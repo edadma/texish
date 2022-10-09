@@ -68,6 +68,7 @@ object Command {
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a * b
             case List(a, b)                         => problem(pos, s"expected arguments <number> <number>: $a, $b")
+            case _                                  => problem(pos, "expected arguments <number> <number>")
           }
       },
       new Command("+", 2) {
@@ -86,6 +87,7 @@ object Command {
             case List(a: Any, b: Seq[_])                                => a +: b
             case List(a: String, b: String)                             => a + b
             case List(a, b) => problem(pos, s"expected arguments <number> <number> or <string> <string>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number> or <string> <string>")
           }
       },
       new Command("-", 2) {
@@ -99,6 +101,7 @@ object Command {
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a - b
             case List(a, b)                         => problem(pos, s"expected arguments <number> <number>: $a, $b")
+            case _                                  => problem(pos, "expected arguments <number> <number>")
           }
       },
       new Command("/", 2) {
@@ -112,6 +115,7 @@ object Command {
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a / b
             case List(a, b)                         => problem(pos, s"expected arguments <number> <number>: $a, $b")
+            case _                                  => problem(pos, "expected arguments <number> <number>")
           }
       },
       new Command("/=", 2) {
@@ -136,6 +140,7 @@ object Command {
             case List(a: String, b: String)         => a < b
             case List(a: BigDecimal, b: BigDecimal) => a < b
             case List(a, b) => problem(pos, s"expected arguments <number> <number> or <string> <string>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number> or <string> <string>")
           }
       },
       new Command("<=", 2) {
@@ -150,6 +155,7 @@ object Command {
             case List(a: String, b: String)         => a <= b
             case List(a: BigDecimal, b: BigDecimal) => a <= b
             case List(a, b) => problem(pos, s"expected arguments <number> <number> or <string> <string>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number> or <string> <string>")
           }
       },
       new Command("=", 2) {
@@ -174,6 +180,7 @@ object Command {
             case List(a: String, b: String)         => a > b
             case List(a: BigDecimal, b: BigDecimal) => a > b
             case List(a, b) => problem(pos, s"expected arguments <number> <number> or <string> <string>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number> or <string> <string>")
           }
       },
       new Command(">=", 2) {
@@ -188,6 +195,7 @@ object Command {
             case List(a: String, b: String)         => a >= b
             case List(a: BigDecimal, b: BigDecimal) => a >= b
             case List(a, b) => problem(pos, s"expected arguments <number> <number> or <string> <string>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number> or <string> <string>")
           }
       },
       new Command("[]", 0) {
@@ -211,6 +219,7 @@ object Command {
           args match {
             case List(a: BigDecimal, b: BigDecimal) if b.isValidInt => a pow b.intValue
             case List(a, b) => problem(pos, s"expected arguments <number> <integer>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number>")
           }
       },
       new Command("abs", 1) {
@@ -239,6 +248,7 @@ object Command {
             case List(a: Any, b: Seq[_])    => b :+ a
             case List(a: String, b: String) => b + a
             case List(a, b) => problem(pos, s"expected arguments <any> <sequence> or <string> <string>: $a, $b")
+            case _          => problem(pos, "expected arguments <number> <number> or <string> <string>")
           }
       },
       new Command("ceil", 1) {
@@ -917,7 +927,8 @@ object Command {
           args match {
             case List(n: BigDecimal) if n.isValidChar => n.toChar
             case List(n: BigDecimal)                  => problem(pos, s"number not a valid character: $n")
-            case List(a)                              => problem(pos, s"expected number argument, given $a")
+            case List(a)                              => problem(pos, s"expected number argument: $a")
+            case _                                    => problem(pos, "expected number argument")
           }
       },
       new Command("upcase", 1) {
@@ -931,6 +942,7 @@ object Command {
           args match {
             case List(s: String) => s toUpperCase
             case List(a)         => problem(pos, s"expected string argument: $a")
+            case _               => problem(pos, "expected string argument")
           }
       },
       new Command("{}", 0) {
