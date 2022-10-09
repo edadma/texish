@@ -614,43 +614,43 @@ class Parser(
             }
         }
 
-      def filters(r: CharReader, ast: AST): (CharReader, AST) =
-        matches(skipSpace(r), pipeDelim) match {
-          case None => (r, ast)
-          case Some(r1) =>
-            val r2 = skipSpace(r1)
-            val (r3, name) =
-              parseFilter(r2) match {
-                case None =>
-                  parseControlSequenceName(r2) match {
-                    case None     => problem(r2, "expected a command or macro")
-                    case Some(cs) => cs
-                  }
-                case Some(cs) => cs
-              }
-
-            macros get name match {
+    def filters(r: CharReader, ast: AST): (CharReader, AST) =
+      matches(skipSpace(r), pipeDelim) match {
+        case None => (r, ast)
+        case Some(r1) =>
+          val r2 = skipSpace(r1)
+          val (r3, name) =
+            parseFilter(r2) match {
               case None =>
-                commandMap get name match {
-                  case None                    => problem(r2, "expected a command or macro")
-                  case Some(c) if c.arity == 0 => problem(r2, "expected a command with parameters")
-                  case Some(c) =>
-                    val (r4, args, optional) = parseCommandArguments(r3, c.arity - 1)
-
-                    filters(r4, CommandAST(r2, c, args :+ ast, optional))
+                parseControlSequenceName(r2) match {
+                  case None     => problem(r2, "expected a command or macro")
+                  case Some(cs) => cs
                 }
-              case Some(Macro(parameters, _)) if parameters isEmpty => problem(r2, "expected a macro with parameters")
-              case Some(mac @ Macro(parameters, _)) =>
-                val (r4, args) = parseRegularArguments(r3, parameters.length - 1)
-
-                filters(r4, MacroAST(mac, args :+ ast))
+              case Some(cs) => cs
             }
-        }
 
-      if (statement)
-        filters(rr, ast)
-      else
-        res
+          macros get name match {
+            case None =>
+              commandMap get name match {
+                case None                    => problem(r2, "expected a command or macro")
+                case Some(c) if c.arity == 0 => problem(r2, "expected a command with parameters")
+                case Some(c) =>
+                  val (r4, args, optional) = parseCommandArguments(r3, c.arity - 1)
+
+                  filters(r4, CommandAST(r2, c, args :+ ast, optional))
+              }
+            case Some(Macro(parameters, _)) if parameters isEmpty => problem(r2, "expected a macro with parameters")
+            case Some(mac @ Macro(parameters, _)) =>
+              val (r4, args) = parseRegularArguments(r3, parameters.length - 1)
+
+              filters(r4, MacroAST(mac, args :+ ast))
+          }
+      }
+
+    if (statement)
+      filters(rr, ast)
+    else
+      res
   }
 
   def parseCommandArguments(r: CharReader, n: Int) = {
