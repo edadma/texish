@@ -35,7 +35,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
   def exitScope: Unit = scopes pop
 
   def render(ast: AST, assigns: collection.Map[String, Any], out: Any => Unit): Unit = {
-    def output(ast: AST) = out(deval(ast))
+    def output(ast: AST): Unit = out(deval(ast))
 
     globals ++= assigns
 
