@@ -2,7 +2,7 @@ name := "texish"
 
 version := "0.0.1"
 
-scalaVersion := "3.2.0"
+scalaVersion := "3.2.2"
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -10,7 +10,7 @@ scalacOptions ++= Seq(
   "-unchecked",
   "-language:postfixOps",
   "-language:implicitConversions",
-  "-language:existentials"
+  "-language:existentials",
 )
 
 organization := "io.github.edadma"
