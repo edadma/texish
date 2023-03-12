@@ -18,13 +18,13 @@ class Parser(
     var rawEndDelim: String = ">>>",
 ) {
 
-  val commandMap = commands map (c => c.name -> c) toMap
-  val activeDelims = actives map (_.name) sortWith (_ > _)
-  val varRegex = """\.([^.]*)""" r
-  val unicodeRegex = "\\\\u[0-9a-fA-F]{4}".r
-  val keywords = List("true", "false", "null")
+  val commandMap: Map[String, Command] = commands map (c => c.name -> c) toMap
+  val activeDelims: Seq[String] = actives map (_.name) sortWith (_ > _)
+  private val varRegex = """\.([^.]*)""".r
+  private val unicodeRegex = "\\\\u[0-9a-fA-F]{4}".r
+  private val keywords = List("true", "false", "null")
 
-  def escapes(s: String) =
+  private def escapes(s: String) =
     unicodeRegex.replaceAllIn(
       s
         .replace("""\b""", "\b")

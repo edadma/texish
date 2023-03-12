@@ -20,7 +20,7 @@ githubOwner := "edadma"
 githubRepository := name.value
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.2.14" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.15" % "test",
 )
 
 libraryDependencies ++= Seq(
