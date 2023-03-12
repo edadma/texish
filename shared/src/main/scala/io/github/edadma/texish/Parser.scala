@@ -7,6 +7,7 @@ import io.github.edadma.char_reader.CharReader
 
 import scala.annotation.tailrec
 import scala.io
+import scala.language.postfixOps
 
 class Parser(
     commands: List[Command],
@@ -21,7 +22,7 @@ class Parser(
 ) {
 
   val commandMap: Map[String, Command] = commands map (c => c.name -> c) toMap
-  val activeDelims: Seq[String] = actives map (_.name) sortWith (_ > _)
+  val activeDelims: List[String] = actives map (_.name) sortWith (_ > _)
   private val varRegex = """\.([^.]*)""".r
   private val unicodeRegex = "\\\\u[0-9a-fA-F]{4}".r
   private val keywords = List("true", "false", "null")
@@ -405,7 +406,7 @@ class Parser(
   def parseExpressionArgument(r: CharReader): (CharReader, AST) = {
     val r0 = skipSpace(r)
 
-    if (r0 eoi)
+    if (r0.eoi)
       problem(r0, "expected command argument")
 
     parseControlSequence(r0) match {
