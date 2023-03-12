@@ -21,7 +21,7 @@ object Command {
     private var set = false
     private var value: T = _
 
-    def apply(v: => T) = {
+    def apply(v: => T): T = {
       if (!set)
         synchronized {
           if (!set) {
@@ -34,19 +34,18 @@ object Command {
     }
   }
 
-  def invoke(renderer: Renderer, lambda: AST, arg: Any) = {
-    renderer.enterScope
+  def invoke(renderer: Renderer, lambda: AST, arg: Any): Any = {
+    renderer.enterScope()
     renderer.scopes.top("_") = arg
 
     val res = renderer.eval(lambda)
 
-    renderer.exitScope
+    renderer.exitScope()
     res
   }
 
-  val escapeRegex = """([^\w _.,!:;?-])""" r
-
-  val standard =
+  private val escapeRegex = """([^\w _.,!:;?-])""".r
+  private[texish] val standard =
     List(
       new Command(" ", 0) {
         def apply(

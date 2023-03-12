@@ -30,9 +30,9 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
       case Some(scope) => scope(name)
     }
 
-  def enterScope: Unit = scopes push new mutable.HashMap
+  def enterScope(): Unit = scopes push new mutable.HashMap
 
-  def exitScope: Unit = scopes pop
+  def exitScope(): Unit = scopes pop
 
   def render(ast: AST, assigns: collection.Map[String, Any], out: Any => Unit): Unit = {
     def output(ast: AST): Unit = out(deval(ast))
@@ -98,12 +98,12 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
             false
         }
       case MacroAST(Macro(parms, body), args) =>
-        enterScope
+        enterScope()
         scopes.top ++= parms zip args map { case (k, v) => (k, eval(v)) }
 
         val res = eval(body)
 
-        exitScope
+        exitScope()
         res
       case MatchAST(expr, cases, els) =>
         val e = eval(expr)
@@ -128,7 +128,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
       case ForAST(pos, expr, body, els) =>
         val buf = new StringBuilder
 
-        enterScope
+        enterScope()
 
         val (in, seq) =
           eval(expr) match {
@@ -179,7 +179,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
           case _: BreakException =>
         }
 
-        exitScope
+        exitScope()
         buf.toString
       case BreakAST(pos) =>
         if (scopes isEmpty)
