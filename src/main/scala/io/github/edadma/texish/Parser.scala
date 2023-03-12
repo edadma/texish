@@ -4,6 +4,8 @@ package io.github.edadma.texish
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import io.github.edadma.char_reader.CharReader
+
+import scala.annotation.tailrec
 import scala.io
 
 class Parser(
@@ -249,7 +251,7 @@ class Parser(
     else
       matches(r.next, s, idx + 1)
 
-  def lookahead(r: CharReader, s: String) = matches(r, s) nonEmpty
+  def lookahead(r: CharReader, s: String): Boolean = matches(r, s) nonEmpty
 
   def lookahead(r: CharReader, delims: List[String]): Boolean =
     delims match {
@@ -275,32 +277,29 @@ class Parser(
   def consume(r: CharReader, set: Char => Boolean, buf: StringBuilder = new StringBuilder): (CharReader, String) =
     consumeCond(r, r => !r.eoi && set(r.ch), buf)
 
-  def consumeStringLiteral(r: CharReader) = {
+  def consumeStringLiteral(r: CharReader): (CharReader, String) =
     val del = r.ch
     var first = true
     var prev = ' '
 
-    def cond(cr: CharReader) = {
+    def cond(cr: CharReader) =
       val res =
         if (cr eoi)
           problem(r, "unclosed string literal")
         else
-          cr ch match {
+          cr ch match
             case '\\' if cr.next.eoi             => problem(cr, "unclosed string literal")
             case `del` if !first && prev == '\\' => true
             case `del`                           => false
             case _                               => true
-          }
 
       first = false
       prev = cr.ch
       res
-    }
 
     val (r1, s) = consumeCond(r.next, cond)
 
     (r1.next, escapes(s))
-  }
 
   def parseLiteralArgument(r: CharReader): (CharReader, Any) =
     r.ch match {
@@ -338,12 +337,12 @@ class Parser(
         }
     }
 
-  def parseString(r: CharReader) = consumeCond(
+  def parseString(r: CharReader): (CharReader, String) = consumeCond(
     r,
     r => !r.eoi && !r.ch.isWhitespace && !lookahead(r, csDelim) && !lookahead(r, beginDelim) && !lookahead(r, endDelim),
   )
 
-  def parseStringWhitespace(r: CharReader) = consume(r, !_.isWhitespace)
+  def parseStringWhitespace(r: CharReader): (CharReader, String) = consume(r, !_.isWhitespace)
 
   def parseStringArgument(r: CharReader): (CharReader, String) = {
     val r1 = skipSpace(r)
@@ -374,7 +373,8 @@ class Parser(
     }
   }
 
-  def dotExpression(pos: CharReader, v: String) = {
+  def dotExpression(pos: CharReader, v: String): AST = {
+    @tailrec
     def fields(start: Int, expr: AST): AST =
       v.indexOf('.', start) match {
         case -1 => expr
@@ -392,7 +392,7 @@ class Parser(
     }
   }
 
-  def parseVariableArgument(r: CharReader) = {
+  def parseVariableArgument(r: CharReader): (CharReader, String) = {
     val res @ (_, s) = parseString(r)
 
     if (s.isEmpty || !nameFirst(s.head) || !s.tail.forall(nameRest))
