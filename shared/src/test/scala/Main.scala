@@ -1,6 +1,3 @@
-package io.github.edadma.name
+package io.github.edadma.texish
 
-
-object Main extends App {
-
-}
+@main def run(): Unit = {}

@@ -25,7 +25,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     mainClass := Some(s"${organization.value}.${name.value}.Main"),
     //    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.14" % "test",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %% "char-reader" % "0.1.11",
+      "io.github.edadma" %%% "char-reader" % "0.1.11",
     ),
     libraryDependencies ++= Seq(
       "com.github.scopt" %%% "scopt" % "4.1.0",
@@ -40,6 +40,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   )
   .nativeSettings(
     nativeLinkStubs := true,
+    libraryDependencies += "io.github.cquiroz" % "scala-java-time_native0.4_3" % "2.5.0",
   )
   .jsSettings(
     jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(),
@@ -48,4 +49,5 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     Test / scalaJSUseMainModuleInitializer := false,
     Test / scalaJSUseTestModuleInitializer := true,
     scalaJSUseMainModuleInitializer := true,
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.5.0",
   )

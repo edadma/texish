@@ -314,7 +314,7 @@ object Command {
             context: AnyRef,
         ): Any =
           args match {
-            case List(s: Seq[_]) => s distinct
+            case List(s: Seq[_]) => s.distinct
             case List(a)         => problem(pos, s"expected sequence argument: $a")
           }
       },
@@ -327,7 +327,7 @@ object Command {
             context: AnyRef,
         ): Any =
           args match {
-            case List(s: String) => s toLowerCase
+            case List(s: String) => s.toLowerCase
             case List(a)         => problem(pos, s"expected string argument: $a")
           }
       },
@@ -390,7 +390,7 @@ object Command {
               var last = 0
               val buf = new StringBuilder
 
-              while (it hasNext) {
+              while (it.hasNext) {
                 val m = it.next
 
                 buf ++= escape(s.substring(last, it.start))
@@ -440,35 +440,35 @@ object Command {
             context: AnyRef,
         ): Any =
           args match {
-            case List(s: String) => s head
-            case List(s: Seq[_]) => s head
+            case List(s: String) => s.head
+            case List(s: Seq[_]) => s.head
             case List(a)         => problem(pos, s"expected string or sequence argument: $a")
           }
       },
-      new Command("include", 1) {
-        val dir = new Const[String]
-
-        def apply(
-            pos: CharReader,
-            renderer: Renderer,
-            args: List[Any],
-            optional: Map[String, Any],
-            context: AnyRef,
-        ): Any = {
-          val file = new File(dir(renderer.config("include").toString), args.head.toString)
-          val charset = optional get "charset" map (_.toString)
-
-          renderer.eval(
-            renderer.parser.parse(
-              util
-                .Using(if (charset.isDefined) io.Source.fromFile(file) else io.Source.fromFile(file)(charset get))(
-                  _.mkString,
-                )
-                .get,
-            ),
-          )
-        }
-      },
+//      new Command("include", 1) { // todo: can't run under js
+//        val dir = new Const[String]
+//
+//        def apply(
+//            pos: CharReader,
+//            renderer: Renderer,
+//            args: List[Any],
+//            optional: Map[String, Any],
+//            context: AnyRef,
+//        ): Any = {
+//          val file = new File(dir(renderer.config("include").toString), args.head.toString)
+//          val charset = optional get "charset" map (_.toString)
+//
+//          renderer.eval(
+//            renderer.parser.parse(
+//              util
+//                .Using(if (charset.isDefined) io.Source.fromFile(file) else io.Source.fromFile(file)(charset get))(
+//                  _.mkString,
+//                )
+//                .get,
+//            ),
+//          )
+//        }
+//      },
       new Command("isEmpty", 1) {
         def apply(
             pos: CharReader,

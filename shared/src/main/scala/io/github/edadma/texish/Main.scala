@@ -5,8 +5,7 @@ import io.github.edadma.char_reader.CharReader
 import scala.collection.mutable
 import scala.io
 
-object Main extends App {
-
+@main def run(): Unit =
   val config =
     Map(
       "today" -> "MMMM d, y",
@@ -29,5 +28,3 @@ object Main extends App {
       |<a  c>
     """.trim.stripMargin
   renderer.render(parser.parse(src), assigns, Console.print)
-
-}
