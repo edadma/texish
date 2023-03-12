@@ -16,7 +16,7 @@ import scala.io
   val actives =
     List(
       new Active("<") {
-        def apply(pos: CharReader, r: Renderer) = {
+        def apply(pos: CharReader, r: Renderer): String = {
           "lt"
         }
       },
