@@ -25,7 +25,11 @@ import scala.io
   val renderer = new Renderer(parser, config, _.mkString)
   val src =
     """
+    |\asdf
     |<a  c>
     |
     """.trim.stripMargin
-  renderer.render(parser.parse(src), assigns, Console.print)
+  val ast = parser.parse(src)
+
+  println(ast)
+  renderer.render(ast, assigns, Console.print)

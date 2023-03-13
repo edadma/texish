@@ -1,9 +1,9 @@
 package io.github.edadma.texish
 
 import java.io.{ByteArrayOutputStream, PrintStream}
-
 import scala.collection.mutable
 import scala.io
+import scala.language.postfixOps
 
 class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any] => Any) {
 
@@ -16,13 +16,13 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
       case Some(scope) => scope(name) = value
     }
 
-  def getVar(name: String, locals: Map[String, Any]) =
+  def getVar(name: String, locals: Map[String, Any]): Any =
     scopes find (_ contains name) match {
       case None =>
         locals get name match {
           case None =>
             globals get name match {
-              case None    => nil
+              case None    => problem(null, s"variable '$name' not found") // nil
               case Some(v) => v
             }
           case Some(v) => v
@@ -32,7 +32,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
 
   def enterScope(): Unit = scopes push new mutable.HashMap
 
-  def exitScope(): Unit = scopes pop
+  def exitScope(): Unit = scopes.pop
 
   def render(ast: AST, assigns: collection.Map[String, Any], out: Any => Unit): Unit = {
     def output(ast: AST): Unit = out(deval(ast))
@@ -65,7 +65,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
       case InAST(cpos, v, epos, expr) =>
         eval(expr) match {
           case s: Seq[_] =>
-            if (scopes isEmpty) problem(cpos, "not inside a loop")
+            if (scopes.isEmpty) problem(cpos, "not inside a loop")
 
             ForGenerator(v, s)
           case a => problem(epos, s"expected a sequence: $a")
@@ -77,8 +77,8 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
               case None    => nil
               case Some(v) => v
             }
-          case (s: String, idx: BigDecimal) if idx isValidInt => s(idx.intValue)
-          case (s: Seq[_], idx: BigDecimal) if idx isValidInt => s(idx.intValue)
+          case (s: String, idx: BigDecimal) if idx.isValidInt => s(idx.intValue)
+          case (s: Seq[_], idx: BigDecimal) if idx.isValidInt => s(idx.intValue)
           case (o, k)                                         => problem(epos, s"not indexable: $o[$k]")
         }
       case SeqAST(seq)         => seq map eval
@@ -111,7 +111,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
         cases find { case (exp, _) => e == eval(exp) } match {
           case None =>
             els match {
-              case None     => nil
+              case None     => problem(expr, s"match error") // nil
               case Some(no) => eval(no)
             }
           case Some((_, yes)) => eval(yes)
