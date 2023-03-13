@@ -111,7 +111,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
         cases find { case (exp, _) => e == eval(exp) } match {
           case None =>
             els match {
-              case None     => problem(expr, s"match error") // nil
+              case None     => problem(null, s"match error") // nil
               case Some(no) => eval(no)
             }
           case Some((_, yes)) => eval(yes)
