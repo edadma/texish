@@ -21,7 +21,7 @@ import scala.io
         }
       },
     )
-  val parser = new Parser(Command.standard, actives, blanks = true)
+  val parser = new Parser(Command.builtins, actives, blanks = true)
   val renderer = new Renderer(parser, config, _.mkString)
   val src =
     """

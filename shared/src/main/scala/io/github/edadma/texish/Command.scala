@@ -45,7 +45,8 @@ object Command {
   }
 
   private val escapeRegex = """([^\w _.,!:;?-])""".r
-  private[texish] val standard =
+
+  val builtins =
     List(
       new Command(" ", 0) {
         def apply(
