@@ -7,7 +7,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name := "texish",
-    version := "0.0.3",
+    version := "0.0.4",
     scalaVersion := "3.2.2",
     scalacOptions ++=
       Seq(
@@ -22,14 +22,13 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     organization := "io.github.edadma",
     githubOwner := "edadma",
     githubRepository := name.value,
-    mainClass := Some(s"${organization.value}.${name.value}.Main"),
     //    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.14" % "test",
     libraryDependencies ++= Seq(
       "io.github.edadma" %%% "char-reader" % "0.1.11",
     ),
     libraryDependencies ++= Seq(
       "com.github.scopt" %%% "scopt" % "4.1.0",
-      //      "com.lihaoyi" %%% "pprint" % "0.8.1" % "test",
+      "com.lihaoyi" %%% "pprint" % "0.8.1",
     ),
     publishMavenStyle := true,
     Test / publishArtifact := false,

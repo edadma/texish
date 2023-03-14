@@ -74,7 +74,7 @@ class Parser(
       r =>
         !r.eoi && !lookahead(r, csDelim) && !lookahead(r, beginDelim) && !lookahead(r, endDelim) &&
           !lookahead(r, activeDelims) &&
-          !(blanks && matches(r, ' ', '\t')),
+          !(blanks && matches(r, ' ', '\t', '\n')),
     )
 
     (r1, LiteralAST(s))
@@ -97,10 +97,9 @@ class Parser(
           case None =>
             parseActive(r) match {
               case None =>
-                if (blanks && matches(r, ' ', '\t'))
-                  (skip(r, p => p.ch != ' ' && p.ch != '\t'), LiteralAST(' '))
-                else
-                  parseStatic(r)
+                if blanks && matches(r, ' ', '\t') then (skip(r, p => p.ch != ' ' && p.ch != '\t'), LiteralAST(' '))
+                else if blanks && r.ch == '\n' then (r.next, LiteralAST('\n'))
+                else parseStatic(r)
               case Some(a) => a
             }
           case Some(r1) => parseGroup(r1)
@@ -242,7 +241,7 @@ class Parser(
         }
     }
 
-  def matches(r: CharReader, c: Char*) = !r.eoi && c.contains(r.ch)
+  def matches(r: CharReader, c: Char*): Boolean = !r.eoi && c.contains(r.ch)
 
   def matches(r: CharReader, s: String, idx: Int = 0): Option[CharReader] =
     if (idx == s.length)

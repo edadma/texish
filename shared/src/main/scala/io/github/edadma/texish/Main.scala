@@ -5,6 +5,8 @@ import io.github.edadma.char_reader.CharReader
 import scala.collection.mutable
 import scala.io
 
+import pprint.pprintln
+
 @main def run(): Unit =
   val config =
     Map(
@@ -25,11 +27,12 @@ import scala.io
   val renderer = new Renderer(parser, config, _.mkString)
   val src =
     """
-    |\asdf
-    |<a  c>
+    |asdf
+    |
+    |qwer
     |
     """.trim.stripMargin
   val ast = parser.parse(src)
 
-  println(ast)
-  renderer.render(ast, assigns, Console.print)
+  pprintln(ast)
+  renderer.render(ast, assigns, x => pprintln(x))
