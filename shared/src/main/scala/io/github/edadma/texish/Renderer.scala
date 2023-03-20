@@ -5,7 +5,7 @@ import scala.collection.mutable
 import scala.io
 import scala.language.postfixOps
 
-class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any] => Any) {
+class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any] => Any, context: Any) {
 
   val globals = new mutable.HashMap[String, Any]
   val scopes = new mutable.Stack[mutable.HashMap[String, Any]]
@@ -123,7 +123,7 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
           group(statements map deval)
       case LiteralAST(v) => v
       case CommandAST(pos, c, args, optional) =>
-        c(pos, this, if (c.eval) args map eval else args, optional map { case (k, v) => k -> eval(v) }, null)
+        c(pos, this, if (c.eval) args map eval else args, optional map { case (k, v) => k -> eval(v) }, context)
       case ActiveAST(pos, a) => a(pos, this)
       case ForAST(pos, expr, body, els) =>
         val buf = new StringBuilder

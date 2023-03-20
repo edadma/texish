@@ -11,7 +11,7 @@ import io.github.edadma.char_reader.CharReader
 import scala.io
 
 abstract class Command(val name: String, val arity: Int, val eval: Boolean = true)
-    extends ((CharReader, Renderer, List[Any], Map[String, Any], AnyRef) => Any) {
+    extends ((CharReader, Renderer, List[Any], Map[String, Any], Any) => Any) {
   override def toString = s"""io.github.edadma.texish.Command.standard("$name")"""
 }
 
@@ -54,7 +54,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = " "
       },
       new Command("*", 2) {
@@ -63,7 +63,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a * b
@@ -77,7 +77,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal)                     => a + b
@@ -96,7 +96,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a - b
@@ -110,7 +110,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a / b
@@ -124,7 +124,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args.head != args.tail.head
       },
@@ -134,7 +134,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: String, b: String)         => a < b
@@ -149,7 +149,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: String, b: String)         => a <= b
@@ -164,7 +164,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args.head == args.tail.head
       },
@@ -174,7 +174,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: String, b: String)         => a > b
@@ -189,7 +189,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: String, b: String)         => a >= b
@@ -204,7 +204,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           Nil
       },
@@ -214,7 +214,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) if b.isValidInt => a pow b.intValue
@@ -228,7 +228,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case n: BigDecimal => n.abs
@@ -242,7 +242,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: Any, b: Seq[_])    => b :+ a
@@ -257,7 +257,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case n: BigDecimal => n.setScale(0, BigDecimal.RoundingMode.CEILING)
@@ -271,7 +271,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: String, b: String) => a contains b
@@ -287,7 +287,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(format: String, date: TemporalAccessor) => DateTimeFormatter.ofPattern(format).format(date)
@@ -300,7 +300,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: Any, b: Any) => if (b == nil) a else b
@@ -312,7 +312,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: Seq[_]) => s.distinct
@@ -325,7 +325,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s.toLowerCase
@@ -338,7 +338,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(n: BigDecimal, s: Seq[_]) if n.isValidInt => s drop n.toInt
@@ -353,7 +353,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case s: String => escape(s)
@@ -367,7 +367,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case s: String => escapeFull(s)
@@ -383,7 +383,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case s: String =>
@@ -411,7 +411,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           (args.head, renderer eval args.tail.head.asInstanceOf[AST]) match {
             case (lambda: AST, s: Seq[_]) => s filter (e => truthy(invoke(renderer, lambda, e)))
@@ -424,7 +424,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case n: BigDecimal => n.setScale(0, BigDecimal.RoundingMode.FLOOR)
@@ -438,7 +438,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s.head
@@ -454,7 +454,7 @@ object Command {
 //            renderer: Renderer,
 //            args: List[Any],
 //            optional: Map[String, Any],
-//            context: AnyRef,
+//            context: Any,
 //        ): Any = {
 //          val file = new File(dir(renderer.config("include").toString), args.head.toString)
 //          val charset = optional get "charset" map (_.toString)
@@ -476,7 +476,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case s: String               => s isEmpty
@@ -492,7 +492,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(sep: String, s: Seq[_]) => s mkString sep
@@ -505,7 +505,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s last
@@ -519,7 +519,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args.head
       },
@@ -529,7 +529,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           (args.head, renderer eval args.tail.head.asInstanceOf[AST]) match {
             case (LiteralAST(f: String), s: Seq[_]) => s.asInstanceOf[Seq[Map[String, Any]]] map (_ getOrElse (f, nil))
@@ -544,7 +544,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a max b
@@ -557,7 +557,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a min b
@@ -570,7 +570,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case n: BigDecimal => -n
@@ -584,7 +584,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head
           nil
@@ -596,7 +596,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args.head match {
             case s: String               => s nonEmpty
@@ -612,7 +612,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args.head.toString.trim.replaceAll("""\s+""", " ")
       },
@@ -622,7 +622,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           ZonedDateTime.now
       },
@@ -632,7 +632,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(start: BigDecimal, end: BigDecimal) => start to end by 1
@@ -645,7 +645,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(a: BigDecimal, b: BigDecimal) => a remainder b
@@ -658,7 +658,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(l: String, r: String) => r replace (l, "")
@@ -671,7 +671,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(l: String, r: String) => r replaceFirst (Matcher.quoteReplacement(l), "")
@@ -684,7 +684,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(l1: String, l2: String, r: String) => r.replace(l1, l2)
@@ -697,7 +697,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(l1: String, l2: String, r: String) => r replaceFirst (Matcher.quoteReplacement(l1), l2)
@@ -710,7 +710,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s reverse
@@ -724,7 +724,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           (args.head, optional.getOrElse("scale", 0)) match {
             case (n: BigDecimal, scale: Number) => round(n, scale.intValue, renderer.config)
@@ -738,7 +738,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String)               => s length
@@ -753,7 +753,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           args match {
             case List(start: BigDecimal, end: BigDecimal, s: String) if start.isValidInt && end.isValidInt =>
@@ -771,7 +771,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           val on = optional get "on" map (_.toString)
           val desc = (optional get "order" map (_.toString)) contains "desc"
@@ -798,7 +798,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(sep: String, s: String) => s split sep toVector
@@ -811,7 +811,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s tail
@@ -825,7 +825,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(n: BigDecimal, s: Seq[_]) if n.isValidInt => s take n.toInt
@@ -840,7 +840,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => ZonedDateTime parse s
@@ -855,7 +855,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           val x = args.head
 
@@ -871,7 +871,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any = {
           val x = args.head
 
@@ -887,7 +887,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           display(args.head)
       },
@@ -899,7 +899,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           ZonedDateTime.now.format(format(DateTimeFormatter.ofPattern(renderer.config("today").toString)))
       },
@@ -909,7 +909,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s trim
@@ -922,7 +922,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(n: BigDecimal) if n.isValidChar => n.toChar
@@ -937,7 +937,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           args match {
             case List(s: String) => s toUpperCase
@@ -951,7 +951,7 @@ object Command {
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
-            context: AnyRef,
+            context: Any,
         ): Any =
           Map()
       },

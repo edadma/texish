@@ -24,7 +24,7 @@ import pprint.pprintln
       },
     )
   val parser = new Parser(Command.builtins, actives, blanks = true)
-  val renderer = new Renderer(parser, config, _.mkString)
+  val renderer = new Renderer(parser, config, _.mkString, null)
   val src =
     """
     |asdf
