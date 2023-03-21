@@ -34,11 +34,9 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
 
   def exitScope(): Unit = scopes.pop
 
-  def render(ast: AST, assigns: collection.Map[String, Any], out: Any => Unit): Unit = {
-    def output(ast: AST): Unit = 
+  def render(ast: AST, out: Any => Unit): Unit = {
+    def output(ast: AST): Unit =
       out(deval(ast))
-
-    globals ++= assigns
 
     ast match {
       case GroupAST(b) => b foreach output
@@ -47,16 +45,16 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
   }
 
   // todo: think about whether the implicit codec is needed
-  def capture(ast: AST, assigns: collection.Map[String, Any])(implicit codec: io.Codec) = {
+  def capture(ast: AST)(implicit codec: io.Codec): String = {
     val bytes = new ByteArrayOutputStream
 
-    render(ast, assigns, (new PrintStream(bytes, false, codec.name)).print)
+    render(ast, new PrintStream(bytes, false, codec.name).print)
     bytes.toString
   }
 
-  def deval(ast: AST) = display(eval(ast))
+  def deval(ast: AST): String = display(eval(ast))
 
-  def teval(ast: AST) = truthy(eval(ast))
+  def teval(ast: AST): Boolean = truthy(eval(ast))
 
   def eval(ast: AST): Any =
     ast match {
@@ -82,8 +80,12 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
           case (s: Seq[_], idx: BigDecimal) if idx.isValidInt => s(idx.intValue)
           case (o, k)                                         => problem(epos, s"not indexable: $o[$k]")
         }
-      case SeqAST(seq)         => seq map eval
-      case ObjectAST(seq)      => seq map eval grouped 2 map { case Vector(a, b) => a -> b } toMap
+      case SeqAST(seq) => seq map eval
+      case ObjectAST(seq) =>
+        seq map eval grouped 2 map {
+          case Vector(a, b) => a -> b
+          case _            => problem(null, "object must be a sequence of key/value pairs")
+        } toMap
       case NotAST(expr)        => !teval(expr)
       case AndAST(left, right) => teval(left) && teval(right)
       case OrAST(left, right) =>

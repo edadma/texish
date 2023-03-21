@@ -912,8 +912,9 @@ object Command {
             context: Any,
         ): Any =
           args match {
-            case List(s: String) => s trim
+            case List(s: String) => s.trim
             case List(a)         => problem(pos, s"expected string argument: $a")
+            case _               => problem(pos, "expected string argument")
           }
       },
       new Command("u", 1) {

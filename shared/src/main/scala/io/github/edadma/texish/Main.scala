@@ -14,7 +14,6 @@ import pprint.pprintln
       "include" -> ".",
       "rounding" -> "HALF_EVEN",
     )
-  val assigns = new mutable.HashMap[String, Any]
   val actives =
     List(
       new Active("<") {
@@ -47,4 +46,4 @@ import pprint.pprintln
   val ast = parser.parse(src)
 
   pprintln(ast)
-  renderer.render(ast, assigns, x => pprintln(x))
+  renderer.render(ast, x => pprintln(x))
