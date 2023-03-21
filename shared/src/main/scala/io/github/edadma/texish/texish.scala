@@ -47,6 +47,7 @@ package object texish {
       case m: collection.Map[_, _] =>
         m map { case (k, v) => qdisplay(k) + ": " + qdisplay(v) } mkString ("{", ", ", "}")
       case l: collection.Seq[_] => l map qdisplay mkString ("[", ", ", "]")
+      case ()                   => ""
       case s                    => String.valueOf(s)
     }
 

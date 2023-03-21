@@ -23,14 +23,26 @@ import pprint.pprintln
         }
       },
     )
-  val parser = new Parser(Command.builtins, actives, blanks = true)
+  val commands =
+    List(
+      new Command("verses", 1):
+        def apply(
+            pos: CharReader,
+            renderer: Renderer,
+            args: List[Any],
+            optional: Map[String, Any],
+            context: Any,
+        ): Any =
+          args match
+            case List(a: String) => println(s"verses: $a")
+            case List(a)         => problem(pos, s"expected arguments <string>: $a")
+            case _               => problem(pos, "expected arguments <string>"),
+    )
+  val parser = new Parser(Command.builtins ++ commands, actives, blanks = true)
   val renderer = new Renderer(parser, config, _.mkString, null)
   val src =
     """
-    |asdf
-    |
-    |qwer
-    |
+    |\verses{asdf qwer}
     """.trim.stripMargin
   val ast = parser.parse(src)
 
