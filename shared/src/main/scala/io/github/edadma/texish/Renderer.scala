@@ -5,14 +5,19 @@ import scala.collection.mutable
 import scala.io
 import scala.language.postfixOps
 
-class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any] => Any, context: Any) {
+class Renderer(
+    val parser: Parser,
+    val config: Map[String, Any],
+    group: Seq[Any] => Any,
+    val context: Any,
+    val out: Any => Unit,
+) {
 
-  val globals = new mutable.HashMap[String, Any]
   val scopes = new mutable.Stack[mutable.HashMap[String, Any]]
 
   def setVar(name: String, value: Any): Unit =
     scopes find (_ contains name) match {
-      case None        => globals(name) = value
+      case None        => sys.error(s"variable '$name' not found") // globals(name) = value
       case Some(scope) => scope(name) = value
     }
 
@@ -21,10 +26,11 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
       case None =>
         locals get name match {
           case None =>
-            globals get name match {
-              case None    => problem(null, s"variable '$name' not found") // nil
-              case Some(v) => v
-            }
+            problem(null, s"variable '$name' not found")
+//            globals get name match {
+//              case None    => problem(null, s"variable '$name' not found") // nil
+//              case Some(v) => v
+//            }
           case Some(v) => v
         }
       case Some(scope) => scope(name)
@@ -34,15 +40,12 @@ class Renderer(val parser: Parser, val config: Map[String, Any], group: Seq[Any]
 
   def exitScope(): Unit = scopes.pop
 
-  def render(ast: AST, out: Any => Unit): Unit = {
-    def output(ast: AST): Unit =
-      out(deval(ast))
+  def render(ast: AST, redirect: Any => Unit = null): Unit =
+    def output(ast: AST): Unit = Option(redirect).getOrElse(out)(deval(ast))
 
-    ast match {
+    ast match
       case GroupAST(b) => b foreach output
       case _           => output(ast)
-    }
-  }
 
   // todo: think about whether the implicit codec is needed
   def capture(ast: AST)(implicit codec: io.Codec): String = {

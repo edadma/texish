@@ -38,7 +38,7 @@ import pprint.pprintln
             case _               => problem(pos, "expected arguments <string>"),
     )
   val parser = new Parser(Command.builtins ++ commands, actives, blanks = true)
-  val renderer = new Renderer(parser, config, _.mkString, null)
+  val renderer = new Renderer(parser, config, _.mkString, null, x => pprintln(x))
   val src =
     """
     |\verses{asdf qwer}
@@ -46,4 +46,4 @@ import pprint.pprintln
   val ast = parser.parse(src)
 
   pprintln(ast)
-  renderer.render(ast, x => pprintln(x))
+  renderer.render(ast)
