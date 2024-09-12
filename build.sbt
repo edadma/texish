@@ -7,8 +7,8 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name := "texish",
-    version := "0.0.8",
-    scalaVersion := "3.2.2",
+    version := "0.0.9",
+    scalaVersion := "3.5.0",
     scalacOptions ++=
       Seq(
         "-deprecation",
@@ -24,11 +24,11 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     githubRepository := name.value,
     //    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.14" % "test",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "char-reader" % "0.1.11",
+      "io.github.edadma" %%% "char-reader" % "0.1.12",
     ),
     libraryDependencies ++= Seq(
       "com.github.scopt" %%% "scopt" % "4.1.0",
-      "com.lihaoyi" %%% "pprint" % "0.8.1",
+      "com.lihaoyi" %%% "pprint" % "0.9.0",
     ),
     publishMavenStyle := true,
     Test / publishArtifact := false,
@@ -38,8 +38,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
   )
   .nativeSettings(
-    nativeLinkStubs := true,
-    libraryDependencies += "io.github.cquiroz" % "scala-java-time_native0.4_3" % "2.5.0",
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
   )
   .jsSettings(
     jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(),
@@ -48,5 +47,5 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     Test / scalaJSUseMainModuleInitializer := false,
     Test / scalaJSUseTestModuleInitializer := true,
     scalaJSUseMainModuleInitializer := true,
-    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.5.0",
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
   )

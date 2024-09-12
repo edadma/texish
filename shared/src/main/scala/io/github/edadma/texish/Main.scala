@@ -35,7 +35,7 @@ import pprint.pprintln
           args match
             case List(a: String) => println(s"verses: $a")
             case List(a)         => problem(pos, s"expected arguments <string>: $a")
-            case _               => problem(pos, "expected arguments <string>"),
+            case _               => problem(pos, "expected arguments <string>")
     )
   val parser = new Parser(Command.builtins ++ commands, actives, blanks = true)
   val renderer = new Renderer(parser, config, _.mkString, null, x => pprintln(x))
