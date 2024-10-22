@@ -1,11 +1,11 @@
 //@
 package io.github.edadma.texish
 
-import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import io.github.edadma.char_reader.CharReader
 
 import scala.annotation.tailrec
+import scala.collection.mutable
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io
 import scala.language.postfixOps
 
@@ -21,7 +21,7 @@ class Parser(
     var rawEndDelim: String = ">>>",
 ) {
 
-  val commandMap: Map[String, Command] = commands map (c => c.name -> c) toMap
+  val commandMap: Map[String, Command] = (Command.builtins ++ commands) map (c => c.name -> c) toMap
   val activeDelims: List[String] = actives map (_.name) sortWith (_ > _)
   private val varRegex = """\.([^.]*)""".r
   private val unicodeRegex = "\\\\u[0-9a-fA-F]{4}".r
@@ -97,8 +97,8 @@ class Parser(
           case None =>
             parseActive(r) match {
               case None =>
-                if blanks && matches(r, ' ', '\t') then (skip(r, p => p.ch != ' ' && p.ch != '\t'), LiteralAST(' '))
-                else if blanks && r.ch == '\n' then (r.next, LiteralAST('\n'))
+                if blanks && matches(r, ' ', '\t') then (skip(r, p => p.ch != ' ' && p.ch != '\t'), LiteralAST(" "))
+                else if blanks && r.ch == '\n' then (r.next, LiteralAST("\n"))
                 else parseStatic(r)
               case Some(a) => a
             }
@@ -147,7 +147,8 @@ class Parser(
       case Some((r1, name)) => parseCommand(r, name, r1, true)
     }
 
-  def parseList(r: CharReader, begin: Boolean) = {
+  private def parseList(r: CharReader, begin: Boolean) = {
+    @tailrec
     def parseList(r: CharReader, buf: ArrayBuffer[AST] = new ArrayBuffer): (CharReader, Vector[AST]) = {
       matches(r, endDelim) match {
         case None =>
@@ -179,11 +180,11 @@ class Parser(
       }
   }
 
-  def nameFirst(c: Char) = c.isLetter || c == '_'
+  private def nameFirst(c: Char) = c.isLetter || c == '_'
 
-  def nameRest(c: Char) = c.isLetter || c == '_' || c == '.'
+  private def nameRest(c: Char) = c.isLetter || c == '_' || c == '.'
 
-  def parseFilter(r: CharReader) =
+  private def parseFilter(r: CharReader) =
     parseControlSequence(r) match {
       case None => parseControlSequenceName(r)
       case cs   => cs
@@ -198,7 +199,7 @@ class Parser(
         case None     => None
       }
 
-  def parseName(r: CharReader) =
+  private def parseName(r: CharReader) =
     if (r eoi)
       None
     else if (nameFirst(r.ch))
@@ -206,7 +207,7 @@ class Parser(
     else
       None
 
-  def parseControlSequenceName(r: CharReader) =
+  private def parseControlSequenceName(r: CharReader) =
     if (r eoi) None
     else {
       val (r1, s) =
@@ -366,7 +367,7 @@ class Parser(
           case None =>
             parseLiteralArgument(r1) match {
               case (r2, "_") => (r2, VariableAST("_"))
-              case (r2, s)   => (r2, LiteralAST(s))
+              case (r2, s)   => (skipSpace(r2), LiteralAST(s))
             }
         }
       case Some((r2, name)) => parseCommand(r1, name, r2, false)
@@ -385,7 +386,7 @@ class Parser(
           }
       }
 
-    v indexOf '.' match {
+    v.indexOf('.') match {
       case -1 => VariableAST(v)
 //      case 0 => problem( pos, "illegal variable reference" )
       case dot => fields(dot, VariableAST(v.substring(0, dot)))
@@ -459,7 +460,7 @@ class Parser(
 
   def skip(r: CharReader, cond: CharReader => Boolean): CharReader = if (r.eoi || cond(r)) r else skip(r.next, cond)
 
-  def check(pos: CharReader, name: String) =
+  private def check(pos: CharReader, name: String) =
     if (
       Set(
         "#",
@@ -614,6 +615,7 @@ class Parser(
             }
         }
 
+    @tailrec
     def filters(r: CharReader, ast: AST): (CharReader, AST) =
       matches(skipSpace(r), pipeDelim) match {
         case None => (r, ast)
@@ -653,15 +655,14 @@ class Parser(
       res
   }
 
-  def parseCommandArguments(r: CharReader, n: Int) = {
-    val (r1, args) = parseRegularArguments(r, n)
-
-    def parseOptional(r: CharReader, optional: Map[String, AST]): (CharReader, List[AST], Map[String, AST]) =
+  private def parseCommandArguments(r: CharReader, n: Int): (CharReader, List[AST], Map[String, AST]) = {
+    @tailrec
+    def parseOptional(r: CharReader, optional: Map[String, AST]): (CharReader, Map[String, AST]) =
       parseName(skipSpace(r)) match {
-        case None => (r, args, optional)
+        case None => (r, optional)
         case Some((r1a, name)) =>
           matches(r1a, ":") match {
-            case None => (r, args, optional)
+            case None => (r, optional)
             case Some(r2) =>
               val (r3, ast) = parseRegularArgument(r2)
 
@@ -669,7 +670,10 @@ class Parser(
           }
       }
 
-    parseOptional(r1, Map())
+    val (r1, optional) = parseOptional(r, Map())
+    val (r2, args) = parseRegularArguments(r1, n)
+
+    (r2, args, optional)
   }
 
   def parseCases(cs: String, r: CharReader, cases: Vector[(AST, AST)] = Vector()): (CharReader, Vector[(AST, AST)]) =

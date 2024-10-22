@@ -1,22 +1,21 @@
 package io.github.edadma.texish
 
-
 object Entity {
 
-  def apply( c: Char ) =
+  def apply(c: Char) =
     c match {
-      case '&' => Some( "amp" )
-      case '<' => Some( "lt" )
-      case '>' => Some( "gt" )
-      case '"' => Some( "quot" )
-      case '\\' => Some( "bsol" )
-      case '{' => Some( "lcub" )
-      case '}' => Some( "rcub" )
-      case _ if c > '\u007F' => Some( s"#${c.toInt}" )
-      case _ => None
+      case '&'               => Some("amp")
+      case '<'               => Some("lt")
+      case '>'               => Some("gt")
+      case '"'               => Some("quot")
+      case '\\'              => Some("bsol")
+      case '{'               => Some("lcub")
+      case '}'               => Some("rcub")
+      case _ if c > '\u007F' => Some(s"#${c.toInt}")
+      case _                 => None
     }
 
-  def full( c: Char ) =
+  def full(c: Char) =
     c match {
       case '\u0009' => "Tab"
       case '\u000A' => "NewLine"
@@ -26,7 +25,7 @@ object Entity {
       case '\u0024' => "dollar"
       case '\u0025' => "percnt"
       case '\u0026' => "amp"
-      case '\'' => "apos"
+      case '\''     => "apos"
       case '\u0028' => "lpar"
       case '\u0029' => "rpar"
       case '\u002A' => "ast"
@@ -42,7 +41,7 @@ object Entity {
       case '\u003F' => "quest"
       case '\u0040' => "commat"
       case '\u005B' => "lsqb"
-      case '\\' => "bsol"
+      case '\\'     => "bsol"
       case '\u005D' => "rsqb"
       case '\u005E' => "Hat"
       case '\u005F' => "lowbar"
@@ -1333,7 +1332,7 @@ object Entity {
       case '\uFB02' => "fllig"
       case '\uFB03' => "ffilig"
       case '\uFB04' => "ffllig"
-      case _ => s"#${c.toInt}"
+      case _        => s"#${c.toInt}"
     }
 
 }
