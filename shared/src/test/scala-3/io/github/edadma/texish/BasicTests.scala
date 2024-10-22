@@ -12,43 +12,37 @@ class BasicTests extends AnyFreeSpec with Matchers with Testing:
   "space text 1" in {
     test("asdf zxcv") shouldBe
       """
-      |["asdf", " ", "zxcv"]
+      |asdf zxcv
       """.trim.stripMargin
   }
 
   "space text 2" in {
     test("asdf  zxcv") shouldBe
       """
-      |["asdf", " ", "zxcv"]
+      |asdf zxcv
       """.trim.stripMargin
   }
 
   "space text 3" in {
     test(" asdf zxcv") shouldBe
       """
-      |[" ", "asdf", " ", "zxcv"]
+      | asdf zxcv
       """.trim.stripMargin
   }
 
   "space text 4" in {
     test("  asdf zxcv") shouldBe
       """
-      |[" ", "asdf", " ", "zxcv"]
+      | asdf zxcv
       """.trim.stripMargin
   }
 
   "space text 5" in {
-    test("asdf zxcv ") shouldBe
-      """
-      |["asdf", " ", "zxcv", " "]
-      """.trim.stripMargin
+    test("asdf zxcv ") shouldBe "asdf zxcv "
   }
 
   "space text 6" in {
-    test("asdf zxcv  ") shouldBe
-      """
-      |["asdf", " ", "zxcv", " "]
-      """.trim.stripMargin
+    test("asdf zxcv  ") shouldBe "asdf zxcv "
   }
 
   "space text 7" in {
@@ -63,7 +57,9 @@ class BasicTests extends AnyFreeSpec with Matchers with Testing:
     test(
       """asdf
         |zxcv""".stripMargin,
-    ) shouldBe "[\"asdf\", \"\n\", \"zxcv\"]"
+    ) shouldBe
+      """asdf
+        |zxcv""".stripMargin
   }
 
   "newline text 2" in {
@@ -71,5 +67,8 @@ class BasicTests extends AnyFreeSpec with Matchers with Testing:
       """asdf
         |
         |zxcv""".stripMargin,
-    ) shouldBe "[\"asdf\", \"\n\", \"\n\", \"zxcv\"]"
+    ) shouldBe
+      """asdf
+        |
+        |zxcv""".stripMargin
   }

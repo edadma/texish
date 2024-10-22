@@ -19,6 +19,7 @@ import pprint.pprintln
       new Command("verses", 1):
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -33,6 +34,8 @@ import pprint.pprintln
   val scopes = mutable.Stack[Map[String, Any]](Map.empty)
   val renderer =
     new Renderer:
+      val parser: Parser = parser
+
       val config: Map[String, Any] =
         Map(
           "today" -> "MMMM d, y",
@@ -42,6 +45,8 @@ import pprint.pprintln
       val context: Any = null
 
       def output(v: Any): Unit = println(display(v))
+
+      def group(vals: Seq[Any]): Any = vals.mkString
 
       def get(name: String): Any = scopes.top.getOrElse(name, UNDEFINED)
 

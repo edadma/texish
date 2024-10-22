@@ -10,6 +10,8 @@ trait Testing:
     val parser: Parser = new Parser(Nil, Nil, blanks = true)
     val renderer =
       new Renderer:
+        val parser: Parser = parser
+
         val config: Map[String, Any] =
           Map(
             "today" -> "MMMM d, y",
@@ -19,6 +21,8 @@ trait Testing:
         val context: Any = null
 
         def output(v: Any): Unit = new PrintStream(bytes, false).print(display(v))
+
+        def group(vals: Seq[Any]): Any = vals.mkString
 
         def get(name: String): Any = scopes.top.getOrElse(name, UNDEFINED)
 

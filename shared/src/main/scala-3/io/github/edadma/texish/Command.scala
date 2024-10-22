@@ -1,7 +1,8 @@
-//@
 package io.github.edadma.texish
 
 import io.github.edadma.char_reader.CharReader
+import io.github.edadma.cross_platform.readFile
+import pprint.pprintln
 
 import java.io.File
 import java.time.format.DateTimeFormatter
@@ -14,7 +15,7 @@ import scala.language.postfixOps
 import scala.util.matching.Regex
 
 abstract class Command(val name: String, val arity: Int, val eval: Boolean = true)
-    extends ((CharReader, Renderer, List[Any], Map[String, Any], Any) => Any) {
+    extends ((CharReader, Parser, Renderer, List[Any], Map[String, Any], Any) => Any) {
   override def toString = s"""Command: "$name""""
 }
 
@@ -54,6 +55,7 @@ object Command {
       new Command(" ", 0) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -63,6 +65,7 @@ object Command {
       new Command("*", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -77,6 +80,7 @@ object Command {
       new Command("+", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -96,6 +100,7 @@ object Command {
       new Command("-", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -110,6 +115,7 @@ object Command {
       new Command("/", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -124,6 +130,7 @@ object Command {
       new Command("/=", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -134,6 +141,7 @@ object Command {
       new Command("<", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -149,6 +157,7 @@ object Command {
       new Command("<=", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -164,6 +173,7 @@ object Command {
       new Command("=", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -174,6 +184,7 @@ object Command {
       new Command(">", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -189,6 +200,7 @@ object Command {
       new Command(">=", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -204,6 +216,7 @@ object Command {
       new Command("[]", 0) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -214,6 +227,7 @@ object Command {
       new Command("^", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -228,6 +242,7 @@ object Command {
       new Command("abs", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -242,6 +257,7 @@ object Command {
       new Command("append", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -257,6 +273,7 @@ object Command {
       new Command("ceil", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -271,6 +288,7 @@ object Command {
       new Command("contains", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -290,6 +308,7 @@ object Command {
       new Command("date", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -306,6 +325,7 @@ object Command {
       new Command("default", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -321,6 +341,7 @@ object Command {
       new Command("distinct", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -336,6 +357,7 @@ object Command {
       new Command("downcase", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -351,6 +373,7 @@ object Command {
       new Command("drop", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -369,6 +392,7 @@ object Command {
       new Command("escape", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -383,6 +407,7 @@ object Command {
       new Command("escapeFull", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -399,6 +424,7 @@ object Command {
 
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -427,6 +453,7 @@ object Command {
       new Command("filter", 2, false) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -440,6 +467,7 @@ object Command {
       new Command("floor", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -454,6 +482,7 @@ object Command {
       new Command("head", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -467,33 +496,53 @@ object Command {
             case Nil             => ???
           }
       },
-//      new Command("include", 1) { // todo: can't run under js
-//        val dir = new Const[String]
-//
-//        def apply(
-//            pos: CharReader,
-//            renderer: Renderer,
-//            args: List[Any],
-//            optional: Map[String, Any],
-//            context: Any,
-//        ): Any = {
-//          val file = new File(dir(renderer.config("include").toString), args.head.toString)
-//          val charset = optional get "charset" map (_.toString)
-//
-//          renderer.eval(
-//            renderer.parser.parse(
-//              util
-//                .Using(if (charset.isDefined) io.Source.fromFile(file) else io.Source.fromFile(file)(charset get))(
-//                  _.mkString,
-//                )
-//                .get,
-//            ),
-//          )
-//        }
-//      },
+      new Command("accent", 2) {
+        private val accents =
+          Map(
+            ("'", "e") -> "é",
+            ("'", "E") -> "É",
+            ("`", "e") -> "è",
+            ("`", "E") -> "È",
+            ("^", "e") -> "ê",
+            ("^", "E") -> "Ê",
+            ("\"", "e") -> "ë",
+            ("\"", "E") -> "Ë",
+            ("`", "a") -> "à",
+            ("`", "A") -> "À",
+            ("^", "a") -> "â",
+            ("^", "A") -> "Â",
+            ("\"", "u") -> "ü",
+            ("\"", "U") -> "Ü",
+            ("^", "u") -> "û",
+            ("^", "U") -> "Û",
+            ("\"", "i") -> "ï",
+            ("\"", "I") -> "Ï",
+            ("^", "i") -> "î",
+            ("^", "I") -> "Î",
+            ("c", "c") -> "ç",
+            ("c", "C") -> "Ç",
+          )
+
+        def apply(
+            pos: CharReader,
+            parser: Parser,
+            renderer: Renderer,
+            args: List[Any],
+            optional: Map[String, Any],
+            context: Any,
+        ): Any =
+          args match {
+            case List(accent: String, base: String) =>
+              accents get (accent, base) match
+                case Some(c) => c
+                case None    => problem(pos, s"accented character not found: $accent $base")
+            case _ => problem(pos, "expected <accent> <base>")
+          }
+      },
       new Command("isEmpty", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -510,6 +559,7 @@ object Command {
       new Command("join", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -526,6 +576,7 @@ object Command {
       new Command("last", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -542,6 +593,7 @@ object Command {
       new Command("lit", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -552,6 +604,7 @@ object Command {
       new Command("map", 2, false) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -567,6 +620,7 @@ object Command {
       new Command("max", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -583,6 +637,7 @@ object Command {
       new Command("min", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -599,6 +654,7 @@ object Command {
       new Command("negate", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -613,6 +669,7 @@ object Command {
       new Command("nil", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -625,6 +682,7 @@ object Command {
       new Command("nonEmpty", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -641,6 +699,7 @@ object Command {
       new Command("normalize", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -651,6 +710,7 @@ object Command {
       new Command("now", 0) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -661,6 +721,7 @@ object Command {
       new Command("range", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -677,6 +738,7 @@ object Command {
       new Command("rem", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -693,6 +755,7 @@ object Command {
       new Command("remove", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -709,6 +772,7 @@ object Command {
       new Command("removeFirst", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -725,6 +789,7 @@ object Command {
       new Command("replace", 3) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -742,6 +807,7 @@ object Command {
       new Command("replaceFirst", 3) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -759,6 +825,7 @@ object Command {
       new Command("reverse", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -775,6 +842,7 @@ object Command {
       new Command("round", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -789,6 +857,7 @@ object Command {
       new Command("size", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -806,6 +875,7 @@ object Command {
       new Command("slice", 3) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -828,6 +898,7 @@ object Command {
       new Command("sort", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -857,6 +928,7 @@ object Command {
       new Command("split", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -873,6 +945,7 @@ object Command {
       new Command("tail", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -889,6 +962,7 @@ object Command {
       new Command("take", 2) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -907,6 +981,7 @@ object Command {
       new Command("timestamp", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -924,6 +999,7 @@ object Command {
       new Command("toInteger", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -940,6 +1016,7 @@ object Command {
       new Command("toNumber", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -956,6 +1033,7 @@ object Command {
       new Command("toString", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -968,6 +1046,7 @@ object Command {
 
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -978,6 +1057,7 @@ object Command {
       new Command("trim", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -992,6 +1072,7 @@ object Command {
       new Command("u", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -1007,6 +1088,7 @@ object Command {
       new Command("upcase", 1) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],
@@ -1021,6 +1103,7 @@ object Command {
       new Command("{}", 0) {
         def apply(
             pos: CharReader,
+            parser: Parser,
             renderer: Renderer,
             args: List[Any],
             optional: Map[String, Any],

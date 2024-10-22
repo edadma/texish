@@ -43,8 +43,10 @@ class Parser(
 
   val macros = new mutable.HashMap[String, Macro]
 
-  def parse(src: String): AST =
-    parseStatements(CharReader.fromString(src)) match {
+  def parse(src: String): AST = parse(CharReader.fromString(src))
+
+  def parse(src: CharReader): AST =
+    parseStatements(src) match {
       case (r1, b) if r1 eoi => b
       case (r1, _)           => problem(r1, s"expected end of input: $r1")
     }
@@ -125,6 +127,11 @@ class Parser(
         rawBeginDelim = b
         rawEndDelim = e
         (r3, null)
+      case Some((r1, "include")) =>
+        val (r2, path) = parseStringArgument(r1)
+
+        parse(CharReader.fromFile(path))
+        (r2, null)
       case Some((r1, "def")) =>
         val (r2, v) = parseStringArguments(r1)
 
