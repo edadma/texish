@@ -9,6 +9,7 @@ import scala.language.postfixOps
 
 abstract class Typesetter:
 
+  var output: String           = "out"
   var debug: Boolean           = false
   var currentFont: Font        = uninitialized
   var currentColor: Color      = Color("black")
@@ -54,7 +55,7 @@ abstract class Typesetter:
 
   def loadFont(path: String): Any
 
-  def getTextExtents(text: String): TextExtents
+  def getTextExtents(text: String, font: Any): TextExtents
 
   def makeFont(font: Any, size: Double): Any
 

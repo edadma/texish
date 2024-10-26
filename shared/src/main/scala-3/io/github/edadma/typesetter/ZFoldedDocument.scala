@@ -5,20 +5,20 @@ class ZFoldedDocument extends Document:
   val vfolds = 2
 
   def init(): Unit =
-    val LETTER_WIDTH = 8.5 * t.in
-    val LETTER_HEIGHT = 11 * t.in
+    val LETTER_WIDTH       = 8.5 * t.in
+    val LETTER_HEIGHT      = 11 * t.in
     val LETTER_WIDTH_THIRD = LETTER_WIDTH / 3
     val LETTER_HEIGHT_HALF = LETTER_HEIGHT / 2
-    val MARGIN = 2 * t.mm
+    val MARGIN             = 2 * t.mm
 
     t.set(
       Seq(
-        "paperwidth" -> LETTER_WIDTH,
+        "paperwidth"  -> LETTER_WIDTH,
         "paperheight" -> LETTER_HEIGHT,
 //        "pagewidth" -> 400,
 //        "pageheight" -> 400,
-        "hsize" -> (LETTER_WIDTH_THIRD - 2 * MARGIN),
-        "vsize" -> (LETTER_HEIGHT_HALF - 2 * MARGIN),
+        "hsize"   -> (LETTER_WIDTH_THIRD - 2 * MARGIN),
+        "vsize"   -> (LETTER_HEIGHT_HALF - 2 * MARGIN),
         "hoffset" -> MARGIN,
         "voffset" -> MARGIN,
       ),
@@ -27,15 +27,15 @@ class ZFoldedDocument extends Document:
   def layout(b: Box): Box = b
 
   infix def add(box: Box): Unit =
-    val folds = vfolds * hfolds
-    val fold = page % folds
-    val hfold = page % hfolds
-    val vfold = page / hfolds
-    val width = t.getNumber("paperwidth") / hfolds
+    val folds  = vfolds * hfolds
+    val fold   = page % folds
+    val hfold  = page % hfolds
+    val vfold  = page / hfolds
+    val width  = t.getNumber("paperwidth") / hfolds
     val height = t.getNumber("paperheight") / vfolds
 
     if fold == 0 then
-      printedPages += t.createPageTarget(t.getNumber("paperwidth"), t.getNumber("paperheight"))
+      printedPages += t.createPageTarget(ts.output, t.getNumber("paperwidth"), t.getNumber("paperheight"))
       eject = true
 
     t.draw(

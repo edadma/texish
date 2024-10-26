@@ -56,7 +56,9 @@ class CairoPDFTypesetter extends Typesetter:
       0,
     )
 
-  def getTextExtents(text: String): TextExtents = ctx.textExtents(text)
+  def getTextExtents(text: String, font: Any): TextExtents =
+    ctx.setFontFace(font.asInstanceOf[FontFace])
+    ctx.textExtents(text)
 
   def makeFont(font: Any, size: Double): Any =
     ctx.setFontFace(font.asInstanceOf[FontFace])
@@ -64,12 +66,9 @@ class CairoPDFTypesetter extends Typesetter:
 
   def charWidth(font: Any, c: Char): Double =
     setFont(font)
-    g.getFontMetrics.charWidth(c)
+    ctx.textExtents(c.toString).width
 
-  def loadImage(path: String): (Any, Int, Int) =
-    val image = ImageIO.read(new File(path))
+  def loadImage(path: String): (Any, Int, Int) = (null, 0, 0)
 
-    (image, image.getWidth, image.getHeight)
-
-  def drawImage(image: Any, x: Double, y: Double): Unit =
-    g.drawImage(image.asInstanceOf[BufferedImage], x.toInt, y.toInt, null)
+  def drawImage(image: Any, x: Double, y: Double): Unit = ()
+//    g.drawImage(image.asInstanceOf[BufferedImage], x.toInt, y.toInt, null)

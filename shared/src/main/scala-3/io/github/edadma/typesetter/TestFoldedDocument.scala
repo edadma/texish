@@ -6,25 +6,25 @@ class TestFoldedDocument extends Document:
   def init(): Unit =
     t.set(
       Seq(
-        "paperwidth" -> 400,
+        "paperwidth"  -> 400,
         "paperheight" -> 400,
-        "pagewidth" -> 400,
-        "pageheight" -> 400,
-        "hsize" -> 300,
-        "vsize" -> 300,
-        "hoffset" -> 50,
-        "voffset" -> 50,
+        "pagewidth"   -> 400,
+        "pageheight"  -> 400,
+        "hsize"       -> 300,
+        "vsize"       -> 300,
+        "hoffset"     -> 50,
+        "voffset"     -> 50,
       ),
     )
 
   def layout(b: Box): Box = b
 
   infix def add(box: Box): Unit =
-    val fold = page % folds
+    val fold  = page % folds
     val width = t.getNumber("paperwidth") / folds
 
     if fold == 0 then
-      printedPages += t.createPageTarget(t.getNumber("paperwidth"), t.getNumber("paperheight"))
+      printedPages += t.createPageTarget(ts.output, t.getNumber("paperwidth"), t.getNumber("paperheight"))
       eject = true
 
     t.draw(

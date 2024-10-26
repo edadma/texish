@@ -6,8 +6,8 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color)
   val TextExtents(_, yBearing, width, heightValue, xAdvance, _) = t.getTextExtents(text, font.renderFont)
 
   override val height: Double = heightValue
-  val ascent: Double = -yBearing // Ascent is the negative yBearing
-  val descent: Double = height - ascent // Descent is height minus ascent
+  val ascent: Double          = -yBearing       // Ascent is the negative yBearing
+  val descent: Double         = height - ascent // Descent is height minus ascent
 
   def draw(t: Typesetter, x: Double, y: Double): Unit =
     box(t, x, y, "purple")
