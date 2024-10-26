@@ -58,7 +58,9 @@ class CairoPDFTypesetter extends Typesetter:
 
   def getTextExtents(text: String): TextExtents = ctx.textExtents(text)
 
-  def makeFont(font: Any, size: Double): Any = font.asInstanceOf[JFont].deriveFont(size.toFloat)
+  def makeFont(font: Any, size: Double): Any =
+    ctx.setFontFace(font.asInstanceOf[FontFace])
+    ctx.setFontSize(size)
 
   def charWidth(font: Any, c: Char): Double =
     setFont(font)
