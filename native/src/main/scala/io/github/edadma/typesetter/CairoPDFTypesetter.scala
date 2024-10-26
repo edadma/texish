@@ -33,16 +33,17 @@ class CairoPDFTypesetter extends Typesetter:
 
   def setFont(font: Any): Unit = ctx.setFontFace(font.asInstanceOf[FontFace])
 
-  def setColor(color: Color): Unit =
-    g.setColor(new java.awt.Color(color.redInt, color.greenInt, color.blueInt, color.alphaInt))
+  def setColor(color: Color): Unit = ctx.setSourceRGBA(color.red, color.green, color.blue, color.alpha)
 
-  def drawString(text: String, x: Double, y: Double): Unit = g.drawString(text, x.toFloat, y.toFloat)
-  def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
-    g.drawLine(x1.toInt, y1.toInt, x2.toInt, y2.toInt)
-  def drawRect(x: Double, y: Double, width: Double, height: Double): Unit =
-    g.drawRect(x.toInt, y.toInt, width.toInt, height.toInt)
-  def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
-    g.fillRect(x.toInt, y.toInt, width.toInt, height.toInt)
+  def drawString(text: String, x: Double, y: Double): Unit =
+    ctx.moveTo(x, y)
+    ctx.showText(text)
+
+  def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = ()
+
+  def drawRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
+
+  def fillRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
 
   def loadFont(path: String): JFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
 
