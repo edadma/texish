@@ -56,24 +56,7 @@ class CairoPDFTypesetter extends Typesetter:
       0,
     )
 
-  def getTextExtents(text: String, font: Any): TextExtents =
-    val layout = new TextLayout(text, font.asInstanceOf[JFont], frc)
-    val bounds = layout.getBounds
-
-    val ascent = -bounds.getY
-//    val descent = layout.getDescent
-    val width   = bounds.getWidth
-    val height  = bounds.getHeight
-    val advance = layout.getAdvance
-
-    TextExtents(
-      xBearing = bounds.getX,
-      yBearing = -ascent, // In Graphics2D, the ascent is negative yBearing (above the baseline)
-      width = width,
-      height = height,
-      xAdvance = advance,
-      yAdvance = 0, // In horizontal typesetting, yAdvance is 0
-    )
+  def getTextExtents(text: String): TextExtents = ctx.textExtents(text)
 
   def makeFont(font: Any, size: Double): Any = font.asInstanceOf[JFont].deriveFont(size.toFloat)
 

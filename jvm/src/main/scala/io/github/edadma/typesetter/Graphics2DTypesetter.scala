@@ -61,8 +61,8 @@ class Graphics2DTypesetter extends Typesetter:
 
   def loadFont(path: String): JFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
 
-  def getTextExtents(text: String, font: Any): TextExtents =
-    val layout = new TextLayout(text, font.asInstanceOf[JFont], frc)
+  def getTextExtents(text: String): TextExtents =
+    val layout = new TextLayout(text, currentFont.renderFont.asInstanceOf[JFont], frc)
     val bounds = layout.getBounds
 
     val ascent = -bounds.getY

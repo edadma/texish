@@ -54,7 +54,7 @@ abstract class Typesetter:
 
   def loadFont(path: String): Any
 
-  def getTextExtents(text: String, font: Any): TextExtents
+  def getTextExtents(text: String): TextExtents
 
   def makeFont(font: Any, size: Double): Any
 
