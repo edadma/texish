@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.freetype.initFreeType
+import io.github.edadma.freetype.{initFreeType, Library}
 import io.github.edadma.libcairo.{
   Context,
   FontFace,
@@ -17,10 +17,12 @@ import scala.compiletime.uninitialized
 
 class CairoPDFTypesetter extends Typesetter:
 
-  private var surface: Surface = uninitialized
-  private var ctx: Context     = uninitialized
+  private var surface: Surface  = uninitialized
+  private var ctx: Context      = uninitialized
+  private var freetype: Library = uninitialized
 
-  def initTarget(): Unit = ()
+  def initTarget(): Unit =
+    freetype = initFreeType.getOrElse(sys.error("error initializing FreeType"))
 
   def createPageTarget(path: String, width: Double, height: Double): Any =
     if surface eq null then
@@ -45,7 +47,14 @@ class CairoPDFTypesetter extends Typesetter:
 
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
 
-  def loadFont(path: String): JFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
+  def loadFont(path: String): FontFace =
+    fontFaceCreateForFTFace(
+      freetype
+        .newFace(path, 0)
+        .getOrElse(sys.error(s"error loading face: $path"))
+        .faceptr,
+      0,
+    )
 
   def getTextExtents(text: String, font: Any): TextExtents =
     val layout = new TextLayout(text, font.asInstanceOf[JFont], frc)
