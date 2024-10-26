@@ -8,7 +8,7 @@ import io.github.edadma.libcairo.{
   FontWeight,
   Format,
   Surface,
-  TextExtents,
+  TextExtents => CairoTextExtents,
   fontFaceCreateForFTFace,
   imageSurfaceCreate,
   pdfSurfaceCreate,
@@ -58,7 +58,10 @@ class CairoPDFTypesetter extends Typesetter:
 
   def getTextExtents(text: String, font: Any): TextExtents =
     ctx.setFontFace(font.asInstanceOf[FontFace])
-    ctx.textExtents(text)
+
+    val CairoTextExtents(a, b, c, d, e, f) = ctx.textExtents(text)
+
+    TextExtents(a, b, c, d, e, f)
 
   def makeFont(font: Any, size: Double): Any =
     ctx.setFontFace(font.asInstanceOf[FontFace])
