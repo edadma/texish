@@ -1,18 +1,20 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.freetype.{initFreeType, Library}
+import io.github.edadma.freetype.{Library, initFreeType}
 import io.github.edadma.libcairo.{
   Context,
   FontFace,
   FontSlant,
   FontWeight,
   Format,
+  ScaledFont,
   Surface,
-  TextExtents => CairoTextExtents,
   fontFaceCreateForFTFace,
   imageSurfaceCreate,
   pdfSurfaceCreate,
+  TextExtents as CairoTextExtents,
 }
+
 import scala.compiletime.uninitialized
 
 class CairoPDFTypesetter extends Typesetter:
@@ -33,7 +35,7 @@ class CairoPDFTypesetter extends Typesetter:
 
   def getDPI: Double = 72
 
-  def setFont(font: Any): Unit = ctx.setFontFace(font.asInstanceOf[FontFace])
+  def setFont(font: Any): Unit = ctx.setScaledFont(font.asInstanceOf[ScaledFont])
 
   def setColor(color: Color): Unit = ctx.setSourceRGBA(color.red, color.green, color.blue, color.alpha)
 
@@ -57,7 +59,7 @@ class CairoPDFTypesetter extends Typesetter:
     )
 
   def getTextExtents(text: String, font: Any): TextExtents =
-    ctx.setFontFace(font.asInstanceOf[FontFace])
+    ctx.setScaledFont(font.asInstanceOf[ScaledFont])
 
     val CairoTextExtents(a, b, c, d, e, f) = ctx.textExtents(text)
 
@@ -66,6 +68,7 @@ class CairoPDFTypesetter extends Typesetter:
   def makeFont(font: Any, size: Double): Any =
     ctx.setFontFace(font.asInstanceOf[FontFace])
     ctx.setFontSize(size)
+    ctx.getScaledFont
 
   def charWidth(font: Any, c: Char): Double =
     setFont(font)
