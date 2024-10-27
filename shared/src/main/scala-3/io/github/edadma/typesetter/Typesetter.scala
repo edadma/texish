@@ -9,7 +9,8 @@ import scala.language.postfixOps
 
 abstract class Typesetter:
 
-  var output: String           = "out"
+  val output: String
+
   var debug: Boolean           = false
   var currentFont: Font        = uninitialized
   var currentColor: Color      = Color("black")
@@ -33,7 +34,7 @@ abstract class Typesetter:
 
   def initTarget(): Unit
 
-  def createPageTarget(path: String, width: Double, height: Double): Any
+  def createPageTarget(width: Double, height: Double): Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
 
@@ -334,9 +335,7 @@ abstract class Typesetter:
   def selectFont(typeface: String, size: Double, style: String*): Font = selectFont(typeface, size, style.toSet)
 
   def selectFont(typeface: String, size: Double, styleSet: Set[String]): Font =
-    println(11)
     val f = makeFont(typeface, size, styleSet)
-    println(22)
 
     if f != currentFont then
       if scopes.size > 1 && !scopes(1).contains("font") then scopes(1) += ("font" -> currentFont)
@@ -357,7 +356,6 @@ abstract class Typesetter:
               s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded",
             ),
           )
-        println((typeface, size, styleSet))
         val derivedFont = makeFont(font, size)
 
         Font(

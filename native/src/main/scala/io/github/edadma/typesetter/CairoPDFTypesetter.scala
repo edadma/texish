@@ -17,19 +17,18 @@ import io.github.edadma.libcairo.{
 
 import scala.compiletime.uninitialized
 
-class CairoPDFTypesetter extends Typesetter:
+class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   private var surface: Surface  = uninitialized
   private var ctx: Context      = uninitialized
   private var freetype: Library = uninitialized
 
   def initTarget(): Unit =
-    println(output)
     freetype = initFreeType.getOrElse(sys.error("error initializing FreeType"))
     surface = pdfSurfaceCreate(output, 8.5 * in, 11 * in)
     ctx = surface.create
 
-  def createPageTarget(path: String, width: Double, height: Double): Any = ()
+  def createPageTarget(width: Double, height: Double): Any = ()
 
   def ejectPageTarget(): Unit = ctx.showPage()
 
@@ -66,7 +65,6 @@ class CairoPDFTypesetter extends Typesetter:
     TextExtents(a, b, c, d, e, f)
 
   def makeFont(font: Any, size: Double): Any =
-    println("makeFont")
     ctx.setFontFace(font.asInstanceOf[FontFace])
     ctx.setFontSize(size)
     ctx.getScaledFont

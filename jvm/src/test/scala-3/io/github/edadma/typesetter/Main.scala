@@ -60,9 +60,9 @@ object Main extends SimpleSwingApplication:
 //          .addFil()
 //          .done()
 
-        t add "[qsdf"
-        t.paragraph()
-        t add "[qhTwer"
+        t add "asdf"
+        t add " "
+        t add "zxcv"
         t.paragraph()
         t.fil
         t.end()
