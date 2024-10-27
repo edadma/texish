@@ -252,7 +252,13 @@ abstract class Typesetter:
 
   infix def getNumber(name: String): Double = get(name).asInstanceOf[Double]
 
-  def set(name: String, value: Any): Unit = scopes(0) += (name -> value)
+  def set(name: String, value: Any): Unit =
+    val v =
+      value match
+        case n: Number => n.doubleValue
+        case _         => value
+
+    scopes(0) += (name -> v)
 
   def set(pairs: Seq[(String, Any)]): Unit =
     scopes(0) ++=
