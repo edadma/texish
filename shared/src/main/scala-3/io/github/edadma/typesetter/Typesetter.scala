@@ -334,7 +334,9 @@ abstract class Typesetter:
   def selectFont(typeface: String, size: Double, style: String*): Font = selectFont(typeface, size, style.toSet)
 
   def selectFont(typeface: String, size: Double, styleSet: Set[String]): Font =
+    println(11)
     val f = makeFont(typeface, size, styleSet)
+    println(22)
 
     if f != currentFont then
       if scopes.size > 1 && !scopes(1).contains("font") then scopes(1) += ("font" -> currentFont)
@@ -355,6 +357,7 @@ abstract class Typesetter:
               s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded",
             ),
           )
+        println((typeface, size, styleSet))
         val derivedFont = makeFont(font, size)
 
         Font(
