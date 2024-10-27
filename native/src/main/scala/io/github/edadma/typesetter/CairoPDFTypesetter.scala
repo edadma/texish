@@ -75,3 +75,7 @@ class CairoPDFTypesetter extends Typesetter:
 
   def drawImage(image: Any, x: Double, y: Double): Unit = ()
 //    g.drawImage(image.asInstanceOf[BufferedImage], x.toInt, y.toInt, null)
+
+  def destroy(): Unit =
+    ctx.destroy()
+    surface.destroy()

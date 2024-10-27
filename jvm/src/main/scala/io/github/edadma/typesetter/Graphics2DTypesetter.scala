@@ -102,3 +102,5 @@ class Graphics2DTypesetter extends Typesetter:
 //    println(lb.getWidth)
 //    println(vb.getWidth)
 //    TextExtents(lb.getX, vb.getY, vb.getWidth, vb.getHeight, lb.getWidth, 0)
+
+  def destroy(): Unit = ()

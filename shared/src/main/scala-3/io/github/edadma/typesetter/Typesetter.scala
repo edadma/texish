@@ -65,6 +65,8 @@ abstract class Typesetter:
 
   def drawImage(image: Any, x: Double, y: Double): Unit
 
+  def destroy(): Unit
+
   def setDocument(d: Document): Unit = {
     document = d
     modeStack(modeStack.length - 1) = d
