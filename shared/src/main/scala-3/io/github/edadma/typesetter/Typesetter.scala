@@ -9,7 +9,8 @@ import scala.language.postfixOps
 
 abstract class Typesetter:
 
-  var output: String           = "out"
+  val output: String
+
   var debug: Boolean           = false
   var currentFont: Font        = uninitialized
   var currentColor: Color      = Color("black")
@@ -33,7 +34,7 @@ abstract class Typesetter:
 
   def initTarget(): Unit
 
-  def createPageTarget(path: String, width: Double, height: Double): Any
+  def createPageTarget(width: Double, height: Double): Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
 
@@ -251,7 +252,13 @@ abstract class Typesetter:
 
   infix def getNumber(name: String): Double = get(name).asInstanceOf[Double]
 
-  def set(name: String, value: Any): Unit = scopes(0) += (name -> value)
+  def set(name: String, value: Any): Unit =
+    val v =
+      value match
+        case n: Number => n.doubleValue
+        case _         => value
+
+    scopes(0) += (name -> v)
 
   def set(pairs: Seq[(String, Any)]): Unit =
     scopes(0) ++=

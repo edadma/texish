@@ -1,13 +1,16 @@
 package io.github.edadma.typesetter
 
 @main def run(): Unit =
-  val t = CairoPDFTypesetter()
+  val t = CairoPDFTypesetter("a.pdf")
 
-  t.output = "a.pdf"
-  println(0)
-//  t add "asdf"
-//  println(1)
-//  t.end()
-//  println(2)
-//  t.destroy()
-//  println(3)
+  t.start()
+  t add "[ppasdf"
+
+  for _ <- 1 to 20 do
+    t add " "
+    t add "[hTz[[["
+
+  t.paragraph()
+  t.fil
+  t.end()
+  t.destroy()

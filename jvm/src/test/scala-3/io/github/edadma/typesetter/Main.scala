@@ -18,7 +18,6 @@ object Main extends SimpleSwingApplication:
         val t =
           new Graphics2DTypesetter():
             setDocument(new SimpleDocument)
-            set("hsize", 400)
 //            debug = true
 
 //        t.hbox(t.getNumber("hsize"))
@@ -60,9 +59,13 @@ object Main extends SimpleSwingApplication:
 //          .addFil()
 //          .done()
 
-        t add "[qsdf"
-        t.paragraph()
-        t add "[qhTwer"
+        t.start()
+        t add "asdf"
+
+        for _ <- 1 to 20 do
+          t add " "
+          t add "zxcv"
+
         t.paragraph()
         t.fil
         t.end()

@@ -9,6 +9,8 @@ import scala.compiletime.uninitialized
 
 class Graphics2DTypesetter extends Typesetter:
 
+  val output: String = null
+
   private var page: BufferedImage    = uninitialized
   private var g: Graphics2D          = uninitialized
   private var frc: FontRenderContext = uninitialized
@@ -21,7 +23,7 @@ class Graphics2DTypesetter extends Typesetter:
     g = page.createGraphics()
     frc = g.getFontRenderContext
 
-  def createPageTarget(path: String, width: Double, height: Double): Any =
+  def createPageTarget(width: Double, height: Double): Any =
     page = new BufferedImage(
       width.toInt,
       height.toInt,

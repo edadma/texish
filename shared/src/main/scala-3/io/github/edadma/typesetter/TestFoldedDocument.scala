@@ -24,7 +24,7 @@ class TestFoldedDocument extends Document:
     val width = t.getNumber("paperwidth") / folds
 
     if fold == 0 then
-      printedPages += t.createPageTarget(ts.output, t.getNumber("paperwidth"), t.getNumber("paperheight"))
+      printedPages += t.createPageTarget(t.getNumber("paperwidth"), t.getNumber("paperheight"))
       eject = true
 
     t.draw(

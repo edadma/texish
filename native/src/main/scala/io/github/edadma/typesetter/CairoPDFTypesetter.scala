@@ -1,21 +1,23 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.freetype.{initFreeType, Library}
+import io.github.edadma.freetype.{Library, initFreeType}
 import io.github.edadma.libcairo.{
   Context,
   FontFace,
   FontSlant,
   FontWeight,
   Format,
+  ScaledFont,
   Surface,
-  TextExtents => CairoTextExtents,
   fontFaceCreateForFTFace,
   imageSurfaceCreate,
   pdfSurfaceCreate,
+  TextExtents as CairoTextExtents,
 }
+
 import scala.compiletime.uninitialized
 
-class CairoPDFTypesetter extends Typesetter:
+class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   private var surface: Surface  = uninitialized
   private var ctx: Context      = uninitialized
@@ -23,17 +25,16 @@ class CairoPDFTypesetter extends Typesetter:
 
   def initTarget(): Unit =
     freetype = initFreeType.getOrElse(sys.error("error initializing FreeType"))
+    surface = pdfSurfaceCreate(output, 8.5 * in, 11 * in)
+    ctx = surface.create
 
-  def createPageTarget(path: String, width: Double, height: Double): Any =
-    if surface eq null then
-      surface = pdfSurfaceCreate(path, width, height)
-      ctx = surface.create
+  def createPageTarget(width: Double, height: Double): Any = ()
 
   def ejectPageTarget(): Unit = ctx.showPage()
 
   def getDPI: Double = 72
 
-  def setFont(font: Any): Unit = ctx.setFontFace(font.asInstanceOf[FontFace])
+  def setFont(font: Any): Unit = ctx.setScaledFont(font.asInstanceOf[ScaledFont])
 
   def setColor(color: Color): Unit = ctx.setSourceRGBA(color.red, color.green, color.blue, color.alpha)
 
@@ -57,7 +58,7 @@ class CairoPDFTypesetter extends Typesetter:
     )
 
   def getTextExtents(text: String, font: Any): TextExtents =
-    ctx.setFontFace(font.asInstanceOf[FontFace])
+    setFont(font)
 
     val CairoTextExtents(a, b, c, d, e, f) = ctx.textExtents(text)
 
@@ -66,10 +67,11 @@ class CairoPDFTypesetter extends Typesetter:
   def makeFont(font: Any, size: Double): Any =
     ctx.setFontFace(font.asInstanceOf[FontFace])
     ctx.setFontSize(size)
+    ctx.getScaledFont
 
   def charWidth(font: Any, c: Char): Double =
     setFont(font)
-    ctx.textExtents(c.toString).width
+    ctx.textExtents(c.toString).xAdvance
 
   def loadImage(path: String): (Any, Int, Int) = (null, 0, 0)
 
