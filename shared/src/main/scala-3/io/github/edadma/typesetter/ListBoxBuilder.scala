@@ -7,7 +7,7 @@ import pprint.pprintln
 abstract class ListBoxBuilder extends Builder:
   protected val measure: Box => Double
   protected val skip: Double => Box
-  protected val toSize: Double | Null
+  protected var toSize: Double | Null
   protected val wrap: Seq[Box] => Box
 
   def size: Double = boxes map measure sum
@@ -26,7 +26,7 @@ abstract class ListBoxBuilder extends Builder:
   protected def buildTo(size: Double): Seq[Box] =
     // Step 1: Calculate the natural size of all boxes
     val naturalSize = boxes map measure sum
-    val delta = size - naturalSize
+    val delta       = size - naturalSize
 
     // Step 2: Collect all Glue with their indices
     val glueBoxesWithIndices = boxes.zipWithIndex.collect { case (g: Glue, idx) =>
@@ -57,7 +57,7 @@ abstract class ListBoxBuilder extends Builder:
         val flexPerUnit = remaining / totalFlex
         glueBoxes.foldLeft(remaining) { case (rem, (g, idx)) =>
           val adjustment = adjust(g, flexPerUnit)
-          val newSize = measure(g) + adjustment
+          val newSize    = measure(g) + adjustment
           boxes(idx) = skip(newSize)
           rem - math.abs(adjustment)
         }
@@ -65,7 +65,7 @@ abstract class ListBoxBuilder extends Builder:
     }
 
     // Step 4: Distribute the delta
-    var remaining = delta
+    var remaining    = delta
     var currentOrder = maxOrder
 
     while ((remaining > 1e-6 || remaining < -1e-6) && currentOrder >= 0) {
