@@ -58,7 +58,7 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
     )
 
   def getTextExtents(text: String, font: Any): TextExtents =
-    ctx.setScaledFont(font.asInstanceOf[ScaledFont])
+    setFont(font)
 
     val CairoTextExtents(a, b, c, d, e, f) = ctx.textExtents(text)
 
@@ -71,7 +71,7 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   def charWidth(font: Any, c: Char): Double =
     setFont(font)
-    ctx.textExtents(c.toString).width
+    ctx.textExtents(c.toString).xAdvance
 
   def loadImage(path: String): (Any, Int, Int) = (null, 0, 0)
 
