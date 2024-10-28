@@ -61,8 +61,11 @@ object Main extends SimpleSwingApplication:
 
         t.start()
         t add "asdf"
-        t add " "
-        t add "zxcv"
+
+        for _ <- 1 to 20 do
+          t add " "
+          t add "zxcv"
+
         t.paragraph()
         t.fil
         t.end()
