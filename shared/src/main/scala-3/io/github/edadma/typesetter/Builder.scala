@@ -30,3 +30,5 @@ trait Builder extends Mode:
   def isEmpty: Boolean = boxes.isEmpty
 
   infix def add(b: Box): Unit = boxes += b
+
+  infix def addSeq(bs: scala.collection.Seq[Box]): Unit = boxes ++= bs

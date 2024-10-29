@@ -3,33 +3,37 @@ package io.github.edadma.typesetter
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 class HAlignMode(val t: Typesetter) extends Mode:
-  private var state: "FORMAT" | "CONTENT" = "FORMAT"
+  private var state: "FORMAT_LEFT" | "FORMAT_RIGHT" | "CONTENT" = "FORMAT_LEFT"
 
-  case class Cell(var format: Boolean, material: ListBuffer[Box])
+  case class Cell(var format: Boolean, material: HBoxBuilder)
+  case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
 
-  val format             = new ArrayBuffer[ListBuffer[Box]]
-  var formatColumns: Int = 0
-  val content            = new ArrayBuffer[ArrayBuffer[Cell]]
-  var lineColumns: Int   = 0
+  val format       = new ArrayBuffer[Format]
+  val content      = new ArrayBuffer[ArrayBuffer[Cell]]
+  var columns: Int = 0
 
   def newColumn(): Unit =
     state match
-      case "FORMAT" =>
-        format += new ListBuffer
-        formatColumns += 1
+      case "FORMAT_LEFT" => sys.error("missing # in column format")
+      case "FORMAT_RIGHT" =>
+        format += Format(new ListBuffer, new ListBuffer)
+        state = "FORMAT_LEFT"
       case "CONTENT" =>
-        content.last += Cell(false, new ListBuffer)
-        lineColumns += 1
-        if lineColumns > formatColumns then sys.error("too many columns")
+        if columns > 0 then content.last.last.material addSeq format(columns).right
+        content.last += Cell(false, new HBoxBuilder(t))
+        columns += 1
+        if columns > format.length then sys.error("too many columns")
+        content.last.last.material addSeq format(columns).left
 
   def newLine(): Unit =
     state match
-      case "FORMAT" =>
-        if formatColumns == 0 then sys.error("need at least one column")
+      case "FORMAT_LEFT" => sys.error("missing # in column format")
+      case "FORMAT_RIGHT" =>
+        if format.isEmpty then sys.error("need at least one column")
         state = "CONTENT"
       case "CONTENT" =>
-        if lineColumns < formatColumns then sys.error("too few columns")
-        lineColumns = 0
+        if columns < format.length then sys.error("too few columns")
+        columns = 0
 
     content += new ArrayBuffer
     newColumn()
@@ -38,8 +42,9 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   def add(box: Box): Unit =
     state match
-      case "FORMAT"  => format.last += box
-      case "CONTENT" => content.last.last.material += box
+      case "FORMAT_LEFT"  => format.last.left += box
+      case "FORMAT_RIGHT" => format.last.right += box
+      case "CONTENT"      => content.last.last.material add box
 
   override def done(): Unit =
     val hboxes = new ArrayBuffer[ArrayBuffer[HBoxBuilder]]
