@@ -46,7 +46,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         state = "CONTENT"
       case "CONTENT" =>
         if column < format.length then sys.error("too few columns")
-        if content.last.last.format then content.last.last.material addSeq format(column).right
+        if content.last.last.format then content.last.last.material addSeq format(column - 1).right
         column = 0
 
     content += new ArrayBuffer

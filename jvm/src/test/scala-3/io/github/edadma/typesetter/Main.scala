@@ -70,7 +70,7 @@ object Main extends SimpleSwingApplication:
 //        t.fil
 
         t.halign.add("(").op("placeholder").add(")").op("newColumn").add("[").op("placeholder").add("]").op("newLine")
-          .add("asdf").op("newColumn").add("zxcv")
+          .add("asdf").op("newColumn").add("zxcv").op("newLine").add("asdf1").op("newColumn").add("zxcv1")
         t.end()
         g.drawImage(t.document.printedPages.head.asInstanceOf[BufferedImage], null, 0, 0)
       }
