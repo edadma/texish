@@ -18,6 +18,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "newColumn"   => newColumn()
       case "newLine"     => newLine()
       case "placeholder" => placeholder()
+      case _             => sys.error(s"illegal operation '$operation'")
 
   def newColumn(): Unit =
     state match
