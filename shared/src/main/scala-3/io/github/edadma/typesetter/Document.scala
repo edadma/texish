@@ -5,13 +5,11 @@ import scala.compiletime.uninitialized
 
 abstract class Document extends Mode:
   private[typesetter] var ts: Typesetter = uninitialized
-  val printedPages = new ArrayBuffer[Any]
-  var page: Int = 0
-  var eject: Boolean = false
+  val printedPages                       = new ArrayBuffer[Any]
+  var page: Int                          = 0
+  var eject: Boolean                     = false
 
   def t: Typesetter = ts
-
-  def init(): Unit
 
   def layout(b: Box): Box
 

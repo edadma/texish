@@ -7,13 +7,16 @@ trait Mode:
 
   infix def add(box: Box): Unit
 
-  def result: Box
+  def result: Box | Null
 
   def op(operation: String): Unit = sys.error(s"illegal operation '$operation'")
 
   def done(): Unit =
     pop
-    t.add(result)
+
+    val res = result
+
+    if res ne null then t.add(result)
 
   def pop: Mode = t.modeStack.pop
 

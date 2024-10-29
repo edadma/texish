@@ -3,7 +3,7 @@ package io.github.edadma.typesetter
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 class HAlignMode(val t: Typesetter) extends Mode:
-  private var state: "FORMAT_LEFT" | "FORMAT_RIGHT" | "CONTENT" = "FORMAT_LEFT"
+  private var state: "START" | "FORMAT_LEFT" | "FORMAT_RIGHT" | "CONTENT" = "START"
 
   case class Cell(var format: Boolean, material: HBoxBuilder)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
@@ -11,6 +11,8 @@ class HAlignMode(val t: Typesetter) extends Mode:
   val format       = new ArrayBuffer[Format]
   val content      = new ArrayBuffer[ArrayBuffer[Cell]]
   var columns: Int = 0
+
+  newColumn()
 
   override def op(operation: String): Unit =
     operation match
@@ -23,18 +25,19 @@ class HAlignMode(val t: Typesetter) extends Mode:
   def newColumn(): Unit =
     state match
       case "FORMAT_LEFT" => sys.error("missing # in column format")
-      case "FORMAT_RIGHT" =>
+      case "START" | "FORMAT_RIGHT" =>
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
       case "CONTENT" =>
-        if columns > 0 && content.last.last.format then content.last.last.material addSeq format(columns).right
+        if columns > 0 && content.last.last.format then content.last.last.material addSeq format(columns - 1).right
         content.last += Cell(false, new HBoxBuilder(t))
+        content.last.last.material addSeq format(columns).left
         columns += 1
         if columns > format.length then sys.error("too many columns")
-        content.last.last.material addSeq format(columns).left
 
   def newLine(): Unit =
     state match
+      case "START"       => sys.error("empty format line")
       case "FORMAT_LEFT" => sys.error("missing # in column format")
       case "FORMAT_RIGHT" =>
         if format.isEmpty then sys.error("need at least one column")
@@ -55,14 +58,15 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   def placeholder(): Unit =
     state match
-      case "FORMAT_LEFT"  => state = "FORMAT_RIGHT"
-      case "FORMAT_RIGHT" => sys.error("only one # in column format")
-      case "CONTENT"      => sys.error("no # in content cell")
+      case "START" | "FORMAT_LEFT" => state = "FORMAT_RIGHT"
+      case "FORMAT_RIGHT"          => sys.error("only one # in column format")
+      case "CONTENT"               => sys.error("no # in content cell")
 
-  def init(): Unit = newColumn()
+  def init(): Unit = ()
 
   def add(box: Box): Unit =
     state match
+      case "START"        => sys.error("can't add a box in the START state")
       case "FORMAT_LEFT"  => format.last.left += box
       case "FORMAT_RIGHT" => format.last.right += box
       case "CONTENT"      => content.last.last.material add box
@@ -87,4 +91,4 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
     super.done()
 
-  def result: Box = ???
+  def result: Box = null

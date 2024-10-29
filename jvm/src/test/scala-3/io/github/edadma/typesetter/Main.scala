@@ -59,15 +59,17 @@ object Main extends SimpleSwingApplication:
 //          .addFil()
 //          .done()
 
-        t.start()
-        t add "asdf"
+//        t.start()
+//        t add "asdf"
+//
+//        for _ <- 1 to 20 do
+//          t add " "
+//          t add "zxcv"
+//
+//        t.paragraph()
+//        t.fil
 
-        for _ <- 1 to 20 do
-          t add " "
-          t add "zxcv"
-
-        t.paragraph()
-        t.fil
+        t.halign.add("(").op("placeholder").add(")").op("newLine").add("asdf")
         t.end()
         g.drawImage(t.document.printedPages.head.asInstanceOf[BufferedImage], null, 0, 0)
       }
