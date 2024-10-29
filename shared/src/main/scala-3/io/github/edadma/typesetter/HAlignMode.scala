@@ -29,21 +29,24 @@ class HAlignMode(val t: Typesetter) extends Mode:
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
       case "CONTENT" =>
-        if content.last.last.format then content.last.last.material addSeq format(column).right
-        content.last += Cell(false, new HBoxBuilder(t))
+        if column == format.length then sys.error("too many columns")
+        if content.last.nonEmpty && content.last.last.format then
+          content.last.last.material addSeq format(column - 1).right
+        content.last += Cell(true, new HBoxBuilder(t))
         content.last.last.material addSeq format(column).left
         column += 1
-        if column > format.length then sys.error("too many columns")
 
   def newLine(): Unit =
     state match
       case "START"       => sys.error("empty format line")
       case "FORMAT_LEFT" => sys.error("missing # in column format")
       case "FORMAT_RIGHT" =>
+        println("newLine format")
         if format.isEmpty then sys.error("need at least one column")
         state = "CONTENT"
       case "CONTENT" =>
         if column < format.length then sys.error("too few columns")
+        if content.last.last.format then content.last.last.material addSeq format(column).right
         column = 0
 
     content += new ArrayBuffer
@@ -72,7 +75,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "CONTENT"      => content.last.last.material add box
 
   override def done(): Unit =
-    content.last.last.material addSeq format.last.right
+    if content.last.last.format then content.last.last.material addSeq format.last.right
 
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 

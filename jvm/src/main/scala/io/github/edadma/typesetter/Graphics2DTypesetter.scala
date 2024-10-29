@@ -69,7 +69,7 @@ class Graphics2DTypesetter extends Typesetter:
 
     val ascent = -bounds.getY
 //    val descent = layout.getDescent
-    val width   = bounds.getWidth
+    val width   = layout.getAdvance // was bounds.getWidth but that put adjacent letters too close
     val height  = bounds.getHeight
     val advance = layout.getAdvance
 
