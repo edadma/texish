@@ -45,6 +45,12 @@ class HAlignMode(val t: Typesetter) extends Mode:
         content.last.last.format = false
       case _ => sys.error("\\omit cannot be used in the format line")
 
+  def placeholder(): Unit =
+    state match
+      case "FORMAT_LEFT"  => state = "FORMAT_RIGHT"
+      case "FORMAT_RIGHT" => sys.error("only one # in column format")
+      case "CONTENT"      => sys.error("no # in content cell")
+
   def init(): Unit = newColumn()
 
   def add(box: Box): Unit =
