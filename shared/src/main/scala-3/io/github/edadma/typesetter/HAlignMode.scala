@@ -8,9 +8,9 @@ class HAlignMode(val t: Typesetter) extends Mode:
   case class Cell(var format: Boolean, material: HBoxBuilder)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
 
-  val format       = new ArrayBuffer[Format]
-  val content      = new ArrayBuffer[ArrayBuffer[Cell]]
-  var columns: Int = 0
+  val format      = new ArrayBuffer[Format]
+  val content     = new ArrayBuffer[ArrayBuffer[Cell]]
+  var column: Int = 0
 
   newColumn()
 
@@ -29,11 +29,11 @@ class HAlignMode(val t: Typesetter) extends Mode:
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
       case "CONTENT" =>
-        if columns > 0 && content.last.last.format then content.last.last.material addSeq format(columns - 1).right
+        if column > 0 && content.last.last.format then content.last.last.material addSeq format(column - 1).right
         content.last += Cell(false, new HBoxBuilder(t))
-        content.last.last.material addSeq format(columns).left
-        columns += 1
-        if columns > format.length then sys.error("too many columns")
+        content.last.last.material addSeq format(column).left
+        column += 1
+        if column > format.length then sys.error("too many columns")
 
   def newLine(): Unit =
     state match
@@ -43,8 +43,8 @@ class HAlignMode(val t: Typesetter) extends Mode:
         if format.isEmpty then sys.error("need at least one column")
         state = "CONTENT"
       case "CONTENT" =>
-        if columns < format.length then sys.error("too few columns")
-        columns = 0
+        if column < format.length then sys.error("too few columns")
+        column = 0
 
     content += new ArrayBuffer
     newColumn()
@@ -72,6 +72,8 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "CONTENT"      => content.last.last.material add box
 
   override def done(): Unit =
+    content.last.last.material addSeq format.last.right
+
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 
     for column <- format.indices do
