@@ -46,7 +46,7 @@ class Graphics2DTypesetter extends Typesetter:
 
   DPI is 143.435294114
    */
-  def getDPI: Double = 143.435294114 // Toolkit.getDefaultToolkit.getScreenResolution
+  def getDPI: Double = 100 // 143.435294114 // Toolkit.getDefaultToolkit.getScreenResolution
 
   def setFont(font: Any): Unit = g.setFont(font.asInstanceOf[JFont])
 

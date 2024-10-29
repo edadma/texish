@@ -453,11 +453,7 @@ abstract class Typesetter:
 
   private def defaultParameters =
     List(
-      "baselineskip" -> Glue(
-        currentFont.size,
-          /** 1.2 */
-//          * pt,
-      ),
+      "baselineskip"  -> Glue(currentFont.size * 1.2 * pt),
       "lineskip"      -> Glue(1 * pt),
       "lineskiplimit" -> 0.0,
       "spaceskip"     -> Glue(currentFont.space, 1),

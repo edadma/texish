@@ -41,7 +41,6 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "START"       => sys.error("empty format line")
       case "FORMAT_LEFT" => sys.error("missing # in column format")
       case "FORMAT_RIGHT" =>
-        println("newLine format")
         if format.isEmpty then sys.error("need at least one column")
         state = "CONTENT"
       case "CONTENT" =>
@@ -80,11 +79,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 
     for column <- format.indices do
-      val width = content.map({ line =>
-        println((line(column).material, line(column).material.size))
-        line(column).material.size
-      }).max
-      println(width)
+      val width = content.map(_(column).material.size).max
 
       for line <- content.indices do
         val builder = content(line)(column).material

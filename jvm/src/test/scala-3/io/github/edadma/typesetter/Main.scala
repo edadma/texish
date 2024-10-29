@@ -76,6 +76,11 @@ object Main extends SimpleSwingApplication:
           .add("asdf").op("newColumn").add("zxcv")
           .op("newLine")
           .add("asdf1").op("newColumn").add("zxcv1")
+
+//        t.hbox().add("[one]").done()
+//        t.hbox().add("[two]").done()
+//        t.hbox().add("[three]").done()
+
         t.end()
         g.drawImage(t.document.printedPages.head.asInstanceOf[BufferedImage], null, 0, 0)
       }
