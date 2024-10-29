@@ -34,3 +34,5 @@ trait HorizontalMode extends Builder:
 //          super.add(t.getGlue("spaceskip"))
 //          super.add(box)
     else super.add(box)
+
+  override infix def addSeq(bs: scala.collection.Seq[Box]): Unit = bs.foreach(add)

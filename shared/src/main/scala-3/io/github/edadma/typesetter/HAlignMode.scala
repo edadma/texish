@@ -80,7 +80,10 @@ class HAlignMode(val t: Typesetter) extends Mode:
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 
     for column <- format.indices do
-      val width = content.map(_(column).material.size).max
+      val width = content.map({ line =>
+        println((line(column).material, line(column).material.size))
+        line(column).material.size
+      }).max
 
       for line <- content.indices do
         val builder = content(line)(column).material

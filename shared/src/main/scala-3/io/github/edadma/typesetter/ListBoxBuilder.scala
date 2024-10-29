@@ -114,3 +114,5 @@ abstract class ListBoxBuilder extends Builder:
 
     // Return the adjusted boxes as a List
     boxes.toList
+
+  override def toString: String = s"${getClass.getName}(${boxes.mkString(", ")})"
