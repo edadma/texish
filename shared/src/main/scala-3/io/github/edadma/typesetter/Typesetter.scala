@@ -400,6 +400,14 @@ abstract class Typesetter:
 
   def pop(): Unit = modeStack.pop
 
+  def halign: Typesetter =
+    modeStack push new HAlignMode(this)
+    this
+
+  def op(operation: String): Typesetter =
+    modeStack.top.op(operation)
+    this
+
   def hbox(toSize: Double | Null = null): Typesetter =
     modeStack push new HBoxBuilder(this, toSize)
     this

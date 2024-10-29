@@ -9,6 +9,8 @@ trait Mode:
 
   def result: Box
 
+  def op(operation: String): Unit = sys.error(s"illegal operation '$operation'")
+
   def done(): Unit =
     pop
     t.add(result)

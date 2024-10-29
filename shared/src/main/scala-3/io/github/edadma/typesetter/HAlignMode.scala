@@ -12,6 +12,13 @@ class HAlignMode(val t: Typesetter) extends Mode:
   val content      = new ArrayBuffer[ArrayBuffer[Cell]]
   var columns: Int = 0
 
+  override def op(operation: String): Unit =
+    operation match
+      case "omit"        => omit()
+      case "newColumn"   => newColumn()
+      case "newLine"     => newLine()
+      case "placeholder" => placeholder()
+
   def newColumn(): Unit =
     state match
       case "FORMAT_LEFT" => sys.error("missing # in column format")
