@@ -29,7 +29,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
       case "CONTENT" =>
-        if column > 0 && content.last.last.format then content.last.last.material addSeq format(column - 1).right
+        if content.last.last.format then content.last.last.material addSeq format(column).right
         content.last += Cell(false, new HBoxBuilder(t))
         content.last.last.material addSeq format(column).left
         column += 1
