@@ -38,6 +38,11 @@ class HAlignMode(val t: Typesetter) extends Mode:
     content += new ArrayBuffer
     newColumn()
 
+  def omit(): Unit =
+    state match
+      case "CONTENT" => content.last.last.format = false
+      case _         => sys.error("\\omit cannot be used in the format line")
+
   def init(): Unit = newColumn()
 
   def add(box: Box): Unit =
