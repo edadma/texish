@@ -19,7 +19,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
       case "CONTENT" =>
-        if columns > 0 then content.last.last.material addSeq format(columns).right
+        if columns > 0 && content.last.last.format then content.last.last.material addSeq format(columns).right
         content.last += Cell(false, new HBoxBuilder(t))
         columns += 1
         if columns > format.length then sys.error("too many columns")
@@ -40,8 +40,10 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   def omit(): Unit =
     state match
-      case "CONTENT" => content.last.last.format = false
-      case _         => sys.error("\\omit cannot be used in the format line")
+      case "CONTENT" =>
+        content.last.last.material.clear()
+        content.last.last.format = false
+      case _ => sys.error("\\omit cannot be used in the format line")
 
   def init(): Unit = newColumn()
 
@@ -52,8 +54,22 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "CONTENT"      => content.last.last.material add box
 
   override def done(): Unit =
+    val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
+
     for column <- format.indices do
       val width = content.map(_(column).material.size).max
+
+      for line <- content.indices do
+        val builder = content(line)(column).material
+
+        builder.toSize = width
+        hboxes(line) += builder.result.asInstanceOf[HBox]
+
+    for line <- hboxes.indices do
+      val hbox = new HBoxBuilder(t)
+
+      hbox addSeq hboxes(line)
+      t.modeStack(1) add hbox.result
 
     super.done()
 
