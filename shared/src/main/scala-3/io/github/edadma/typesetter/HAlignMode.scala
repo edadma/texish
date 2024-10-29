@@ -52,7 +52,8 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "CONTENT"      => content.last.last.material add box
 
   override def done(): Unit =
-    val hboxes = new ArrayBuffer[ArrayBuffer[HBoxBuilder]]
+    for column <- format.indices do
+      val width = content.map(_(column).material.size).max
 
     super.done()
 
