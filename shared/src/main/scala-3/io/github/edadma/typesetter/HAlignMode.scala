@@ -5,9 +5,11 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 class HAlignMode(val t: Typesetter) extends Mode:
   private var state: "FORMAT" | "CONTENT" = "FORMAT"
 
+  case class Cell(var format: Boolean, material: ListBuffer[Box])
+
   val format             = new ArrayBuffer[ListBuffer[Box]]
   var formatColumns: Int = 0
-  val content            = new ArrayBuffer[ArrayBuffer[ListBuffer[Box]]]
+  val content            = new ArrayBuffer[ArrayBuffer[Cell]]
   var lineColumns: Int   = 0
 
   def newColumn(): Unit =
@@ -16,7 +18,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         format += new ListBuffer
         formatColumns += 1
       case "CONTENT" =>
-        content.last += new ListBuffer
+        content.last += Cell(false, new ListBuffer)
         lineColumns += 1
         if lineColumns > formatColumns then sys.error("too many columns")
 
@@ -37,7 +39,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
   def add(box: Box): Unit =
     state match
       case "FORMAT"  => format.last += box
-      case "CONTENT" => content.last.last += box
+      case "CONTENT" => content.last.last.material += box
 
   override def done(): Unit =
     val hboxes = new ArrayBuffer[ArrayBuffer[HBoxBuilder]]
