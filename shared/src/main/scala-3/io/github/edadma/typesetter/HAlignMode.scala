@@ -84,6 +84,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         println((line(column).material, line(column).material.size))
         line(column).material.size
       }).max
+      println(width)
 
       for line <- content.indices do
         val builder = content(line)(column).material

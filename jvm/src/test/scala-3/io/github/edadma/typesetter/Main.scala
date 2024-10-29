@@ -46,17 +46,17 @@ object Main extends SimpleSwingApplication:
 //          .add("one")
 //          .addFil()
 //          .done()
-//
-//        t.hbox(t.getNumber("hsize"))
-//          .addFil()
-//          .add("two")
-//          .addFil()
-//          .done()
 
 //        t.hbox(t.getNumber("hsize"))
-//          .addFil()
-//          .add("three")
-//          .addFil()
+//          .fil
+//          .add("[two]")
+//          .fil
+//          .done()
+//
+//        t.hbox(t.getNumber("hsize"))
+//          .fil
+//          .add("[three]")
+//          .fil
 //          .done()
 
 //        t.start()
@@ -69,8 +69,13 @@ object Main extends SimpleSwingApplication:
 //        t.paragraph()
 //        t.fil
 
-        t.halign.add("(").op("placeholder").add(")").op("newColumn").add("[").op("placeholder").add("]").op("newLine")
-          .add("asdf").op("newColumn").add("zxcv").op("newLine").add("asdf1").op("newColumn").add("zxcv1")
+        t.halign
+          .add("(").op("placeholder").add(")").add(" ").fil
+          .op("newColumn").add("[").op("placeholder").add("]").fil
+          .op("newLine")
+          .add("asdf").op("newColumn").add("zxcv")
+          .op("newLine")
+          .add("asdf1").op("newColumn").add("zxcv1")
         t.end()
         g.drawImage(t.document.printedPages.head.asInstanceOf[BufferedImage], null, 0, 0)
       }
