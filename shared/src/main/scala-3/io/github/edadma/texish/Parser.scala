@@ -10,8 +10,8 @@ import scala.io
 import scala.language.postfixOps
 
 class Parser(
-    commands: List[Command],
-    actives: List[Active],
+    commands: Seq[Command],
+    actives: Seq[Active],
     blanks: Boolean = false,
     var csDelim: String = "\\",
     var beginDelim: String = "{",
@@ -22,7 +22,7 @@ class Parser(
 ) {
 
   val commandMap: Map[String, Command] = (Command.builtins ++ commands) map (c => c.name -> c) toMap
-  val activeDelims: List[String] = actives map (_.name) sortWith (_ > _)
+  val activeDelims: Seq[String] = actives map (_.name) sortWith (_ > _)
   private val varRegex = """\.([^.]*)""".r
   private val unicodeRegex = "\\\\u[0-9a-fA-F]{4}".r
   private val keywords = List("true", "false", "null")
@@ -82,7 +82,7 @@ class Parser(
     (r1, LiteralAST(s))
   }
 
-  def parseActive(r: CharReader, as: List[Active] = actives): Option[(CharReader, AST)] =
+  def parseActive(r: CharReader, as: Seq[Active] = actives): Option[(CharReader, AST)] =
     as match {
       case Nil => None
       case h :: t =>
@@ -261,7 +261,7 @@ class Parser(
 
   def lookahead(r: CharReader, s: String): Boolean = matches(r, s) nonEmpty
 
-  def lookahead(r: CharReader, delims: List[String]): Boolean =
+  def lookahead(r: CharReader, delims: Seq[String]): Boolean =
     delims match {
       case Nil => false
       case h :: t =>
