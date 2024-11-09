@@ -122,7 +122,7 @@ abstract class Renderer:
       case LiteralAST(v) => v
       case CommandAST(pos, c, args, optional) =>
         c(pos, parser, this, if (c.eval) args map eval else args, optional map { case (k, v) => k -> eval(v) }, context)
-      case ActiveAST(pos, a) => a(pos, this)
+      case ActiveAST(pos, a) => a(pos, this, context)
       case ForAST(pos, expr, body, els) =>
         val buf = new StringBuilder
 

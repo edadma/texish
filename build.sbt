@@ -7,7 +7,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name := "texish",
-    version := "0.0.11",
+    version := "0.0.12",
     scalaVersion := "3.5.2",
     scalacOptions ++=
       Seq(

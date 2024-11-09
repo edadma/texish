@@ -9,7 +9,7 @@ import pprint.pprintln
   val actives =
     List(
       new Active("<") {
-        def apply(pos: CharReader, r: Renderer): String = {
+        def apply(pos: CharReader, r: Renderer, context: Any): String = {
           "lt"
         }
       },
@@ -57,9 +57,9 @@ import pprint.pprintln
       def exitScope(): Unit = scopes.pop
   val src =
     """
-    |\set a 123 \a {\a \set a 456 \a} \a
+    |asdf <<< zxcv
     """.trim.stripMargin
   val ast = parser.parse(src)
 
-  //pprintln(ast)
+  pprintln(ast)
   renderer.render(ast)
