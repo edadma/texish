@@ -38,11 +38,16 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   def setColor(color: Color): Unit = ctx.setSourceRGBA(color.red, color.green, color.blue, color.alpha)
 
+  def setLineWidth(width: Double): Unit = ctx.setLineWidth(width)
+
   def drawString(text: String, x: Double, y: Double): Unit =
     ctx.moveTo(x, y)
     ctx.showText(text)
 
-  def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = ()
+  def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
 
   def drawRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
 

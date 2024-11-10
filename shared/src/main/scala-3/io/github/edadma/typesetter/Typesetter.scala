@@ -46,6 +46,8 @@ abstract class Typesetter:
 
   def setColor(color: Color): Unit
 
+  def setLineWidth(width: Double): Unit
+
   def drawString(text: String, x: Double, y: Double): Unit
 
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit
