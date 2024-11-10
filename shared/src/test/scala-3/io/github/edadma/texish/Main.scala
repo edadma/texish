@@ -57,7 +57,7 @@ import pprint.pprintln
       def exitScope(): Unit = scopes.pop
   val src =
     """
-    |asdf <<< zxcv
+    |\asdf < zxcv
     """.trim.stripMargin
   val ast = parser.parse(src)
 
