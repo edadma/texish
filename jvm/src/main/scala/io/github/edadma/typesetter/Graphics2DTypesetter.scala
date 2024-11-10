@@ -2,7 +2,7 @@ package io.github.edadma.typesetter
 
 import java.awt.font.{FontRenderContext, TextLayout}
 import java.awt.image.BufferedImage
-import java.awt.{Graphics2D, RenderingHints, Font as JFont}
+import java.awt.{BasicStroke, Graphics2D, RenderingHints, Font as JFont}
 import java.io.File
 import javax.imageio.ImageIO
 import scala.compiletime.uninitialized
@@ -52,6 +52,8 @@ class Graphics2DTypesetter extends Typesetter:
 
   def setColor(color: Color): Unit =
     g.setColor(new java.awt.Color(color.redInt, color.greenInt, color.blueInt, color.alphaInt))
+
+  def setLineWidth(width: Double): Unit = g.setStroke(new BasicStroke(width.toFloat))
 
   def drawString(text: String, x: Double, y: Double): Unit = g.drawString(text, x.toFloat, y.toFloat)
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
