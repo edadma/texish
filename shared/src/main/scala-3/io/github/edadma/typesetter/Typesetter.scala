@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter
 
-import pprint.pprintln
+//import pprint.pprintln
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -246,7 +246,7 @@ abstract class Typesetter:
 
   def mm: Double = cm / 10
 
-  infix def get(name: String): Any = scopes.top.getOrElse(name, UNDEFINED)
+  infix def get(name: String): Any = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
 
   infix def getGlue(name: String): Glue = get(name).asInstanceOf[Glue]
 

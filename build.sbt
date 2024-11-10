@@ -7,7 +7,7 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name         := "typesetter",
-    version      := "0.0.5",
+    version      := "0.0.6",
     scalaVersion := "3.5.2",
     scalacOptions ++=
       Seq(
@@ -23,12 +23,8 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
     githubOwner      := "edadma",
     githubRepository := name.value,
 //    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
-//    libraryDependencies ++= Seq(
-//      "io.github.edadma" %%% "cross-platform" % "0.1.5"
-//    ),
     libraryDependencies ++= Seq(
-//      "com.github.scopt" %%% "scopt" % "4.1.0",
-      "com.lihaoyi" %%% "pprint" % "0.9.0", /*% "test"*/
+      "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
     ),
     publishMavenStyle      := true,
     Test / publishArtifact := false,
@@ -36,8 +32,9 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
-      "org.scala-js"           %% "scalajs-stubs" % "1.1.0" % "provided",
-      "org.scala-lang.modules" %% "scala-swing"   % "3.0.0" % "test",
+      "org.scala-js"           %% "scalajs-stubs" % "1.1.0"  % "provided",
+      "org.scala-lang.modules" %% "scala-swing"   % "3.0.0"  % "test",
+      "io.github.edadma"       %% "texish"        % "0.0.12" % "test",
     ),
   )
   .nativeSettings(

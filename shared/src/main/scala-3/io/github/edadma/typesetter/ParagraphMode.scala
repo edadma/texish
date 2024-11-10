@@ -2,7 +2,7 @@ package io.github.edadma.typesetter
 
 import scala.annotation.tailrec
 
-import pprint.pprintln
+//import pprint.pprintln
 
 class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   def result: Box = ???
@@ -32,13 +32,13 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
                       case None =>
                       case Some(hyphenation) =>
                         var lastBefore: CharBox = null
-                        var lastAfter: String = null
+                        var lastAfter: String   = null
 
                         @tailrec
                         def longest(): Unit =
                           if hyphenation.hasNext then
                             val (before, after) = hyphenation.next
-                            val beforeHyphen = b.newCharBox(before)
+                            val beforeHyphen    = b.newCharBox(before)
 
                             if hbox.size + beforeHyphen.width <= t.getNumber("hsize") then
                               lastBefore = beforeHyphen

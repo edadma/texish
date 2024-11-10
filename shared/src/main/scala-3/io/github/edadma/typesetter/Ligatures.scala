@@ -2,7 +2,7 @@ package io.github.edadma.typesetter
 
 import scala.annotation.tailrec
 
-import pprint.pprintln
+//import pprint.pprintln
 
 object Ligatures:
   @tailrec
@@ -19,31 +19,31 @@ object Ligatures:
   private val LIGATURES = List(
     "ffi" -> `LATIN SMALL LIGATURE FFI`,
     "ffl" -> `LATIN SMALL LIGATURE FFL`,
-    "ff" -> `LATIN SMALL LIGATURE FF`,
-    "fi" -> `LATIN SMALL LIGATURE FI`,
-    "fl" -> `LATIN SMALL LIGATURE FL`,
+    "ff"  -> `LATIN SMALL LIGATURE FF`,
+    "fi"  -> `LATIN SMALL LIGATURE FI`,
+    "fl"  -> `LATIN SMALL LIGATURE FL`,
   )
 
   private[typesetter] val REPRESENTATIONS = List(
-    "``" -> `LEFT DOUBLE QUOTATION MARK`,
-    "`" -> `LEFT SINGLE QUOTATION MARK`,
-    "''" -> `RIGHT DOUBLE QUOTATION MARK`,
-    "'" -> `RIGHT SINGLE QUOTATION MARK`,
-    "---" -> `EM DASH`,
+    "``"   -> `LEFT DOUBLE QUOTATION MARK`,
+    "`"    -> `LEFT SINGLE QUOTATION MARK`,
+    "''"   -> `RIGHT DOUBLE QUOTATION MARK`,
+    "'"    -> `RIGHT SINGLE QUOTATION MARK`,
+    "---"  -> `EM DASH`,
     "<-->" -> `LONG LEFT RIGHT ARROW`,
     "<==>" -> `LONG LEFT RIGHT DOUBLE ARROW`,
-    "<--" -> `LONG LEFTWARDS ARROW`,
-    "-->" -> `LONG RIGHTWARDS ARROW`,
-    "<==" -> `LONG LEFTWARDS DOUBLE ARROW`,
-    "==>" -> `LONG RIGHTWARDS DOUBLE ARROW`,
-    "<->" -> `LEFT RIGHT ARROW`,
-    "<=>" -> `LEFT RIGHT DOUBLE ARROW`,
-    "<-" -> `LEFTWARDS ARROW`,
-    "->" -> `RIGHTWARDS ARROW`,
-    "<=" -> `LEFTWARDS DOUBLE ARROW`,
-    "=>" -> `RIGHTWARDS DOUBLE ARROW`,
-    "--" -> `EN DASH`,
-    "..." -> `HORIZONTAL ELLIPSIS`,
+    "<--"  -> `LONG LEFTWARDS ARROW`,
+    "-->"  -> `LONG RIGHTWARDS ARROW`,
+    "<=="  -> `LONG LEFTWARDS DOUBLE ARROW`,
+    "==>"  -> `LONG RIGHTWARDS DOUBLE ARROW`,
+    "<->"  -> `LEFT RIGHT ARROW`,
+    "<=>"  -> `LEFT RIGHT DOUBLE ARROW`,
+    "<-"   -> `LEFTWARDS ARROW`,
+    "->"   -> `RIGHTWARDS ARROW`,
+    "<="   -> `LEFTWARDS DOUBLE ARROW`,
+    "=>"   -> `RIGHTWARDS DOUBLE ARROW`,
+    "--"   -> `EN DASH`,
+    "..."  -> `HORIZONTAL ELLIPSIS`,
   )
 
   val ALL: Set[String] = (Map() ++ LIGATURES ++ REPRESENTATIONS).values.toSet

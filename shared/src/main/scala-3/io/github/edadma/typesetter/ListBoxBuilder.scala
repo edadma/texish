@@ -2,7 +2,7 @@ package io.github.edadma.typesetter
 
 import scala.language.postfixOps
 
-import pprint.pprintln
+//import pprint.pprintln
 
 abstract class ListBoxBuilder extends Builder:
   protected val measure: Box => Double
