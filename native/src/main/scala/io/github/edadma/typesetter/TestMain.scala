@@ -19,7 +19,7 @@ package io.github.edadma.typesetter
     .op("newLine")
     .add("asdf").op("newColumn").add("zxcv")
     .op("newLine")
-    .add("asdf 1").op("newColumn").add("zxcv 1")
+    .add("asdf").add(" ").add("1").op("newColumn").add("zxcv 1")
 
   t.end()
   t.destroy()

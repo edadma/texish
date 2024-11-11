@@ -75,7 +75,7 @@ object Main extends SimpleSwingApplication:
           .op("newLine")
           .add("asdf").op("newColumn").add("zxcv")
           .op("newLine")
-          .add("asdf1").op("newColumn").add("zxcv1")
+          .add("asdf").add(" ").add("1").op("newColumn").add("zxcv 1")
 
 //        t.hbox().add("[one]").done()
 //        t.hbox().add("[two]").done()

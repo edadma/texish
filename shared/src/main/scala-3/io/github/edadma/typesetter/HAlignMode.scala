@@ -2,6 +2,8 @@ package io.github.edadma.typesetter
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
+//import pprint.pprintln
+
 class HAlignMode(val t: Typesetter) extends Mode:
   private var state: "START" | "FORMAT_LEFT" | "FORMAT_RIGHT" | "CONTENT" = "START"
 
