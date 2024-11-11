@@ -51,7 +51,9 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   def drawRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
 
-  def fillRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
+  def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
+    ctx.rectangle(x, y, width, height)
+    ctx.fill()
 
   def loadFont(path: String): FontFace =
     fontFaceCreateForFTFace(

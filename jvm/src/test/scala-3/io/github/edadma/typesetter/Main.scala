@@ -69,6 +69,8 @@ object Main extends SimpleSwingApplication:
 //        t.paragraph()
 //        t.fil
 
+        t add RuleBox(t, 20, 2, 0)
+
         t.halign
           .add("(").op("placeholder").add(")").add(" ").fil
           .op("newColumn").add("[").op("placeholder").add("]").fil
