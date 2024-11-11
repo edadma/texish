@@ -11,10 +11,12 @@ trait Mode:
 
   def op(operation: String): Unit = sys.error(s"illegal operation '$operation'")
 
-  def done(): Unit =
+  def exit: Box | Null =
     pop
+    result
 
-    val res = result
+  def done(): Unit =
+    val res = exit
 
     if res ne null then t.add(result)
 
