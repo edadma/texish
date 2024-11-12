@@ -28,8 +28,9 @@ abstract class Renderer:
 
   def render(ast: AST): Unit =
     def out(a: AST): Unit =
-      deval(a) match
+      eval(a) match
         case "" =>
+        case () =>
         case v  =>
 //          sys.error(v)
           output(v)
