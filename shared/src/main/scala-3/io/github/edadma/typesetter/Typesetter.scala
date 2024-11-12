@@ -133,6 +133,13 @@ abstract class Typesetter:
     "Regular",
     "Bold",
   )
+  loadTypeface(
+    "nosifer",
+    "fonts/Nosifer/Nosifer",
+    Ligatures.ALL,
+    Set(),
+    "Regular",
+  )
 
   private val gentiumbookMissing = Set(
     `LONG LEFT RIGHT ARROW`,
