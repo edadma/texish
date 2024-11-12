@@ -238,7 +238,7 @@ abstract class Typesetter:
     "Regular",
   )
 
-  selectFont("gentiumbook", 18, Set("regular"))
+  selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
   setDocument(new SimpleDocument)
   modeStack push new PageMode(this)

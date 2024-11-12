@@ -69,6 +69,7 @@ object Main extends SimpleSwingApplication:
 //        t.paragraph()
 //        t.fil
 
+        t.typeface("nosifer")
         t add RuleBox(t, 20, 2, 0)
 
         t.halign
