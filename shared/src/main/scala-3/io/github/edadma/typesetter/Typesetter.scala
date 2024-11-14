@@ -442,7 +442,7 @@ abstract class Typesetter:
   def end(): Unit =
     while modeStack.nonEmpty do done()
 
-  def start(): Unit =
+  def start: Typesetter =
     mode match
       case v: VerticalMode =>
         val paragraphMode = new ParagraphMode(this)
@@ -452,13 +452,15 @@ abstract class Typesetter:
         if indentParagraph then paragraphMode add HSpaceBox(getNumber("parindent"))
       case _ =>
 
-  def indent(): Unit =
-    indentParagraph = true
-    start()
+    this
 
-  def noindent(): Unit =
+  def indent: Typesetter =
+    indentParagraph = true
+    start
+
+  def noindent: Typesetter =
     indentParagraph = false
-    start()
+    start
 
   private def defaultParameters =
     List(

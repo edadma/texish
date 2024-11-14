@@ -7,7 +7,7 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name         := "typesetter",
-    version      := "0.0.9",
+    version      := "0.0.10",
     scalaVersion := "3.5.2",
     scalacOptions ++=
       Seq(
@@ -40,7 +40,7 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   .nativeSettings(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "libcairo" % "0.0.8",
+      "io.github.edadma" %%% "libcairo" % "0.0.9",
       "io.github.edadma" %%% "freetype" % "0.0.4",
     ),
   )

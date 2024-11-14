@@ -13,15 +13,11 @@ package io.github.edadma.typesetter
 //  t.paragraph()
 //  t.fil
 
-  t add RuleBox(t, 20, 2, 0)
-
-  t.halign
-    .add("(").op("placeholder").add(")").add(" ").fil
-    .op("newColumn").add("[").op("placeholder").add("]").fil
-    .op("newLine")
-    .add("asdf").op("newColumn").add("zxcv")
-    .op("newLine")
-    .add("asdf").add(" ").add("1").op("newColumn").add("zxcv 1")
+  t.add("asdf")
+  t.selectFont("gentium", 14, Set("regular"))
+  t.add("asdf")
+  t.selectFont("noto", 14, Set("regular"))
+  t.add("asdf")
 
   t.end()
   t.destroy()

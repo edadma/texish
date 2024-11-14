@@ -74,7 +74,7 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
   def makeFont(font: Any, size: Double): Any =
     ctx.setFontFace(font.asInstanceOf[FontFace])
     ctx.setFontSize(size)
-    ctx.getScaledFont
+    ctx.getScaledFont.reference
 
   def charWidth(font: Any, c: Char): Double =
     setFont(font)
