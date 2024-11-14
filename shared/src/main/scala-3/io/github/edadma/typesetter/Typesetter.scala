@@ -279,12 +279,15 @@ abstract class Typesetter:
   def enter(): Unit = scopes push scopes.top
 
   def exit(): Unit =
-    scopes.pop
+    val prev = scopes.pop
 
-    scopes.top get "font" match
-      case Some(font: Font) => currentFont = font
-      case Some(o)          => sys.error(s"font object has wrong type: '${o.getClass}'")
-      case None             =>
+    if scopes.length == 1 then
+      scopes(0) = prev
+    else
+      scopes.top get "font" match
+        case Some(font: Font) => currentFont = font
+        case Some(o)          => sys.error(s"font object has wrong type: '${o.getClass}'")
+        case None             =>
 
   def italic(): Unit = addStyle("italic")
 
