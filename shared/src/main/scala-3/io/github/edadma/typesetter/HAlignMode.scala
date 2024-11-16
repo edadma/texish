@@ -18,6 +18,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   override def op(operation: String): Unit =
     operation match
+      case "noalign"     =>
       case "omit"        => omit()
       case "newColumn"   => newColumn()
       case "newLine"     => newLine()
