@@ -38,7 +38,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "START" | "FORMAT_RIGHT" =>
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
-      case "ROW" =>
+      case "ROW" | "NOALIGN" =>
         if column == format.length then sys.error("too many columns")
         if content.last.row.nonEmpty && content.last.row.last.format then
           content.last.row.last.material addSeq format(column - 1).right
@@ -46,7 +46,6 @@ class HAlignMode(val t: Typesetter) extends Mode:
         content.last.row += Cell(true, new HBoxBuilder(t))
         content.last.row.last.material addSeq format(column).left
         column += 1
-      case "NOALIGN" =>
 
   def newLine(): Unit =
     state match
@@ -60,6 +59,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         if content.last.row.last.format then content.last.row.last.material addSeq format(column - 1).right
         column = 0
       case "NOALIGN" =>
+        column = 0
 
     content += Line(null, new ArrayBuffer)
     newColumn()
@@ -98,7 +98,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 
     for column <- format.indices do
-      val width = content.map(_.row(column).material.size).max
+      val width = content.map(line => if line.noalign ne null then 0 else line.row(column).material.size).max
 
       for line <- content.indices do
         if content(line).noalign eq null then

@@ -72,9 +72,9 @@ object Main extends SimpleSwingApplication:
         t.halign
           .add("(").op("placeholder").add(")").add(" ").fil
           .op("newColumn").add("[").op("placeholder").add("]").fil
-          .op("newLine").op("noalign-begin").add("noalign").op("noalign-end")
-          .add("asdf").op("newColumn").add("zxcv")
           .op("newLine")
+          .add("asdf").op("newColumn").add("zxcv")
+          .op("newLine").op("noalign-begin").add("noalign").op("noalign-end")
           .add("asdf").add(" ").add("1").op("newColumn").add("zxcv 1")
 
 //        t.hbox().add("[one]").done()
