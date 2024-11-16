@@ -19,10 +19,15 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   override def op(operation: String): Unit =
     operation match
-      case "noalign" =>
+      case "noalign-begin" =>
         state = "NOALIGN"
-      case "omit"        => omit()
-      case "newColumn"   => newColumn()
+      case "noalign-end" =>
+        newLine()
+        state = "ROW"
+      case "omit" => omit()
+      case "newColumn" =>
+        if state == "NOALIGN" then sys.error("can't add a new column in 'noalign'")
+        newColumn()
       case "newLine"     => newLine()
       case "placeholder" => placeholder()
       case _             => sys.error(s"illegal operation '$operation'")
@@ -37,10 +42,11 @@ class HAlignMode(val t: Typesetter) extends Mode:
         if column == format.length then sys.error("too many columns")
         if content.last.row.nonEmpty && content.last.row.last.format then
           content.last.row.last.material addSeq format(column - 1).right
+
         content.last.row += Cell(true, new HBoxBuilder(t))
         content.last.row.last.material addSeq format(column).left
         column += 1
-      case "NOALIGN" => sys.error("can't add a new column in 'noalign'")
+      case "NOALIGN" =>
 
   def newLine(): Unit =
     state match

@@ -69,13 +69,10 @@ object Main extends SimpleSwingApplication:
 //        t.paragraph()
 //        t.fil
 
-        t.typeface("nosifer")
-        t add RuleBox(t, 20, 2, 0)
-
         t.halign
           .add("(").op("placeholder").add(")").add(" ").fil
           .op("newColumn").add("[").op("placeholder").add("]").fil
-          .op("newLine")
+          .op("newLine").op("noalign-begin").add("noalign").op("noalign-end")
           .add("asdf").op("newColumn").add("zxcv")
           .op("newLine")
           .add("asdf").add(" ").add("1").op("newColumn").add("zxcv 1")
