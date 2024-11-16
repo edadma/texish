@@ -9,9 +9,12 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   case class Cell(var format: Boolean, material: HBoxBuilder)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
+  enum Line:
+    case Row(row: ArrayBuffer[ArrayBuffer[Cell]])
+    case Noalign(boxes: ListBuffer[Box])
 
   val format      = new ArrayBuffer[Format]
-  val content     = new ArrayBuffer[ArrayBuffer[Cell]]
+  val content     = new ArrayBuffer[Line]
   var column: Int = 0
 
   newColumn()
