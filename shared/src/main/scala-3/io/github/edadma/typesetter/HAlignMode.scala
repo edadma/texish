@@ -5,13 +5,11 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 //import pprint.pprintln
 
 class HAlignMode(val t: Typesetter) extends Mode:
-  private var state: "START" | "FORMAT_LEFT" | "FORMAT_RIGHT" | "CONTENT" = "START"
+  private var state: "START" | "FORMAT_LEFT" | "FORMAT_RIGHT" | "ROW" | "NOALIGN" = "START"
 
   case class Cell(var format: Boolean, material: HBoxBuilder)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
-  enum Line:
-    case Row(row: ArrayBuffer[ArrayBuffer[Cell]])
-    case Noalign(boxes: ListBuffer[Box])
+  case class Line(noalign: ListBuffer[Box], row: ArrayBuffer[Cell])
 
   val format      = new ArrayBuffer[Format]
   val content     = new ArrayBuffer[Line]
@@ -34,12 +32,12 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "START" | "FORMAT_RIGHT" =>
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
-      case "CONTENT" =>
+      case "ROW" =>
         if column == format.length then sys.error("too many columns")
-        if content.last.nonEmpty && content.last.last.format then
-          content.last.last.material addSeq format(column - 1).right
-        content.last += Cell(true, new HBoxBuilder(t))
-        content.last.last.material addSeq format(column).left
+        if content.last.row.nonEmpty && content.last.row.last.format then
+          content.last.row.last.material addSeq format(column - 1).right
+        content.last.row += Cell(true, new HBoxBuilder(t))
+        content.last.row.last.material addSeq format(column).left
         column += 1
 
   def newLine(): Unit =
@@ -48,27 +46,27 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "FORMAT_LEFT" => sys.error("missing # in column format")
       case "FORMAT_RIGHT" =>
         if format.isEmpty then sys.error("need at least one column")
-        state = "CONTENT"
-      case "CONTENT" =>
+        state = "ROW"
+      case "ROW" =>
         if column < format.length then sys.error("too few columns")
-        if content.last.last.format then content.last.last.material addSeq format(column - 1).right
+        if content.last.row.last.format then content.last.row.last.material addSeq format(column - 1).right
         column = 0
 
-    content += new ArrayBuffer
+    content += Line(null, new ArrayBuffer)
     newColumn()
 
   def omit(): Unit =
     state match
-      case "CONTENT" =>
-        content.last.last.material.clear()
-        content.last.last.format = false
+      case "ROW" =>
+        content.last.row.last.material.clear()
+        content.last.row.last.format = false
       case _ => sys.error("\\omit cannot be used in the format line")
 
   def placeholder(): Unit =
     state match
       case "START" | "FORMAT_LEFT" => state = "FORMAT_RIGHT"
       case "FORMAT_RIGHT"          => sys.error("only one # in column format")
-      case "CONTENT"               => sys.error("no # in content cell")
+      case "ROW"                   => sys.error("no # in content cell")
 
   def init(): Unit = ()
 
@@ -77,18 +75,18 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "START"        => sys.error("can't add a box in the START state")
       case "FORMAT_LEFT"  => format.last.left += box
       case "FORMAT_RIGHT" => format.last.right += box
-      case "CONTENT"      => content.last.last.material add box
+      case "ROW"          => content.last.row.last.material add box
 
   override def done(): Unit =
-    if content.last.last.format then content.last.last.material addSeq format.last.right
+    if content.last.row.last.format then content.last.row.last.material addSeq format.last.right
 
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 
     for column <- format.indices do
-      val width = content.map(_(column).material.size).max
+      val width = content.map(_.row(column).material.size).max
 
       for line <- content.indices do
-        val builder = content(line)(column).material
+        val builder = content(line).row(column).material
 
         builder.toSize = width
         hboxes(line) += builder.result.asInstanceOf[HBox]
