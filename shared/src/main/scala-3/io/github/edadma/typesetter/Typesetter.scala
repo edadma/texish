@@ -241,7 +241,9 @@ abstract class Typesetter:
   selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
   setDocument(new SimpleDocument)
-  modeStack push new PageMode(this)
+  push(new PageMode(this))
+
+  def push(m: Mode): Unit = modeStack push m
 
   def mode: Mode = modeStack.top
 
@@ -413,7 +415,7 @@ abstract class Typesetter:
   def pop: Mode = modeStack.pop
 
   def halign: Typesetter =
-    modeStack push new HAlignMode(this)
+    push(new HAlignMode(this))
     this
 
   def op(operation: String): Typesetter =
@@ -421,7 +423,7 @@ abstract class Typesetter:
     this
 
   def hbox(toSize: Double | Null = null): Typesetter =
-    modeStack push new HBoxBuilder(this, toSize)
+    push(new HBoxBuilder(this, toSize))
     this
 
   def image(path: String): Typesetter =
@@ -450,7 +452,7 @@ abstract class Typesetter:
       case v: VerticalMode =>
         val paragraphMode = new ParagraphMode(this)
 
-        modeStack push paragraphMode
+        push(paragraphMode)
 
         if indentParagraph then paragraphMode add HSpaceBox(getNumber("parindent"))
       case _ =>
