@@ -410,7 +410,7 @@ abstract class Typesetter:
 
   def result: Box = mode.result
 
-  def pop(): Unit = modeStack.pop
+  def pop: Mode = modeStack.pop
 
   def halign: Typesetter =
     modeStack push new HAlignMode(this)
