@@ -9,7 +9,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   case class Cell(var format: Boolean, material: HBoxBuilder)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
-  case class Line(noalign: ListBuffer[Box], row: ArrayBuffer[Cell])
+  case class Line(var noalign: ListBuffer[Box], row: ArrayBuffer[Cell])
 
   val format      = new ArrayBuffer[Format]
   val content     = new ArrayBuffer[Line]
@@ -19,7 +19,8 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   override def op(operation: String): Unit =
     operation match
-      case "noalign"     =>
+      case "noalign" =>
+        state = "NOALIGN"
       case "omit"        => omit()
       case "newColumn"   => newColumn()
       case "newLine"     => newLine()
@@ -39,6 +40,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         content.last.row += Cell(true, new HBoxBuilder(t))
         content.last.row.last.material addSeq format(column).left
         column += 1
+      case "NOALIGN" => sys.error("can't add a new column in 'noalign'")
 
   def newLine(): Unit =
     state match
@@ -51,6 +53,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
         if column < format.length then sys.error("too few columns")
         if content.last.row.last.format then content.last.row.last.material addSeq format(column - 1).right
         column = 0
+      case "NOALIGN" =>
 
     content += Line(null, new ArrayBuffer)
     newColumn()
@@ -60,13 +63,15 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "ROW" =>
         content.last.row.last.material.clear()
         content.last.row.last.format = false
-      case _ => sys.error("\\omit cannot be used in the format line")
+      case "NOALIGN" => sys.error("\\omit cannot be used in 'noalign'")
+      case _         => sys.error("\\omit cannot be used in the format line")
 
   def placeholder(): Unit =
     state match
       case "START" | "FORMAT_LEFT" => state = "FORMAT_RIGHT"
       case "FORMAT_RIGHT"          => sys.error("only one # in column format")
       case "ROW"                   => sys.error("no # in content cell")
+      case "NOALIGN"               => sys.error("no # in 'noalign'")
 
   def init(): Unit = ()
 
@@ -76,6 +81,10 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "FORMAT_LEFT"  => format.last.left += box
       case "FORMAT_RIGHT" => format.last.right += box
       case "ROW"          => content.last.row.last.material add box
+      case "NOALIGN" =>
+        if content.last.noalign eq null then content.last.noalign = new ListBuffer
+
+        content.last.noalign += box
 
   override def done(): Unit =
     if content.last.row.last.format then content.last.row.last.material addSeq format.last.right
@@ -86,16 +95,20 @@ class HAlignMode(val t: Typesetter) extends Mode:
       val width = content.map(_.row(column).material.size).max
 
       for line <- content.indices do
-        val builder = content(line).row(column).material
+        if content(line).noalign eq null then
+          val builder = content(line).row(column).material
 
-        builder.toSize = width
-        hboxes(line) += builder.result.asInstanceOf[HBox]
+          builder.toSize = width
+          hboxes(line) += builder.result.asInstanceOf[HBox]
 
-    for line <- hboxes.indices do
-      val hbox = new HBoxBuilder(t)
+    for line <- content.indices do
+      if content(line).noalign eq null then
+        val hbox = new HBoxBuilder(t)
 
-      hbox addSeq hboxes(line)
-      t.modeStack(1) add hbox.result
+        hbox addSeq hboxes(line)
+        t.modeStack(1) add hbox.result
+      else
+        content(line).noalign foreach t.modeStack(1).add
 
     super.done()
 
