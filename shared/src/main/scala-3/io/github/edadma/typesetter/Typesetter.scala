@@ -142,7 +142,7 @@ abstract class Typesetter:
   )
   loadTypeface(
     "rubik-wet-paint",
-    "fonts/Rubik_Wet_Paint/Rubik_Wet_Paint",
+    "fonts/Rubik_Wet_Paint/RubikWetPaint",
     Ligatures.ALL,
     Set(),
     "Regular",
