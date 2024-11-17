@@ -426,6 +426,10 @@ abstract class Typesetter:
     push(new HBoxBuilder(this, toSize))
     this
 
+  def vbox(toSize: Double | Null = null): Typesetter =
+    push(new VBoxBuilder(this, toSize))
+    this
+
   def image(path: String): Typesetter =
     add(new ImageBox(this, path))
     this
