@@ -140,6 +140,13 @@ abstract class Typesetter:
     Set(),
     "Regular",
   )
+  loadTypeface(
+    "rubik-wet-paint",
+    "fonts/Rubik_Wet_Paint/Rubik_Wet_Paint",
+    Ligatures.ALL,
+    Set(),
+    "Regular",
+  )
 
   private val gentiumbookMissing = Set(
     `LONG LEFT RIGHT ARROW`,
