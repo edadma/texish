@@ -7,8 +7,8 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name         := "typesetter",
-    version      := "0.0.18",
-    scalaVersion := "3.5.2",
+    version      := "0.0.1",
+    scalaVersion := "3.7.0",
     scalacOptions ++=
       Seq(
         "-deprecation",
