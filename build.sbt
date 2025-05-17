@@ -7,8 +7,8 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name         := "typesetter",
-    version      := "0.0.18",
-    scalaVersion := "3.5.2",
+    version      := "0.0.1",
+    scalaVersion := "3.7.0",
     scalacOptions ++=
       Seq(
         "-deprecation",
@@ -32,16 +32,16 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
-      "org.scala-js"           %% "scalajs-stubs" % "1.1.0"  % "provided",
-      "org.scala-lang.modules" %% "scala-swing"   % "3.0.0"  % "test",
-      "io.github.edadma"       %% "texish"        % "0.0.12" % "test",
+      "org.scala-js"           %% "scalajs-stubs" % "1.1.0" % "provided",
+      "org.scala-lang.modules" %% "scala-swing"   % "3.0.0" % "test",
+      "io.github.edadma"       %% "texish"        % "0.0.1" % "test",
     ),
   )
   .nativeSettings(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "libcairo" % "0.0.9",
-      "io.github.edadma" %%% "freetype" % "0.0.4",
+      "io.github.edadma" %%% "libcairo" % "0.0.1",
+      "io.github.edadma" %%% "freetype" % "0.0.1",
     ),
   )
 //  .jsSettings(
