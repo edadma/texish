@@ -11,6 +11,7 @@ import io.github.edadma.libcairo.{
   Surface,
   fontFaceCreateForFTFace,
   imageSurfaceCreate,
+  imageSurfaceCreateFromPNG,
   pdfSurfaceCreate,
   TextExtents as CairoTextExtents,
 }
@@ -82,10 +83,15 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
     setFont(font)
     ctx.textExtents(c.toString).xAdvance
 
-  def loadImage(path: String): (ImageHandle, Int, Int) = (null, 0, 0)
+  def loadImage(path: String): (ImageHandle, Int, Int) =
+    val surface = imageSurfaceCreateFromPNG(path)
+    (surface, surface.getWidth, surface.getHeight)
 
-  def drawImage(image: ImageHandle, x: Double, y: Double): Unit = ()
-//    g.drawImage(image.asInstanceOf[BufferedImage], x.toInt, y.toInt, null)
+  def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
+    ctx.save()
+    ctx.setSourceSurface(image, x, y)
+    ctx.paint()
+    ctx.restore()
 
   def destroy(): Unit =
     ctx.destroy()
