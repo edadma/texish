@@ -19,9 +19,7 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
         "-language:existentials",
         "-language:dynamics",
       ),
-    organization     := "io.github.edadma",
-    githubOwner      := "edadma",
-    githubRepository := name.value,
+    organization := "io.github.edadma",
 //    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
