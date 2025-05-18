@@ -19,6 +19,8 @@ import scala.compiletime.uninitialized
 
 class CairoPDFTypesetter(val output: String) extends Typesetter:
 
+  type ImageHandle = Surface
+
   private var surface: Surface  = uninitialized
   private var ctx: Context      = uninitialized
   private var freetype: Library = uninitialized
@@ -80,9 +82,9 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
     setFont(font)
     ctx.textExtents(c.toString).xAdvance
 
-  def loadImage(path: String): (Any, Int, Int) = (null, 0, 0)
+  def loadImage(path: String): (ImageHandle, Int, Int) = (null, 0, 0)
 
-  def drawImage(image: Any, x: Double, y: Double): Unit = ()
+  def drawImage(image: ImageHandle, x: Double, y: Double): Unit = ()
 //    g.drawImage(image.asInstanceOf[BufferedImage], x.toInt, y.toInt, null)
 
   def destroy(): Unit =

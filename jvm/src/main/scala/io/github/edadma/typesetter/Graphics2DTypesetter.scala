@@ -9,6 +9,8 @@ import scala.compiletime.uninitialized
 
 class Graphics2DTypesetter extends Typesetter:
 
+  type ImageHandle = BufferedImage
+
   val output: String = null
 
   private var page: BufferedImage    = uninitialized
@@ -90,13 +92,13 @@ class Graphics2DTypesetter extends Typesetter:
     setFont(font)
     g.getFontMetrics.charWidth(c)
 
-  def loadImage(path: String): (Any, Int, Int) =
+  def loadImage(path: String): (ImageHandle, Int, Int) =
     val image = ImageIO.read(new File(path))
 
     (image, image.getWidth, image.getHeight)
 
-  def drawImage(image: Any, x: Double, y: Double): Unit =
-    g.drawImage(image.asInstanceOf[BufferedImage], x.toInt, y.toInt, null)
+  def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
+    g.drawImage(image, x.toInt, y.toInt, null)
 
 //    val glyphs = font.createGlyphVector(frc, text)
 //    val lb = glyphs.getLogicalBounds

@@ -9,6 +9,8 @@ import scala.language.postfixOps
 
 abstract class Typesetter:
 
+  type ImageHandle
+
   val output: String
 
   var debug: Boolean           = false
@@ -64,9 +66,9 @@ abstract class Typesetter:
 
   def charWidth(font: Any, c: Char): Double
 
-  def loadImage(path: String): (Any, Int, Int)
+  def loadImage(path: String): (ImageHandle, Int, Int)
 
-  def drawImage(image: Any, x: Double, y: Double): Unit
+  def drawImage(image: ImageHandle, x: Double, y: Double): Unit
 
   def destroy(): Unit
 
