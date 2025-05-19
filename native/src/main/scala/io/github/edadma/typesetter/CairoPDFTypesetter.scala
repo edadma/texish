@@ -84,8 +84,10 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
     ctx.textExtents(c.toString).xAdvance
 
   def loadImage(path: String): (ImageHandle, Int, Int) =
-    val surface = imageSurfaceCreateFromPNG(path)
-    (surface, surface.getWidth, surface.getHeight)
+    val surface           = imageSurfaceCreateFromPNG(path)
+    val referencedSurface = surface.reference
+
+    (referencedSurface, referencedSurface.getWidth, referencedSurface.getHeight)
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
     ctx.save()
