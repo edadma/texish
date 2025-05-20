@@ -18,11 +18,14 @@ class Graphics2DTypesetter extends Typesetter:
   private val frc          = tempGraphics.getFontRenderContext
 
   // Page management variables
-  private var page: BufferedImage = uninitialized
+  private var page: BufferedImage = tempImage
   private var g: Graphics2D       = uninitialized
 
+  g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+  g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+
   def createPageTarget(width: Double, height: Double): Any =
-    if (g != null) {
+    if (g != null && page != tempImage) {
       g.dispose()
     }
 
