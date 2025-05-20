@@ -13,19 +13,19 @@ class Graphics2DTypesetter extends Typesetter:
 
   val output: String = null
 
-  private var page: BufferedImage    = uninitialized
-  private var g: Graphics2D          = uninitialized
-  private var frc: FontRenderContext = uninitialized
+  private val tempImage    = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+  private val tempGraphics = tempImage.createGraphics()
+  private val frc          = tempGraphics.getFontRenderContext
 
-  g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-  g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-
-  def initTarget(): Unit =
-    page = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
-    g = page.createGraphics()
-    frc = g.getFontRenderContext
+  // Page management variables
+  private var page: BufferedImage = uninitialized
+  private var g: Graphics2D       = uninitialized
 
   def createPageTarget(width: Double, height: Double): Any =
+    if (g != null) {
+      g.dispose()
+    }
+
     page = new BufferedImage(
       width.toInt,
       height.toInt,
@@ -41,8 +41,6 @@ class Graphics2DTypesetter extends Typesetter:
   def ejectPageTarget(): Unit = ()
 
   /*
-  Precision-7530
-  --------------
   xrandr | grep -w connected
   eDP-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 340mm x 190mm
 

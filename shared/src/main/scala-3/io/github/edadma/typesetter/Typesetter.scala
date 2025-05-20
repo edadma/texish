@@ -34,8 +34,6 @@ abstract class Typesetter:
   protected[typesetter] val modeStack: mutable.Stack[Mode] = mutable.Stack(null) // gets set by setDocument
   var indentParagraph: Boolean = true // todo: this should go into page mode maybe
 
-  def initTarget(): Unit
-
   def createPageTarget(width: Double, height: Double): Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
@@ -80,8 +78,6 @@ abstract class Typesetter:
   }
 
   def getDocument: Document = document
-
-  initTarget()
 
   loadTypeface(
     "noto",
