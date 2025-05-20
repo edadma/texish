@@ -19,7 +19,7 @@ class Graphics2DTypesetter extends Typesetter:
 
   // Page management variables
   private var page: BufferedImage = tempImage
-  private var g: Graphics2D       = uninitialized
+  private var g: Graphics2D       = tempGraphics
 
   g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
   g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
