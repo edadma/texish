@@ -34,6 +34,8 @@ abstract class Typesetter:
   protected[typesetter] val modeStack: mutable.Stack[Mode] = mutable.Stack(null) // gets set by setDocument
   var indentParagraph: Boolean = true // todo: this should go into page mode maybe
 
+  def init(width: Double, height: Double): Unit
+
   def createPageTarget(width: Double, height: Double): Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
@@ -79,40 +81,40 @@ abstract class Typesetter:
 
   def getDocument: Document = document
 
-//  loadTypeface(
-//    "noto",
-//    "fonts/NotoSerif/NotoSerif",
-//    "\uFB03\uFB04\uFB01\uFB02",
-//    Set(),
-//    "Regular",
-//    "Bold",
-//    "Italic",
-//    ("Bold", "Italic"),
-//  )
-//  loadTypeface(
-//    "noto",
-//    "fonts/NotoSans/NotoSans",
-//    "\uFB03\uFB04\uFB01\uFB02\uFB00",
-//    Set("sans"),
-//    "Black",
-//    ("Black", "Italic"),
-//    "Bold",
-//    ("Bold", "Italic"),
-//    "ExtraBold",
-//    ("ExtraBold", "Italic"),
-//    "ExtraLight",
-//    ("ExtraLight", "Italic"),
-//    "Italic",
-//    "Light",
-//    ("Light", "Italic"),
-//    "Medium",
-//    ("Medium", "Italic"),
-//    "Regular",
-//    "SemiBold",
-//    ("SemiBold", "Italic"),
-//    "Thin",
-//    ("Thin", "Italic"),
-//  )
+  loadTypeface(
+    "noto",
+    "fonts/NotoSerif/NotoSerif",
+    "\uFB03\uFB04\uFB01\uFB02",
+    Set(),
+    "Regular",
+    "Bold",
+    "Italic",
+    ("Bold", "Italic"),
+  )
+  loadTypeface(
+    "noto",
+    "fonts/NotoSans/NotoSans",
+    "\uFB03\uFB04\uFB01\uFB02\uFB00",
+    Set("sans"),
+    "Black",
+    ("Black", "Italic"),
+    "Bold",
+    ("Bold", "Italic"),
+    "ExtraBold",
+    ("ExtraBold", "Italic"),
+    "ExtraLight",
+    ("ExtraLight", "Italic"),
+    "Italic",
+    "Light",
+    ("Light", "Italic"),
+    "Medium",
+    ("Medium", "Italic"),
+    "Regular",
+    "SemiBold",
+    ("SemiBold", "Italic"),
+    "Thin",
+    ("Thin", "Italic"),
+  )
   loadTypeface(
     "gentium",
     "fonts/GentiumPlus-6.200/GentiumPlus",
@@ -243,6 +245,7 @@ abstract class Typesetter:
     "Regular",
   )
 
+  init(1, 1)
   selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
   setDocument(new SimpleDocument)

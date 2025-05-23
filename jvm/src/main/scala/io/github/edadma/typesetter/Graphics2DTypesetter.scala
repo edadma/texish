@@ -24,6 +24,8 @@ class Graphics2DTypesetter extends Typesetter:
   g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
   g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
+  def init(width: Double, height: Double): Unit = {}
+
   def createPageTarget(width: Double, height: Double): Any =
     if (g != null && page != tempImage) {
       g.dispose()
