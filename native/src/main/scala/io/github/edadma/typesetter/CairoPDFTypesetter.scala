@@ -22,10 +22,10 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   type ImageHandle = Surface
 
-  private var surface: Surface  = uninitialized
-  private var ctx: Context      = uninitialized
-  private var freetype: Library = initFreeType.getOrElse(sys.error("error initializing FreeType"))
-  private var initialized       = false
+  private var surface: Surface       = uninitialized
+  private var ctx: Context           = uninitialized
+  private lazy val freetype: Library = initFreeType.getOrElse(sys.error("error initializing FreeType"))
+  private var initialized            = false
 
   def createPageTarget(width: Double, height: Double): Any =
     if !initialized then
@@ -64,7 +64,7 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
     ctx.rectangle(x, y, width, height)
     ctx.fill()
 
-  def loadFont(path: String): FontFace =
+  def loadFont(path: String): FontFace = {
     fontFaceCreateForFTFace(
       freetype
         .newFace(path, 0)
@@ -72,6 +72,7 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
         .faceptr,
       0,
     )
+  }
 
   def getTextExtents(text: String, font: Any): TextExtents =
     setFont(font)
