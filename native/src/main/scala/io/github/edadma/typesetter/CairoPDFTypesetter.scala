@@ -25,22 +25,12 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
   private var surface: Surface       = uninitialized
   private var ctx: Context           = uninitialized
   private lazy val freetype: Library = initFreeType.getOrElse(sys.error("error initializing FreeType"))
-  private var initialized            = false
 
   def init(width: Double, height: Double): Unit =
     surface = pdfSurfaceCreate(output, width, height)
     ctx = surface.create
 
-  def createPageTarget(width: Double, height: Double): Any =
-    if !initialized then
-      // Create surface with the requested dimensions on first page
-      init(width, height)
-      initialized = true
-      ()
-    else
-      // For subsequent pages, just end the current page
-      ctx.showPage()
-      ()
+  def createPageTarget: Any = ensureInitializedForContent()
 
   def ejectPageTarget(): Unit = ctx.showPage()
 

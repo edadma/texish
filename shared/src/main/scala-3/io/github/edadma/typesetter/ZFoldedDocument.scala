@@ -35,7 +35,7 @@ class ZFoldedDocument extends Document:
     val height = t.getNumber("paperheight") / vfolds
 
     if fold == 0 then
-      printedPages += t.createPageTarget(t.getNumber("paperwidth"), t.getNumber("paperheight"))
+      printedPages += t.createPageTarget
       eject = true
 
     t.draw(

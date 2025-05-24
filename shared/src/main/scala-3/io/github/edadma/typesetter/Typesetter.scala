@@ -32,11 +32,33 @@ abstract class Typesetter:
   private val scopes                           = mutable.Stack[Map[String, Any]](Map.empty)
   /*protected[typesetter]*/
   protected[typesetter] val modeStack: mutable.Stack[Mode] = mutable.Stack(null) // gets set by setDocument
-  var indentParagraph: Boolean = true // todo: this should go into page mode maybe
+  var indentParagraph: Boolean   = true // todo: this should go into page mode maybe
+  private var contentInitialized = false
+
+  protected def ensureInitializedForContent(): Unit = {
+    if (!contentInitialized) {
+      // Get dimensions from variables (with sensible defaults)
+      val width =
+        try {
+          getNumber("paperwidth")
+        } catch {
+          case _: Exception => 8.5 * in
+        }
+      val height =
+        try {
+          getNumber("paperheight")
+        } catch {
+          case _: Exception => 11 * in
+        }
+
+      init(width, height)
+      contentInitialized = true
+    }
+  }
 
   def init(width: Double, height: Double): Unit
 
-  def createPageTarget(width: Double, height: Double): Any
+  def createPageTarget: Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
 
@@ -406,6 +428,7 @@ abstract class Typesetter:
     new CharBox(this, if ligatures then Ligatures(rep, currentFont.ligatures) else rep)
 
   infix def add(box: Box): Typesetter =
+    ensureInitializedForContent()
     mode add box
     this
 

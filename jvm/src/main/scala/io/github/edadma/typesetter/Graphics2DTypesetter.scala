@@ -26,10 +26,13 @@ class Graphics2DTypesetter extends Typesetter:
 
   def init(width: Double, height: Double): Unit = {}
 
-  def createPageTarget(width: Double, height: Double): Any =
+  def createPageTarget: Any =
     if (g != null && page != tempImage) {
       g.dispose()
     }
+
+    val width: Double  = getNumber("paperwidth")
+    val height: Double = getNumber("paperheight")
 
     page = new BufferedImage(
       width.toInt,

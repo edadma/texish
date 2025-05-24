@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter
 
 @main def run(): Unit =
-  val t = CairoPDFTypesetter("a.pdf")
+  val t = new CairoPDFTypesetter("a.pdf")
 
 //  t.start()
 //  t add "[ppasdf"
@@ -13,7 +13,6 @@ package io.github.edadma.typesetter
 //  t.paragraph()
 //  t.fil
 
-  t.init(500, 500)
   t.add("asdf")
   t.selectFont("gentium", 14, Set("regular"))
   t.add("asdf")
