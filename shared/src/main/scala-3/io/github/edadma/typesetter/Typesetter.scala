@@ -27,7 +27,7 @@ abstract class Typesetter:
       ligatures: Set[String],
   )
 
-  protected[typesetter] var document: DocumentMode         = uninitialized
+  protected[typesetter] var document: DocumentMode         = new DocumentMode(this)
   protected val typefaces                                  = new mutable.HashMap[String, Typeface]
   private val scopes                                       = mutable.Stack[Map[String, Any]](Map.empty)
   protected[typesetter] val modeStack: mutable.Stack[Mode] = new mutable.Stack
@@ -262,7 +262,7 @@ abstract class Typesetter:
   init(1, 1)
   selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
-  push(new DocumentMode(this))
+  push(document)
   push(new PageMode(this))
 
   def push(m: Mode): Unit = modeStack push m

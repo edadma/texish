@@ -13,37 +13,35 @@ class Graphics2DTypesetter extends Typesetter:
 
   val output: String = null
 
-  private val tempImage    = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
-  private val tempGraphics = tempImage.createGraphics()
-  private val frc          = tempGraphics.getFontRenderContext
+  private var page: BufferedImage    = uninitialized
+  private var g: Graphics2D          = uninitialized
+  private var frc: FontRenderContext = uninitialized
 
-  // Page management variables
-  private var page: BufferedImage = tempImage
-  private var g: Graphics2D       = tempGraphics
-
-  g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-  g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-
-  def init(width: Double, height: Double): Unit = {}
-
-  def createPageTarget: Any =
-    if (g != null && page != tempImage) {
-      g.dispose()
-    }
-
-    val width: Double  = getNumber("paperwidth")
-    val height: Double = getNumber("paperheight")
-
-    page = new BufferedImage(
-      width.toInt,
-      height.toInt,
-      BufferedImage.TYPE_INT_ARGB,
-    )
-    g = page.createGraphics()
-    g.setColor(java.awt.Color.WHITE)
-    g.fillRect(0, 0, page.getWidth, page.getHeight)
+  def init(width: Double, height: Double): Unit =
+    page = new BufferedImage(width.toInt, height.toInt, BufferedImage.TYPE_INT_ARGB)
+    g = page.createGraphics
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    frc = g.getFontRenderContext
+
+  def createPageTarget: Any =
+//    if (g != null) {
+//      g.dispose()
+//    }
+//
+//    val width: Double  = getNumber("paperwidth")
+//    val height: Double = getNumber("paperheight")
+//
+//    page = new BufferedImage(
+//      width.toInt,
+//      height.toInt,
+//      BufferedImage.TYPE_INT_ARGB,
+//    )
+//    g = page.createGraphics()
+    g.setColor(java.awt.Color.WHITE)
+    g.fillRect(0, 0, page.getWidth, page.getHeight)
+//    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+//    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
     page
 
   def ejectPageTarget(): Unit = ()

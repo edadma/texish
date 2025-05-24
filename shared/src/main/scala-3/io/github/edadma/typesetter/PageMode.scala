@@ -14,7 +14,7 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     end if
 
   def newpage(): Unit =
-    t.document add result
+    t.getDocument add result
     clear()
 
   override def result: Box = wrap(buildTo(t.getNumber("vsize")))

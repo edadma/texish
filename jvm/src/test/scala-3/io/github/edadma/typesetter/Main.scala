@@ -79,7 +79,7 @@ object Main extends SimpleSwingApplication:
 //        t.hbox().add("[three]").done()
 
         t.end()
-        g.drawImage(t.document.printedPages.head.asInstanceOf[BufferedImage], null, 0, 0)
+        g.drawImage(t.getDocument.printedPages.head.asInstanceOf[BufferedImage], null, 0, 0)
       }
     }
 
