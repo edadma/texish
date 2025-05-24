@@ -27,9 +27,9 @@ abstract class Typesetter:
       ligatures: Set[String],
   )
 
-  protected[typesetter] var document: Document = uninitialized
-  protected val typefaces                      = new mutable.HashMap[String, Typeface]
-  private val scopes                           = mutable.Stack[Map[String, Any]](Map.empty)
+  protected[typesetter] var document: DocumentMode = uninitialized
+  protected val typefaces                          = new mutable.HashMap[String, Typeface]
+  private val scopes                               = mutable.Stack[Map[String, Any]](Map.empty)
   /*protected[typesetter]*/
   protected[typesetter] val modeStack: mutable.Stack[Mode] = mutable.Stack(null) // gets set by setDocument
   var indentParagraph: Boolean   = true // todo: this should go into page mode maybe
@@ -94,14 +94,7 @@ abstract class Typesetter:
 
   def destroy(): Unit
 
-  def setDocument(d: Document): Unit = {
-    document = d
-    modeStack(modeStack.length - 1) = d
-    d.ts = this
-    d.init()
-  }
-
-  def getDocument: Document = document
+  def getDocument: DocumentMode = document
 
   loadTypeface(
     "noto",
@@ -270,7 +263,7 @@ abstract class Typesetter:
   init(1, 1)
   selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
-  setDocument(new SimpleDocument)
+  push(new DocumentMode)
   push(new PageMode(this))
 
   def push(m: Mode): Unit = modeStack push m
