@@ -15,59 +15,56 @@ object Main extends SimpleSwingApplication:
       override def paintComponent(g: Graphics2D): Unit = {
         super.paintComponent(g)
 
-        val t =
-          new Graphics2DTypesetter():
-            setDocument(new SimpleDocument)
-//            debug = true
+        val t = new Graphics2DTypesetter()
 
-//        t.hbox(t.getNumber("hsize"))
-//          .addFil()
-//          .add("Hello")
-//          .add(" ")
-//          .add("Scriptura!")
-//          .add(" ")
-//          .add("Cool")
-//          .addFil()
-//          .done()
+        //        t.hbox(t.getNumber("hsize"))
+        //          .addFil()
+        //          .add("Hello")
+        //          .add(" ")
+        //          .add("Scriptura!")
+        //          .add(" ")
+        //          .add("Cool")
+        //          .addFil()
+        //          .done()
 
-//        t.hbox(t.getNumber("hsize"))
-//          .addFil()
-//          .add(
-//            ImageBox(
-//              t,
-//              "866-536x354.jpg",
-//            ),
-//          )
-//          .addFil()
-//          .done()
+        //        t.hbox(t.getNumber("hsize"))
+        //          .addFil()
+        //          .add(
+        //            ImageBox(
+        //              t,
+        //              "866-536x354.jpg",
+        //            ),
+        //          )
+        //          .addFil()
+        //          .done()
 
-//        t.hbox(t.getNumber("hsize"))
-//          .addFil()
-//          .add("one")
-//          .addFil()
-//          .done()
+        //        t.hbox(t.getNumber("hsize"))
+        //          .addFil()
+        //          .add("one")
+        //          .addFil()
+        //          .done()
 
-//        t.hbox(t.getNumber("hsize"))
-//          .fil
-//          .add("[two]")
-//          .fil
-//          .done()
-//
-//        t.hbox(t.getNumber("hsize"))
-//          .fil
-//          .add("[three]")
-//          .fil
-//          .done()
+        //        t.hbox(t.getNumber("hsize"))
+        //          .fil
+        //          .add("[two]")
+        //          .fil
+        //          .done()
+        //
+        //        t.hbox(t.getNumber("hsize"))
+        //          .fil
+        //          .add("[three]")
+        //          .fil
+        //          .done()
 
-//        t.start()
-//        t add "asdf"
-//
-//        for _ <- 1 to 20 do
-//          t add " "
-//          t add "zxcv"
-//
-//        t.paragraph()
-//        t.fil
+        //        t.start()
+        //        t add "asdf"
+        //
+        //        for _ <- 1 to 20 do
+        //          t add " "
+        //          t add "zxcv"
+        //
+        //        t.paragraph()
+        //        t.fil
 
         t.halign
           .add("(").op("placeholder").add(")").add(" ").fil
