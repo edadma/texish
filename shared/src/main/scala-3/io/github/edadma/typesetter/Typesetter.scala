@@ -263,7 +263,7 @@ abstract class Typesetter:
   init(1, 1)
   selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
-  push(new DocumentMode)
+  push(new DocumentMode(this))
   push(new PageMode(this))
 
   def push(m: Mode): Unit = modeStack push m

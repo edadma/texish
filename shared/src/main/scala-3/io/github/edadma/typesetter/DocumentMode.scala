@@ -3,13 +3,10 @@ package io.github.edadma.typesetter
 import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized
 
-class DocumentMode extends Mode:
-  private[typesetter] var ts: Typesetter = uninitialized
-  val printedPages                       = new ArrayBuffer[Any]
-  var page: Int                          = 0
-  var eject: Boolean                     = false
-
-  def t: Typesetter = ts
+class DocumentMode(val t: Typesetter) extends Mode:
+  val printedPages   = new ArrayBuffer[Any]
+  var page: Int      = 0
+  var eject: Boolean = false
 
   def init(): Unit = ()
 
