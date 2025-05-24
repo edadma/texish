@@ -25,6 +25,7 @@ class DocumentMode(val t: Typesetter) extends Mode:
   override def done(): Unit =
     pop
 
-    if eject then t.ejectPageTarget()
+    if eject then
+      t.ejectPageTarget()
 
   def result: Box = ???

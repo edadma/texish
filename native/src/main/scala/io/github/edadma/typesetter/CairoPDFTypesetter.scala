@@ -32,7 +32,9 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   def createPageTarget: Any = ensureInitializedForContent()
 
-  def ejectPageTarget(): Unit = ctx.showPage()
+  def ejectPageTarget(): Unit = {
+    ctx.showPage()
+  }
 
   def getDPI: Double = 72
 

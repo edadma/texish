@@ -27,13 +27,12 @@ abstract class Typesetter:
       ligatures: Set[String],
   )
 
-  protected[typesetter] var document: DocumentMode = uninitialized
-  protected val typefaces                          = new mutable.HashMap[String, Typeface]
-  private val scopes                               = mutable.Stack[Map[String, Any]](Map.empty)
-  /*protected[typesetter]*/
-  protected[typesetter] val modeStack: mutable.Stack[Mode] = mutable.Stack(null) // gets set by setDocument
-  var indentParagraph: Boolean   = true // todo: this should go into page mode maybe
-  private var contentInitialized = false
+  protected[typesetter] var document: DocumentMode         = uninitialized
+  protected val typefaces                                  = new mutable.HashMap[String, Typeface]
+  private val scopes                                       = mutable.Stack[Map[String, Any]](Map.empty)
+  protected[typesetter] val modeStack: mutable.Stack[Mode] = new mutable.Stack
+  var indentParagraph: Boolean                             = true // todo: this should go into page mode maybe
+  private var contentInitialized                           = false
 
   protected def ensureInitializedForContent(): Unit = {
     if (!contentInitialized) {
@@ -458,8 +457,7 @@ abstract class Typesetter:
     add(new ImageBox(this, path))
     this
 
-  def done(): Unit =
-    mode.done()
+  def done(): Unit = mode.done()
 
   def newpage(): Unit =
     paragraph()
