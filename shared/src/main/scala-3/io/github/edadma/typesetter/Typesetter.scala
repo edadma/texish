@@ -308,12 +308,14 @@ abstract class Typesetter:
     val prev = scopes.pop
 
     if scopes.length == 1 then
-      scopes(0) = prev
-    else
-      scopes.top get "font" match
-        case Some(font: Font) => currentFont = font
-        case Some(o)          => sys.error(s"font object has wrong type: '${o.getClass}'")
-        case None             =>
+      val nonFontVars = prev.filterNot(_._1 == "font")
+
+      scopes(0) ++= nonFontVars
+
+    scopes.top.get("font") match
+      case Some(font: Font) => currentFont = font
+      case Some(o)          => sys.error(s"font object has wrong type: '${o.getClass}'")
+      case None             =>
 
   def italic(): Unit = addStyle("italic")
 
