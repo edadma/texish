@@ -279,11 +279,13 @@ abstract class Typesetter:
 
   def mm: Double = cm / 10
 
-  infix def get(name: String): Any = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
+  infix def get(name: String): Option[Any] = scopes.top.get(name)
 
-  infix def getGlue(name: String): Glue = get(name).asInstanceOf[Glue]
+  infix def getVar(name: String): Any = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
 
-  infix def getNumber(name: String): Double = get(name).asInstanceOf[Double]
+  infix def getGlue(name: String): Glue = getVar(name).asInstanceOf[Glue]
+
+  infix def getNumber(name: String): Double = getVar(name).asInstanceOf[Double]
 
   def set(name: String, value: Any): Unit =
     val v =

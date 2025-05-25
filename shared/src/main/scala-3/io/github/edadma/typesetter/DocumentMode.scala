@@ -14,8 +14,8 @@ class DocumentMode(val t: Typesetter) extends Mode:
 
   infix def add(box: Box): Unit =
     t.get("layout") match
-      case "zfold" => handleZFoldLayout(box)
-      case _       => handleSimpleLayout(box)
+      case Some("zfold") => handleZFoldLayout(box)
+      case _             => handleSimpleLayout(box)
 
     page += 1
 
