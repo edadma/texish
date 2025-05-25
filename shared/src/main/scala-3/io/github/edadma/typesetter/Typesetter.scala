@@ -391,8 +391,6 @@ abstract class Typesetter:
     val f = makeFont(typeface, size, styleSet)
 
     if f != currentFont then
-      if scopes.size > 1 && !scopes(1).contains("font") then scopes(1) += ("font" -> currentFont)
-
       currentFont = f
       set("baselineskip", Glue(f.size))
 
