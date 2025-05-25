@@ -13,14 +13,46 @@ class DocumentMode(val t: Typesetter) extends Mode:
   def layout(b: Box): Box = b
 
   infix def add(box: Box): Unit =
+    t.get("layout") match
+      case "zfold" => handleZFoldLayout(box)
+      case _       => handleSimpleLayout(box)
+
+    page += 1
+
+  def handleZFoldLayout(b: Box): Unit =
+    val hfolds = 3
+    val vfolds = 2
+
+    val folds = vfolds * hfolds
+
+    val fold   = page % folds
+    val hfold  = page % hfolds
+    val vfold  = page / hfolds
+    val width  = t.getNumber("paperwidth") / hfolds
+    val height = t.getNumber("paperheight") / vfolds
+
+    if fold == 0 then
+      printedPages += t.createPageTarget
+      eject = true
+
+    t.draw(
+      layout(b),
+      hfold * width + t.getNumber("hoffset"),
+      vfold * height + t.getNumber("voffset"),
+    )
+
+    if fold == folds - 1 then
+      t.ejectPageTarget()
+      eject = false
+
+  def handleSimpleLayout(b: Box): Unit =
     printedPages += t.createPageTarget
     t.draw(
-      layout(box),
+      layout(b),
       t.getNumber("hoffset"),
       t.getNumber("voffset"),
     )
     t.ejectPageTarget()
-    page += 1
 
   override def done(): Unit =
     pop
