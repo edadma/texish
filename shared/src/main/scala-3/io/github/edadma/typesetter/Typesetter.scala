@@ -302,20 +302,27 @@ abstract class Typesetter:
         case (k, v)         => (k, v)
       }
 
-  def enter(): Unit = scopes push scopes.top
+  def enter(): Unit =
+    scopes push scopes.top
+    set("saved_font", currentFont)
+    set("saved_color", currentColor)
 
   def exit(): Unit =
     val prev = scopes.pop
 
-    if scopes.length == 1 then
-      val nonFontVars = prev.filterNot(_._1 == "font")
-
-      scopes(0) ++= nonFontVars
-
-    scopes.top.get("font") match
+    prev.get("saved_font") match
       case Some(font: Font) => currentFont = font
-      case Some(o)          => sys.error(s"font object has wrong type: '${o.getClass}'")
-      case None             =>
+      case _                =>
+
+    prev.get("saved_color") match
+      case Some(color: Color) => currentColor = color
+      case _                  =>
+
+    if scopes.length == 1 then
+      val nonFormattingVars = prev.filterNot { case (k, _) =>
+        k.startsWith("saved_")
+      }
+      scopes(0) ++= nonFormattingVars
 
   def italic(): Unit = addStyle("italic")
 
