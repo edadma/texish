@@ -7,7 +7,7 @@ ThisBuild / scalaVersion           := "3.7.4"
 ThisBuild / organization           := "io.github.edadma"
 ThisBuild / organizationName       := "edadma"
 ThisBuild / organizationHomepage   := Some(url("https://github.com/edadma"))
-ThisBuild / version                := "0.0.7"
+ThisBuild / version                := "0.0.8"
 ThisBuild / sonatypeCredentialHost := sonatypeCentralHost
 
 ThisBuild / publishConfiguration := publishConfiguration.value.withOverwrite(true).withChecksums(Vector.empty)
@@ -52,7 +52,7 @@ lazy val typesetter = crossProject( /*JSPlatform,*/ JVMPlatform, NativePlatform)
         "-language:dynamics",
       ),
     organization := "io.github.edadma",
-//    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
     ),
