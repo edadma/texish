@@ -302,6 +302,9 @@ abstract class Typesetter:
         case (k, v)         => (k, v)
       }
 
+  // Variables that should be scoped with font changes (not leaked back on scope exit)
+  private val formattingVars = Set("baselineskip", "spaceskip", "xspaceskip", "lineskip")
+
   def enter(): Unit =
     scopes push scopes.top
     set("saved_font", currentFont)
@@ -320,7 +323,7 @@ abstract class Typesetter:
 
     if scopes.length == 1 then
       val nonFormattingVars = prev.filterNot { case (k, _) =>
-        k.startsWith("saved_")
+        k.startsWith("saved_") || formattingVars.contains(k)
       }
       scopes(0) ++= nonFormattingVars
 
