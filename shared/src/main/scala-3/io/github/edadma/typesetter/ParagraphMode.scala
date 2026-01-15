@@ -2,13 +2,48 @@ package io.github.edadma.typesetter
 
 import scala.annotation.tailrec
 
-//import pprint.pprintln
-
 class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   def result: Box = ???
 
   override def done(): Unit =
     val hsize = t.getNumber("hsize")
+
+    // Try Knuth-Plass optimal line breaking first
+    KnuthPlass.breakParagraph(boxes.toSeq, hsize, t) match
+      case Some(lines) if lines.nonEmpty =>
+        buildLinesFromOptimal(lines, hsize)
+      case _ =>
+        // Fall back to greedy algorithm
+        buildLinesGreedy(hsize)
+
+    t.indentParagraph = true
+    pop
+
+  private def buildLinesFromOptimal(lines: Seq[Seq[Box]], hsize: Double): Unit =
+    var first = true
+
+    for (lineBoxes, lineIdx) <- lines.zipWithIndex do
+      val hbox    = new HBoxBuilder(t, hsize)
+      val isLast  = lineIdx == lines.length - 1
+
+      for box <- lineBoxes do
+        hbox add box
+
+      // Remove trailing space
+      if hbox.nonEmpty && hbox.last.isSpace then hbox.removeLast()
+
+      // Add parfillskip to last line
+      if isLast then hbox add t.getGlue("parfillskip")
+
+      val newLine = hbox.result
+      t.modeStack(1) add newLine
+
+      if first then
+        val vlist = t.modeStack(1).asInstanceOf[VerticalMode]
+        if vlist.length > 1 then vlist.insert(vlist.length - 2, t.getGlue("parskip"))
+        first = false
+
+  private def buildLinesGreedy(hsize: Double): Unit =
     var first = true
 
     while boxes.nonEmpty do
@@ -78,7 +113,3 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         if vlist.length > 1 then vlist.insert(vlist.length - 2, t.getGlue("parskip"))
         first = false
     end while
-
-    t.indentParagraph = true
-    pop
-  end done

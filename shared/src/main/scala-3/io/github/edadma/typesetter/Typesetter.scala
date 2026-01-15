@@ -524,6 +524,14 @@ abstract class Typesetter:
       "hoffset"       -> 1 * in,
       "voffset"       -> 1 * in,
 
+      // Knuth-Plass line breaking parameters
+      "tolerance"       -> 200.0,  // max acceptable badness
+      "pretolerance"    -> 100.0,  // first pass tolerance (no hyphenation)
+      "hyphenpenalty"   -> 50.0,   // penalty for hyphenating
+      "exhyphenpenalty" -> 50.0,   // penalty for explicit hyphen break
+      "linepenalty"     -> 10.0,   // penalty per line
+      "adjdemerits"     -> 10000.0, // penalty for adjacent tight/loose lines
+
       //
       "imageScaling" -> 1.0,
       "pagewidth"    -> 8.5 * in,
