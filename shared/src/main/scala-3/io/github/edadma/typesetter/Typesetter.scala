@@ -98,7 +98,7 @@ abstract class Typesetter:
   loadTypeface(
     "noto",
     "fonts/NotoSerif/NotoSerif",
-    "\uFB03\uFB04\uFB01\uFB02",
+    "ﬃﬄﬁﬂ",
     Set(),
     "Regular",
     "Bold",
@@ -108,7 +108,7 @@ abstract class Typesetter:
   loadTypeface(
     "noto",
     "fonts/NotoSans/NotoSans",
-    "\uFB03\uFB04\uFB01\uFB02\uFB00",
+    "ﬃﬄﬁﬂﬀ",
     Set("sans"),
     "Black",
     ("Black", "Italic"),
@@ -132,7 +132,7 @@ abstract class Typesetter:
   loadTypeface(
     "gentium",
     "fonts/GentiumPlus-6.200/GentiumPlus",
-    "\uFB03\uFB04\uFB01\uFB02\uFB00",
+    "ﬃﬄﬁﬂﬀ",
     Set(),
     "Regular",
     "Bold",
@@ -185,7 +185,7 @@ abstract class Typesetter:
     ("Bold", "Italic"),
   )
   overrideBaseline("gentium", 0.8)
-  loadTypeface("pt", "fonts/PTSansNarrow/PTSansNarrow", "\uFB01\uFB02", Set(), "Regular", "Bold")
+  loadTypeface("pt", "fonts/PTSansNarrow/PTSansNarrow", "ﬁﬂ", Set(), "Regular", "Bold")
   loadTypeface(
     "mono",
     "fonts/JetBrainsMono/static/JetBrainsMono",
