@@ -72,7 +72,7 @@ object Value:
     case Seq(items)    => items.map(display).mkString("[", ", ", "]")
     case Map(entries)  => entries.map((k, v) => s"$k: ${display(v)}").mkString("{", ", ", "}")
     case Macro(_, _, _) => "<macro>"
-    case Dimen(pts)    => s"${pts}pt"
+    case Dimen(pts)    => (if pts.isWhole then pts.toBigInt.toString else pts.toString) + "pt"
     case Glue(n, st, sh) => s"${n}pt plus ${st}pt minus ${sh}pt"
     case Nil           => ""
     case Undefined     => "<undefined>"

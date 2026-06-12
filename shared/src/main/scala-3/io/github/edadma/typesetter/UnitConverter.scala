@@ -1,12 +1,9 @@
 package io.github.edadma.typesetter
 
-import scala.compiletime.uninitialized
-
+/** Converts unit-suffixed dimension values to big points (1/72 inch) — the engine's one canonical unit. The typesetter
+  * is needed only for font-relative units (em, ex).
+  */
 class UnitConverter(t: Typesetter):
-  def pointsToPixels(points: Double): Double = (points / 72.0) * t.getDPI
-
-  def pixelsToPoints(pixels: Double): Double = (pixels / t.getDPI) * 72.0
-
   def cmToPoints(cm: Double): Double = (cm / 2.54) * 72.0
 
   def inchesToPoints(inches: Double): Double = inches * 72.0
@@ -23,11 +20,10 @@ class UnitConverter(t: Typesetter):
     case "mm" => mmToPoints(value) // Millimeters (1 mm = 2.83465 points)
     case "em" => value * t.currentFont.size // Em units (based on current font size)
     case "ex" => value * t.currentFont.xHeight // Ex units (based on current font x-height)
-    case "px" => pixelsToPoints(value) // Pixels (dependent on screen DPI)
     case _    => throw new IllegalArgumentException(s"Unknown unit: $unit")
 
   def toPicas(points: Double): (Double, Double, String) =
-    val picas = points / 12
+    val picas           = points / 12
     val remainingPoints = points % 12
 
     (picas, points, f"${picas}p${remainingPoints}")

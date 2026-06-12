@@ -36,8 +36,6 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
     ctx.showPage()
   }
 
-  def getDPI: Double = 72
-
   def setFont(font: Any): Unit = ctx.setScaledFont(font.asInstanceOf[ScaledFont])
 
   def setColor(color: Color): Unit = ctx.setSourceRGBA(color.red, color.green, color.blue, color.alpha)

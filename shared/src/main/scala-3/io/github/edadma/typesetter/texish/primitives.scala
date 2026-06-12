@@ -99,10 +99,9 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     "vskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val arg = evalArg(proc, pos)
-        arg match
-          case Value.Num(d) => t.glue(d.toDouble, 0, 0)
-          case _            => handler.error("\\vskip expects a dimension", pos)
+        points(evalArg(proc, pos)) match
+          case Some(d) => t.glue(d, 0, 0)
+          case None    => handler.error("\\vskip expects a dimension", pos)
     },
   )
 
@@ -111,10 +110,9 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     "hskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val arg = evalArg(proc, pos)
-        arg match
-          case Value.Num(d) => t.glue(d.toDouble, 0, 0)
-          case _            => handler.error("\\hskip expects a dimension", pos)
+        points(evalArg(proc, pos)) match
+          case Some(d) => t.glue(d, 0, 0)
+          case None    => handler.error("\\hskip expects a dimension", pos)
     },
   )
 
@@ -124,9 +122,9 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val opts    = proc.readOptionalParams(pos)
-        val width   = opts.get("width").collect { case Value.Num(n) => n.toDouble }.getOrElse(t.getNumber("hsize"))
-        val ascent  = opts.get("ascent").collect { case Value.Num(n) => n.toDouble }.getOrElse(3.0)
-        val descent = opts.get("descent").collect { case Value.Num(n) => n.toDouble }.getOrElse(0.0)
+        val width   = opts.get("width").flatMap(points).getOrElse(t.getNumber("hsize"))
+        val ascent  = opts.get("ascent").flatMap(points).getOrElse(3.0)
+        val descent = opts.get("descent").flatMap(points).getOrElse(0.0)
         t.add(RuleBox(t, width, ascent, descent))
     },
   )
@@ -138,7 +136,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val opts  = proc.readOptionalParams(pos)
         val body  = proc.readArgument(pos)
-        val toVal = opts.get("to").collect { case Value.Num(n) => n.toDouble }.map(java.lang.Double.valueOf).orNull
+        val toVal = opts.get("to").flatMap(points).map(java.lang.Double.valueOf).orNull
         t.hbox(toVal)
         proc.processTokenList(body) // scoping happens automatically from { } tokens
         t.mode.done()
@@ -152,7 +150,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val opts  = proc.readOptionalParams(pos)
         val body  = proc.readArgument(pos)
-        val toVal = opts.get("to").collect { case Value.Num(n) => n.toDouble }.map(java.lang.Double.valueOf).orNull
+        val toVal = opts.get("to").flatMap(points).map(java.lang.Double.valueOf).orNull
         t.vbox(toVal)
         proc.processTokenList(body) // scoping happens automatically from { } tokens
         t.mode.done()
@@ -257,3 +255,9 @@ class SimplePrimitive(action: () => Any) extends Primitive:
 // Helper to evaluate an argument and get its value
 private def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
+
+// A dimension value in big points: Dimen carries its own unit; a bare number means points
+private def points(v: Value): Option[Double] = v match
+  case Value.Dimen(p) => Some(p.toDouble)
+  case Value.Num(n)   => Some(n.toDouble)
+  case _              => None

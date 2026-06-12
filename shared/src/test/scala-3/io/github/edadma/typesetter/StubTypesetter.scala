@@ -15,8 +15,6 @@ class StubTypesetter extends Typesetter:
 
   def ejectPageTarget(): Unit = ()
 
-  def getDPI: Double = 72
-
   def setFont(font: Any): Unit = ()
 
   def setColor(color: Color): Unit = ()

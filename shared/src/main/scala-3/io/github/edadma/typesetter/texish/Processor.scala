@@ -591,13 +591,31 @@ def stripOuterBraces(tokens: Vector[Token]): Vector[Token] =
       rest.init.toVector
     case other => other
 
+/** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm */
+private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm)""".r
+
+/** Parse a unit-suffixed dimension into Dimen (big points). Only context-free units — font-relative units (em, ex)
+  * need the typesetter and are handled at the primitive level.
+  */
+def parseDimension(s: String): Option[Value] =
+  s match
+    case DimensionPattern(num, unit) =>
+      val factor = unit match
+        case "pt" => BigDecimal(1)
+        case "pc" => BigDecimal(12)
+        case "in" => BigDecimal(72)
+        case "cm" => BigDecimal(72 / 2.54)
+        case "mm" => BigDecimal(72 / 25.4)
+      Some(Value.Dimen(BigDecimal(num) * factor))
+    case _ => None
+
 // Helper to evaluate tokens to a value
 def evalTokens(tokens: Vector[Token], handler: Handler): Value =
   stripOuterBraces(tokens) match
     case Vector(Token.Text(s, _)) =>
-      // Try to parse as number
+      // Try to parse as a number, then as a unit-suffixed dimension
       try Value.Num(BigDecimal(s))
-      catch case _: Exception => Value.Text(s)
+      catch case _: Exception => parseDimension(s).getOrElse(Value.Text(s))
     case Vector(Token.ControlSeq(name, _)) =>
       handler.get(name)
     case _ =>

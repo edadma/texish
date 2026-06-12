@@ -7,52 +7,41 @@ import java.io.File
 import javax.imageio.ImageIO
 import scala.compiletime.uninitialized
 
-class Graphics2DTypesetter extends Typesetter:
+/** Raster backend over java.awt. The engine hands this class coordinates and sizes in big points (1/72 inch); the
+  * device transform (dpi/72) is applied in exactly one place — a scale on the Graphics2D — so layout is identical
+  * across backends and only rasterization density differs. Text is measured against an identity FontRenderContext, so
+  * extents are reported back to the engine in points.
+  */
+class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   type ImageHandle = BufferedImage
 
   val output: String = null
+
+  private val deviceScale = dpi / 72
 
   private var page: BufferedImage    = uninitialized
   private var g: Graphics2D          = uninitialized
   private var frc: FontRenderContext = uninitialized
 
   def init(width: Double, height: Double): Unit =
-    page = new BufferedImage(width.toInt, height.toInt, BufferedImage.TYPE_INT_ARGB)
+    page = new BufferedImage(
+      (width * deviceScale).toInt max 1,
+      (height * deviceScale).toInt max 1,
+      BufferedImage.TYPE_INT_ARGB,
+    )
     g = page.createGraphics
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-    frc = g.getFontRenderContext
+    g.scale(deviceScale, deviceScale)
+    frc = new FontRenderContext(null, true, true)
 
   def createPageTarget: Any =
-//    if (g != null) {
-//      g.dispose()
-//    }
-//
-//    val width: Double  = getNumber("paperwidth")
-//    val height: Double = getNumber("paperheight")
-//
-//    page = new BufferedImage(
-//      width.toInt,
-//      height.toInt,
-//      BufferedImage.TYPE_INT_ARGB,
-//    )
-//    g = page.createGraphics()
     g.setColor(java.awt.Color.WHITE)
-    g.fillRect(0, 0, page.getWidth, page.getHeight)
-//    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-//    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    g.fillRect(0, 0, (page.getWidth / deviceScale).toInt + 1, (page.getHeight / deviceScale).toInt + 1)
     page
 
   def ejectPageTarget(): Unit = ()
-
-  /*
-  xrandr | grep -w connected
-  eDP-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 340mm x 190mm
-
-  DPI is 143.435294114
-   */
-  def getDPI: Double = 100 // 143.435294114 // Toolkit.getDefaultToolkit.getScreenResolution
 
   def setFont(font: Any): Unit = g.setFont(font.asInstanceOf[JFont])
 
@@ -93,24 +82,17 @@ class Graphics2DTypesetter extends Typesetter:
   def makeFont(font: Any, size: Double): Any = font.asInstanceOf[JFont].deriveFont(size.toFloat)
 
   def charWidth(font: Any, c: Char): Double =
-    setFont(font)
-    g.getFontMetrics.charWidth(c)
+    val layout = new TextLayout(c.toString, font.asInstanceOf[JFont], frc)
+
+    layout.getAdvance
 
   def loadImage(path: String): (ImageHandle, Int, Int) =
     val image = ImageIO.read(new File(path))
 
+    // image pixels are treated as big points (1px = 1pt), matching the PDF backend
     (image, image.getWidth, image.getHeight)
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
     g.drawImage(image, x.toInt, y.toInt, null)
-
-//    val glyphs = font.createGlyphVector(frc, text)
-//    val lb = glyphs.getLogicalBounds
-//    val vb = glyphs.getVisualBounds
-//
-//    println(lb.getX)
-//    println(lb.getWidth)
-//    println(vb.getWidth)
-//    TextExtents(lb.getX, vb.getY, vb.getWidth, vb.getHeight, lb.getWidth, 0)
 
   def destroy(): Unit = ()

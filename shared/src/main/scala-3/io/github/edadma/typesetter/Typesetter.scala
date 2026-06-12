@@ -65,8 +65,6 @@ abstract class Typesetter:
 
   def ejectPageTarget(): Unit
 
-  def getDPI: Double
-
   def setFont(font: Any): Unit
 
   def setColor(color: Color): Unit
@@ -273,9 +271,11 @@ abstract class Typesetter:
 
   def setFont(f: Font): Unit = setFont(f.renderFont)
 
-  def in: Double = getDPI
+  // The engine works in big points (1/72 inch), on every backend. DPI exists
+  // only at the device boundary, inside raster backends.
+  def pt: Double = 1
 
-  def pt: Double = in / 72
+  def in: Double = 72
 
   def cm: Double = in / 2.54
 
@@ -290,8 +290,9 @@ abstract class Typesetter:
     case v                     => sys.error(s"variable '$name' is not glue: ${Value.display(v)}")
 
   infix def getNumber(name: String): Double = getVar(name) match
-    case Value.Num(n) => n.toDouble
-    case v            => sys.error(s"variable '$name' is not a number: ${Value.display(v)}")
+    case Value.Num(n)   => n.toDouble
+    case Value.Dimen(p) => p.toDouble
+    case v              => sys.error(s"variable '$name' is not a number: ${Value.display(v)}")
 
   def set(name: String, value: Any): Unit =
     scopes(0) += (name -> Value.from(value))
