@@ -59,6 +59,7 @@ class Processor(val handler: Handler):
   registerPrimitive("downcase", DowncasePrimitive)
   registerPrimitive("trim", TrimPrimitive)
   registerPrimitive("size", SizePrimitive)
+  registerPrimitive("accent", AccentPrimitive)
 
   // Sequence primitives
   registerPrimitive("seq", SeqPrimitive)
@@ -818,6 +819,61 @@ object NePrimitive extends Primitive:
     if result then proc.handler.text("true") else proc.handler.text("false")
 
 // ============ STRING FUNCTIONS ============
+
+object AccentPrimitive extends Primitive:
+  private val accents =
+    Map(
+      ("'", "a") -> "á", ("'", "A") -> "Á",
+      ("'", "e") -> "é", ("'", "E") -> "É",
+      ("'", "i") -> "í", ("'", "I") -> "Í",
+      ("'", "o") -> "ó", ("'", "O") -> "Ó",
+      ("'", "u") -> "ú", ("'", "U") -> "Ú",
+      ("'", "y") -> "ý", ("'", "Y") -> "Ý",
+      ("`", "a") -> "à", ("`", "A") -> "À",
+      ("`", "e") -> "è", ("`", "E") -> "È",
+      ("`", "i") -> "ì", ("`", "I") -> "Ì",
+      ("`", "o") -> "ò", ("`", "O") -> "Ò",
+      ("`", "u") -> "ù", ("`", "U") -> "Ù",
+      ("^", "a") -> "â", ("^", "A") -> "Â",
+      ("^", "e") -> "ê", ("^", "E") -> "Ê",
+      ("^", "i") -> "î", ("^", "I") -> "Î",
+      ("^", "o") -> "ô", ("^", "O") -> "Ô",
+      ("^", "u") -> "û", ("^", "U") -> "Û",
+      ("\"", "a") -> "ä", ("\"", "A") -> "Ä",
+      ("\"", "e") -> "ë", ("\"", "E") -> "Ë",
+      ("\"", "i") -> "ï", ("\"", "I") -> "Ï",
+      ("\"", "o") -> "ö", ("\"", "O") -> "Ö",
+      ("\"", "u") -> "ü", ("\"", "U") -> "Ü",
+      ("\"", "y") -> "ÿ", ("\"", "Y") -> "Ÿ",
+      ("~", "a") -> "ã", ("~", "A") -> "Ã",
+      ("~", "n") -> "ñ", ("~", "N") -> "Ñ",
+      ("~", "o") -> "õ", ("~", "O") -> "Õ",
+      ("c", "c") -> "ç", ("c", "C") -> "Ç",
+    )
+
+  // the accent mark may arrive wrapped in literal quotes (\accent "'" e or \accent '"' e)
+  private def unquote(s: String): String =
+    if s.length >= 3 && (s.head == '"' && s.last == '"' || s.head == '\'' && s.last == '\'') then s.tail.init
+    else s
+
+  // read an argument as literal text: active chars like ~ keep their literal character (\accent {~} n)
+  private def literalArg(proc: Processor, pos: CharReader): String =
+    stripOuterBraces(proc.readArgument(pos)).map {
+      case Token.Text(s, _)   => s
+      case Token.Active(c, _) => c.toString
+      case Token.Space(s, _)  => s
+      case _                  => ""
+    }.mkString
+
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val accent = unquote(literalArg(proc, pos))
+    val base   = literalArg(proc, pos)
+
+    accents get (accent, base) match
+      case Some(c) =>
+        proc.setResult(Value.Text(c))
+        proc.handler.text(c)
+      case None => proc.handler.error(s"accented character not found: $accent $base", pos)
 
 object UpcasePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =

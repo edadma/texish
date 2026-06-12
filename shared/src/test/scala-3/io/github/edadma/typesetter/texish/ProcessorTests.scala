@@ -580,4 +580,43 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       // This matches texish-old behavior
       process("\\set x {42} hello") shouldBe " hello"
     }
+
+    // ============ ACCENTS ============
+
+    "should handle \\accent with acute" in {
+      process("caf\\accent ' e") shouldBe "café"
+    }
+
+    "should handle \\accent with grave" in {
+      process("\\accent ` a") shouldBe "à"
+    }
+
+    "should handle \\accent with circumflex" in {
+      process("\\accent ^ e") shouldBe "ê"
+    }
+
+    "should handle \\accent with quoted umlaut mark" in {
+      process("\\accent '\"' u") shouldBe "ü"
+    }
+
+    "should handle \\accent with quoted apostrophe mark" in {
+      process("\\accent \"'\" E") shouldBe "É"
+    }
+
+    "should handle \\accent with cedilla" in {
+      process("\\accent c c") shouldBe "ç"
+    }
+
+    "should handle \\accent with tilde" in {
+      // bare ~ is the non-breaking space, so the tilde mark must be braced
+      process("\\accent {~} n") shouldBe "ñ"
+    }
+
+    "should handle \\accent through a macro" in {
+      process("\\def umlaut letter {\\accent '\"' \\letter}fr\\umlaut{u}her") shouldBe "früher"
+    }
+
+    "should error on unknown accent combination" in {
+      a[TexishException] should be thrownBy process("\\accent c x")
+    }
   }
