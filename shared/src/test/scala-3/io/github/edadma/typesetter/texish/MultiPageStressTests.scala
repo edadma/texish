@@ -6,8 +6,9 @@ import org.scalatest.matchers.should.Matchers
 
 import scala.collection.mutable.ArrayBuffer
 
-/** A document of many paragraphs flows across many pages with no glue-setting complaints: parskip's fil stretch
-  * absorbs the slack on every page, every shipped page is set to exactly vsize, and pageno tracks the count.
+/** A document of many paragraphs flows across many pages with no glue-setting complaints: with raggedbottom set,
+  * every page — including one holding only a mid-paragraph fragment, which has no stretchable glue of its own —
+  * is set to exactly vsize, and pageno tracks the count.
   */
 class MultiPageStressTests extends AnyFreeSpec with Matchers:
 
@@ -26,6 +27,7 @@ class MultiPageStressTests extends AnyFreeSpec with Matchers:
     val doc = new CapturingDocument(t)
     t.document = doc
     t.set("vsize", 200.0)
+    t.set("raggedbottom", 1.0)
 
     val source = (1 to 40)
       .map(i => s"Paragraph $i begins here. " + "filler words follow it onward " * 5)

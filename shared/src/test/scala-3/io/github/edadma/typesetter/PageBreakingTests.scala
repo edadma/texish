@@ -152,6 +152,47 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
     doc.shipped.map(lines) shouldBe Seq(2, 2, 2, 1)
   }
 
+  "topskip pads the page top so first baselines align" in quietly {
+    val (doc, pm) = setup(100)
+
+    pm.t.set("topskip", Glue(20))
+    pm add Line(8, 2)
+    pm.newpage()
+    pm add Line(15, 2)
+    pm.newpage()
+
+    // pad + ascent = topskip on both pages, whatever the first line's ascent
+    doc.shipped(0).boxes.head shouldBe a[VSpaceBox]
+    doc.shipped(0).boxes.head.height shouldBe 12.0 +- 1e-9
+    doc.shipped(1).boxes.head.height shouldBe 5.0 +- 1e-9
+  }
+
+  "a first line taller than topskip gets no pad" in quietly {
+    val (doc, pm) = setup(100)
+
+    pm.t.set("topskip", Glue(20))
+    pm add Line(40)
+    pm.newpage()
+
+    doc.shipped(0).boxes.head should not be a[VSpaceBox]
+  }
+
+  "raggedbottom ends a short page quietly" in {
+    val (doc, pm) = setup(100)
+
+    pm.t.set("raggedbottom", 1.0)
+
+    val out = new java.io.ByteArrayOutputStream
+
+    Console.withOut(out) {
+      pm add Line(40)
+      pm.newpage()
+    }
+
+    doc.shipped(0).height shouldBe 100.0 +- 1e-9
+    out.toString shouldBe empty
+  }
+
   "ending the document builds the final page only once" in {
     // done() must ship the box result already built — rebuilding would double the work and, because glue
     // setting replaces the glue in place, mis-report the second pass as a glueless off-size box

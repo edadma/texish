@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter.texish
 
-import io.github.edadma.typesetter.{Box, Builder, DocumentMode, HBox, Penalty, StubTypesetter, VBox}
+import io.github.edadma.typesetter.{Box, Builder, DocumentMode, Glue, HBox, Penalty, StubTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -26,6 +26,7 @@ class WidowOrphanTests extends AnyFreeSpec with Matchers:
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
     t.set("hsize", 100.0)
+    t.set("topskip", Glue(0)) // the vsize arithmetic below assumes no first-baseline padding
     (t, proc)
 
   private def quietly[A](body: => A): A =

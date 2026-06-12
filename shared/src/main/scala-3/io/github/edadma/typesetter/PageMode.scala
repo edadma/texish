@@ -9,12 +9,27 @@ package io.github.edadma.typesetter
   */
 class PageMode(t: Typesetter) extends VBoxBuilder(t):
 
+  private var topskipDone = false
+
+  override def clear(): Unit =
+    super.clear()
+    topskipDone = false
+
   override infix def add(box: Box): Unit =
     box match
       case p: Penalty if p.penalty <= Penalty.Force =>
         if nonEmpty then newpage()
       case _ =>
         super.add(box)
+
+        // topskip: when the page's first box arrives, pad above it so the first baseline sits at the same
+        // place on every page, however tall that line happens to be; a line taller than topskip gets no pad.
+        // Inserted at contribution time so the overflow check below sees the true page size.
+        if !topskipDone && !box.isSpace && !box.isInstanceOf[Penalty] then
+          val pad = t.getGlue("topskip").naturalSize - box.ascent
+
+          if pad > 0 then insert(length - 1, VSpaceBox(pad))
+          topskipDone = true
 
         if size > t.getNumber("vsize") then breakPage()
 
@@ -60,4 +75,9 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     t.getDocument add result
     clear()
 
-  override def result: Box = wrap(buildTo(t.getNumber("vsize")))
+  override def result: Box =
+    // ragged bottoms trade vertical justification for never stretching the page's own glue: the fil soaks up
+    // all the slack, so content stays at its natural spacing and short pages end quietly
+    if t.getNumber("raggedbottom") != 0 then super.add(FilGlue)
+
+    wrap(buildTo(t.getNumber("vsize")))

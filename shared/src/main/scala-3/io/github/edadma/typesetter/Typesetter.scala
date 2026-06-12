@@ -550,6 +550,8 @@ abstract class Typesetter:
       "pageno"        -> 1.0,
       "headsep"       -> in / 4, // bottom of the running header to the top of the body
       "footskip"      -> in / 4, // bottom of the body to the top of the running footer
+      "topskip"       -> Glue(currentFont.size * 1.2 * pt), // distance from the page top to the first baseline
+      "raggedbottom"  -> 0.0, // nonzero: pad page bottoms with fil instead of stretching the page's glue
 
       // Knuth-Plass line breaking parameters
       "tolerance"       -> 200.0,  // max acceptable badness
