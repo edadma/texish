@@ -1,5 +1,7 @@
 package io.github.edadma.typesetter
 
+import io.github.edadma.typesetter.texish.Value
+
 import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized
 
@@ -14,8 +16,8 @@ class DocumentMode(val t: Typesetter) extends Mode:
 
   infix def add(box: Box): Unit =
     t.get("layout") match
-      case Some("zfold") => handleZFoldLayout(box)
-      case _             => handleSimpleLayout(box)
+      case Some(Value.Text("zfold")) => handleZFoldLayout(box)
+      case _                         => handleSimpleLayout(box)
 
     page += 1
 

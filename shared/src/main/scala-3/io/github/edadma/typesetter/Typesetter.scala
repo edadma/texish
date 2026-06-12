@@ -2,6 +2,8 @@ package io.github.edadma.typesetter
 
 //import pprint.pprintln
 
+import io.github.edadma.typesetter.texish.Value
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized
@@ -29,7 +31,7 @@ abstract class Typesetter:
 
   protected[typesetter] var document: DocumentMode         = new DocumentMode(this)
   protected val typefaces                                  = new mutable.HashMap[String, Typeface]
-  private val scopes                                       = mutable.Stack[Map[String, Any]](Map.empty)
+  private val scopes                                       = mutable.Stack[Map[String, Value]](Map.empty)
   protected[typesetter] val modeStack: mutable.Stack[Mode] = new mutable.Stack
   var indentParagraph: Boolean                             = false // todo: this should go into page mode maybe
   private var contentInitialized                           = false
@@ -279,28 +281,23 @@ abstract class Typesetter:
 
   def mm: Double = cm / 10
 
-  infix def get(name: String): Option[Any] = scopes.top.get(name)
+  infix def get(name: String): Option[Value] = scopes.top.get(name)
 
-  infix def getVar(name: String): Any = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
+  infix def getVar(name: String): Value = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
 
-  infix def getGlue(name: String): Glue = getVar(name).asInstanceOf[Glue]
+  infix def getGlue(name: String): Glue = getVar(name) match
+    case Value.Native(g: Glue) => g
+    case v                     => sys.error(s"variable '$name' is not glue: ${Value.display(v)}")
 
-  infix def getNumber(name: String): Double = getVar(name).asInstanceOf[Double]
+  infix def getNumber(name: String): Double = getVar(name) match
+    case Value.Num(n) => n.toDouble
+    case v            => sys.error(s"variable '$name' is not a number: ${Value.display(v)}")
 
   def set(name: String, value: Any): Unit =
-    val v =
-      value match
-        case n: Number => n.doubleValue
-        case _         => value
-
-    scopes(0) += (name -> v)
+    scopes(0) += (name -> Value.from(value))
 
   def set(pairs: Seq[(String, Any)]): Unit =
-    scopes(0) ++=
-      pairs map {
-        case (k, n: Number) => (k, n.doubleValue)
-        case (k, v)         => (k, v)
-      }
+    scopes(0) ++= pairs.map((k, v) => (k, Value.from(v)))
 
   // Variables that should be scoped with font changes (not leaked back on scope exit)
   private val formattingVars = Set("baselineskip", "spaceskip", "xspaceskip", "lineskip")
@@ -314,12 +311,12 @@ abstract class Typesetter:
     val prev = scopes.pop
 
     prev.get("saved_font") match
-      case Some(font: Font) => currentFont = font
-      case _                =>
+      case Some(Value.Native(font: Font)) => currentFont = font
+      case _                              =>
 
     prev.get("saved_color") match
-      case Some(color: Color) => currentColor = color
-      case _                  =>
+      case Some(Value.Native(color: Color)) => currentColor = color
+      case _                                =>
 
     if scopes.length == 1 then
       val nonFormattingVars = prev.filterNot { case (k, _) =>

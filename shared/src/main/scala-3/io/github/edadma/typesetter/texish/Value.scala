@@ -37,7 +37,21 @@ enum Value:
   /** Undefined - variable not found */
   case Undefined
 
+  /** An opaque host object (font, color, engine glue, ...) stored in the variable scope */
+  case Native(value: Any)
+
 object Value:
+  /** Wrap a raw host value as a Value. Already-wrapped values pass through. */
+  def from(value: Any): Value = value match
+    case v: Value      => v
+    case n: BigDecimal => Num(n)
+    case n: Int        => Num(BigDecimal(n))
+    case n: Long       => Num(BigDecimal(n))
+    case n: Number     => Num(BigDecimal(n.doubleValue))
+    case s: String     => Text(s)
+    case b: Boolean    => Bool(b)
+    case null          => Nil
+    case other         => Native(other)
   /** Check if a value is "truthy" (for conditionals) */
   def truthy(v: Value): Boolean = v match
     case Bool(false) => false
@@ -62,3 +76,4 @@ object Value:
     case Glue(n, st, sh) => s"${n}pt plus ${st}pt minus ${sh}pt"
     case Nil           => ""
     case Undefined     => "<undefined>"
+    case Native(v)     => v.toString

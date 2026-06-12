@@ -1,0 +1,259 @@
+package io.github.edadma.typesetter.texish
+
+import io.github.edadma.char_reader.CharReader
+import io.github.edadma.typesetter.{Glue, Hyphenation, InfGlue, RuleBox, UnderlineBox}
+
+/** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
+  *
+  * These are the language-level bindings to the typesetting API — the builtin vocabulary any document language gets
+  * for free. Applications register their own primitives on top.
+  */
+def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): Unit =
+  val t = handler.typesetter
+
+  // Simple commands (0 args)
+  proc.registerPrimitive("newpage", SimplePrimitive(() => t.newpage()))
+  proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
+  proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
+  proc.registerPrimitive("cr", SimplePrimitive(() => t.op("newLine")))
+  proc.registerPrimitive("hfil", SimplePrimitive(() => t.fil))
+  proc.registerPrimitive("vfil", SimplePrimitive(() => t.fil))
+  proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))
+  proc.registerPrimitive("vfill", SimplePrimitive(() => t.fill))
+  proc.registerPrimitive("hss", SimplePrimitive(() => t.add(InfGlue)))
+  proc.registerPrimitive("vss", SimplePrimitive(() => t.add(InfGlue)))
+
+  // loadhyphenation - 2 braced args: language name and path to pattern file
+  proc.registerPrimitive(
+    "loadhyphenation",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val lang = evalArg(proc, pos)
+        val path = evalArg(proc, pos)
+        (lang, path) match
+          case (Value.Text(l), Value.Text(p)) => Hyphenation.loadPatterns(l, p)
+          case _                              => handler.error("\\loadhyphenation expects {language}{path}", pos)
+    },
+  )
+
+  // language - 1 braced arg: switch active hyphenation language
+  proc.registerPrimitive(
+    "language",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val arg = evalArg(proc, pos)
+        arg match
+          case Value.Text(lang) => Hyphenation.setLanguage(lang)
+          case _                => handler.error("\\language expects a language name", pos)
+    },
+  )
+
+  // typeface - 1 braced arg
+  proc.registerPrimitive(
+    "typeface",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val arg = evalArg(proc, pos)
+        arg match
+          case Value.Text(typeface) =>
+            val font = t.typeface(typeface)
+            // Update spaceskip based on new font's space width (typesetter doesn't do this automatically)
+            t.set("spaceskip", Glue(font.space, 1))
+            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+          case _ => handler.error("\\typeface expects a typeface name", pos)
+    },
+  )
+
+  // font - 3 braced args
+  proc.registerPrimitive(
+    "font",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val typeface = evalArg(proc, pos)
+        val size     = evalArg(proc, pos)
+        val style    = evalArg(proc, pos)
+        (typeface, size, style) match
+          case (Value.Text(tf), Value.Num(sz), Value.Text(st)) =>
+            val font = t.selectFont(tf, sz.toDouble, st.split("\\s+").toSet)
+            // Update spaceskip based on new font's space width (typesetter doesn't do this automatically)
+            t.set("spaceskip", Glue(font.space, 1))
+            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+          case _ => handler.error("\\font expects <typeface> <size> <style>", pos)
+    },
+  )
+
+  // image - 1 arg
+  proc.registerPrimitive(
+    "image",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val arg = evalArg(proc, pos)
+        arg match
+          case Value.Text(path) => t.image(path)
+          case _                => handler.error("\\image expects a path", pos)
+    },
+  )
+
+  // vskip - 1 braced arg
+  proc.registerPrimitive(
+    "vskip",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val arg = evalArg(proc, pos)
+        arg match
+          case Value.Num(d) => t.glue(d.toDouble, 0, 0)
+          case _            => handler.error("\\vskip expects a dimension", pos)
+    },
+  )
+
+  // hskip - 1 braced arg
+  proc.registerPrimitive(
+    "hskip",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val arg = evalArg(proc, pos)
+        arg match
+          case Value.Num(d) => t.glue(d.toDouble, 0, 0)
+          case _            => handler.error("\\hskip expects a dimension", pos)
+    },
+  )
+
+  // hrule - 0 args but optional params
+  proc.registerPrimitive(
+    "hrule",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts    = proc.readOptionalParams(pos)
+        val width   = opts.get("width").collect { case Value.Num(n) => n.toDouble }.getOrElse(t.getNumber("hsize"))
+        val ascent  = opts.get("ascent").collect { case Value.Num(n) => n.toDouble }.getOrElse(3.0)
+        val descent = opts.get("descent").collect { case Value.Num(n) => n.toDouble }.getOrElse(0.0)
+        t.add(RuleBox(t, width, ascent, descent))
+    },
+  )
+
+  // hbox - 1 body arg + optional "to" param
+  proc.registerPrimitive(
+    "hbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts  = proc.readOptionalParams(pos)
+        val body  = proc.readArgument(pos)
+        val toVal = opts.get("to").collect { case Value.Num(n) => n.toDouble }.map(java.lang.Double.valueOf).orNull
+        t.hbox(toVal)
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        t.mode.done()
+    },
+  )
+
+  // vbox - 1 body arg + optional "to" param
+  proc.registerPrimitive(
+    "vbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts  = proc.readOptionalParams(pos)
+        val body  = proc.readArgument(pos)
+        val toVal = opts.get("to").collect { case Value.Num(n) => n.toDouble }.map(java.lang.Double.valueOf).orNull
+        t.vbox(toVal)
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        t.mode.done()
+    },
+  )
+
+  // noalign - 1 body arg (no scoping - it's inline content in table)
+  proc.registerPrimitive(
+    "noalign",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.op("noalign-begin")
+        proc.processTokenList(body)
+        t.op("noalign-end")
+    },
+  )
+
+  // halign - 1 body arg (no scoping - table inherits outer context)
+  proc.registerPrimitive(
+    "halign",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.halign
+        proc.processTokenList(body)
+        t.done()
+    },
+  )
+
+  // bold - 1 body arg
+  proc.registerPrimitive(
+    "bold",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.bold()
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        t.nobold()
+    },
+  )
+
+  // italic - 1 body arg
+  proc.registerPrimitive(
+    "italic",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.italic()
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        t.noitalic()
+    },
+  )
+
+  // smallcaps - 1 body arg
+  proc.registerPrimitive(
+    "smallcaps",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.smallcaps()
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        t.nosmallcaps()
+    },
+  )
+
+  // underline - 1 body arg (wraps content in underline)
+  proc.registerPrimitive(
+    "underline",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        // Create an hbox to capture the content
+        t.hbox(null)
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        val box = t.mode.exit
+        if box ne null then handler.addBox(new UnderlineBox(t, box))
+    },
+  )
+
+  // Active characters
+  proc.registerActive(
+    '#',
+    new Active {
+      def execute(proc: Processor, c: Char, pos: CharReader): Unit =
+        t.op("placeholder")
+    },
+  )
+
+  proc.registerActive(
+    '&',
+    new Active {
+      def execute(proc: Processor, c: Char, pos: CharReader): Unit =
+        t.op("newColumn")
+    },
+  )
+
+// Helper class for simple 0-arg commands
+class SimplePrimitive(action: () => Any) extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit = action()
+
+// Helper to evaluate an argument and get its value
+private def evalArg(proc: Processor, pos: CharReader): Value =
+  proc.evalArgumentExpr(pos)
