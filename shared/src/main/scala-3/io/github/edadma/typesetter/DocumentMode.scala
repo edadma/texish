@@ -26,6 +26,7 @@ class DocumentMode(val t: Typesetter) extends Mode:
     page += 1
     t.set("pageno", page + 1)
 
+  // panels share a physical sheet, so running headers/footers (pageDecorator) don't apply to this layout
   def handleZFoldLayout(b: Box): Unit =
     val hfolds = 3
     val vfolds = 2
@@ -54,10 +55,22 @@ class DocumentMode(val t: Typesetter) extends Mode:
 
   def handleSimpleLayout(b: Box): Unit =
     printedPages += t.createPageTarget
+
+    val hoffset = t.getNumber("hoffset")
+    val voffset = t.getNumber("voffset")
+    val dec     = t.pageDecorator
+
+    if dec ne null then
+      val (header, footer) = dec()
+
+      if header ne null then t.draw(header, hoffset, voffset - t.getNumber("headsep") - header.height)
+      // anchored to vsize, not the body box height, so the footer sits at the same place on a short final page
+      if footer ne null then t.draw(footer, hoffset, voffset + t.getNumber("vsize") + t.getNumber("footskip"))
+
     t.draw(
       layout(b),
-      t.getNumber("hoffset"),
-      t.getNumber("voffset"),
+      hoffset,
+      voffset,
     )
     t.ejectPageTarget()
 

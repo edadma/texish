@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter.texish
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.typesetter.{Glue, Hyphenation, InfGlue, Penalty, RuleBox, UnderlineBox}
+import io.github.edadma.typesetter.{Box, Glue, Hyphenation, InfGlue, Penalty, RuleBox, UnderlineBox}
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
   *
@@ -258,6 +258,21 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         if box ne null then handler.addBox(new UnderlineBox(t, box))
     },
   )
+
+  // Running headers and footers: if the document defines a headline or footline macro, each shipped page builds
+  // an hbox to hsize from its body at shipout time — pageno is already set to the shipping page's number, so
+  // \the\pageno in the macro is always current. The hbox is built on a temporary mode pushed over whatever is
+  // being typeset and popped with exit (not done), so the box never lands in the page being broken.
+  t.pageDecorator = () =>
+    def line(name: String): Box | Null =
+      t.get(name) match
+        case Some(Value.Macro(_, body, _)) =>
+          t.hbox(t.getNumber("hsize"))
+          proc.processTokenList(body)
+          t.mode.exit
+        case _ => null
+
+    (line("headline"), line("footline"))
 
   // Active characters
   proc.registerActive(

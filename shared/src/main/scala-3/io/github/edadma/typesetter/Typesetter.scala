@@ -39,6 +39,13 @@ abstract class Typesetter:
       ligatures: Set[String],
   )
 
+  /** Shipout-time page decoration: produces the running header and footer boxes (either may be null) for the page
+    * being shipped. Evaluated once per page, after `pageno` is set to the shipping page's number, so material like
+    * the page number is always current. The language layer installs one that builds the boxes from the `headline`
+    * and `footline` macros.
+    */
+  var pageDecorator: (() => (Box | Null, Box | Null)) | Null = null
+
   protected[typesetter] var document: DocumentMode         = new DocumentMode(this)
   protected val typefaces                                  = new mutable.HashMap[String, Typeface]
   private val scopes                                       = mutable.Stack[Map[String, Value]](Map.empty)
@@ -541,6 +548,8 @@ abstract class Typesetter:
       "hoffset"       -> 1 * in,
       "voffset"       -> 1 * in,
       "pageno"        -> 1.0,
+      "headsep"       -> in / 4, // bottom of the running header to the top of the body
+      "footskip"      -> in / 4, // bottom of the body to the top of the running footer
 
       // Knuth-Plass line breaking parameters
       "tolerance"       -> 200.0,  // max acceptable badness
