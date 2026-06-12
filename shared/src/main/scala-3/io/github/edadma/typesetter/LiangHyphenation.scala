@@ -84,10 +84,13 @@ object LiangHyphenation:
       .map(parsePattern)
       .toMap
 
+  /** Create from TeX pattern file content (e.g. fetched or read by the caller). */
+  def fromString(content: String): LiangHyphenation =
+    new LiangHyphenation(parsePatterns(content))
+
   /** Load patterns from a file path. */
   def fromFile(path: String): LiangHyphenation =
-    val content = scala.io.Source.fromFile(path).mkString
-    new LiangHyphenation(parsePatterns(content))
+    fromString(io.github.edadma.cross_platform.readFile(path))
 
   /** Create from individual pattern strings. */
   def fromPatterns(patterns: String*): LiangHyphenation =
