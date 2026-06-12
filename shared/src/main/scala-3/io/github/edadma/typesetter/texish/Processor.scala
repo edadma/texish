@@ -107,17 +107,26 @@ class Processor(val handler: Handler):
 
   /** Main processing loop */
   private def processTokens(): Unit =
-    while hasMoreTokens do
-      val token = nextToken()
+    while hasMoreTokens do dispatch(nextToken())
+
+  /** Dispatch one token to the handler, attaching the token's source position to any error the host raises while
+    * handling it. Errors from the language layer already carry a position and pass through unchanged.
+    */
+  private def dispatch(token: Token): Unit =
+    try
       token match
-        case Token.Text(s, _)       => handler.text(s)
-        case Token.Space(_, _)      => handler.space()
-        case Token.Newline(_)       => handler.newline()
-        case Token.BeginGroup(pos)  => handleBeginGroup(pos)
-        case Token.EndGroup(pos)    => handleEndGroup(pos)
+        case Token.Text(s, _)            => handler.text(s)
+        case Token.Space(_, _)           => handler.space()
+        case Token.Newline(_)            => handler.newline()
+        case Token.BeginGroup(pos)       => handleBeginGroup(pos)
+        case Token.EndGroup(pos)         => handleEndGroup(pos)
         case Token.ControlSeq(name, pos) => handleControlSeq(name, pos)
-        case Token.Active(c, pos)   => handleActive(c, pos)
-        case Token.EOF(_)           => // done
+        case Token.Active(c, pos)        => handleActive(c, pos)
+        case Token.EOF(_)                => // done
+    catch
+      case e: TexishException => throw e
+      case e: RuntimeException =>
+        handler.error(Option(e.getMessage).getOrElse(e.toString), Token.pos(token))
 
   private def handleBeginGroup(pos: CharReader): Unit =
     handler.enterScope()
@@ -343,7 +352,8 @@ class Processor(val handler: Handler):
       skipSpaces()
       nextToken() match
         case Token.Text(s, p) =>
-          parseFlex(s).getOrElse(handler.error(s"expected a dimension or fil/fill amount after '$kw', got '$s'", p))
+          parseFlex(s, handler.fontUnit)
+            .getOrElse(handler.error(s"expected a dimension or fil/fill amount after '$kw', got '$s'", p))
         case _ =>
           handler.error(s"expected a dimension or fil/fill amount after '$kw'", pos)
 
@@ -358,7 +368,7 @@ class Processor(val handler: Handler):
   /** Parse a simple value from a string (number, unit-suffixed dimension, or text) */
   private def parseSimpleValue(s: String): Value =
     try Value.Num(s.toDouble)
-    catch case _: Exception => parseDimension(s).getOrElse(Value.Text(s))
+    catch case _: Exception => parseDimension(s, handler.fontUnit).getOrElse(Value.Text(s))
 
   /** Process a list of tokens (used by primitives like \for) */
   def processTokenList(tokens: Vector[Token]): Unit =
@@ -372,17 +382,7 @@ class Processor(val handler: Handler):
 
   /** Process tokens until stack depth reaches minDepth */
   private def processTokensUntilDepth(minDepth: Int): Unit =
-    while tokenSources.size > minDepth && hasMoreTokensAtDepth(minDepth) do
-      val token = nextToken()
-      token match
-        case Token.Text(s, _)       => handler.text(s)
-        case Token.Space(_, _)      => handler.space()
-        case Token.Newline(_)       => handler.newline()
-        case Token.BeginGroup(pos)  => handleBeginGroup(pos)
-        case Token.EndGroup(pos)    => handleEndGroup(pos)
-        case Token.ControlSeq(name, pos) => handleControlSeq(name, pos)
-        case Token.Active(c, pos)   => handleActive(c, pos)
-        case Token.EOF(_)           => // done
+    while tokenSources.size > minDepth && hasMoreTokensAtDepth(minDepth) do dispatch(nextToken())
 
   /** Check if we have more tokens without popping below minDepth */
   private def hasMoreTokensAtDepth(minDepth: Int): Boolean =
@@ -626,61 +626,68 @@ def stripOuterBraces(tokens: Vector[Token]): Vector[Token] =
       rest.init.toVector
     case other => other
 
-/** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm */
-private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm)""".r
+/** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm, 1.5em, 2ex */
+private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)""".r
 
 /** Match a flex (stretch or shrink) amount: a dimension or an infinite amount like 1fil / 2fill */
-private val FlexPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|fil|fill)""".r
+private val FlexPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)""".r
 
 /** Match a full glue spec: a dimension with optional `plus <flex>` and `minus <flex>` parts */
 private val GluePattern =
-  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm)(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|fil|fill))?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|fil|fill))?""".r
+  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill))?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill))?""".r
 
-private def unitFactor(unit: String): Double = unit match
-  case "pt" => 1.0
-  case "pc" => 12.0
-  case "in" => 72.0
-  case "cm" => 72 / 2.54
-  case "mm" => 72 / 25.4
-
-/** Parse a unit-suffixed dimension into Dimen (big points). Only context-free units — font-relative units (em, ex)
-  * need the typesetter and are handled at the primitive level.
+/** Points per unit. Context-free units have fixed factors; em and ex come from the host's current font via the
+  * resolver, and fail to resolve when the host has none (or has no font yet).
   */
-def parseDimension(s: String): Option[Value] =
+private def unitPoints(unit: String, fontUnit: String => Option[Double]): Option[Double] = unit match
+  case "pt"        => Some(1.0)
+  case "pc"        => Some(12.0)
+  case "in"        => Some(72.0)
+  case "cm"        => Some(72 / 2.54)
+  case "mm"        => Some(72 / 25.4)
+  case "em" | "ex" => fontUnit(unit)
+
+/** Parse a unit-suffixed dimension into Dimen (big points). Font-relative units (em, ex) resolve against the current
+  * font through the resolver; without one they don't parse, leaving the input as text.
+  */
+def parseDimension(s: String, fontUnit: String => Option[Double] = _ => None): Option[Value] =
   s match
-    case DimensionPattern(num, unit) => Some(Value.Dimen(num.toDouble * unitFactor(unit)))
+    case DimensionPattern(num, unit) => unitPoints(unit, fontUnit).map(f => Value.Dimen(num.toDouble * f))
     case _                           => None
 
 /** Parse a flex amount into (size, infinity order): `2pt` is finite (order 0), `1fil` order 1, `1fill` order 2. The
   * size of an infinite amount is in fil units, not points.
   */
-def parseFlex(s: String): Option[(Double, Int)] =
+def parseFlex(s: String, fontUnit: String => Option[Double] = _ => None): Option[(Double, Int)] =
   s match
     case FlexPattern(num, "fil")  => Some((num.toDouble, 1))
     case FlexPattern(num, "fill") => Some((num.toDouble, 2))
-    case FlexPattern(num, unit)   => Some((num.toDouble * unitFactor(unit), 0))
+    case FlexPattern(num, unit)   => unitPoints(unit, fontUnit).map(f => (num.toDouble * f, 0))
     case _                        => None
 
 /** Parse a glue spec like `12pt plus 2pt minus 1fil` (the plus/minus parts optional, in that order). A bare
   * dimension yields Dimen; anything with a flex part yields Glue. Stretch and shrink carry independent infinity
   * orders, so finite stretch can coexist with infinite shrink.
   */
-def parseGlue(s: String): Option[Value] =
+def parseGlue(s: String, fontUnit: String => Option[Double] = _ => None): Option[Value] =
   s.trim match
     case GluePattern(num, unit, stNum, stUnit, shNum, shUnit) =>
-      val natural = num.toDouble * unitFactor(unit)
-      if stNum == null && shNum == null then Some(Value.Dimen(natural))
-      else
-        def flex(n: String, u: String): (Double, Int) =
-          if n == null then (0.0, 0)
-          else
-            u match
-              case "fil"  => (n.toDouble, 1)
-              case "fill" => (n.toDouble, 2)
-              case _      => (n.toDouble * unitFactor(u), 0)
-        val (stretch, stretchOrder) = flex(stNum, stUnit)
-        val (shrink, shrinkOrder)   = flex(shNum, shUnit)
-        Some(Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder))
+      def flex(n: String, u: String): Option[(Double, Int)] =
+        if n == null then Some((0.0, 0))
+        else
+          u match
+            case "fil"  => Some((n.toDouble, 1))
+            case "fill" => Some((n.toDouble, 2))
+            case _      => unitPoints(u, fontUnit).map(f => (n.toDouble * f, 0))
+
+      for
+        factor                 <- unitPoints(unit, fontUnit)
+        (stretch, stretchOrder) <- flex(stNum, stUnit)
+        (shrink, shrinkOrder)   <- flex(shNum, shUnit)
+      yield
+        val natural = num.toDouble * factor
+        if stNum == null && shNum == null then Value.Dimen(natural)
+        else Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder)
     case _ => None
 
 // Helper to evaluate tokens to a value
@@ -689,7 +696,7 @@ def evalTokens(tokens: Vector[Token], handler: Handler): Value =
     case Vector(Token.Text(s, _)) =>
       // Try to parse as a number, then as a unit-suffixed dimension
       try Value.Num(s.toDouble)
-      catch case _: Exception => parseDimension(s).getOrElse(Value.Text(s))
+      catch case _: Exception => parseDimension(s, handler.fontUnit).getOrElse(Value.Text(s))
     case Vector(Token.ControlSeq(name, _)) =>
       handler.get(name)
     case _ =>
@@ -701,7 +708,7 @@ def evalTokens(tokens: Vector[Token], handler: Handler): Value =
         case _                 => ""
       }.mkString
       if text.isEmpty then Value.Nil
-      else parseGlue(text).getOrElse(Value.Text(text)) // a braced glue spec like {12pt plus 2pt} arrives here
+      else parseGlue(text, handler.fontUnit).getOrElse(Value.Text(text)) // a braced glue spec like {12pt plus 2pt} arrives here
 
 // ============ FOR LOOP ============
 

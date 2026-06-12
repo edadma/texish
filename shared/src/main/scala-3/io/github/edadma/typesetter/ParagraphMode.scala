@@ -72,7 +72,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
                         @tailrec
                         def longest(): Unit =
                           if hyphenation.hasNext then
-                            val (before, after) = hyphenation.next
+                            val (before, after) = hyphenation.next()
                             val beforeHyphen    = b.newCharBox(before)
 
                             if hbox.size + beforeHyphen.width <= t.getNumber("hsize") then

@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter.texish
 
-import io.github.edadma.typesetter.{Builder, Glue, StubTypesetter}
+import io.github.edadma.typesetter.{Builder, Font, Glue, StubTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -141,6 +141,23 @@ class GlueSyntaxTests extends AnyFreeSpec with Matchers:
     g.naturalSize shouldBe 3.0
     g.stretch shouldBe 1.0
     g.stretchOrder shouldBe 1
+  }
+
+  "font-relative units work in glue specs" in {
+    val (t, proc) = fixture()
+    t.currentFont = new Font("stub", 10, 6, 4.5, Set.empty, "stub", None, Set.empty)
+    proc.process("\\set s {1em plus 0.5em minus 1ex}")
+    t.getVar("s") shouldBe Value.Glue(10, 5, 4.5)
+  }
+
+  "font-relative units work in unbraced continuations" in {
+    val (t, proc) = fixture()
+    t.currentFont = new Font("stub", 10, 6, 4.5, Set.empty, "stub", None, Set.empty)
+    proc.process("\\vskip 1em plus 1ex")
+    val g = lastGlue(t)
+    g.naturalSize shouldBe 10.0
+    g.stretch shouldBe 4.5
+    g.stretchOrder shouldBe 0
   }
 
   "\\vskip accepts an engine glue stored by the host" in {

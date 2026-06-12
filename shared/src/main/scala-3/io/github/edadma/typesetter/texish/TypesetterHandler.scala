@@ -44,6 +44,16 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
 
+  override def fontUnit(unit: String): Option[Double] =
+    val font = typesetter.currentFont
+
+    if font == null then None
+    else
+      unit match
+        case "em" => Some(font.size)
+        case "ex" => Some(font.xHeight)
+        case _    => None
+
   def command(name: String, args: Seq[Value], pos: CharReader): Value =
     // Typesetting commands are registered as Primitives; unknown commands are errors
     error(s"Unknown command: \\$name", pos)

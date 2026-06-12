@@ -20,6 +20,6 @@ trait Mode:
 
     if res ne null then t.add(result)
 
-  def pop: Mode = t.modeStack.pop
+  def pop: Mode = t.modeStack.pop()
 
   def top: Mode = t.mode

@@ -312,7 +312,7 @@ abstract class Typesetter:
     set("saved_color", currentColor)
 
   def exit(): Unit =
-    val prev = scopes.pop
+    val prev = scopes.pop()
 
     prev.get("saved_font") match
       case Some(Value.Native(font: Font)) => currentFont = font
@@ -454,7 +454,7 @@ abstract class Typesetter:
 
   def result: Box = mode.result
 
-  def pop: Mode = modeStack.pop
+  def pop: Mode = modeStack.pop()
 
   def halign: Typesetter =
     push(new HAlignMode(this))

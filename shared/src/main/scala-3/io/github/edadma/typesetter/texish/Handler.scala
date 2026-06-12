@@ -38,6 +38,11 @@ trait Handler:
   /** Enable/disable output suppression (for expression evaluation) */
   def suppressOutput(suppress: Boolean): Unit
 
+  /** Resolve a font-relative unit (em, ex) to points. Hosts with a notion of a current font override this; the
+    * default knows no such units, so dimensions using them stay unparsed.
+    */
+  def fontUnit(unit: String): Option[Double] = None
+
   /** Report an error at the given position. Uses char-reader's error formatting. */
   def error(msg: String, pos: CharReader): Nothing =
     if pos == null then throw TexishException(msg, null)

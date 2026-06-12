@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter.texish
 
-import io.github.edadma.typesetter.StubTypesetter
+import io.github.edadma.typesetter.{Font, StubTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -69,6 +69,34 @@ class DimensionTests extends AnyFreeSpec with Matchers:
   "whole dimensions display without a decimal point" in {
     Value.display(Value.Dimen(36.0)) shouldBe "36pt"
     Value.display(Value.Dimen(1.5)) shouldBe "1.5pt"
+  }
+
+  "em resolves against the current font size" in {
+    val (t, proc) = fixture()
+    t.currentFont = new Font("stub", 10, 6, 4.5, Set.empty, "stub", None, Set.empty)
+    proc.process("\\set x {1.5em}")
+    t.getVar("x") shouldBe Value.Dimen(15)
+  }
+
+  "ex resolves against the current font x-height" in {
+    val (t, proc) = fixture()
+    t.currentFont = new Font("stub", 10, 6, 4.5, Set.empty, "stub", None, Set.empty)
+    proc.process("\\set x {2ex}")
+    t.getVar("x") shouldBe Value.Dimen(9)
+  }
+
+  "em defaults to the host's startup font" in {
+    // every Typesetter starts with a 14pt default font, so em works before any \font command
+    val (t, proc) = fixture()
+    proc.process("\\set x {1em}")
+    t.getVar("x") shouldBe Value.Dimen(14)
+  }
+
+  "em without a font-aware host stays text" in {
+    val handler = new StringHandler
+    val proc    = new Processor(handler)
+    proc.process("\\set x {1em}")
+    handler.get("x") shouldBe Value.Text("1em")
   }
 
   "\\vskip and \\hskip accept unit-suffixed dimensions" in {
