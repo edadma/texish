@@ -553,6 +553,11 @@ abstract class Typesetter:
       "topskip"       -> Glue(currentFont.size * 1.2 * pt), // distance from the page top to the first baseline
       "raggedbottom"  -> 0.0, // nonzero: pad page bottoms with fil instead of stretching the page's glue
 
+      // mark state, maintained by the page builder as pages ship (see MarkBox)
+      "topmark"   -> "", // the last mark of the previous page
+      "firstmark" -> "", // the first mark on the page being shipped
+      "botmark"   -> "", // the last mark on the page being shipped
+
       // Knuth-Plass line breaking parameters
       "tolerance"       -> 200.0,  // max acceptable badness
       "pretolerance"    -> 100.0,  // first pass tolerance (no hyphenation)

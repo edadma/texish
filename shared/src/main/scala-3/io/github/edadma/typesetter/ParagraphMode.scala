@@ -35,9 +35,11 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     for (lineBoxes, lineIdx) <- lines.zipWithIndex do
       val hbox    = new HBoxBuilder(t, hsize)
       val isLast  = lineIdx == lines.length - 1
+      // marks migrate out of the line to the vertical list, where the page builder can see them
+      val marks   = lineBoxes.collect { case m: MarkBox => m }
 
       for box <- lineBoxes do
-        hbox add box
+        if !box.isInstanceOf[MarkBox] then hbox add box
 
       // Remove trailing space
       if hbox.nonEmpty && hbox.last.isSpace then hbox.removeLast()
@@ -53,6 +55,9 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         if vlist.length > 1 then vlist.insert(vlist.length - 2, t.getGlue("parskip"))
         first = false
 
+      // marks before the interline penalty, so the penalty stays adjacent to the glue it guards
+      marks.foreach(t.modeStack(1).add)
+
       if !isLast then
         val p = penaltyBetween(lineIdx == 0, lineIdx == lines.length - 2)
         if p != 0 then t.modeStack(1) add Penalty(p)
@@ -62,12 +67,17 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     var lineIdx = 0
 
     while boxes.nonEmpty do
-      val hbox = new HBoxBuilder(t, t.getNumber("hsize"))
+      val hbox  = new HBoxBuilder(t, t.getNumber("hsize"))
+      val marks = scala.collection.mutable.ArrayBuffer[MarkBox]()
 
       @tailrec
       def line(): Unit =
         if boxes.nonEmpty then
-          if hbox.size + boxes.head.width <= hsize then
+          if boxes.head.isInstanceOf[MarkBox] then
+            // marks migrate out of the line to the vertical list, where the page builder can see them
+            marks += boxes.remove(0).asInstanceOf[MarkBox]
+            line()
+          else if hbox.size + boxes.head.width <= hsize then
             hbox add boxes.remove(0)
             line()
           else if boxes.head.width > hsize then
@@ -132,6 +142,8 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
 
         if vlist.length > 1 then vlist.insert(vlist.length - 2, t.getGlue("parskip"))
         first = false
+
+      marks.foreach(t.modeStack(1).add)
 
       lineIdx += 1
     end while

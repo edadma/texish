@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter.texish
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.typesetter.{Box, Glue, Hyphenation, InfGlue, Penalty, RuleBox, UnderlineBox}
+import io.github.edadma.typesetter.{Box, Glue, Hyphenation, InfGlue, MarkBox, Penalty, RuleBox, UnderlineBox}
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
   *
@@ -32,6 +32,16 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       t.paragraph()
       t.add(Penalty(Penalty.Force))
     }),
+  )
+
+  // mark - 1 arg: label this point in the document; as pages ship, topmark/firstmark/botmark track which
+  // labels each page covers, so a running header can show e.g. "\the\firstmark — \the\botmark"
+  proc.registerPrimitive(
+    "mark",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.add(MarkBox(Value.display(evalArg(proc, pos))))
+    },
   )
 
   // penalty - 1 numeric arg: how undesirable a page break is here (10000 forbids, -10000 forces)

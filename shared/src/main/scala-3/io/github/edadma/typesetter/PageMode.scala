@@ -1,5 +1,7 @@
 package io.github.edadma.typesetter
 
+import io.github.edadma.typesetter.texish.Value
+
 /** Builds the main vertical list and breaks it into pages.
   *
   * Pages break only at legal breakpoints, following TeX's rules: at a glue whose predecessor is non-discardable, or
@@ -25,7 +27,7 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
         // topskip: when the page's first box arrives, pad above it so the first baseline sits at the same
         // place on every page, however tall that line happens to be; a line taller than topskip gets no pad.
         // Inserted at contribution time so the overflow check below sees the true page size.
-        if !topskipDone && !box.isSpace && !box.isInstanceOf[Penalty] then
+        if !topskipDone && !box.isSpace && !box.isInstanceOf[ControlBox] then
           val pad = t.getGlue("topskip").naturalSize - box.ascent
 
           if pad > 0 then insert(length - 1, VSpaceBox(pad))
@@ -72,6 +74,17 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     if nonEmpty then newpage()
 
   def newpage(): Unit =
+    // record this page's marks before shipping, so shipout-time material (running headers) reads them: topmark
+    // is the previous page's botmark, and a markless page inherits it for firstmark and botmark too, as in TeX
+    val marks = boxes.collect { case m: MarkBox => m.text }
+    val top = t.get("botmark") match
+      case Some(Value.Text(s)) => s
+      case _                   => ""
+
+    t.set("topmark", top)
+    t.set("firstmark", marks.headOption.getOrElse(top))
+    t.set("botmark", marks.lastOption.getOrElse(top))
+
     t.getDocument add result
     clear()
 
