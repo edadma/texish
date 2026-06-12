@@ -1,7 +1,18 @@
 package io.github.edadma.typesetter.texish
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.typesetter.{Box, Glue, Hyphenation, InfGlue, MarkBox, Penalty, RuleBox, UnderlineBox}
+import io.github.edadma.typesetter.{
+  Box,
+  Glue,
+  Hyphenation,
+  InfGlue,
+  InsertBox,
+  MarkBox,
+  Penalty,
+  RuleBox,
+  ShiftBox,
+  UnderlineBox,
+}
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
   *
@@ -41,6 +52,51 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         t.add(MarkBox(Value.display(evalArg(proc, pos))))
+    },
+  )
+
+  // footnote - 1 body arg: a raised marker number in the running text, with the body typeset at the foot of
+  // whatever page the marker lands on. The body is typeset immediately, at footnotesize, into a block that rides
+  // the vertical list as a zero-size insert (see InsertBox); the page builder counts its height against the page
+  // and moves it below the separator rule at shipout, so reference and footnote always share a page.
+  proc.registerPrimitive(
+    "footnote",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        val n    = t.getNumber("footnoteno").toInt + 1
+
+        t.set("footnoteno", n.toDouble)
+
+        val textFont = t.currentFont
+        val noteFont = t.makeFont(textFont.typeface, textFont.size * t.getNumber("footnotesize"), textFont.style)
+
+        // the marker: the footnote number in the smaller footnote font, raised a third of an em
+        t.currentFont = noteFont
+
+        val marker = t.charBox(n.toString)
+
+        t.currentFont = textFont
+        t.start add ShiftBox(marker, -textFont.size / 3)
+
+        // the body is typeset now, into its own vertical box at the footnote size, behind a "N." prefix; the
+        // scope brackets the font switch and its dependent spacing so the surrounding text resumes unaffected
+        t.enter()
+        t.currentFont = noteFont
+        t.set("baselineskip", Glue(noteFont.size * 1.2))
+        t.set("spaceskip", Glue(noteFont.space, 1))
+        t.set("xspaceskip", Glue(noteFont.space * 1.5, 1))
+        t.vbox()
+        t.noindent add t.charBox(s"$n.")
+        t.add(t.getGlue("spaceskip"))
+        proc.processTokenList(body)
+        t.paragraph()
+
+        val note = t.mode.exit
+
+        t.exit()
+
+        if note ne null then t.start add InsertBox(note)
     },
   )
 

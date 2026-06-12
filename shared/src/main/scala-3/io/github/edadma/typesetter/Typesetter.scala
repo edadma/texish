@@ -553,6 +553,12 @@ abstract class Typesetter:
       "topskip"       -> Glue(currentFont.size * 1.2 * pt), // distance from the page top to the first baseline
       "raggedbottom"  -> 0.0, // nonzero: pad page bottoms with fil instead of stretching the page's glue
 
+      // footnotes (see InsertBox): the space above the separator rule, the footnote text size as a fraction
+      // of the surrounding font, and the footnote counter advanced by each \footnote
+      "footnotesep"  -> Glue(currentFont.size * pt),
+      "footnotesize" -> 0.8,
+      "footnoteno"   -> 0.0,
+
       // mark state, maintained by the page builder as pages ship (see MarkBox)
       "topmark"   -> "", // the last mark of the previous page
       "firstmark" -> "", // the first mark on the page being shipped

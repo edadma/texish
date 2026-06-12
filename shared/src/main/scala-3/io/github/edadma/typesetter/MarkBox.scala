@@ -7,7 +7,7 @@ package io.github.edadma.typesetter
   * top of a new page survives the break and becomes that page's first mark — and, as in TeX, it counts as a
   * non-discardable predecessor, so glue following it is a legal breakpoint.
   */
-class MarkBox(val text: String) extends ControlBox:
+class MarkBox(val text: String) extends MigratingBox:
   val isSpace: Boolean = false
 
   override def toString: String = s"MarkBox($text)"

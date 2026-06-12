@@ -8,10 +8,28 @@ import io.github.edadma.typesetter.texish.Value
   * at a penalty below [[Penalty.Inhibit]]. A penalty at or below [[Penalty.Force]] ships the current page
   * immediately. When a page overflows, the latest legal breakpoint that still fits is chosen (first-fit); the break
   * item and any discardables after it are dropped, so a new page never starts with stray space.
+  *
+  * Footnotes arrive as zero-size [[InsertBox]] items whose content nonetheless occupies page height: every fitting
+  * decision counts an insert's content (plus the separator above the footnote block, once) against the page, and
+  * shipout moves the content to the foot of the page below the separator rule.
   */
 class PageMode(t: Typesetter) extends VBoxBuilder(t):
 
+  private val FootnoteRuleHeight = 0.4
+  private val FootnoteRuleWidth  = 2 * t.in
+
   private var topskipDone = false
+
+  /** Height of the separator the shipout places above the footnote block: the footnotesep space plus the rule. */
+  private def separatorSize: Double = t.getGlue("footnotesep").naturalSize + FootnoteRuleHeight
+
+  /** Page height the given items will occupy once shipped: their own heights plus the footnote content carried by
+    * any inserts among them, plus the separator (counted once) when any insert is present.
+    */
+  private def shippedSize(items: collection.Seq[Box]): Double =
+    val notes = items.collect { case ins: InsertBox => ins.content.height }
+
+    items.map(measure).sum + (if notes.isEmpty then 0 else notes.sum + separatorSize)
 
   override def clear(): Unit =
     super.clear()
@@ -33,7 +51,7 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
           if pad > 0 then insert(length - 1, VSpaceBox(pad))
           topskipDone = true
 
-        if size > t.getNumber("vsize") then breakPage()
+        if shippedSize(boxes) > t.getNumber("vsize") then breakPage()
 
   /** The page is overfull: ship everything before the latest legal breakpoint whose page content still fits, and
     * carry the rest onto the next page. If no legal breakpoint fits, the latest legal one is used anyway (the page
@@ -49,8 +67,16 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
         case g: Glue    => !g.nobreak && i > 0 && !boxes(i - 1).isSpace
         case _          => false
 
-    // sizes(i) is the height of boxes(0 until i), i.e. the page if we break at item i
-    val sizes      = boxes.scanLeft(0.0)(_ + measure(_))
+    // sizes(i) is the shipped height of boxes(0 until i), i.e. the page if we break at item i — including the
+    // footnote content of any inserts in the prefix, by the same rule the overflow check in add uses
+    val heights = boxes.scanLeft(0.0)(_ + measure(_))
+    val notes = boxes.scanLeft(0.0)((acc, b) =>
+      acc + (b match
+        case ins: InsertBox => ins.content.height
+        case _              => 0.0))
+
+    def sizes(i: Int): Double = heights(i) + (if notes(i) > 0 then notes(i) + separatorSize else 0)
+
     val candidates = (boxes.length - 1) to 1 by -1
 
     candidates.find(i => legal(i) && sizes(i) <= vsize).orElse(candidates.find(legal)) match
@@ -89,8 +115,21 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     clear()
 
   override def result: Box =
+    // the inserts come out of the body and their content reappears at the foot of the page, below the
+    // footnotesep space and the separator rule; the body is built short by exactly that much, so the page is
+    // still exactly vsize tall
+    val notes = boxes.collect { case ins: InsertBox => ins.content }.toList
+
+    boxes.filterInPlace(!_.isInstanceOf[InsertBox])
+
     // ragged bottoms trade vertical justification for never stretching the page's own glue: the fil soaks up
     // all the slack, so content stays at its natural spacing and short pages end quietly
     if t.getNumber("raggedbottom") != 0 then super.add(FilGlue)
 
-    wrap(buildTo(t.getNumber("vsize")))
+    if notes.isEmpty then wrap(buildTo(t.getNumber("vsize")))
+    else
+      val body = buildTo(t.getNumber("vsize") - notes.map(_.height).sum - separatorSize)
+      val foot = VSpaceBox(t.getGlue("footnotesep").naturalSize)
+        :: RuleBox(t, FootnoteRuleWidth, FootnoteRuleHeight, 0) :: notes
+
+      wrap(body ++ foot)
