@@ -29,18 +29,18 @@ class ScopeUnificationTests extends AnyFreeSpec with Matchers:
     val (t, handler, _) = fixture()
 
     t.set("chapter", 5)
-    handler.get("chapter") shouldBe Value.Num(BigDecimal(5))
+    handler.get("chapter") shouldBe Value.Num(5)
 
     t.set("book", "Genesis")
     handler.get("book") shouldBe Value.Text("Genesis")
   }
 
-  "numeric precision survives the round trip" in {
+  "numbers survive the round trip unchanged" in {
     val (t, handler, proc) = fixture()
 
-    proc.process("\\set pi {3.14159265358979323846}")
-    t.getVar("pi") shouldBe Value.Num(BigDecimal("3.14159265358979323846"))
-    handler.get("pi") shouldBe Value.Num(BigDecimal("3.14159265358979323846"))
+    proc.process("\\set pi {3.14159}")
+    t.getVar("pi") shouldBe Value.Num(3.14159)
+    handler.get("pi") shouldBe Value.Num(3.14159)
   }
 
   "engine objects live in the same scope the parser reads" in {
@@ -54,8 +54,8 @@ class ScopeUnificationTests extends AnyFreeSpec with Matchers:
   "engine parameters are readable as language values" in {
     val (t, handler, _) = fixture()
 
-    handler.get("parindent") shouldBe Value.Num(BigDecimal(t.getNumber("parindent")))
-    handler.get("hsize") shouldBe Value.Num(BigDecimal(t.getNumber("hsize")))
+    handler.get("parindent") shouldBe Value.Num(t.getNumber("parindent"))
+    handler.get("hsize") shouldBe Value.Num(t.getNumber("hsize"))
   }
 
   "undefined variables are Undefined to the language, errors to the engine" in {

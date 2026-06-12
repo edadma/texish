@@ -320,10 +320,10 @@ class Processor(val handler: Handler):
     loop()
     params.toMap
 
-  /** Parse a simple value from a string (number or text) */
+  /** Parse a simple value from a string (number, unit-suffixed dimension, or text) */
   private def parseSimpleValue(s: String): Value =
-    try Value.Num(BigDecimal(s))
-    catch case _: Exception => Value.Text(s)
+    try Value.Num(s.toDouble)
+    catch case _: Exception => parseDimension(s).getOrElse(Value.Text(s))
 
   /** Process a list of tokens (used by primitives like \for) */
   def processTokenList(tokens: Vector[Token]): Unit =
@@ -601,12 +601,12 @@ def parseDimension(s: String): Option[Value] =
   s match
     case DimensionPattern(num, unit) =>
       val factor = unit match
-        case "pt" => BigDecimal(1)
-        case "pc" => BigDecimal(12)
-        case "in" => BigDecimal(72)
-        case "cm" => BigDecimal(72 / 2.54)
-        case "mm" => BigDecimal(72 / 25.4)
-      Some(Value.Dimen(BigDecimal(num) * factor))
+        case "pt" => 1.0
+        case "pc" => 12.0
+        case "in" => 72.0
+        case "cm" => 72 / 2.54
+        case "mm" => 72 / 25.4
+      Some(Value.Dimen(num.toDouble * factor))
     case _ => None
 
 // Helper to evaluate tokens to a value
@@ -614,7 +614,7 @@ def evalTokens(tokens: Vector[Token], handler: Handler): Value =
   stripOuterBraces(tokens) match
     case Vector(Token.Text(s, _)) =>
       // Try to parse as a number, then as a unit-suffixed dimension
-      try Value.Num(BigDecimal(s))
+      try Value.Num(s.toDouble)
       catch case _: Exception => parseDimension(s).getOrElse(Value.Text(s))
     case Vector(Token.ControlSeq(name, _)) =>
       handler.get(name)

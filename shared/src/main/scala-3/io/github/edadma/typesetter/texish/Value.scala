@@ -10,8 +10,8 @@ enum Value:
   /** Text content */
   case Text(s: String)
 
-  /** Numeric value (arbitrary precision) */
-  case Num(n: BigDecimal)
+  /** Numeric value */
+  case Num(n: Double)
 
   /** Boolean value */
   case Bool(b: Boolean)
@@ -26,10 +26,10 @@ enum Value:
   case Macro(params: Vector[String], body: Vector[Token], pos: CharReader)
 
   /** A dimension with unit (internally stored as points) */
-  case Dimen(points: BigDecimal)
+  case Dimen(points: Double)
 
   /** Glue (flexible space) for typesetting */
-  case Glue(natural: BigDecimal, stretch: BigDecimal, shrink: BigDecimal)
+  case Glue(natural: Double, stretch: Double, shrink: Double)
 
   /** The nil/empty value */
   case Nil
@@ -44,10 +44,8 @@ object Value:
   /** Wrap a raw host value as a Value. Already-wrapped values pass through. */
   def from(value: Any): Value = value match
     case v: Value      => v
-    case n: BigDecimal => Num(n)
-    case n: Int        => Num(BigDecimal(n))
-    case n: Long       => Num(BigDecimal(n))
-    case n: Number     => Num(BigDecimal(n.doubleValue))
+    case n: BigDecimal => Num(n.toDouble)
+    case n: Number     => Num(n.doubleValue)
     case s: String     => Text(s)
     case b: Boolean    => Bool(b)
     case null          => Nil
@@ -67,12 +65,12 @@ object Value:
   /** Convert a value to its display string */
   def display(v: Value): String = v match
     case Text(s)       => s
-    case Num(n)        => if n.isWhole then n.toBigInt.toString else n.toString
+    case Num(n)        => if n.isWhole then n.toLong.toString else n.toString
     case Bool(b)       => b.toString
     case Seq(items)    => items.map(display).mkString("[", ", ", "]")
     case Map(entries)  => entries.map((k, v) => s"$k: ${display(v)}").mkString("{", ", ", "}")
     case Macro(_, _, _) => "<macro>"
-    case Dimen(pts)    => (if pts.isWhole then pts.toBigInt.toString else pts.toString) + "pt"
+    case Dimen(pts)    => (if pts.isWhole then pts.toLong.toString else pts.toString) + "pt"
     case Glue(n, st, sh) => s"${n}pt plus ${st}pt minus ${sh}pt"
     case Nil           => ""
     case Undefined     => "<undefined>"

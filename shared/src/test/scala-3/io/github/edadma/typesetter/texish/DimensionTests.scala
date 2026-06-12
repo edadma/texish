@@ -20,7 +20,7 @@ class DimensionTests extends AnyFreeSpec with Matchers:
     val (t, proc) = fixture()
     proc.process("\\set x {12pt}")
     t.getNumber("x") shouldBe 12.0
-    t.getVar("x") shouldBe Value.Dimen(BigDecimal(12))
+    t.getVar("x") shouldBe Value.Dimen(12)
   }
 
   "inches convert to points" in {
@@ -56,7 +56,7 @@ class DimensionTests extends AnyFreeSpec with Matchers:
   "bare numbers stay Num (meaning points)" in {
     val (t, proc) = fixture()
     proc.process("\\set x {10}")
-    t.getVar("x") shouldBe Value.Num(BigDecimal(10))
+    t.getVar("x") shouldBe Value.Num(10)
     t.getNumber("x") shouldBe 10.0
   }
 
@@ -67,8 +67,8 @@ class DimensionTests extends AnyFreeSpec with Matchers:
   }
 
   "whole dimensions display without a decimal point" in {
-    Value.display(Value.Dimen(BigDecimal("36.0"))) shouldBe "36pt"
-    Value.display(Value.Dimen(BigDecimal("1.5"))) shouldBe "1.5pt"
+    Value.display(Value.Dimen(36.0)) shouldBe "36pt"
+    Value.display(Value.Dimen(1.5)) shouldBe "1.5pt"
   }
 
   "\\vskip and \\hskip accept unit-suffixed dimensions" in {

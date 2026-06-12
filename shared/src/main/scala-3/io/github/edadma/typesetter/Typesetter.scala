@@ -290,8 +290,8 @@ abstract class Typesetter:
     case v                     => sys.error(s"variable '$name' is not glue: ${Value.display(v)}")
 
   infix def getNumber(name: String): Double = getVar(name) match
-    case Value.Num(n)   => n.toDouble
-    case Value.Dimen(p) => p.toDouble
+    case Value.Num(n)   => n
+    case Value.Dimen(p) => p
     case v              => sys.error(s"variable '$name' is not a number: ${Value.display(v)}")
 
   def set(name: String, value: Any): Unit =
