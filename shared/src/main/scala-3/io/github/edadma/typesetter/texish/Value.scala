@@ -28,8 +28,10 @@ enum Value:
   /** A dimension with unit (internally stored as points) */
   case Dimen(points: Double)
 
-  /** Glue (flexible space) for typesetting */
-  case Glue(natural: Double, stretch: Double, shrink: Double)
+  /** Glue (flexible space) for typesetting; order is the stretch/shrink infinity level (0 = finite, 1 = fil, 2 =
+    * fill)
+    */
+  case Glue(natural: Double, stretch: Double, shrink: Double, order: Int = 0)
 
   /** The nil/empty value */
   case Nil
@@ -71,7 +73,9 @@ object Value:
     case Map(entries)  => entries.map((k, v) => s"$k: ${display(v)}").mkString("{", ", ", "}")
     case Macro(_, _, _) => "<macro>"
     case Dimen(pts)    => (if pts.isWhole then pts.toLong.toString else pts.toString) + "pt"
-    case Glue(n, st, sh) => s"${n}pt plus ${st}pt minus ${sh}pt"
+    case Glue(n, st, sh, ord) =>
+      val unit = if ord == 0 then "pt" else "fi" + "l" * ord
+      s"${n}pt plus $st$unit minus $sh$unit"
     case Nil           => ""
     case Undefined     => "<undefined>"
     case Native(v)     => v.toString
