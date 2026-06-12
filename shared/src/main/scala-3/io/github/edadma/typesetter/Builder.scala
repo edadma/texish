@@ -25,6 +25,8 @@ trait Builder extends Mode:
 
   def insert(idx: Int, box: Box): Unit = boxes.insert(idx, box)
 
+  def list: List[Box] = boxes.toList
+
   def nonEmpty: Boolean = boxes.nonEmpty
 
   def isEmpty: Boolean = boxes.isEmpty

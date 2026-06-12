@@ -22,23 +22,32 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   private val deviceScale = dpi / 72
 
+  private var pageWidth: Double      = 0
+  private var pageHeight: Double     = 0
   private var page: BufferedImage    = uninitialized
   private var g: Graphics2D          = uninitialized
   private var frc: FontRenderContext = uninitialized
 
   def init(width: Double, height: Double): Unit =
+    pageWidth = width
+    pageHeight = height
+    newPageImage()
+    frc = new FontRenderContext(null, true, true)
+
+  // each page is its own image: the document collects every shipped page, so the target can't be reused
+  private def newPageImage(): Unit =
     page = new BufferedImage(
-      (width * deviceScale).toInt max 1,
-      (height * deviceScale).toInt max 1,
+      (pageWidth * deviceScale).toInt max 1,
+      (pageHeight * deviceScale).toInt max 1,
       BufferedImage.TYPE_INT_ARGB,
     )
     g = page.createGraphics
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
     g.scale(deviceScale, deviceScale)
-    frc = new FontRenderContext(null, true, true)
 
   def createPageTarget: Any =
+    newPageImage()
     g.setColor(java.awt.Color.WHITE)
     g.fillRect(0, 0, (page.getWidth / deviceScale).toInt + 1, (page.getHeight / deviceScale).toInt + 1)
     page
