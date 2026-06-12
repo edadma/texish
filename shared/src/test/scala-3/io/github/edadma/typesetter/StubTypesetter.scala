@@ -6,6 +6,8 @@ package io.github.edadma.typesetter
 class StubTypesetter extends Typesetter:
 
   type ImageHandle = Unit
+  type FontFace    = String
+  type RenderFont  = String
 
   val output = ""
 
@@ -15,7 +17,7 @@ class StubTypesetter extends Typesetter:
 
   def ejectPageTarget(): Unit = ()
 
-  def setFont(font: Any): Unit = ()
+  def setFont(font: RenderFont): Unit = ()
 
   def setColor(color: Color): Unit = ()
 
@@ -29,14 +31,14 @@ class StubTypesetter extends Typesetter:
 
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
 
-  def loadFont(path: String): Any = path
+  def loadFont(path: String): FontFace = path
 
-  def getTextExtents(text: String, font: Any): TextExtents =
+  def getTextExtents(text: String, font: RenderFont): TextExtents =
     TextExtents(0, -8, text.length * 6, 10, text.length * 6, 0)
 
-  def makeFont(font: Any, size: Double): Any = font
+  def makeFont(font: FontFace, size: Double): RenderFont = font
 
-  def charWidth(font: Any, c: Char): Double = 6
+  def charWidth(font: RenderFont, c: Char): Double = 6
 
   def loadImage(path: String): (ImageHandle, Int, Int) = ((), 1, 1)
 

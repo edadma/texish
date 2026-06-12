@@ -15,6 +15,8 @@ import scala.compiletime.uninitialized
 class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   type ImageHandle = BufferedImage
+  type FontFace    = JFont
+  type RenderFont  = JFont
 
   val output: String = null
 
@@ -43,7 +45,7 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   def ejectPageTarget(): Unit = ()
 
-  def setFont(font: Any): Unit = g.setFont(font.asInstanceOf[JFont])
+  def setFont(font: RenderFont): Unit = g.setFont(font)
 
   def setColor(color: Color): Unit =
     g.setColor(new java.awt.Color(color.redInt, color.greenInt, color.blueInt, color.alphaInt))
@@ -58,10 +60,10 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
     g.fillRect(x.toInt, y.toInt, width.toInt, height.toInt)
 
-  def loadFont(path: String): JFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
+  def loadFont(path: String): FontFace = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
 
-  def getTextExtents(text: String, font: Any): TextExtents =
-    val layout = new TextLayout(text, font.asInstanceOf[JFont], frc)
+  def getTextExtents(text: String, font: RenderFont): TextExtents =
+    val layout = new TextLayout(text, font, frc)
     val bounds = layout.getBounds
 
     val ascent = -bounds.getY
@@ -79,10 +81,10 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
       yAdvance = 0, // In horizontal typesetting, yAdvance is 0
     )
 
-  def makeFont(font: Any, size: Double): Any = font.asInstanceOf[JFont].deriveFont(size.toFloat)
+  def makeFont(font: FontFace, size: Double): RenderFont = font.deriveFont(size.toFloat)
 
-  def charWidth(font: Any, c: Char): Double =
-    val layout = new TextLayout(c.toString, font.asInstanceOf[JFont], frc)
+  def charWidth(font: RenderFont, c: Char): Double =
+    val layout = new TextLayout(c.toString, font, frc)
 
     layout.getAdvance
 

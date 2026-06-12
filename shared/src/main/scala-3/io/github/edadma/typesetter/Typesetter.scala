@@ -13,6 +13,16 @@ abstract class Typesetter:
 
   type ImageHandle
 
+  /** The backend's loaded-but-unsized font: a typeface file in memory (java.awt.Font on JVM, cairo FontFace on
+    * Native).
+    */
+  type FontFace
+
+  /** The backend's sized font, ready to render and measure with (a derived java.awt.Font on JVM, cairo ScaledFont on
+    * Native). Stored in [[Font.renderFont]].
+    */
+  type RenderFont
+
   val output: String
 
   var debug: Boolean           = false
@@ -24,7 +34,7 @@ abstract class Typesetter:
   var representations: Boolean = true
 
   case class Typeface(
-      fonts: mutable.HashMap[Set[String], Any], // todo: find a nicer target independent type other than Any
+      fonts: mutable.HashMap[Set[String], FontFace],
       baseline: Option[Double],
       ligatures: Set[String],
   )
@@ -65,7 +75,7 @@ abstract class Typesetter:
 
   def ejectPageTarget(): Unit
 
-  def setFont(font: Any): Unit
+  def setFont(font: RenderFont): Unit
 
   def setColor(color: Color): Unit
 
@@ -79,13 +89,13 @@ abstract class Typesetter:
 
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit
 
-  def loadFont(path: String): Any
+  def loadFont(path: String): FontFace
 
-  def getTextExtents(text: String, font: Any): TextExtents
+  def getTextExtents(text: String, font: RenderFont): TextExtents
 
-  def makeFont(font: Any, size: Double): Any
+  def makeFont(font: FontFace, size: Double): RenderFont
 
-  def charWidth(font: Any, c: Char): Double
+  def charWidth(font: RenderFont, c: Char): Double
 
   def loadImage(path: String): (ImageHandle, Int, Int)
 
@@ -269,7 +279,7 @@ abstract class Typesetter:
 
   def mode: Mode = modeStack.top
 
-  def setFont(f: Font): Unit = setFont(f.renderFont)
+  def setFont(f: Font): Unit = setFont(f.renderFont.asInstanceOf[RenderFont])
 
   // The engine works in big points (1/72 inch), on every backend. DPI exists
   // only at the device boundary, inside raster backends.

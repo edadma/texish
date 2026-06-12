@@ -7,7 +7,7 @@ class Font(
     val space: Double,
     val xHeight: Double,
     val style: Set[String],
-    val renderFont: Any,
+    val renderFont: Any, // the creating typesetter's RenderFont; Any because Font travels through the engine-agnostic scope
     val baseline: Option[Double],
     val ligatures: Set[String],
 ):
