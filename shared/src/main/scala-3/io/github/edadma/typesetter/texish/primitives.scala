@@ -134,9 +134,12 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     "hbox",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val opts  = proc.readOptionalParams(pos)
-        val body  = proc.readArgument(pos)
-        val toVal = opts.get("to").flatMap(points).map(java.lang.Double.valueOf).orNull
+        val opts = proc.readOptionalParams(pos)
+        val body = proc.readArgument(pos)
+        // build Double | Null directly — boxing through java.lang.Double would unbox null to 0.0
+        val toVal: Double | Null = opts.get("to").flatMap(points) match
+          case Some(d) => d
+          case None    => null
         t.hbox(toVal)
         proc.processTokenList(body) // scoping happens automatically from { } tokens
         t.mode.done()
@@ -148,9 +151,12 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     "vbox",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val opts  = proc.readOptionalParams(pos)
-        val body  = proc.readArgument(pos)
-        val toVal = opts.get("to").flatMap(points).map(java.lang.Double.valueOf).orNull
+        val opts = proc.readOptionalParams(pos)
+        val body = proc.readArgument(pos)
+        // build Double | Null directly — boxing through java.lang.Double would unbox null to 0.0
+        val toVal: Double | Null = opts.get("to").flatMap(points) match
+          case Some(d) => d
+          case None    => null
         t.vbox(toVal)
         proc.processTokenList(body) // scoping happens automatically from { } tokens
         t.mode.done()
