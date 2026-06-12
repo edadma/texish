@@ -47,6 +47,15 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
         // material spanning several pages cascade into further breaks
         carried.dropWhile(_.isSpace).foreach(this.add)
 
+  /** The document is ending: ship whatever remains, but only if something does — a document that just ejected
+    * its last page must not get a trailing blank one. Shipping goes through newpage (and so getDocument) like
+    * every other page, never through whatever mode happens to sit under this one on the stack.
+    */
+  override def done(): Unit =
+    pop
+
+    if nonEmpty then newpage()
+
   def newpage(): Unit =
     t.getDocument add result
     clear()

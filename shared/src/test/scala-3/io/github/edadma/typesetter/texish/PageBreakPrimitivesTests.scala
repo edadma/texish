@@ -70,6 +70,15 @@ class PageBreakPrimitivesTests extends AnyFreeSpec with Matchers:
     out.toString shouldBe empty
   }
 
+  "a document ending in \\eject has no trailing blank page" in quietly {
+    val (t, doc, proc) = capturing()
+
+    proc.process("one\n\n\\vfill\\eject")
+    t.end()
+
+    doc.shipped.length shouldBe 1
+  }
+
   "pageno starts at 1 and advances as pages ship" in quietly {
     val (t, proc) = fixture()
     t.getNumber("pageno") shouldBe 1.0
