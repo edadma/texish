@@ -28,10 +28,10 @@ enum Value:
   /** A dimension with unit (internally stored as points) */
   case Dimen(points: Double)
 
-  /** Glue (flexible space) for typesetting; order is the stretch/shrink infinity level (0 = finite, 1 = fil, 2 =
-    * fill)
+  /** Glue (flexible space) for typesetting. Stretch and shrink each have their own infinity order (0 = finite, 1 =
+    * fil, 2 = fill), so `12pt plus 2pt minus 1fil` — finite stretch, infinite shrink — is representable.
     */
-  case Glue(natural: Double, stretch: Double, shrink: Double, order: Int = 0)
+  case Glue(natural: Double, stretch: Double, shrink: Double, stretchOrder: Int = 0, shrinkOrder: Int = 0)
 
   /** The nil/empty value */
   case Nil
@@ -73,9 +73,13 @@ object Value:
     case Map(entries)  => entries.map((k, v) => s"$k: ${display(v)}").mkString("{", ", ", "}")
     case Macro(_, _, _) => "<macro>"
     case Dimen(pts)    => (if pts.isWhole then pts.toLong.toString else pts.toString) + "pt"
-    case Glue(n, st, sh, ord) =>
-      val unit = if ord == 0 then "pt" else "fi" + "l" * ord
-      s"${n}pt plus $st$unit minus $sh$unit"
+    case Glue(n, st, sh, sto, sho) =>
+      // renders back into the glue syntax the parser accepts, so \the output is re-readable
+      def num(d: Double)  = if d.isWhole then d.toLong.toString else d.toString
+      def unit(ord: Int)  = if ord == 0 then "pt" else "fi" + "l" * ord
+      val plus            = if st != 0 then s" plus ${num(st)}${unit(sto)}" else ""
+      val minus           = if sh != 0 then s" minus ${num(sh)}${unit(sho)}" else ""
+      s"${num(n)}pt$plus$minus"
     case Nil           => ""
     case Undefined     => "<undefined>"
     case Native(v)     => v.toString

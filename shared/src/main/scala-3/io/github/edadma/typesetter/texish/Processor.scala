@@ -321,6 +321,40 @@ class Processor(val handler: Handler):
     loop()
     params.toMap
 
+  /** TeX-style glue continuation: after a dimension argument, consume optional `plus <flex>` and `minus <flex>`
+    * keywords from the token stream (`\vskip 12pt plus 2pt minus 1fil`). Returns Glue if either keyword was present,
+    * otherwise Dimen of the natural size alone. Spaces skipped while looking for a keyword that isn't there are
+    * pushed back so surrounding text is unaffected.
+    */
+  def readGlueContinuation(natural: Double, pos: CharReader): Value =
+    def keyword(kw: String): Boolean =
+      val skipped = Vector.newBuilder[Token]
+      while hasMoreTokens && peekToken().isInstanceOf[Token.Space] do skipped += nextToken()
+      peekToken() match
+        case Token.Text(s, _) if s == kw =>
+          nextToken()
+          true
+        case _ =>
+          val toRestore = skipped.result()
+          if toRestore.nonEmpty then tokenSources.push(TokenListSource(toRestore))
+          false
+
+    def flexAmount(kw: String): (Double, Int) =
+      skipSpaces()
+      nextToken() match
+        case Token.Text(s, p) =>
+          parseFlex(s).getOrElse(handler.error(s"expected a dimension or fil/fill amount after '$kw', got '$s'", p))
+        case _ =>
+          handler.error(s"expected a dimension or fil/fill amount after '$kw'", pos)
+
+    val hasPlus                 = keyword("plus")
+    val (stretch, stretchOrder) = if hasPlus then flexAmount("plus") else (0.0, 0)
+    val hasMinus                = keyword("minus")
+    val (shrink, shrinkOrder)   = if hasMinus then flexAmount("minus") else (0.0, 0)
+
+    if hasPlus || hasMinus then Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder)
+    else Value.Dimen(natural)
+
   /** Parse a simple value from a string (number, unit-suffixed dimension, or text) */
   private def parseSimpleValue(s: String): Value =
     try Value.Num(s.toDouble)
@@ -595,19 +629,58 @@ def stripOuterBraces(tokens: Vector[Token]): Vector[Token] =
 /** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm */
 private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm)""".r
 
+/** Match a flex (stretch or shrink) amount: a dimension or an infinite amount like 1fil / 2fill */
+private val FlexPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|fil|fill)""".r
+
+/** Match a full glue spec: a dimension with optional `plus <flex>` and `minus <flex>` parts */
+private val GluePattern =
+  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm)(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|fil|fill))?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|fil|fill))?""".r
+
+private def unitFactor(unit: String): Double = unit match
+  case "pt" => 1.0
+  case "pc" => 12.0
+  case "in" => 72.0
+  case "cm" => 72 / 2.54
+  case "mm" => 72 / 25.4
+
 /** Parse a unit-suffixed dimension into Dimen (big points). Only context-free units — font-relative units (em, ex)
   * need the typesetter and are handled at the primitive level.
   */
 def parseDimension(s: String): Option[Value] =
   s match
-    case DimensionPattern(num, unit) =>
-      val factor = unit match
-        case "pt" => 1.0
-        case "pc" => 12.0
-        case "in" => 72.0
-        case "cm" => 72 / 2.54
-        case "mm" => 72 / 25.4
-      Some(Value.Dimen(num.toDouble * factor))
+    case DimensionPattern(num, unit) => Some(Value.Dimen(num.toDouble * unitFactor(unit)))
+    case _                           => None
+
+/** Parse a flex amount into (size, infinity order): `2pt` is finite (order 0), `1fil` order 1, `1fill` order 2. The
+  * size of an infinite amount is in fil units, not points.
+  */
+def parseFlex(s: String): Option[(Double, Int)] =
+  s match
+    case FlexPattern(num, "fil")  => Some((num.toDouble, 1))
+    case FlexPattern(num, "fill") => Some((num.toDouble, 2))
+    case FlexPattern(num, unit)   => Some((num.toDouble * unitFactor(unit), 0))
+    case _                        => None
+
+/** Parse a glue spec like `12pt plus 2pt minus 1fil` (the plus/minus parts optional, in that order). A bare
+  * dimension yields Dimen; anything with a flex part yields Glue. Stretch and shrink carry independent infinity
+  * orders, so finite stretch can coexist with infinite shrink.
+  */
+def parseGlue(s: String): Option[Value] =
+  s.trim match
+    case GluePattern(num, unit, stNum, stUnit, shNum, shUnit) =>
+      val natural = num.toDouble * unitFactor(unit)
+      if stNum == null && shNum == null then Some(Value.Dimen(natural))
+      else
+        def flex(n: String, u: String): (Double, Int) =
+          if n == null then (0.0, 0)
+          else
+            u match
+              case "fil"  => (n.toDouble, 1)
+              case "fill" => (n.toDouble, 2)
+              case _      => (n.toDouble * unitFactor(u), 0)
+        val (stretch, stretchOrder) = flex(stNum, stUnit)
+        val (shrink, shrinkOrder)   = flex(shNum, shUnit)
+        Some(Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder))
     case _ => None
 
 // Helper to evaluate tokens to a value
@@ -628,7 +701,7 @@ def evalTokens(tokens: Vector[Token], handler: Handler): Value =
         case _                 => ""
       }.mkString
       if text.isEmpty then Value.Nil
-      else Value.Text(text)
+      else parseGlue(text).getOrElse(Value.Text(text)) // a braced glue spec like {12pt plus 2pt} arrives here
 
 // ============ FOR LOOP ============
 

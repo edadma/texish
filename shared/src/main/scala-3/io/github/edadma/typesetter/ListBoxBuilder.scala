@@ -49,28 +49,28 @@ abstract class ListBoxBuilder extends Builder:
       if math.abs(delta) > 1e-6 then warn(f"box is ${-delta}%.2f off its target size and contains no glue")
     else if math.abs(delta) <= 1e-6 then setGlue(_.naturalSize)
     else if delta > 0 then
-      glue.collect { case (g, _) if g.stretch > 0 => g.order }.maxOption match
+      glue.collect { case (g, _) if g.stretch > 0 => g.stretchOrder }.maxOption match
         case None =>
           warn(f"underfull box: $delta%.2f of stretch needed but no glue can stretch")
           setGlue(_.naturalSize)
         case Some(order) =>
-          val total = glue.collect { case (g, _) if g.order == order => g.stretch }.sum
+          val total = glue.collect { case (g, _) if g.stretchOrder == order => g.stretch }.sum
           val r     = delta / total
-          setGlue(g => if g.order == order then g.naturalSize + r * g.stretch else g.naturalSize)
+          setGlue(g => if g.stretchOrder == order then g.naturalSize + r * g.stretch else g.naturalSize)
     else
-      glue.collect { case (g, _) if g.shrink > 0 => g.order }.maxOption match
+      glue.collect { case (g, _) if g.shrink > 0 => g.shrinkOrder }.maxOption match
         case None =>
           warn(f"overfull box: content exceeds the target size by ${-delta}%.2f and no glue can shrink")
           setGlue(_.naturalSize)
         case Some(order) =>
-          val total = glue.collect { case (g, _) if g.order == order => g.shrink }.sum
+          val total = glue.collect { case (g, _) if g.shrinkOrder == order => g.shrink }.sum
           if order == 0 && -delta > total then
             // finite shrink is a hard limit: set glue at maximum shrink and report the overflow
             warn(f"overfull box: content exceeds the target size by ${-delta - total}%.2f")
-            setGlue(g => g.naturalSize - (if g.order == 0 then g.shrink else 0))
+            setGlue(g => g.naturalSize - (if g.shrinkOrder == 0 then g.shrink else 0))
           else
             val r = -delta / total
-            setGlue(g => if g.order == order then g.naturalSize - r * g.shrink else g.naturalSize)
+            setGlue(g => if g.shrinkOrder == order then g.naturalSize - r * g.shrink else g.naturalSize)
 
     // safety net: if the glue was set correctly the box is exactly on target unless already reported
     val finalSize = boxes map measure sum

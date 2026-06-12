@@ -286,8 +286,11 @@ abstract class Typesetter:
   infix def getVar(name: String): Value = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
 
   infix def getGlue(name: String): Glue = getVar(name) match
-    case Value.Native(g: Glue) => g
-    case v                     => sys.error(s"variable '$name' is not glue: ${Value.display(v)}")
+    case Value.Native(g: Glue)           => g
+    case Value.Glue(n, st, sh, sto, sho) => Glue(n, st, sh, sto, sho)
+    case Value.Dimen(p)                  => Glue(p) // a plain dimension is rigid glue
+    case Value.Num(n)                    => Glue(n)
+    case v                               => sys.error(s"variable '$name' is not glue: ${Value.display(v)}")
 
   infix def getNumber(name: String): Double = getVar(name) match
     case Value.Num(n)   => n
@@ -434,8 +437,14 @@ abstract class Typesetter:
     mode add box
     this
 
-  def glue(naturalWidth: Double, stretch: Double = 0, shrink: Double = 0): Typesetter =
-    add(Glue(naturalWidth, stretch, shrink))
+  def glue(
+      naturalWidth: Double,
+      stretch: Double = 0,
+      shrink: Double = 0,
+      stretchOrder: Int = 0,
+      shrinkOrder: Int = 0,
+  ): Typesetter =
+    add(Glue(naturalWidth, stretch, shrink, stretchOrder, shrinkOrder))
 
   def fil: Typesetter = add(FilGlue)
 

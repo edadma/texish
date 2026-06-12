@@ -43,7 +43,7 @@ class GlueSettingTests extends AnyFreeSpec with Matchers:
   "infinite-order shrink absorbs the whole deficit, finite glue stays natural" in {
     // this is the case the old accounting double-shrank: leftover bookkeeping
     // after a successful infinite-order pass re-shrank the finite glue too
-    val box = build(56, HSpaceBox(40), Glue(10, 0, 5), Glue(10, 0, 1, order = 1))
+    val box = build(56, HSpaceBox(40), Glue(10, 0, 5), Glue(10, 0, 1, shrinkOrder = 1))
     box.width shouldBe 56.0 +- 1e-9
     widths(box) shouldBe Seq(40.0, 10.0, 6.0)
   }
@@ -59,6 +59,19 @@ class GlueSettingTests extends AnyFreeSpec with Matchers:
     val out = new java.io.ByteArrayOutputStream
     Console.withOut(out)(build(40, HSpaceBox(40), Glue(10, 0, 3)))
     out.toString should include("overfull")
+  }
+
+  "stretch and shrink orders are independent: finite stretch loses to fil, infinite shrink wins" in {
+    // glue like `12pt plus 2pt minus 1fil` stretches at order 0 but shrinks at order 1
+    val mixed = Glue(12, 2, 1, 0, 1)
+
+    // stretching: FilGlue's order-1 stretch outranks the mixed glue's finite stretch
+    val stretched = build(100, HSpaceBox(40), mixed, FilGlue)
+    widths(stretched) shouldBe Seq(40.0, 12.0, 48.0)
+
+    // shrinking: the mixed glue's order-1 shrink outranks finite shrink elsewhere
+    val shrunk = build(45, HSpaceBox(40), Glue(10, 0, 5), mixed)
+    widths(shrunk) shouldBe Seq(40.0, 10.0, -5.0)
   }
 
   "exact fit sets glue at natural size without warnings" in {

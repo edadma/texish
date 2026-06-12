@@ -94,25 +94,25 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // vskip - 1 braced arg
+  // vskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable
   proc.registerPrimitive(
     "vskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        points(evalArg(proc, pos)) match
-          case Some(d) => t.glue(d, 0, 0)
-          case None    => handler.error("\\vskip expects a dimension", pos)
+        glueArg(proc, pos) match
+          case Some(g) => t.add(g)
+          case None    => handler.error("\\vskip expects a dimension or glue", pos)
     },
   )
 
-  // hskip - 1 braced arg
+  // hskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable
   proc.registerPrimitive(
     "hskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        points(evalArg(proc, pos)) match
-          case Some(d) => t.glue(d, 0, 0)
-          case None    => handler.error("\\hskip expects a dimension", pos)
+        glueArg(proc, pos) match
+          case Some(g) => t.add(g)
+          case None    => handler.error("\\hskip expects a dimension or glue", pos)
     },
   )
 
@@ -267,3 +267,18 @@ private def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
+
+// Resolve a glue argument: a braced glue spec ({12pt plus 2pt}), a glue-valued variable, or a bare dimension
+// optionally continued by `plus`/`minus` keywords in the token stream (\vskip 12pt plus 2pt minus 1fil)
+private def glueArg(proc: Processor, pos: CharReader): Option[Glue] =
+  proc.evalArgumentExpr(pos) match
+    case Value.Glue(n, st, sh, sto, sho) => Some(Glue(n, st, sh, sto, sho))
+    case Value.Native(g: Glue)           => Some(g)
+    case Value.Dimen(p)                  => Some(glueContinuation(proc, p, pos))
+    case Value.Num(n)                    => Some(glueContinuation(proc, n, pos))
+    case _                               => None
+
+private def glueContinuation(proc: Processor, natural: Double, pos: CharReader): Glue =
+  proc.readGlueContinuation(natural, pos) match
+    case Value.Glue(n, st, sh, sto, sho) => Glue(n, st, sh, sto, sho)
+    case _                               => Glue(natural)
