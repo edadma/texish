@@ -44,6 +44,9 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
     g = page.createGraphics
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    // drawing must use the same fractional metrics the FontRenderContext measures with: with integer glyph
+    // advances the drawn text drifts off the measured positions, a glyph or two per word, eating interword space
+    g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
     g.scale(deviceScale, deviceScale)
 
   def createPageTarget: Any =
@@ -61,13 +64,16 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   def setLineWidth(width: Double): Unit = g.setStroke(new BasicStroke(width.toFloat))
 
+  // geometry goes through Shape so fractional coordinates and sizes rasterize by coverage: a rule thinner
+  // than a device pixel (0.4pt at screen resolutions) still leaves proportional ink instead of truncating to
+  // an integer height of zero
   def drawString(text: String, x: Double, y: Double): Unit = g.drawString(text, x.toFloat, y.toFloat)
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
-    g.drawLine(x1.toInt, y1.toInt, x2.toInt, y2.toInt)
+    g.draw(new java.awt.geom.Line2D.Double(x1, y1, x2, y2))
   def drawRect(x: Double, y: Double, width: Double, height: Double): Unit =
-    g.drawRect(x.toInt, y.toInt, width.toInt, height.toInt)
+    g.draw(new java.awt.geom.Rectangle2D.Double(x, y, width, height))
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
-    g.fillRect(x.toInt, y.toInt, width.toInt, height.toInt)
+    g.fill(new java.awt.geom.Rectangle2D.Double(x, y, width, height))
 
   def loadFont(path: String): FontFace = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
 
