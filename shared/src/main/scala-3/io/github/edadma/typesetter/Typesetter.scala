@@ -540,6 +540,7 @@ abstract class Typesetter:
       "hangafter"     -> 1.0,
       "hoffset"       -> 1 * in,
       "voffset"       -> 1 * in,
+      "pageno"        -> 1.0,
 
       // Knuth-Plass line breaking parameters
       "tolerance"       -> 200.0,  // max acceptable badness

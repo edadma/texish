@@ -15,11 +15,16 @@ class DocumentMode(val t: Typesetter) extends Mode:
   def layout(b: Box): Box = b
 
   infix def add(box: Box): Unit =
+    // pageno is the number of the page being shipped, so shipout-time material (running headers and footers)
+    // reads the right value; afterwards it advances, since anything typeset from here lands on the next page
+    t.set("pageno", page + 1)
+
     t.get("layout") match
       case Some(Value.Text("zfold")) => handleZFoldLayout(box)
       case _                         => handleSimpleLayout(box)
 
     page += 1
+    t.set("pageno", page + 1)
 
   def handleZFoldLayout(b: Box): Unit =
     val hfolds = 3

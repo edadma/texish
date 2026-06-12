@@ -18,7 +18,7 @@ trait Mode:
   def done(): Unit =
     val res = exit
 
-    if res ne null then t.add(result)
+    if res ne null then t.add(res)
 
   def pop: Mode = t.modeStack.pop()
 

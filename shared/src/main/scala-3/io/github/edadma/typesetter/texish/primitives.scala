@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter.texish
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.typesetter.{Glue, Hyphenation, InfGlue, RuleBox, UnderlineBox}
+import io.github.edadma.typesetter.{Glue, Hyphenation, InfGlue, Penalty, RuleBox, UnderlineBox}
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
   *
@@ -22,6 +22,28 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive("vfill", SimplePrimitive(() => t.fill))
   proc.registerPrimitive("hss", SimplePrimitive(() => t.add(InfGlue)))
   proc.registerPrimitive("vss", SimplePrimitive(() => t.add(InfGlue)))
+
+  // \nobreak forbids a page break at this point; \eject ends the paragraph and forces one (\vfill\eject fills
+  // the rest of the page first). Both are penalties under the hood — see \penalty.
+  proc.registerPrimitive("nobreak", SimplePrimitive(() => t.add(Penalty(Penalty.Inhibit))))
+  proc.registerPrimitive(
+    "eject",
+    SimplePrimitive(() => {
+      t.paragraph()
+      t.add(Penalty(Penalty.Force))
+    }),
+  )
+
+  // penalty - 1 numeric arg: how undesirable a page break is here (10000 forbids, -10000 forces)
+  proc.registerPrimitive(
+    "penalty",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        evalArg(proc, pos) match
+          case Value.Num(n) => t.add(Penalty(n.toInt))
+          case _            => handler.error("\\penalty expects a number", pos)
+    },
+  )
 
   // loadhyphenation - 2 braced args: language name and path to pattern file
   proc.registerPrimitive(
