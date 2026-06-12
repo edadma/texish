@@ -559,6 +559,13 @@ abstract class Typesetter:
       "linepenalty"     -> 10.0,   // penalty per line
       "adjdemerits"     -> 10000.0, // penalty for adjacent tight/loose lines
 
+      // Page-break penalties between the lines of a paragraph. The page builder is first-fit, so values between
+      // 0 and 9999 don't bias anything — what matters is 10000 (forbid) and -10000 (force). The defaults forbid
+      // orphans (a paragraph's first line alone at a page bottom) and widows (its last line alone at a page top).
+      "clubpenalty"      -> 10000.0, // against breaking after a paragraph's first line
+      "widowpenalty"     -> 10000.0, // against breaking before a paragraph's last line
+      "interlinepenalty" -> 0.0,     // between all other lines
+
       //
       "imageScaling" -> 1.0,
       "pagewidth"    -> 8.5 * in,

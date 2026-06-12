@@ -19,6 +19,16 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     t.indentParagraph = true
     pop
 
+  /** The page-break penalty between two consecutive lines of a paragraph: interlinepenalty everywhere, plus
+    * clubpenalty after the first line and widowpenalty before the last, as in TeX.
+    */
+  private def penaltyBetween(afterFirst: Boolean, beforeLast: Boolean): Int =
+    var p = t.getNumber("interlinepenalty").toInt
+
+    if afterFirst then p += t.getNumber("clubpenalty").toInt
+    if beforeLast then p += t.getNumber("widowpenalty").toInt
+    p
+
   private def buildLinesFromOptimal(lines: Seq[Seq[Box]], hsize: Double): Unit =
     var first = true
 
@@ -43,8 +53,13 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         if vlist.length > 1 then vlist.insert(vlist.length - 2, t.getGlue("parskip"))
         first = false
 
+      if !isLast then
+        val p = penaltyBetween(lineIdx == 0, lineIdx == lines.length - 2)
+        if p != 0 then t.modeStack(1) add Penalty(p)
+
   private def buildLinesGreedy(hsize: Double): Unit =
-    var first = true
+    var first   = true
+    var lineIdx = 0
 
     while boxes.nonEmpty do
       val hbox = new HBoxBuilder(t, t.getNumber("hsize"))
@@ -105,6 +120,11 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
 
       val newLine = hbox.result
 
+      // a greedy line is final exactly when it exhausted the paragraph's boxes
+      if lineIdx > 0 then
+        val p = penaltyBetween(lineIdx == 1, boxes.isEmpty)
+        if p != 0 then t.modeStack(1) add Penalty(p)
+
       t.modeStack(1) add newLine
 
       if first then
@@ -112,4 +132,6 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
 
         if vlist.length > 1 then vlist.insert(vlist.length - 2, t.getGlue("parskip"))
         first = false
+
+      lineIdx += 1
     end while
