@@ -1,32 +1,11 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.freetype.{Library, initFreeType}
-import io.github.edadma.libcairo.{
-  Context,
-  FontFace as CairoFontFace,
-  FontSlant,
-  FontWeight,
-  Format,
-  ScaledFont,
-  Surface,
-  fontFaceCreateForFTFace,
-  imageSurfaceCreate,
-  imageSurfaceCreateFromPNG,
-  pdfSurfaceCreate,
-  TextExtents as CairoTextExtents,
-}
+import io.github.edadma.libcairo.pdfSurfaceCreate
 
-import scala.compiletime.uninitialized
-
-class CairoPDFTypesetter(val output: String) extends Typesetter:
-
-  type ImageHandle = Surface
-  type FontFace    = CairoFontFace
-  type RenderFont  = ScaledFont
-
-  private var surface: Surface       = uninitialized
-  private var ctx: Context           = uninitialized
-  private lazy val freetype: Library = initFreeType.getOrElse(sys.error("error initializing FreeType"))
+/** Renders the whole document onto a single Cairo PDF surface, one page per `showPage`, streaming to the file at
+  * `output`. All drawing is inherited from [[CairoTypesetter]].
+  */
+class CairoPDFTypesetter(val output: String) extends CairoTypesetter:
 
   def init(width: Double, height: Double): Unit =
     surface = pdfSurfaceCreate(output, width, height)
@@ -34,68 +13,7 @@ class CairoPDFTypesetter(val output: String) extends Typesetter:
 
   def createPageTarget: Any = ensureInitializedForContent()
 
-  def ejectPageTarget(): Unit = {
-    ctx.showPage()
-  }
-
-  def setFont(font: RenderFont): Unit = ctx.setScaledFont(font)
-
-  def setColor(color: Color): Unit = ctx.setSourceRGBA(color.red, color.green, color.blue, color.alpha)
-
-  def setLineWidth(width: Double): Unit = ctx.setLineWidth(width)
-
-  def drawString(text: String, x: Double, y: Double): Unit =
-    ctx.moveTo(x, y)
-    ctx.showText(text)
-
-  def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
-    ctx.moveTo(x1, y1)
-    ctx.lineTo(x2, y2)
-    ctx.stroke()
-
-  def drawRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
-
-  def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
-    ctx.rectangle(x, y, width, height)
-    ctx.fill()
-
-  def loadFont(path: String): FontFace = {
-    fontFaceCreateForFTFace(
-      freetype
-        .newFace(path, 0)
-        .getOrElse(sys.error(s"error loading face: $path"))
-        .faceptr,
-      0,
-    )
-  }
-
-  def getTextExtents(text: String, font: RenderFont): TextExtents =
-    setFont(font)
-
-    val CairoTextExtents(a, b, c, d, e, f) = ctx.textExtents(text)
-
-    TextExtents(a, b, c, d, e, f)
-
-  def makeFont(font: FontFace, size: Double): RenderFont =
-    ctx.setFontFace(font)
-    ctx.setFontSize(size)
-    ctx.getScaledFont.reference
-
-  def charWidth(font: RenderFont, c: Char): Double =
-    setFont(font)
-    ctx.textExtents(c.toString).xAdvance
-
-  def loadImage(path: String): (ImageHandle, Int, Int) =
-    val surface           = imageSurfaceCreateFromPNG(path)
-    val referencedSurface = surface.reference
-
-    (referencedSurface, referencedSurface.getWidth, referencedSurface.getHeight)
-
-  def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
-    ctx.save()
-    ctx.setSourceSurface(image, x, y)
-    ctx.paint()
-    ctx.restore()
+  def ejectPageTarget(): Unit = ctx.showPage()
 
   def destroy(): Unit =
     ctx.destroy()
