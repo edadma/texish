@@ -143,6 +143,17 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
     Hyphenation.clear()
   }
 
+  it should "load the build-time embedded en-US patterns via enableEnglish" in {
+    Hyphenation.clear()
+    Hyphenation.isEnabled shouldBe false
+    Hyphenation.enableEnglish()
+    try
+      Hyphenation.isEnabled shouldBe true
+      // a famously long word the embedded patterns break in several places
+      Hyphenation("pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
+    finally Hyphenation.clear() // leave the global hyphenator as we found it
+  }
+
   // Real English word hyphenation tests
   // Format: word -> expected syllables (hyphenation points are between syllables)
   // Values verified against hyph-en-us.tex patterns

@@ -62,6 +62,23 @@ lazy val typesetter = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     ),
     publishMavenStyle      := true,
     Test / publishArtifact := false,
+    // Embed the TeX en-US hyphenation patterns as a Scala constant at build time, so they ship
+    // compiled into every target — a native binary has no pattern file to read at runtime.
+    // Hyphenation.enableEnglish() loads this. The string is escaped so any pattern content is safe.
+    Compile / sourceGenerators += Def.task {
+      val root    = (LocalRootProject / baseDirectory).value
+      val src     = root / "shared" / "src" / "main" / "resources" / "hyph-en-us.tex"
+      val out     = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "typesetter" / "EnglishHyphenationPatterns.scala"
+      val escaped = IO.read(src).replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
+      IO.write(
+        out,
+        "package io.github.edadma.typesetter\n\n" +
+          "// Generated at build time from shared/src/main/resources/hyph-en-us.tex — do not edit.\n" +
+          "private[typesetter] object EnglishHyphenationPatterns:\n" +
+          "  val content: String = \"" + escaped + "\"\n",
+      )
+      Seq(out)
+    }.taskValue,
   )
   .jvmSettings(
     libraryDependencies ++= Seq(

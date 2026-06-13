@@ -29,9 +29,21 @@ object Hyphenation:
   def clear(): Unit =
     hyphenators = Map.empty
     currentLanguage = None
+    englishLoaded = false
 
   /** Check if hyphenation is enabled. */
   def isEnabled: Boolean = currentLanguage.isDefined
+
+  private var englishLoaded = false
+
+  /** Enable TeX en-US hyphenation, the way a TeX format loads `hyphen.tex` — without this no
+    * patterns are loaded and long words never break, so a paragraph stretches its spaces instead.
+    * The patterns are compiled into the binary (see `EnglishHyphenationPatterns`), so this works on
+    * a native target with no pattern file to read. Idempotent: the patterns parse once. */
+  def enableEnglish(): Unit =
+    if !englishLoaded then
+      loadPatternsFromString("en-us", EnglishHyphenationPatterns.content)
+      englishLoaded = true
 
   /** Get hyphenation points for a word using the current language. */
   def apply(word: String): Option[Iterator[(String, String)]] =
