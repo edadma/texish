@@ -28,11 +28,33 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
   proc.registerPrimitive("cr", SimplePrimitive(() => t.op("newLine")))
   proc.registerPrimitive("hfil", SimplePrimitive(() => t.fil))
-  proc.registerPrimitive("vfil", SimplePrimitive(() => t.fil))
   proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))
-  proc.registerPrimitive("vfill", SimplePrimitive(() => t.fill))
   proc.registerPrimitive("hss", SimplePrimitive(() => t.add(InfGlue)))
-  proc.registerPrimitive("vss", SimplePrimitive(() => t.add(InfGlue)))
+
+  // The vertical glue commands end an open paragraph first, as in TeX: \vfill issued mid-paragraph would
+  // otherwise add its glue to the paragraph itself, where it sets as horizontal space inside the last line and
+  // the vertical list never sees it.
+  proc.registerPrimitive(
+    "vfil",
+    SimplePrimitive(() => {
+      t.paragraph()
+      t.fil
+    }),
+  )
+  proc.registerPrimitive(
+    "vfill",
+    SimplePrimitive(() => {
+      t.paragraph()
+      t.fill
+    }),
+  )
+  proc.registerPrimitive(
+    "vss",
+    SimplePrimitive(() => {
+      t.paragraph()
+      t.add(InfGlue)
+    }),
+  )
 
   // \nobreak forbids a page break at this point; \eject ends the paragraph and forces one (\vfill\eject fills
   // the rest of the page first). Both are penalties under the hood — see \penalty.
@@ -182,14 +204,17 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // vskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable
+  // vskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable; like the
+  // other vertical glue commands it ends an open paragraph first
   proc.registerPrimitive(
     "vskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         glueArg(proc, pos) match
-          case Some(g) => t.add(g)
-          case None    => handler.error("\\vskip expects a dimension or glue", pos)
+          case Some(g) =>
+            t.paragraph()
+            t.add(g)
+          case None => handler.error("\\vskip expects a dimension or glue", pos)
     },
   )
 

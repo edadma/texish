@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter.texish
 
-import io.github.edadma.typesetter.{Box, Builder, DocumentMode, Penalty, StubTypesetter, VBox}
+import io.github.edadma.typesetter.{Box, Builder, DocumentMode, Glue, Penalty, StubTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -68,6 +68,34 @@ class PageBreakPrimitivesTests extends AnyFreeSpec with Matchers:
     doc.shipped.length shouldBe 1
     doc.shipped(0).height shouldBe 100.0 +- 1e-9
     out.toString shouldBe empty
+  }
+
+  "\\vfill mid-paragraph ends the paragraph and fills the page bottom" in {
+    val (t, doc, proc) = capturing()
+    t.set("vsize", 100.0)
+    t.set("topskip", Glue(0))
+
+    // a single newline leaves the paragraph open: the fill must still land in the vertical list and absorb
+    // the page's slack at the bottom, not set as horizontal space inside the paragraph's last line
+    val out = new java.io.ByteArrayOutputStream
+    Console.withOut(out)(proc.process("one two\n\\vfill\\eject"))
+
+    out.toString shouldBe empty
+    doc.shipped.length shouldBe 1
+    doc.shipped(0).height shouldBe 100.0 +- 1e-9
+    // the line sits at the top; the set fill below it holds everything else
+    doc.shipped(0).boxes.last.height shouldBe 90.0 +- 1e-9
+  }
+
+  "\\vskip mid-paragraph ends the paragraph and skips vertically" in {
+    val (t, proc) = fixture()
+
+    proc.process("one two\n\\vskip 20pt more")
+    t.paragraph()
+
+    // the skip sits between the two paragraphs' lines at the top level of the vertical list
+    val items = t.mode.asInstanceOf[Builder].list
+    items.count(b => b.isInstanceOf[Glue] && b.asInstanceOf[Glue].naturalSize == 20.0) shouldBe 1
   }
 
   "a document ending in \\eject has no trailing blank page" in quietly {
