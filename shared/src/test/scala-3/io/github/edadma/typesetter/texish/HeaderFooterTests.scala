@@ -64,6 +64,20 @@ class HeaderFooterTests extends AnyFreeSpec with Matchers:
     t.drawn.map(_._1) shouldBe ArrayBuffer("body")
   }
 
+  "a newline pending at shipout does not leak a space into the header" in quietly {
+    val (t, proc) = fixture()
+
+    // the page ships at an \eject preceded by a single newline: the pending newline would have produced an
+    // interword space at the next text, and must not put one at the front of the header instead
+    proc.process("\\def headline {heading words \\hfil}\nbody\n\\vfill\\eject")
+    t.end()
+
+    val texts = t.drawn.map(_._1)
+    texts should contain("heading")
+    texts should contain("words")
+    texts.count(_.startsWith(" ")) shouldBe 0
+  }
+
   "shipout during a paragraph contribution evaluates the header without disturbing the body" in quietly {
     val (t, proc) = fixture()
     t.set("vsize", 60.0)

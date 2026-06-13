@@ -72,3 +72,15 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   /** Reset newline count (useful after certain operations) */
   def resetNewlineCount(): Unit = newlineCount = 0
+
+  /** Run out-of-band material (running headers, footers) with a clean inline state: a newline pending in the
+    * document at shipout time must not leak a space into the header, and building the header must not disturb
+    * the document's own pending state.
+    */
+  def isolated[A](body: => A): A =
+    val saved = newlineCount
+
+    newlineCount = 0
+
+    try body
+    finally newlineCount = saved

@@ -328,14 +328,18 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   // Running headers and footers: if the document defines a headline or footline macro, each shipped page builds
   // an hbox to hsize from its body at shipout time — pageno is already set to the shipping page's number, so
   // \the\pageno in the macro is always current. The hbox is built on a temporary mode pushed over whatever is
-  // being typeset and popped with exit (not done), so the box never lands in the page being broken.
+  // being typeset and popped with exit (not done), so the box never lands in the page being broken; the handler's
+  // pending-newline state is isolated the same way, so a newline pending in the document doesn't put a stray
+  // space at the front of the header.
   t.pageDecorator = () =>
     def line(name: String): Box | Null =
       t.get(name) match
         case Some(Value.Macro(_, body, _)) =>
-          t.hbox(t.getNumber("hsize"))
-          proc.processTokenList(body)
-          t.mode.exit
+          handler.isolated {
+            t.hbox(t.getNumber("hsize"))
+            proc.processTokenList(body)
+            t.mode.exit
+          }
         case _ => null
 
     (line("headline"), line("footline"))
