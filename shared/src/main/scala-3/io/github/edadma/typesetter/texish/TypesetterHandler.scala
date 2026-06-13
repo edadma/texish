@@ -14,7 +14,11 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def text(s: String): Unit =
     if !suppressed then
-      if newlineCount == 1 then typesetter add " "
+      // A single pending newline is an interword space — but only while we are still in the
+      // paragraph. If a vertical command (\vskip, \vfill, …) closed the paragraph since the
+      // newline, the pending space is stale and must be dropped, or it leaks a stray box into
+      // the vertical list before the next paragraph starts.
+      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
       typesetter.start add s
       newlineCount = 0
 
@@ -61,7 +65,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
   /** Add a Box directly to the current mode */
   def addBox(box: Box): Unit =
     if !suppressed then
-      if newlineCount == 1 then typesetter add " "
+      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
       typesetter add box
       newlineCount = 0
 
