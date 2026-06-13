@@ -17,11 +17,15 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
 
   private val FootnoteRuleHeight = 0.4
   private val FootnoteRuleWidth  = 2 * t.in
+  private val FootnoteRuleGap    = 2.6 // breathing room between the rule and the first footnote, as in TeX
 
   private var topskipDone = false
 
-  /** Height of the separator the shipout places above the footnote block: the footnotesep space plus the rule. */
-  private def separatorSize: Double = t.getGlue("footnotesep").naturalSize + FootnoteRuleHeight
+  /** Height of the separator the shipout places above the footnote block: the footnotesep space, the rule, and
+    * the gap below the rule.
+    */
+  private def separatorSize: Double =
+    t.getGlue("footnotesep").naturalSize + FootnoteRuleHeight + FootnoteRuleGap
 
   /** Page height the given items will occupy once shipped: their own heights plus the footnote content carried by
     * any inserts among them, plus the separator (counted once) when any insert is present.
@@ -130,6 +134,7 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     else
       val body = buildTo(t.getNumber("vsize") - notes.map(_.height).sum - separatorSize)
       val foot = VSpaceBox(t.getGlue("footnotesep").naturalSize)
-        :: RuleBox(t, FootnoteRuleWidth, FootnoteRuleHeight, 0) :: notes
+        :: RuleBox(t, FootnoteRuleWidth, FootnoteRuleHeight, 0)
+        :: VSpaceBox(FootnoteRuleGap) :: notes
 
       wrap(body ++ foot)

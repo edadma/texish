@@ -28,7 +28,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
       shipped += box.asInstanceOf[VBox]
       page += 1
 
-  // footnotesep 10 plus the 0.4 rule: the separator above the footnote block costs 10.4
+  // footnotesep 10, the 0.4 rule, and the 2.6 gap below it: the separator above the footnote block costs 13
   private def setup(vsize: Double): (CapturingDocument, PageMode) =
     val t = new StubTypesetter
     t.set("vsize", vsize)
@@ -55,12 +55,13 @@ class InsertTests extends AnyFreeSpec with Matchers:
 
     // the page is still exactly vsize: body built to vsize minus the footnote block
     page.height shouldBe 100.0 +- 1e-9
-    // the insert itself is gone; its content sits last, under the rule
+    // the insert itself is gone; its content sits last, under the rule and the gap below it
     page.boxes.count(_.isInstanceOf[InsertBox]) shouldBe 0
     page.boxes.last should be theSameInstanceAs note
-    page.boxes(page.boxes.length - 2) shouldBe a[RuleBox]
+    page.boxes(page.boxes.length - 2).height shouldBe 2.6 +- 1e-9
+    page.boxes(page.boxes.length - 3) shouldBe a[RuleBox]
     // everything above the separator occupies what the footnote block left over
-    page.boxes.dropRight(3).map(_.height).sum shouldBe (100.0 - 20 - 10.4) +- 1e-9
+    page.boxes.dropRight(4).map(_.height).sum shouldBe (100.0 - 20 - 13) +- 1e-9
   }
 
   "a footnote shrinks the room available to the body" in quietly {
@@ -69,7 +70,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
     pm add Line(40)
     pm add InsertBox(Note(20))
     pm add Glue(10, 5, 5)
-    pm add Line(40) // 90 alone would fit, but the footnote block's 30.4 pushes it over
+    pm add Line(40) // 90 alone would fit, but the footnote block's 33 pushes it over
 
     doc.shipped.length shouldBe 1
     doc.shipped(0).boxes.count(_.isInstanceOf[Line]) shouldBe 1
@@ -86,7 +87,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
     pm add Line(40)
     pm add Glue(10, 5, 5)
     pm add Line(40)
-    pm add InsertBox(note) // 90 + 50.4 overflows: the insert's line moves over, and the insert with it
+    pm add InsertBox(note) // 90 + 53 overflows: the insert's line moves over, and the insert with it
 
     doc.shipped.length shouldBe 1
     doc.shipped(0).boxes.exists(_.isInstanceOf[RuleBox]) shouldBe false
