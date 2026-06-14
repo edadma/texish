@@ -76,4 +76,20 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
     new RadicalBox(t, mathFont.radicalGlyph(target), radicand, p)
 
+  /** Build a `\left…\right` delimited sub-formula: the already-laid-out inner formula flanked by stretchy
+    * fences tall enough to span it about the math axis. Either delimiter may be absent (a null delimiter,
+    * `\left.` or `\right.`). The fences are sized to cover the inner box's reach above and below the axis,
+    * and centred on it, exactly as TeX sizes `\left`/`\right`. */
+  def makeDelimited(left: Option[Int], inner: Box, right: Option[Int]): Box =
+    val axis  = mathFont.axisHeight
+    val delta = math.max(inner.ascent - axis, inner.descent + axis) // the formula's larger reach from the axis
+    val target = 2 * delta                                          // a fence centred on the axis spans ±delta
+
+    val pieces = Vector.newBuilder[Box]
+    left.foreach(cp => pieces += mathFont.delimiter(cp, target))
+    pieces += inner
+    right.foreach(cp => pieces += mathFont.delimiter(cp, target))
+
+    HBox(pieces.result())
+
   def result: Box | Null = HBox(MathList.translate(nodes.toVector, mathFont, style.cramped))

@@ -22,7 +22,7 @@ object RadicalParams:
   * excess is split evenly above and below — raising the bar and letting the surd dip below the baseline —
   * exactly as TeXbook rule 11 distributes it, so the radicand stays centred in the surd.
   */
-class RadicalBox(t: Typesetter, surd: GlyphBox, radicand: Box, p: RadicalParams) extends ContentBox:
+class RadicalBox(t: Typesetter, surd: Box, radicand: Box, p: RadicalParams) extends ContentBox:
 
   // the surd should cover the radicand plus the gap and the bar; any height beyond that is shared above/below
   private val needed = p.verticalGap + p.ruleThickness + radicand.ascent + radicand.descent

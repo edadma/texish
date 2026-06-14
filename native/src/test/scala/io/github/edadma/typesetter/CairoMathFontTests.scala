@@ -70,3 +70,16 @@ class CairoMathFontTests extends AnyFreeSpec with Matchers:
     sb.ascent should be > nucleusAscent      // the superscript pushes the box's top up
     sb.width should be > full.glyphBox(0x1D465).width
   }
+
+  "a stretchy delimiter grows past the base glyph to span a tall target, centred on the axis" in {
+    val t    = new CairoImageTypesetter(100)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    val baseParen = full.glyphBox(0x28).height
+
+    val tall = full.verticalVariant(0x28, baseParen * 4)
+    tall.height should be > baseParen
+
+    val fence = full.delimiter(0x28, baseParen * 4).asInstanceOf[AxisCenteredBox]
+    (fence.ascent - fence.descent) shouldBe (2 * full.axisHeight +- 0.001)
+  }

@@ -235,6 +235,29 @@ class Processor(val handler: Handler):
         Vector(Token.Text(s.substring(0, 1), p))
       case _ => Vector(nextToken())
 
+  /** Push tokens back onto the source stack so the next reads see them first — used after peeking past a
+    * delimiter to return the unconsumed remainder of a text run to the stream. */
+  def pushBack(tokens: Vector[Token]): Unit =
+    if tokens.nonEmpty then tokenSources.push(TokenListSource(tokens))
+
+  /** Collect the tokens of a `\left…\right` body: everything up to the matching `\right`, with nested
+    * `\left`/`\right` pairs balanced and passed through verbatim (they are re-processed when the body is laid
+    * out). The matching `\right` is consumed, so its delimiter is read next; an end of input before it is an
+    * error. */
+  def collectDelimitedBody(pos: CharReader): Vector[Token] =
+    val tokens = Vector.newBuilder[Token]
+    var depth  = 1
+
+    while depth > 0 && hasMoreTokens do
+      nextToken() match
+        case t @ Token.ControlSeq("left", _)  => depth += 1; tokens += t
+        case t @ Token.ControlSeq("right", _) => depth -= 1; if depth > 0 then tokens += t
+        case Token.EOF(p)                     => handler.error("\\left without matching \\right", p)
+        case t                                => tokens += t
+
+    if depth > 0 then handler.error("\\left without matching \\right", pos)
+    tokens.result()
+
   /** Read tokens until matching } */
   private def readBalancedGroup(): Vector[Token] =
     val tokens = Vector.newBuilder[Token]

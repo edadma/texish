@@ -132,3 +132,20 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     rad.ascent should be > r.ascent                  // the vinculum rises above the radicand
     rad.width should be > full.glyphBox(0x1D465).width // surd plus the radicand
   }
+
+  "a stretchy delimiter grows past the base glyph to span a tall target, centred on the axis" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    val baseParen = full.glyphBox(0x28).height   // an ordinary '(' at text size
+
+    // a target several line-heights tall must select a precomposed size variant (or an assembly) taller than
+    // the base glyph — Latin Modern Math supplies a deep stack of '(' variants
+    val tall = full.verticalVariant(0x28, baseParen * 4)
+    tall.height should be > baseParen
+    tall.height should be >= baseParen * 4 * 0.9  // reaches (close to) the target
+
+    // the fence \left( sets is that variant, centred on the math axis
+    val fence = full.delimiter(0x28, baseParen * 4).asInstanceOf[AxisCenteredBox]
+    (fence.ascent - fence.descent) shouldBe (2 * full.axisHeight +- 0.001) // symmetric about the axis
+  }

@@ -11,6 +11,7 @@ import io.github.edadma.typesetter.{
   MarkBox,
   MathAtom,
   MathClass,
+  MathDelimiters,
   MathMode,
   Penalty,
   RuleBox,
@@ -360,6 +361,36 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // left - opens a stretchy delimited sub-formula. Math-mode only; reads the opening delimiter, collects the
+  // body up to the matching \right, reads the closing delimiter, then sizes both fences to span the body about
+  // the math axis. Either delimiter may be `.` (drawn as nothing). The whole thing enters the list as an Inner
+  // atom, so it gets the spacing of a parenthesized subexpression.
+  proc.registerPrimitive(
+    "left",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val leftDelim  = readDelimiter(proc, handler, pos)
+            val body       = proc.collectDelimitedBody(pos)
+            val rightDelim = readDelimiter(proc, handler, pos)
+            val inner      = handler.mathSubFormula(proc, parent.style, body)
+
+            if inner ne null then
+              parent.addNode(MathAtom(MathClass.Inner, parent.makeDelimited(leftDelim, inner, rightDelim)))
+          case _ => handler.error("\\left is only allowed in math mode", pos)
+    },
+  )
+
+  // right - only meaningful as the close of a \left group, which consumes it directly; standing alone it is an
+  // error (an unmatched \right).
+  proc.registerPrimitive(
+    "right",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit = handler.error("\\right without matching \\left", pos)
+    },
+  )
+
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
     "noalign",
@@ -502,6 +533,21 @@ class SimplePrimitive(action: () => Any) extends Primitive:
 // Helper to evaluate an argument and get its value
 private def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
+
+// Read the delimiter that follows \left or \right: a single character (the first of the next text run, with
+// the rest pushed back) or a control sequence, resolved through MathDelimiters. `.` and any unrecognized
+// delimiter yield None — the null (undrawn) fence.
+private def readDelimiter(proc: Processor, handler: TypesetterHandler, pos: CharReader): Option[Int] =
+  proc.skipSpaces()
+  proc.peekToken() match
+    case Token.Text(s, p) if s.nonEmpty =>
+      proc.nextToken()
+      if s.length > 1 then proc.pushBack(Vector(Token.Text(s.substring(1), p)))
+      MathDelimiters.forChar(s.charAt(0))
+    case Token.ControlSeq(name, _) =>
+      proc.nextToken()
+      MathDelimiters.forCommand(name)
+    case _ => handler.error("expected a delimiter after \\left or \\right", pos)
 
 // A dimension value in big points: Dimen carries its own unit; a bare number means points
 private def points(v: Value): Option[Double] = v match

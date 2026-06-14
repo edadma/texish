@@ -83,21 +83,35 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
         )
       case None => RadicalParams.texDefaults(size, display)
 
-  /** A surd glyph (√) at least `targetHeight` points tall: the smallest of the font's vertical size variants
-    * that reaches the target, or the largest available when none does (glyph assembly for radicands taller
-    * than any precomposed variant arrives with stretchy delimiters). Falls back to the base glyph when the
-    * font carries no variant data. */
-  def radicalGlyph(targetHeight: Double): GlyphBox =
-    val baseIdx  = glyphIndex(0x221A)
-    val variants = math.flatMap(_.variants.vertical.get(baseIdx)).map(_.variants).getOrElse(Vector.empty)
-    val chosen =
-      variants
-        .find(_.advance * size >= targetHeight)
-        .orElse(variants.lastOption)
-        .map(_.glyph)
-        .getOrElse(baseIdx)
+  /** The least an assembly's parts may overlap at a joint, in points. Zero without a MATH table. */
+  def minConnectorOverlap: Double = math.map(_.variants.minConnectorOverlap).getOrElse(0.0) * size
 
-    new GlyphBox(t, chosen, font, t.currentColor)
+  /** A box at least `targetHeight` points tall for a base glyph that grows vertically (a delimiter, a surd, a
+    * big operator): the smallest precomposed size variant that reaches the target; or, past the largest
+    * variant, the parts assembled to span it ([[GlyphAssemblyBox]]); or the largest variant, or the base
+    * glyph, when the font supplies no taller form. Falls back to the base glyph with no MATH table. */
+  def verticalVariant(codepoint: Int, targetHeight: Double): Box =
+    val baseIdx = glyphIndex(codepoint)
+
+    math.flatMap(_.variants.vertical.get(baseIdx)) match
+      case Some(gc) =>
+        gc.variants.find(_.advance * size >= targetHeight) match
+          case Some(v) => new GlyphBox(t, v.glyph, font, t.currentColor)
+          case None =>
+            gc.assembly match
+              case Some(asm) =>
+                new GlyphAssemblyBox(t, font, t.currentColor, asm, targetHeight, minConnectorOverlap)
+              case None =>
+                new GlyphBox(t, gc.variants.lastOption.map(_.glyph).getOrElse(baseIdx), font, t.currentColor)
+      case None => new GlyphBox(t, baseIdx, font, t.currentColor)
+
+  /** A surd glyph (√) at least `targetHeight` points tall — the vertical variant, or assembly, of √. */
+  def radicalGlyph(targetHeight: Double): Box = verticalVariant(0x221A, targetHeight)
+
+  /** A stretchy delimiter at least `targetHeight` points tall, centred on the math axis so it brackets a
+    * formula symmetrically — the box `\left`/`\right` set the fence with. */
+  def delimiter(codepoint: Int, targetHeight: Double): Box =
+    new AxisCenteredBox(verticalVariant(codepoint, targetHeight), axisHeight)
 
   /** The math axis height in points: the line relations, binary operators, fraction bars and fences centre
     * on. Comes from the `MATH` table when present, otherwise a quarter em — TeX's `axis_height` for

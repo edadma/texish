@@ -114,3 +114,35 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     val ex = the[ParserException] thrownBy proc.process("\\sqrt{x}")
     ex.getMessage should include("math mode")
   }
+
+  "\\left … \\right builds a delimited sub-formula inside math without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\left( \\frac{a}{b} \\right) + \\left[ x \\right]$")
+  }
+
+  "a null delimiter (\\left.) is accepted" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\left. \\frac{a}{b} \\right|$")
+  }
+
+  "control-sequence delimiters (\\langle … \\rangle) stretch too" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\left\\langle x \\right\\rangle$")
+  }
+
+  "nested \\left … \\right pairs balance" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\left( \\left[ x \\right] \\right)$")
+  }
+
+  "\\left without a matching \\right is reported" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("$\\left( x $")
+    ex.getMessage should include("\\right")
+  }
+
+  "\\right standing alone is reported" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("$ x \\right)$")
+    ex.getMessage should include("\\left")
+  }
