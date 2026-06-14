@@ -52,3 +52,21 @@ class CairoMathFontTests extends AnyFreeSpec with Matchers:
     box.boxes should have length 5
     box.width should be > 0.0
   }
+
+  "x^2 sets the superscript smaller and raises it above the nucleus" in {
+    val t    = new CairoImageTypesetter(100)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+    val m    = new MathMode(t, full, MathStyle.Text)
+
+    val nucleusAscent = full.glyphBox(0x1D465).ascent // math-italic x
+    m.addChar('x')
+
+    val sup = new MathMode(t, full, MathStyle.Text.sup)
+    sup.mathFont.size shouldBe (full.size * full.scriptPercentScaleDown +- 0.001) // script style is 70%
+    sup.addChar('2')
+    m.addScript(superscript = true, sup.result.asInstanceOf[Box])
+
+    val sb = m.result.asInstanceOf[HBox].boxes.head.asInstanceOf[MathScriptBox]
+    sb.ascent should be > nucleusAscent      // the superscript pushes the box's top up
+    sb.width should be > full.glyphBox(0x1D465).width
+  }

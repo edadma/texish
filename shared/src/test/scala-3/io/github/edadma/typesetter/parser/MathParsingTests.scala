@@ -1,5 +1,6 @@
 package io.github.edadma.typesetter.parser
 
+import io.github.edadma.char_reader.CharReader
 import io.github.edadma.typesetter.{MathMode, StubTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -49,4 +50,45 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     // after the closing $, we are back in a horizontal (paragraph) text mode, not math
     t.mode shouldBe a[io.github.edadma.typesetter.HorizontalMode]
     t.mode should not be a[MathMode]
+  }
+
+  "^ and _ build scripts inside math without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$x^2 + y_i - z^a_b$")
+  }
+
+  "a script grabs only one character: x^2y leaves y as a following atom" in {
+    val (_, proc) = fixture()
+    proc.pushTokenizer(Tokenizer("2y", proc.activeChars))
+    val field = proc.readScriptField(CharReader.fromString(""))
+
+    field.collect { case Token.Text(s, _) => s } shouldBe Vector("2")
+    proc.nextToken() match
+      case Token.Text(s, _) => s shouldBe "y" // the remainder was pushed back to be read normally
+      case other            => fail(s"expected the leftover 'y', got $other")
+  }
+
+  "a braced script field is the whole group; a control sequence is one token" in {
+    val (_, proc) = fixture()
+
+    proc.pushTokenizer(Tokenizer("{a+b}c", proc.activeChars))
+    val braced = proc.readScriptField(CharReader.fromString(""))
+    braced.head shouldBe a[Token.BeginGroup]
+    braced.last shouldBe a[Token.EndGroup]
+
+    proc.pushTokenizer(Tokenizer("\\alpha x", proc.activeChars))
+    proc.readScriptField(CharReader.fromString("")) match
+      case Vector(Token.ControlSeq(name, _)) => name shouldBe "alpha"
+      case other                             => fail(s"expected a single \\alpha token, got $other")
+  }
+
+  "a double superscript on one atom is reported as an error" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("$x^2^3$")
+    ex.getMessage should include("double superscript")
+  }
+
+  "^ in ordinary text is the literal character, not a script marker" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("the caret x^2 and underscore y_i in prose")
   }

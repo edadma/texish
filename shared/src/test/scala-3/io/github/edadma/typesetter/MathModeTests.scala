@@ -109,7 +109,7 @@ class MathModeTests extends AnyFreeSpec with Matchers:
     val t  = new StubTypesetter
     val mf = mathFont(t)
 
-    def cls(name: String) = MathSymbols.commandNode(mf, name).map { case MathAtom(c, _) => c; case _ => null }
+    def cls(name: String) = MathSymbols.commandNode(mf, name).map { case a: MathAtom => a.cls; case _ => null }
 
     cls("leq")   shouldBe Some(MathClass.Rel)
     cls("sum")   shouldBe Some(MathClass.Op)
@@ -122,7 +122,7 @@ class MathModeTests extends AnyFreeSpec with Matchers:
     val t  = new StubTypesetter
     val mf = mathFont(t)
 
-    def cls(c: Char) = MathSymbols.charNode(mf, c.toInt).map { case MathAtom(k, _) => k; case _ => null }
+    def cls(c: Char) = MathSymbols.charNode(mf, c.toInt).map { case a: MathAtom => a.cls; case _ => null }
 
     cls('+') shouldBe Some(MathClass.Bin)
     cls('=') shouldBe Some(MathClass.Rel)

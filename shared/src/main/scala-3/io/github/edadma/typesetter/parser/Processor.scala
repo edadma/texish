@@ -220,6 +220,21 @@ class Processor(val handler: Handler):
         skipSpaces() // consume trailing whitespace after non-braced argument
         tok
 
+  /** Read a single math script field, the argument of a `^` or `_`: a braced group is the whole group; a
+    * control sequence is that one token; a run of text contributes only its first character, the rest pushed
+    * back to be read normally — so `x^2y` makes `2` the script and `y` a following atom, as in TeX. */
+  def readScriptField(pos: CharReader): Vector[Token] =
+    skipSpaces()
+    if !hasMoreTokens then handler.error("Expected a superscript or subscript", pos)
+
+    peekToken() match
+      case Token.BeginGroup(_) => readArgument(pos)
+      case Token.Text(s, p) =>
+        nextToken()
+        if s.length > 1 then tokenSources.push(TokenListSource(Vector(Token.Text(s.substring(1), p))))
+        Vector(Token.Text(s.substring(0, 1), p))
+      case _ => Vector(nextToken())
+
   /** Read tokens until matching } */
   private def readBalancedGroup(): Vector[Token] =
     val tokens = Vector.newBuilder[Token]

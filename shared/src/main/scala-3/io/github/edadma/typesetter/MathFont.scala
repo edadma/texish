@@ -16,6 +16,43 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
   /** The glyph index for a Unicode codepoint in this font (0, the .notdef glyph, when the font lacks it). */
   def glyphIndex(codepoint: Int): Int = t.glyphIndex(renderFont, codepoint)
 
+  /** How far script style scales the base size down, from the MATH table — TeX's 70% default otherwise. */
+  def scriptPercentScaleDown: Double = math.map(_.constants.scriptPercentScaleDown).getOrElse(0.7)
+
+  /** How far scriptscript style scales the base size down, from the MATH table — TeX's 50% default. */
+  def scriptScriptPercentScaleDown: Double = math.map(_.constants.scriptScriptPercentScaleDown).getOrElse(0.5)
+
+  /** The same math font at a fraction of this size — how a script sub-formula is set smaller. The MATH table
+    * is size-independent (its constants are in em, scaled by the font size on use), so it carries over. */
+  def atScale(factor: Double): MathFont =
+    if factor == 1.0 then this
+    else new MathFont(t, t.makeFont(font.typeface, font.size * factor, font.style), math)
+
+  /** The italic correction for a codepoint in this font, in points: the small rightward kern a slanted glyph
+    * wants after it before an upright neighbour or a superscript. Zero without a MATH table. */
+  def italicCorrection(codepoint: Int): Double =
+    math.map(_.glyphInfo.italicsCorrection.getOrElse(glyphIndex(codepoint), 0.0) * font.size).getOrElse(0.0)
+
+  /** The script-placement parameters at this font's size: from the MATH constants when present, otherwise
+    * TeX's Computer Modern defaults. */
+  def scriptParams: MathScriptParams =
+    math match
+      case Some(m) =>
+        val c = m.constants
+        MathScriptParams(
+          superscriptShiftUp                = c.value("superscriptShiftUp") * size,
+          superscriptShiftUpCramped         = c.value("superscriptShiftUpCramped") * size,
+          superscriptBottomMin              = c.value("superscriptBottomMin") * size,
+          superscriptBaselineDropMax        = c.value("superscriptBaselineDropMax") * size,
+          subscriptShiftDown                = c.value("subscriptShiftDown") * size,
+          subscriptTopMax                   = c.value("subscriptTopMax") * size,
+          subscriptBaselineDropMin          = c.value("subscriptBaselineDropMin") * size,
+          subSuperscriptGapMin              = c.value("subSuperscriptGapMin") * size,
+          superscriptBottomMaxWithSubscript = c.value("superscriptBottomMaxWithSubscript") * size,
+          spaceAfterScript                  = c.value("spaceAfterScript") * size,
+        )
+      case None => MathScriptParams.texDefaults(size)
+
   /** The math axis height in points: the line relations, binary operators, fraction bars and fences centre
     * on. Comes from the `MATH` table when present, otherwise a quarter em — TeX's `axis_height` for
     * Computer Modern at text size. */

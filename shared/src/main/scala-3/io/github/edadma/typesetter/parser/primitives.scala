@@ -425,6 +425,21 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // ^ and _ attach a superscript / subscript to the preceding math atom. They matter only inside $…$; in
+  // ordinary text they stand for themselves, so a document that uses ^ or _ in prose is unaffected.
+  proc.registerActive(
+    '^',
+    new Active {
+      def execute(proc: Processor, c: Char, pos: CharReader): Unit = handler.mathScript(proc, superscript = true, pos)
+    },
+  )
+  proc.registerActive(
+    '_',
+    new Active {
+      def execute(proc: Processor, c: Char, pos: CharReader): Unit = handler.mathScript(proc, superscript = false, pos)
+    },
+  )
+
   proc.registerActive(
     '#',
     new Active {

@@ -8,8 +8,17 @@ import scala.collection.mutable.ArrayBuffer
   */
 sealed trait MathNode
 
-/** A math atom: a nucleus box together with the [[MathClass]] that governs the space around it. */
-case class MathAtom(cls: MathClass, nucleus: Box) extends MathNode
+/** A math atom: a nucleus box together with the [[MathClass]] that governs the space around it, and the
+  * optional super- and subscript boxes attached to it. The scripts are already laid out at the script size
+  * when they are attached; [[MathList.translate]] positions them around the nucleus. `italicCorrection` is
+  * the nucleus's, used to set the superscript out past a slanted nucleus. */
+case class MathAtom(
+    cls: MathClass,
+    nucleus: Box,
+    sup: Option[Box] = None,
+    sub: Option[Box] = None,
+    italicCorrection: Double = 0.0,
+) extends MathNode
 
 /** An explicit, author-inserted space — fixed glue that is emitted verbatim and is transparent to the
   * automatic inter-atom spacing of its neighbours. */
@@ -50,25 +59,39 @@ object MathList:
 
     var k = 0
     nodes.map {
-      case a: MathAtom => val c = cls(k); k += 1; MathAtom(c, a.nucleus)
+      case a: MathAtom => val c = cls(k); k += 1; a.copy(cls = c)
       case other       => other
     }
 
-  /** Lay out the list: normalize bins, then walk the nodes emitting each atom's nucleus preceded by the
-    * automatic glue for the (previous atom, this atom) class pair. Explicit spaces are emitted in place and
-    * do not break the atom adjacency the spacing is computed from. `em` is the math font's size in points.
+  /** Lay out the list: normalize bins, then walk the nodes emitting each atom's nucleus — with its scripts
+    * attached when it has any — preceded by the automatic glue for the (previous atom, this atom) class pair.
+    * Explicit spaces are emitted in place and do not break the atom adjacency the spacing is computed from.
+    * `mf` is the font this list is set in (its size drives the spacing, its constants the script placement);
+    * `cramped` is whether the list's style is cramped, which lowers superscripts.
     */
-  def translate(nodes: Vector[MathNode], em: Double): Vector[Box] =
+  def translate(nodes: Vector[MathNode], mf: MathFont, cramped: Boolean): Vector[Box] =
+    val em                          = mf.size
     val out                         = ArrayBuffer[Box]()
     var prevAtom: Option[MathClass] = None
 
     for node <- normalizeBins(nodes) do
       node match
-        case MathAtom(cls, nucleus) =>
-          prevAtom.foreach(p => MathSpacing.glue(MathSpacing.code(p, cls), em).foreach(out += _))
-          out += nucleus
-          prevAtom = Some(cls)
+        case a: MathAtom =>
+          prevAtom.foreach(p => MathSpacing.glue(MathSpacing.code(p, a.cls), em).foreach(out += _))
+          out += nucleusBox(a, mf, cramped)
+          prevAtom = Some(a.cls)
         case MathSpace(g) =>
           out += g
 
     out.toVector
+
+  /** An atom's nucleus, with its super/subscript attached if it has any. A script-less atom is just its
+    * nucleus; otherwise the scripts are shifted into place by [[MathScriptBox]] using the nucleus font's
+    * script parameters and the nucleus's italic correction. */
+  private def nucleusBox(a: MathAtom, mf: MathFont, cramped: Boolean): Box =
+    if a.sup.isEmpty && a.sub.isEmpty then a.nucleus
+    else
+      val p          = mf.scriptParams
+      val (up, down) = MathScriptBox.shifts(a.nucleus, a.sup, a.sub, p, cramped)
+
+      new MathScriptBox(a.nucleus, a.sup, a.sub, up, down, a.italicCorrection, p.spaceAfterScript)

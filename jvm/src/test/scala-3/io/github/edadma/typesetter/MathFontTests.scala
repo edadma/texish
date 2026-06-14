@@ -68,3 +68,30 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     box.boxes should have length 5         // a, thick, ≤, thick, b
     box.width should be > 0.0
   }
+
+  "the math font reports its script scale-downs and a positive italic correction for the integral sign" in {
+    val t  = new Graphics2DTypesetter(dpi = 72)
+    val mf = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    mf.scriptPercentScaleDown should (be > 0.0 and be < 1.0)        // ~0.7 in LM Math
+    mf.scriptScriptPercentScaleDown should be < mf.scriptPercentScaleDown
+    mf.italicCorrection(0x222B) should be > 0.0                     // ∫ leans hard right
+  }
+
+  "x^2 sets the superscript smaller and raises it above the nucleus" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+    val m    = new MathMode(t, full, MathStyle.Text)
+
+    val nucleusAscent = full.glyphBox(0x1D465).ascent // math-italic x
+    m.addChar('x')
+
+    val sup = new MathMode(t, full, MathStyle.Text.sup)
+    sup.mathFont.size shouldBe (full.size * full.scriptPercentScaleDown +- 0.001) // script style is 70%
+    sup.addChar('2')
+    m.addScript(superscript = true, sup.result.asInstanceOf[Box])
+
+    val sb = m.result.asInstanceOf[HBox].boxes.head.asInstanceOf[MathScriptBox]
+    sb.ascent should be > nucleusAscent      // the superscript pushes the box's top up
+    sb.width should be > full.glyphBox(0x1D465).width
+  }

@@ -139,16 +139,21 @@ object MathSymbols:
   def charNode(mf: MathFont, codepoint: Int): Option[MathNode] =
     val c = codepoint.toChar
 
-    if c < 128 && c.isLetter then Some(MathAtom(Ord, mf.glyphBox(italicLetter(c))))
-    else if c.isDigit then Some(MathAtom(Ord, mf.glyphBox(codepoint))) // upright digit
-    else chars.get(c).map((cp, cls) => MathAtom(cls, mf.glyphBox(cp)))
+    if c < 128 && c.isLetter then Some(glyphAtom(mf, Ord, italicLetter(c)))
+    else if c.isDigit then Some(glyphAtom(mf, Ord, codepoint)) // upright digit
+    else chars.get(c).map((cp, cls) => glyphAtom(mf, cls, cp))
 
   /** Classify a control-sequence name into a math node, or `None` if it is not a known math symbol, an
     * operator name, or an explicit space. */
   def commandNode(mf: MathFont, name: String): Option[MathNode] =
-    symbols.get(name).map((cp, cls) => MathAtom(cls, mf.glyphBox(cp)))
+    symbols.get(name).map((cp, cls) => glyphAtom(mf, cls, cp))
       .orElse(if operatorNames(name) then Some(MathAtom(Op, operatorBox(mf, name))) else None)
       .orElse(spacesMu.get(name).map(mu => MathSpace(Glue(mu / 18.0 * mf.size))))
+
+  /** A single-glyph atom carrying that glyph's italic correction, so a superscript can be set out past a
+    * slanted nucleus (a variable, the integral sign) by the right amount. */
+  private def glyphAtom(mf: MathFont, cls: MathClass, codepoint: Int): MathAtom =
+    MathAtom(cls, mf.glyphBox(codepoint), italicCorrection = mf.italicCorrection(codepoint))
 
   /** An upright row of Latin glyphs for an operator name like `sin`. */
   private def operatorBox(mf: MathFont, name: String): Box =

@@ -539,7 +539,7 @@ abstract class Typesetter:
     start // a $...$ in vertical mode starts a paragraph, exactly as text would
 
     val mf = makeFont(mathTypeface, currentFont.size, Set.empty)
-    val m  = new MathMode(this, new MathFont(this, mf, mathTableFor(mf)))
+    val m  = new MathMode(this, new MathFont(this, mf, mathTableFor(mf)), MathStyle.Text)
 
     push(m)
     m

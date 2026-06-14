@@ -88,6 +88,23 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       newlineCount = 0
       typesetter.enterMath()
 
+  /** Attach a super- or subscript at a `^` / `_`. Inside math, the script field (the next group or token) is
+    * read, typeset by a nested math mode one style smaller, and attached to the most recent atom. Outside
+    * math the marker is just its literal character, so prose containing `^` or `_` is left untouched. */
+  def mathScript(proc: Processor, superscript: Boolean, pos: CharReader): Unit =
+    if !suppressed then
+      typesetter.mode match
+        case parent: MathMode =>
+          val field = proc.readScriptField(pos)
+
+          typesetter.push(new MathMode(typesetter, parent.baseMathFont, parent.scriptStyle(superscript)))
+          proc.processTokenList(field)
+          val box = typesetter.mode.exit // pop the script mode and lay its list out
+
+          if box ne null then parent.addScript(superscript, box)
+        case _ =>
+          text(if superscript then "^" else "_")
+
   /** Add a Box directly to the current mode */
   def addBox(box: Box): Unit =
     if !suppressed then
