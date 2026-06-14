@@ -9,12 +9,17 @@ package io.github.edadma.typesetter
 class GlyphBox(t: Typesetter, val glyph: Int, val font: Font, val color: Color) extends ContentBox:
   def this(t: Typesetter, glyph: Int) = this(t, glyph, t.currentFont, t.currentColor)
 
-  val TextExtents(_, yBearing, width, heightValue, xAdvance, _) =
-    t.glyphExtents(font.renderFont.asInstanceOf[t.RenderFont], glyph)
+  private val extents = t.glyphExtents(font.renderFont.asInstanceOf[t.RenderFont], glyph)
 
-  override val height: Double = heightValue
-  val ascent: Double          = -yBearing       // ascent is the negative yBearing (part above the baseline)
-  val descent: Double         = height - ascent
+  // Horizontal placement uses the glyph's advance width, exactly as text does through CharBox: the advance
+  // — not the ink bounding box — is what sets one glyph after the next without crowding, and it carries the
+  // side bearings that keep neighbours (and fences around their contents) apart. The ink box still gives the
+  // vertical extents (the part above and below the baseline).
+  override val width: Double    = extents.xAdvance
+  override val xAdvance: Double = extents.xAdvance
+  override val height: Double   = extents.height
+  val ascent: Double            = -extents.yBearing
+  val descent: Double           = height - ascent
 
   def draw(t: Typesetter, x: Double, y: Double): Unit =
     box(t, x, y, "purple")

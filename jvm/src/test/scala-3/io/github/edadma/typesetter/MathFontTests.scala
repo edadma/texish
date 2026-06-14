@@ -38,6 +38,16 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     mf.glyphIndex(0x2211)  should not be 0 // ∑
   }
 
+  "a glyph box is as wide as the advance, not the ink box, so glyphs don't crowd" in {
+    val t  = new Graphics2DTypesetter(dpi = 72)
+    val mf = new MathFont(t, lmmath(t), None)
+    val rf = mf.font.renderFont.asInstanceOf[t.RenderFont]
+    val e  = t.glyphExtents(rf, mf.glyphIndex(0x2B)) // '+', which carries wide side bearings in a math font
+
+    e.xAdvance should be > e.width             // precondition: advance genuinely exceeds the ink width here
+    mf.glyphBox(0x2B).width shouldBe e.xAdvance // the box advances by the font's advance, not the ink box
+  }
+
   "a real math atom has positive, sensible extents" in {
     val t  = new Graphics2DTypesetter(dpi = 72)
     val mf = new MathFont(t, lmmath(t), None)

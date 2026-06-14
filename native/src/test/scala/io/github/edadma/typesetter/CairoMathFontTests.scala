@@ -31,6 +31,16 @@ class CairoMathFontTests extends AnyFreeSpec with Matchers:
     mf.glyphIndex(0x2211)  should not be 0 // ∑
   }
 
+  "a glyph box is as wide as the advance, not the ink box, so glyphs don't crowd" in {
+    val t  = new CairoImageTypesetter(100)
+    val mf = new MathFont(t, lmmath(t), None)
+    val rf = mf.font.renderFont.asInstanceOf[t.RenderFont]
+
+    // the box must advance by the glyph's advance width (what keeps glyphs from crowding), not its ink box
+    for cp <- Seq('a'.toInt, 0x1D44E, 0x2B, 0x222B) do
+      mf.glyphBox(cp).width shouldBe t.glyphExtents(rf, mf.glyphIndex(cp)).xAdvance
+  }
+
   "an inline math list lays out left to right with positive total width" in {
     val t  = new CairoImageTypesetter(100)
     val mf = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
