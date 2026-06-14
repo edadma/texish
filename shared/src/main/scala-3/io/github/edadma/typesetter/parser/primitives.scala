@@ -399,6 +399,35 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // Math accents: each sets an accent glyph over its single argument's nucleus. Math-mode only; the nucleus
+  // is typeset by a nested math mode in the cramped current style, then the accent is centred over it. The
+  // wide forms (\widehat, \widetilde) grow a horizontal variant to span a multi-character nucleus. Enters as
+  // an Ord atom.
+  val mathAccents: Map[String, (Int, Boolean)] = Map(
+    "hat"      -> (0x0302, false), "widehat"   -> (0x0302, true),
+    "tilde"    -> (0x0303, false), "widetilde" -> (0x0303, true),
+    "check"    -> (0x030C, false), "breve"     -> (0x0306, false),
+    "acute"    -> (0x0301, false), "grave"     -> (0x0300, false),
+    "dot"      -> (0x0307, false), "ddot"      -> (0x0308, false),
+    "bar"      -> (0x0304, false), "vec"       -> (0x20D7, false),
+    "mathring" -> (0x030A, false),
+  )
+
+  for (name, (codepoint, wide)) <- mathAccents do
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val nucleus = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+
+              if nucleus ne null then
+                parent.addNode(MathAtom(MathClass.Ord, parent.makeAccent(codepoint, nucleus, wide)))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
     "noalign",

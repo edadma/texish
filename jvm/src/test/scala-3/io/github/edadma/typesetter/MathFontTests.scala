@@ -151,6 +151,27 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     rooted.height.isFinite shouldBe true
   }
 
+  "an accent rises above its nucleus, and a wide accent spans a multi-letter base" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    full.glyphIndex(0x0302) should not be 0 // the font carries a combining circumflex (the \hat accent)
+
+    val m    = new MathMode(t, full, MathStyle.Text)
+    val x    = { val s = new MathMode(t, full, MathStyle.Text.cramp); s.addChar('x'); s.result.asInstanceOf[Box] }
+    val hatX = m.makeAccent(0x0302, x, wide = false).asInstanceOf[AccentBox]
+
+    hatX.ascent should be > x.ascent // the hat sits above the x
+    hatX.width shouldBe x.width      // and does not widen it
+
+    // a wide accent grows a horizontal variant to span a wider nucleus
+    val wideBase = {
+      val s = new MathMode(t, full, MathStyle.Text.cramp); "ABC".foreach(c => s.addChar(c.toInt)); s.result
+        .asInstanceOf[Box]
+    }
+    full.horizontalVariant(0x0302, wideBase.width).width should be > full.glyphBox(0x0302).width
+  }
+
   "a stretchy delimiter grows past the base glyph to span a tall target, centred on the axis" in {
     val t    = new Graphics2DTypesetter(dpi = 72)
     val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))

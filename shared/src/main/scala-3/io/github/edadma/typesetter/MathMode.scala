@@ -77,6 +77,26 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
     new RadicalBox(t, mathFont.radicalGlyph(target), radicand, p, degree)
 
+  /** Build an accented atom (`\hat x`, `\vec v`, `\widehat{AB}`, …): the accent glyph set over an
+    * already-laid-out nucleus. The accent centres on the nucleus's top-accent attachment point (its visual
+    * middle) and is raised so it rests just above the nucleus — at a uniform height over short bases, lifted
+    * over tall ones. A `wide` accent grows to a horizontal variant spanning the nucleus. */
+  def makeAccent(accentCodepoint: Int, nucleus: Box, wide: Boolean): Box =
+    val accent =
+      if wide then mathFont.horizontalVariant(accentCodepoint, nucleus.width)
+      else mathFont.glyphBox(accentCodepoint)
+
+    val shift = nucleus.ascent - mathFont.accentBaseHeight // the base's excess over the accent's design height
+
+    val nucleusAttach = nucleus match
+      case g: GlyphBox => mathFont.topAccentAttachmentGlyph(g.glyph).getOrElse(nucleus.width / 2)
+      case _           => nucleus.width / 2
+    val accentAttach =
+      if wide then accent.width / 2
+      else mathFont.topAccentAttachment(accentCodepoint).getOrElse(accent.width / 2)
+
+    new AccentBox(nucleus, accent, shift, nucleusAttach - accentAttach)
+
   /** Build a `\left…\right` delimited sub-formula: the already-laid-out inner formula flanked by stretchy
     * fences tall enough to span it about the math axis. Either delimiter may be absent (a null delimiter,
     * `\left.` or `\right.`). The fences are sized to cover the inner box's reach above and below the axis,

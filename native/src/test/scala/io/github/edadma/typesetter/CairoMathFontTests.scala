@@ -83,3 +83,23 @@ class CairoMathFontTests extends AnyFreeSpec with Matchers:
     val fence = full.delimiter(0x28, baseParen * 4).asInstanceOf[AxisCenteredBox]
     (fence.ascent - fence.descent) shouldBe (2 * full.axisHeight +- 0.001)
   }
+
+  "an accent rises above its nucleus, and a wide accent spans a multi-letter base" in {
+    val t    = new CairoImageTypesetter(100)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    full.glyphIndex(0x0302) should not be 0
+
+    val m    = new MathMode(t, full, MathStyle.Text)
+    val x    = { val s = new MathMode(t, full, MathStyle.Text.cramp); s.addChar('x'); s.result.asInstanceOf[Box] }
+    val hatX = m.makeAccent(0x0302, x, wide = false).asInstanceOf[AccentBox]
+
+    hatX.ascent should be > x.ascent
+    hatX.width shouldBe x.width
+
+    val wideBase = {
+      val s = new MathMode(t, full, MathStyle.Text.cramp); "ABC".foreach(c => s.addChar(c.toInt)); s.result
+        .asInstanceOf[Box]
+    }
+    full.horizontalVariant(0x0302, wideBase.width).width should be > full.glyphBox(0x0302).width
+  }

@@ -116,6 +116,32 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
   def delimiter(codepoint: Int, targetHeight: Double): Box =
     new AxisCenteredBox(verticalVariant(codepoint, targetHeight), axisHeight)
 
+  /** A box at least `targetWidth` points wide for a glyph that grows horizontally — a wide accent (`\widehat`)
+    * over a several-character nucleus: the smallest precomposed width variant that reaches the target, else
+    * the widest available, else the base glyph. (Horizontal assemblies, for accents wider than any variant,
+    * are rare and not built.) */
+  def horizontalVariant(codepoint: Int, targetWidth: Double): Box =
+    val baseIdx = glyphIndex(codepoint)
+
+    math.flatMap(_.variants.horizontal.get(baseIdx)) match
+      case Some(gc) =>
+        val chosen = gc.variants.find(_.advance * size >= targetWidth).orElse(gc.variants.lastOption).map(_.glyph)
+        new GlyphBox(t, chosen.getOrElse(baseIdx), font, t.currentColor)
+      case None => new GlyphBox(t, baseIdx, font, t.currentColor)
+
+  /** The height an accent is designed to sit at over an x-height base, in points: the `MATH` accent base
+    * height, or the font's x-height when it carries no MATH table. A nucleus taller than this lifts its
+    * accent by the difference; a shorter one lowers it. */
+  def accentBaseHeight: Double = math.map(_.constants.accentBaseHeight * size).getOrElse(font.xHeight)
+
+  /** The horizontal point on a glyph an accent centres over, measured from the glyph's left edge in points —
+    * the `MATH` top-accent attachment for the glyph index, or `None` when the font supplies none. */
+  def topAccentAttachmentGlyph(glyph: Int): Option[Double] =
+    math.flatMap(_.glyphInfo.topAccentAttachment.get(glyph)).map(_ * size)
+
+  /** The top-accent attachment for a codepoint (resolved to its glyph), in points. */
+  def topAccentAttachment(codepoint: Int): Option[Double] = topAccentAttachmentGlyph(glyphIndex(codepoint))
+
   /** The math axis height in points: the line relations, binary operators, fraction bars and fences centre
     * on. Comes from the `MATH` table when present, otherwise a quarter em — TeX's `axis_height` for
     * Computer Modern at text size. */
