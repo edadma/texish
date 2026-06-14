@@ -151,6 +151,26 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     rooted.height.isFinite shouldBe true
   }
 
+  "a large operator grows in display style, and its limits stack over and under" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    val textSum    = full.glyphBox(0x2211).height        // ∑ at text size
+    val displaySum = full.largeOperator(0x2211, display = true).height
+    displaySum should be > textSum                       // display style picks a taller variant
+
+    // \sum\limits_0^n lays out as a limits box taller than the bare operator
+    val m = new MathMode(t, full, MathStyle.Text)
+    m.addCommand("sum") shouldBe true
+    m.setLimits(true)
+    m.addScript(superscript = false, { val s = new MathMode(t, full, MathStyle.Text.sub); s.addChar('0'); s.result.asInstanceOf[Box] })
+    m.addScript(superscript = true, { val s = new MathMode(t, full, MathStyle.Text.sup); s.addChar('n'); s.result.asInstanceOf[Box] })
+
+    val box = m.result.asInstanceOf[HBox].boxes.head
+    box shouldBe a[LimitsBox]
+    box.height should be > displaySum // the stacked limits make it taller than the operator alone
+  }
+
   "an accent rises above its nucleus, and a wide accent spans a multi-letter base" in {
     val t    = new Graphics2DTypesetter(dpi = 72)
     val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))

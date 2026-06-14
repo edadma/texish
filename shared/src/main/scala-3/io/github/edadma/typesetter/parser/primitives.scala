@@ -399,6 +399,28 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // limits / nolimits - force a large operator's scripts above/below (limits) or to the side. Math-mode only;
+  // must follow an operator. Inline math defaults to side-set scripts, so \limits is how a \sum or \prod gets
+  // its bounds stacked over and under (and its glyph enlarged) without display mode.
+  proc.registerPrimitive(
+    "limits",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode => parent.setLimits(true)
+          case _                => handler.error("\\limits is only allowed in math mode", pos)
+    },
+  )
+  proc.registerPrimitive(
+    "nolimits",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode => parent.setLimits(false)
+          case _                => handler.error("\\nolimits is only allowed in math mode", pos)
+    },
+  )
+
   // Math accents: each sets an accent glyph over its single argument's nucleus. Math-mode only; the nucleus
   // is typeset by a nested math mode in the cramped current style, then the accent is centred over it. The
   // wide forms (\widehat, \widetilde) grow a horizontal variant to span a multi-character nucleus. Enters as

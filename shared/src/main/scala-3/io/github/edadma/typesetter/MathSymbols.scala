@@ -151,9 +151,15 @@ object MathSymbols:
       .orElse(spacesMu.get(name).map(mu => MathSpace(Glue(mu / 18.0 * mf.size))))
 
   /** A single-glyph atom carrying that glyph's italic correction, so a superscript can be set out past a
-    * slanted nucleus (a variable, the integral sign) by the right amount. */
+    * slanted nucleus (a variable, the integral sign) by the right amount. A large operator (`\sum`, `\int`)
+    * also records its codepoint, so `\limits` can grow it to a display-size variant. */
   private def glyphAtom(mf: MathFont, cls: MathClass, codepoint: Int): MathAtom =
-    MathAtom(cls, mf.glyphBox(codepoint), italicCorrection = mf.italicCorrection(codepoint))
+    MathAtom(
+      cls,
+      mf.glyphBox(codepoint),
+      italicCorrection = mf.italicCorrection(codepoint),
+      bigOp = if cls == Op then Some(codepoint) else None,
+    )
 
   /** An upright row of Latin glyphs for an operator name like `sin`. */
   private def operatorBox(mf: MathFont, name: String): Box =

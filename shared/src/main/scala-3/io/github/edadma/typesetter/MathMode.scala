@@ -43,6 +43,15 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
   /** The style a super- or subscript of this list's atoms is set in. */
   def scriptStyle(superscript: Boolean): MathStyle = if superscript then style.sup else style.sub
 
+  /** Set (or clear) limit placement on the most recent atom, for `\limits` / `\nolimits`. The control must
+    * follow a large operator, as in TeX; otherwise it is an error. Scripts attached afterward are carried
+    * over the flag, so `\sum\limits_a^b` sets its bounds above and below. */
+  def setLimits(on: Boolean): Unit =
+    nodes.lastOption match
+      case Some(a: MathAtom) if a.cls == MathClass.Op =>
+        nodes(nodes.length - 1) = a.copy(limits = on)
+      case _ => sys.error("limit controls must follow a math operator")
+
   /** Attach an already-laid-out script box to the most recent atom. When no atom precedes — a leading `^`
     * or `_`, or one right after an explicit space — an empty-nucleus Ord atom is created to carry it, as in
     * TeX. A second script of the same kind on one atom is a double-script error. */

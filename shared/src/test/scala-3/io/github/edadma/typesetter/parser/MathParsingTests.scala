@@ -151,3 +151,25 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     val ex = the[ParserException] thrownBy proc.process("$ x \\right)$")
     ex.getMessage should include("\\left")
   }
+
+  "\\sum\\limits with bounds, and \\lim\\limits, lay out without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\sum\\limits_{i=1}^{n} i + \\lim\\limits_{x} f + \\int_0^1 g$")
+  }
+
+  "\\limits after something that is not an operator is reported" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("$x\\limits_2$")
+    ex.getMessage should include("operator")
+  }
+
+  "math accents (\\hat, \\widehat) lay out without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\hat{x} + \\vec{v} + \\widehat{ABC} + \\bar{y}$")
+  }
+
+  "an accent outside math is reported as a math-only command" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("\\hat{x}")
+    ex.getMessage should include("math mode")
+  }

@@ -11,13 +11,17 @@ sealed trait MathNode
 /** A math atom: a nucleus box together with the [[MathClass]] that governs the space around it, and the
   * optional super- and subscript boxes attached to it. The scripts are already laid out at the script size
   * when they are attached; [[MathList.translate]] positions them around the nucleus. `italicCorrection` is
-  * the nucleus's, used to set the superscript out past a slanted nucleus. */
+  * the nucleus's, used to set the superscript out past a slanted nucleus. `limits`, set by `\limits` on a
+  * large operator, asks for the scripts to be set above and below rather than to the side; `bigOp` is the
+  * operator's codepoint when it is one that can grow to a display-size variant under limits. */
 case class MathAtom(
     cls: MathClass,
     nucleus: Box,
     sup: Option[Box] = None,
     sub: Option[Box] = None,
     italicCorrection: Double = 0.0,
+    limits: Boolean = false,
+    bigOp: Option[Int] = None,
 ) extends MathNode
 
 /** An explicit, author-inserted space — fixed glue that is emitted verbatim and is transparent to the
@@ -86,10 +90,15 @@ object MathList:
     out.toVector
 
   /** An atom's nucleus, with its super/subscript attached if it has any. A script-less atom is just its
-    * nucleus; otherwise the scripts are shifted into place by [[MathScriptBox]] using the nucleus font's
-    * script parameters, with the nucleus's italic correction applied horizontally per [[scriptOffsets]]. */
+    * nucleus. A large operator marked `\limits` sets its scripts above and below as limits (over an enlarged,
+    * axis-centred operator glyph when the operator has a display variant). Otherwise the scripts are shifted
+    * into place to the side by [[MathScriptBox]] using the nucleus font's script parameters, with the
+    * nucleus's italic correction applied horizontally per [[scriptOffsets]]. */
   private def nucleusBox(a: MathAtom, mf: MathFont, cramped: Boolean): Box =
     if a.sup.isEmpty && a.sub.isEmpty then a.nucleus
+    else if a.cls == Op && a.limits then
+      val opBox = a.bigOp.map(cp => mf.largeOperator(cp, display = true)).getOrElse(a.nucleus)
+      new LimitsBox(mf.t, opBox, a.sup, a.sub, mf.limitParams)
     else
       val p              = mf.scriptParams
       val (up, down)     = MathScriptBox.shifts(a.nucleus, a.sup, a.sub, p, cramped)

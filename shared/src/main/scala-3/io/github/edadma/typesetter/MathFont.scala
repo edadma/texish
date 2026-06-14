@@ -142,6 +142,28 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
   /** The top-accent attachment for a codepoint (resolved to its glyph), in points. */
   def topAccentAttachment(codepoint: Int): Option[Double] = topAccentAttachmentGlyph(glyphIndex(codepoint))
 
+  /** A large operator glyph (`\sum`, `\int`). In display style it grows to a vertical variant at least the
+    * font's `displayOperatorMinHeight` tall and is centred on the math axis; inline it is the base glyph,
+    * sitting on the baseline like any other symbol. */
+  def largeOperator(codepoint: Int, display: Boolean): Box =
+    if !display then glyphBox(codepoint)
+    else
+      val minHeight = math.map(_.constants.displayOperatorMinHeight * size).getOrElse(0.0)
+      new AxisCenteredBox(verticalVariant(codepoint, minHeight), axisHeight)
+
+  /** The placement parameters for limits set above and below a large operator, at this font's size. */
+  def limitParams: LimitsParams =
+    math match
+      case Some(m) =>
+        val c = m.constants
+        LimitsParams(
+          upperGapMin          = c.value("upperLimitGapMin") * size,
+          upperBaselineRiseMin = c.value("upperLimitBaselineRiseMin") * size,
+          lowerGapMin          = c.value("lowerLimitGapMin") * size,
+          lowerBaselineDropMin = c.value("lowerLimitBaselineDropMin") * size,
+        )
+      case None => LimitsParams.texDefaults(size)
+
   /** The math axis height in points: the line relations, binary operators, fraction bars and fences centre
     * on. Comes from the `MATH` table when present, otherwise a quarter em — TeX's `axis_height` for
     * Computer Modern at text size. */
