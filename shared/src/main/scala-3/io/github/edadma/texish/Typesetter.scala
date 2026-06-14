@@ -303,14 +303,15 @@ abstract class Typesetter:
     "Regular",
   )
 
-  // Computer Modern (the CMU Serif Unicode revival) — the text companion to Latin Modern Math, so a document
-  // can set body text in the same family the math font belongs to. Its file names (cmunrm/cmunbx/cmunti/cmunbi)
-  // don't follow loadTypeface's "-Style.ttf" convention, so the four core styles are registered by file.
-  private val cmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet
-  loadFont("cm", "fonts/cm/cmunrm.ttf", cmLigatures, Set.empty)
-  loadFont("cm", "fonts/cm/cmunbx.ttf", cmLigatures, Set("bold"))
-  loadFont("cm", "fonts/cm/cmunti.ttf", cmLigatures, Set("italic"))
-  loadFont("cm", "fonts/cm/cmunbi.ttf", cmLigatures, Set("bold", "italic"))
+  // Latin Modern Roman — GUST's OpenType successor to Computer Modern and the text companion to Latin Modern
+  // Math, so a document can set body text in the same family the math is set in (and the \TeX/\TeXish logo
+  // kerns land as designed). The 10-point optical size is the body face; its four core styles are registered
+  // by file, since the .otf names don't follow loadTypeface's "-Style.ttf" convention.
+  private val lmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet
+  loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-regular.otf", lmLigatures, Set.empty)
+  loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bold.otf", lmLigatures, Set("bold"))
+  loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
+  loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
 
   // The default math font: Latin Modern Math, an OpenType font with a full MATH table. Loaded by file
   // directly (not loadTypeface, whose naming assumes a .ttf) since it is a CFF/.otf and stands alone with
