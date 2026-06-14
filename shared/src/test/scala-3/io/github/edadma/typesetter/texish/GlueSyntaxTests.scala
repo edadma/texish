@@ -117,6 +117,15 @@ class GlueSyntaxTests extends AnyFreeSpec with Matchers:
     g.shrink shouldBe 0.0
   }
 
+  "a bad \\vskip argument reports the line/column of the argument, not the command" in {
+    val (t, proc) = fixture()
+    // "\vskip 12p" is on line 3; the bad argument "12p" starts at column 8 (after "\vskip ").
+    val msg =
+      try { proc.process("a\nb\n\\vskip 12p\n"); "no error" }
+      catch case e: Throwable => e.getMessage
+    msg should include("line 3, column 8")
+  }
+
   "\\vskip with a bare dimension stays rigid" in {
     val (t, proc) = fixture()
     proc.process("\\vskip 12pt")

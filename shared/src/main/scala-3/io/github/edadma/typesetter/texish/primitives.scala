@@ -210,11 +210,12 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     "vskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
         glueArg(proc, pos) match
           case Some(g) =>
             t.paragraph()
             t.add(g)
-          case None => handler.error("\\vskip expects a dimension or glue", pos)
+          case None => handler.error("\\vskip expects a dimension or glue", argPos)
     },
   )
 
@@ -223,9 +224,10 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     "hskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
         glueArg(proc, pos) match
           case Some(g) => t.add(g)
-          case None    => handler.error("\\hskip expects a dimension or glue", pos)
+          case None    => handler.error("\\hskip expects a dimension or glue", argPos)
     },
   )
 
@@ -402,6 +404,13 @@ private def points(v: Value): Option[Double] = v match
 
 // Resolve a glue argument: a braced glue spec ({12pt plus 2pt}), a glue-valued variable, or a bare dimension
 // optionally continued by `plus`/`minus` keywords in the token stream (\vskip 12pt plus 2pt minus 1fil)
+// The position of the next argument token (after any intervening spaces), or the command's own
+// position when nothing follows. An "expects an argument" error reports this, so the caret points
+// at the offending argument rather than at the start of the command.
+private def argumentPos(proc: Processor, command: CharReader): CharReader =
+  proc.skipSpaces()
+  if proc.hasMoreTokens then Token.pos(proc.peekToken()) else command
+
 private def glueArg(proc: Processor, pos: CharReader): Option[Glue] =
   proc.evalArgumentExpr(pos) match
     case Value.Glue(n, st, sh, sto, sho) => Some(Glue(n, st, sh, sto, sho))
