@@ -45,6 +45,7 @@ class Processor(val handler: Handler):
   registerPrimitive("-", SubPrimitive)
   registerPrimitive("*", MulPrimitive)
   registerPrimitive("/", DivPrimitive)
+  registerPrimitive("calc", CalcPrimitive)
 
   // Comparison primitives
   registerPrimitive("=", EqPrimitive)
@@ -881,6 +882,41 @@ object DivPrimitive extends Primitive:
       case _ => proc.handler.error(s"Cannot divide ${Value.display(a)} and ${Value.display(b)}", pos)
     proc.setResult(result)
     proc.handler.text(Value.display(result))
+
+/** `\calc{expr}` — evaluate an infix arithmetic expression (with functions, constants and length units; see
+  * [[MathExpr]]) to a number. Bare identifiers that are not built-in constants resolve to document variables, so
+  * `\calc{2*x + cosd(angle)}` reads `x` and `angle` from scope. This is how a document does trigonometry and the
+  * like — the function library lives inside the expression, not as a control sequence per operation. */
+object CalcPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val text = exprText(stripOuterBraces(proc.readArgument(pos)))
+    val result =
+      try
+        MathExpr.eval(
+          text,
+          name =>
+            proc.handler.get(name) match
+              case Value.Num(n)   => Some(n)
+              case Value.Dimen(p) => Some(p)
+              case _              => None,
+          proc.handler.fontUnit,
+        )
+      catch case e: MathExpr.MathExprException => proc.handler.error(e.getMessage, pos)
+    proc.setResult(Value.Num(result))
+    proc.handler.text(Value.display(Value.Num(result)))
+
+/** Flatten an argument's tokens back into the raw expression string [[MathExpr]] parses. A control sequence
+  * contributes its bare name (so `\x` and `\pi` read as the identifiers `x` and `pi`), and an active character
+  * (notably `^`) contributes its character, so `\calc{2^\x}` works. */
+private def exprText(tokens: Vector[Token]): String =
+  tokens.map {
+    case Token.Text(s, _)       => s
+    case Token.Space(s, _)      => s
+    case Token.Newline(_)       => " "
+    case Token.ControlSeq(n, _) => n
+    case Token.Active(c, _)     => c.toString
+    case _                      => ""
+  }.mkString
 
 // ============ COMPARISON ============
 
