@@ -23,6 +23,12 @@ class Processor(val handler: Handler):
   // Registered active character handlers
   private val actives = mutable.Map[Char, Active]()
 
+  // Bundled/loaded package names, so \use loads each at most once
+  private val loadedPackages = mutable.Set[String]()
+
+  /** Record a package as loaded; returns true the first time (so \use loads it) and false thereafter. */
+  def markPackageLoaded(name: String): Boolean = loadedPackages.add(name)
+
   // Register default primitives
   registerPrimitive("def", DefPrimitive)
   registerPrimitive("gdef", GdefPrimitive)
@@ -39,6 +45,7 @@ class Processor(val handler: Handler):
 
   // File inclusion
   registerPrimitive("include", IncludePrimitive)
+  registerPrimitive("use", UsePrimitive)
 
   // Arithmetic primitives
   registerPrimitive("+", AddPrimitive)
@@ -814,6 +821,25 @@ object DonePrimitive extends Primitive:
     // End of for loop - marker only
 
 // ============ FILE INCLUSION ============
+
+/** `\use{name}` — load a bundled package (see [[Packages]]) once. The package's document-language source is
+  * tokenised and pushed onto the source stack, so its definitions register before the rest of the document is
+  * read; a second `\use` of the same name is a no-op. Unknown names are an error. */
+object UsePrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name = proc.readArgument(pos).map {
+      case Token.Text(s, _)  => s
+      case Token.Space(s, _) => s
+      case _                 => ""
+    }.mkString.trim
+
+    if name.isEmpty then proc.handler.error("\\use requires a package name", pos)
+
+    Packages.source(name) match
+      case Some(src) =>
+        if proc.markPackageLoaded(name) then proc.pushTokenizer(Tokenizer(src, proc.activeChars))
+      case None =>
+        proc.handler.error(s"unknown package '$name'", pos)
 
 object IncludePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =

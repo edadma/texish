@@ -714,6 +714,25 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
       t.set(name, Value.Seq(Vector(Value.Num(c(0)), Value.Num(c(1))))),
   )
 
+  // \xof{coord} / \yof{coord} - the x or y of a coordinate, as a number for use in expressions. These let a
+  // package compute with points (a bond's perpendicular offset, a midpoint) in the document language itself.
+  proc.registerPrimitive(
+    "xof",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val c = readNumbers(proc, pos)
+        proc.setResult(Value.Num(if c.nonEmpty then c.head else 0.0))
+    },
+  )
+  proc.registerPrimitive(
+    "yof",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val c = readNumbers(proc, pos)
+        proc.setResult(Value.Num(if c.length > 1 then c(1) else 0.0))
+    },
+  )
+
   // State: colours are picture-mode state baked into each shape's paint; widths/dashes/caps/joins become ops.
   picturePrimitive(proc, handler, "stroke", (pm, p) => pm.setStroke(readColorArg(proc, p)))
   picturePrimitive(proc, handler, "fill", (pm, p) => pm.setFill(readColorArg(proc, p)))
