@@ -104,6 +104,26 @@ abstract class Typesetter:
 
   def charWidth(font: RenderFont, c: Char): Double
 
+  // Glyph seam — a parallel path to the string seam (drawString/getTextExtents) above, used where the
+  // engine must place individual glyphs itself rather than hand the backend a string to shape: math
+  // mode positions every glyph by hand. Text stays on the string path; the two never interact beyond
+  // sharing a font. A glyph is named by its index in the font (an opaque per-backend handle), obtained
+  // from a Unicode codepoint via glyphIndex.
+
+  /** Map a Unicode codepoint to a glyph index in `font`. The result is valid only within this backend —
+    * it is exactly what [[glyphExtents]] and [[drawGlyph]] consume. Returns 0 (the .notdef glyph) when the
+    * font has no glyph for the codepoint.
+    */
+  def glyphIndex(font: RenderFont, codepoint: Int): Int
+
+  /** Geometric extents of a single glyph, by index, reported in points (same convention as
+    * [[getTextExtents]]: `yBearing` is negative for the part above the baseline).
+    */
+  def glyphExtents(font: RenderFont, glyph: Int): TextExtents
+
+  /** Draw a single glyph, by index, at a baseline origin, in the current color. */
+  def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit
+
   def loadImage(path: String): (ImageHandle, Int, Int)
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit

@@ -103,6 +103,29 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
     layout.getAdvance
 
+  def glyphIndex(font: RenderFont, codepoint: Int): Int =
+    font.createGlyphVector(frc, new String(Character.toChars(codepoint))).getGlyphCode(0)
+
+  // createGlyphVector(frc, int[]) treats the ints as glyph codes (no cmap mapping), which is exactly
+  // what we want once we already hold an index. GlyphMetrics gives the advance and the visual bounds
+  // relative to the baseline origin (y grows downward, so the top of the glyph has negative y).
+  def glyphExtents(font: RenderFont, glyph: Int): TextExtents =
+    val gv     = font.createGlyphVector(frc, Array(glyph))
+    val m      = gv.getGlyphMetrics(0)
+    val bounds = m.getBounds2D
+
+    TextExtents(
+      xBearing = bounds.getX,
+      yBearing = bounds.getY,
+      width = bounds.getWidth,
+      height = bounds.getHeight,
+      xAdvance = m.getAdvanceX,
+      yAdvance = m.getAdvanceY,
+    )
+
+  def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit =
+    g.drawGlyphVector(font.createGlyphVector(frc, Array(glyph)), x.toFloat, y.toFloat)
+
   def loadImage(path: String): (ImageHandle, Int, Int) =
     val image = ImageIO.read(new File(path))
 

@@ -1,9 +1,10 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.freetype.{Library, initFreeType}
+import io.github.edadma.freetype.{Face as FTFace, Library, initFreeType}
 import io.github.edadma.libcairo.{
   Context,
   FontFace as CairoFontFace,
+  Glyph,
   Surface,
   fontFaceCreateForFTFace,
   imageSurfaceCreateFromPNG,
@@ -12,11 +13,19 @@ import io.github.edadma.libcairo.{
 
 import scala.compiletime.uninitialized
 
+/** A loaded typeface: the Cairo font face used to draw and measure, paired with the FreeType face it was
+  * built from. The FreeType face is retained because the glyph seam needs it — `getCharIndex` maps a
+  * codepoint to a glyph index, and (since the Cairo face was created from this FreeType face) that index
+  * is exactly what `cairo_show_glyphs` / `cairo_glyph_extents` consume.
+  */
+case class CairoFace(cairo: CairoFontFace, ft: FTFace)
+
 /** A Cairo font handle, applied to a context as a face + size rather than via `cairo_set_scaled_font`: a
   * `cairo_scaled_font_t` binds the transform of the context it was created on and faults when set on a different
-  * page's context, whereas a face + size has no such binding and draws cleanly on every page.
+  * page's context, whereas a face + size has no such binding and draws cleanly on every page. The FreeType
+  * face rides along for the glyph seam (see [[CairoFace]]).
   */
-case class CairoRenderFont(face: CairoFontFace, size: Double)
+case class CairoRenderFont(face: CairoFontFace, size: Double, ft: FTFace)
 
 /** The drawing shared by the native Cairo backends. Everything that operates on a Cairo context — text, lines,
   * fills, fonts, images — lives here and is identical whatever the page is drawn onto. Subclasses decide only
@@ -27,7 +36,7 @@ case class CairoRenderFont(face: CairoFontFace, size: Double)
 abstract class CairoTypesetter extends Typesetter:
 
   type ImageHandle = Surface
-  type FontFace    = CairoFontFace
+  type FontFace    = CairoFace
   type RenderFont  = CairoRenderFont
 
   protected var surface: Surface     = uninitialized
@@ -58,13 +67,9 @@ abstract class CairoTypesetter extends Typesetter:
     ctx.fill()
 
   def loadFont(path: String): FontFace =
-    fontFaceCreateForFTFace(
-      freetype
-        .newFace(path, 0)
-        .getOrElse(sys.error(s"error loading face: $path"))
-        .faceptr,
-      0,
-    )
+    val ft = freetype.newFace(path, 0).getOrElse(sys.error(s"error loading face: $path"))
+
+    CairoFace(fontFaceCreateForFTFace(ft.faceptr, 0), ft)
 
   def getTextExtents(text: String, font: RenderFont): TextExtents =
     setFont(font)
@@ -73,11 +78,24 @@ abstract class CairoTypesetter extends Typesetter:
 
     TextExtents(a, b, c, d, e, f)
 
-  def makeFont(font: FontFace, size: Double): RenderFont = CairoRenderFont(font, size)
+  def makeFont(font: FontFace, size: Double): RenderFont = CairoRenderFont(font.cairo, size, font.ft)
 
   def charWidth(font: RenderFont, c: Char): Double =
     setFont(font)
     ctx.textExtents(c.toString).xAdvance
+
+  def glyphIndex(font: RenderFont, codepoint: Int): Int = font.ft.getCharIndex(codepoint.toLong)
+
+  def glyphExtents(font: RenderFont, glyph: Int): TextExtents =
+    setFont(font)
+
+    val CairoTextExtents(a, b, c, d, e, f) = ctx.glyphExtents(Seq(Glyph(glyph.toLong, 0, 0)))
+
+    TextExtents(a, b, c, d, e, f)
+
+  def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit =
+    setFont(font)
+    ctx.showGlyphs(Seq(Glyph(glyph.toLong, x, y)))
 
   def loadImage(path: String): (ImageHandle, Int, Int) =
     val loaded = imageSurfaceCreateFromPNG(path).reference

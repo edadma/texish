@@ -40,6 +40,14 @@ class StubTypesetter extends Typesetter:
 
   def charWidth(font: RenderFont, c: Char): Double = 6
 
+  // Glyph seam: indices are the codepoint itself, and every glyph has the same fixed metrics as a
+  // character. drawGlyph is a no-op here; a recording subclass can override it to capture placements.
+  def glyphIndex(font: RenderFont, codepoint: Int): Int = codepoint
+
+  def glyphExtents(font: RenderFont, glyph: Int): TextExtents = TextExtents(0, -8, 6, 10, 6, 0)
+
+  def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit = ()
+
   def loadImage(path: String): (ImageHandle, Int, Int) = ((), 1, 1)
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit = ()
