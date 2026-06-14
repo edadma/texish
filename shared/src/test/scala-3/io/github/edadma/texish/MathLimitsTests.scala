@@ -70,3 +70,39 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
     m.addChar('x') // an ordinary atom, not an operator
     an[RuntimeException] should be thrownBy m.setLimits(true)
   }
+
+  "in display style a \\sum stacks its bounds by default, with no \\limits" in {
+    val t  = new StubTypesetter
+    val bf = base(t)
+    val m  = new MathMode(t, bf, MathStyle.Display)
+
+    m.addCommand("sum") shouldBe true
+    m.addScript(superscript = false, bf.glyphBox('0'.toInt))
+    m.addScript(superscript = true, bf.glyphBox('n'.toInt))
+
+    m.result.asInstanceOf[HBox].boxes.head shouldBe a[LimitsBox]
+  }
+
+  "in display style an integral keeps its bounds to the side by default" in {
+    val t  = new StubTypesetter
+    val bf = base(t)
+    val m  = new MathMode(t, bf, MathStyle.Display)
+
+    m.addCommand("int") shouldBe true // ∫ is set side-set even in display, unlike \sum
+    m.addScript(superscript = false, bf.glyphBox('0'.toInt))
+    m.addScript(superscript = true, bf.glyphBox('n'.toInt))
+
+    m.result.asInstanceOf[HBox].boxes.head shouldBe a[MathScriptBox]
+  }
+
+  "\\nolimits overrides the display default back to side-set scripts" in {
+    val t  = new StubTypesetter
+    val bf = base(t)
+    val m  = new MathMode(t, bf, MathStyle.Display)
+
+    m.addCommand("sum") shouldBe true
+    m.setLimits(false)
+    m.addScript(superscript = true, bf.glyphBox('n'.toInt))
+
+    m.result.asInstanceOf[HBox].boxes.head shouldBe a[MathScriptBox]
+  }

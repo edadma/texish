@@ -76,17 +76,19 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
         // Typesetting commands are registered as Primitives; unknown commands are errors
         error(s"Unknown command: \\$name", pos)
 
-  /** Toggle inline math at a `$`. Entering flushes any pending interword space (a newline just before the
-    * `$` is a space, as in text) and clears the pending-newline state so the math box joins the line
-    * cleanly; exiting lays the math list out and drops the resulting box back into the line. */
-  def toggleMath(): Unit =
+  /** Toggle math at a `$` (inline) or `$$` (display); the active-character handler has already recognised and
+    * consumed the second `$` of a display delimiter and passes `display` accordingly. Entering inline flushes
+    * any pending interword space (a newline just before the `$` is a space, as in text) and clears the
+    * pending-newline state so the math box joins the line cleanly; entering display ends the paragraph and
+    * sets the formula on its own line. Exiting lays the math list out and places the resulting box. */
+  def toggleMath(display: Boolean): Unit =
     if typesetter.mode.isInstanceOf[MathMode] then
       typesetter.exitMath()
       newlineCount = 0
     else
-      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
+      if !display && newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
       newlineCount = 0
-      typesetter.enterMath()
+      typesetter.enterMath(display)
 
   /** Typeset a math sub-formula — a script field, a fraction numerator, a radicand — by running its tokens
     * through a nested [[MathMode]] at the given style (so it is set at the right smaller size), and return

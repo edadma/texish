@@ -533,19 +533,45 @@ abstract class Typesetter:
       },
     )
 
-  /** Begin inline math: ensure a horizontal list is open (so the finished math box has somewhere to land),
-    * then push a [[MathMode]] that collects atoms set in the math typeface at the current text size. */
-  def enterMath(): MathMode =
-    start // a $...$ in vertical mode starts a paragraph, exactly as text would
+  /** Begin math. Inline (`$…$`) ensures a horizontal list is open so the finished box lands in the running
+    * text, and sets the list in text style. Display (`$$…$$`) ends the current paragraph first — the display
+    * is set on its own, between vertical glue — and sets the list in the larger display style, where big
+    * operators stack their limits and fractions open up. */
+  def enterMath(display: Boolean = false): MathMode =
+    if display then paragraph() // a $$…$$ breaks the paragraph; the display rides the vertical list
+    else start                  // a $…$ in vertical mode starts a paragraph, exactly as text would
 
-    val mf = makeFont(mathTypeface, currentFont.size, Set.empty)
-    val m  = new MathMode(this, new MathFont(this, mf, mathTableFor(mf)), MathStyle.Text)
+    val mf    = makeFont(mathTypeface, currentFont.size, Set.empty)
+    val style = if display then MathStyle.Display else MathStyle.Text
+    val m     = new MathMode(this, new MathFont(this, mf, mathTableFor(mf)), style)
 
     push(m)
     m
 
-  /** End inline math: lay the collected math list out and add the resulting box to the surrounding list. */
-  def exitMath(): Unit = mode.done()
+  /** End math. An inline list lays out and drops its box into the running text. A display list lays out and is
+    * placed on its own centred line, with `\abovedisplayskip` above and `\belowdisplayskip` below; an
+    * equation number set by `\eqno` is flushed to the right margin on that line. */
+  def exitMath(): Unit =
+    mode match
+      case m: MathMode if m.style.isDisplay =>
+        val box = m.exit // pop the math mode and lay its list out
+
+        if box ne null then placeDisplay(box, m.eqno)
+      case _ => mode.done()
+
+  /** Place a finished display formula on the vertical list: glue above, a line holding the centred formula
+    * (and its equation number, if any, flush right) at the page width, then glue below. */
+  private def placeDisplay(box: Box, eqno: Option[Box]): Unit =
+    add(getGlue("abovedisplayskip"))
+
+    hbox(getNumber("hsize"))
+    fil
+    add(box)
+    fil
+    eqno.foreach(add)
+    done()
+
+    add(getGlue("belowdisplayskip"))
 
   def op(operation: String): Typesetter =
     modeStack.top.op(operation)
@@ -622,6 +648,10 @@ abstract class Typesetter:
       "footskip"      -> in / 4, // bottom of the body to the top of the running footer
       "topskip"       -> Glue(currentFont.size * 1.2 * pt), // distance from the page top to the first baseline
       "raggedbottom"  -> 0.0, // nonzero: pad page bottoms with fil instead of stretching the page's glue
+
+      // display math ($$…$$): the glue set above and below a displayed formula
+      "abovedisplayskip" -> Glue(currentFont.size * 0.83 * pt, currentFont.size * 0.17 * pt, currentFont.size * 0.17 * pt),
+      "belowdisplayskip" -> Glue(currentFont.size * 0.83 * pt, currentFont.size * 0.17 * pt, currentFont.size * 0.17 * pt),
 
       // footnotes (see InsertBox): the space above the separator rule, the footnote text size as a fraction
       // of the surrounding font, and the footnote counter advanced by each \footnote

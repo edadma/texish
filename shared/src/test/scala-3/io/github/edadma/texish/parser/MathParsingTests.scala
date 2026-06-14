@@ -173,3 +173,21 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     val ex = the[ParserException] thrownBy proc.process("\\hat{x}")
     ex.getMessage should include("math mode")
   }
+
+  "$$ … $$ opens and closes a display without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("Before. $$x + y = z$$ After.")
+  }
+
+  "after a display the math mode is left and we are back in vertical (paragraph-breaking) context" in {
+    val (t, proc) = fixture()
+    proc.process("$$x + y$$")
+    // a display breaks the paragraph and rides the vertical list, so we are not in a math or horizontal mode
+    t.mode should not be a[MathMode]
+    t.mode should not be a[io.github.edadma.texish.HorizontalMode]
+  }
+
+  "a display with big operators and fractions lays out without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$$\\sum_{i=1}^{n} \\frac{1}{i} + \\int_0^1 f$$")
+  }

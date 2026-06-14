@@ -545,12 +545,18 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
 
   // Active characters
 
-  // $ toggles inline math mode, as in TeX. The first $ opens a math list; the next closes it, lays it out
-  // and drops the resulting box into the running text. (Display math $$...$$ is a later stage.)
+  // $ toggles math mode, as in TeX. A single $ delimits inline math; a doubled $$ delimits a display, set on
+  // its own centred line. A second $ immediately following is recognised here and consumed, so the doubled
+  // delimiter reads as one token to the rest of the machinery — opening or closing a display either way.
   proc.registerActive(
     '$',
     new Active {
-      def execute(proc: Processor, c: Char, pos: CharReader): Unit = handler.toggleMath()
+      def execute(proc: Processor, c: Char, pos: CharReader): Unit =
+        val display = proc.peekToken() match
+          case Token.Active('$', _) => proc.nextToken(); true
+          case _                    => false
+
+        handler.toggleMath(display)
     },
   )
 

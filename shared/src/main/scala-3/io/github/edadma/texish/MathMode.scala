@@ -16,6 +16,10 @@ import scala.collection.mutable.ArrayBuffer
 class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathStyle = MathStyle.Text) extends Mode:
   private val nodes = ArrayBuffer[MathNode]()
 
+  /** The equation number set by `\eqno` on a display, laid out in this mode's font; placed flush right on the
+    * display line when the math is shipped. `None` for an unnumbered display or any inline formula. */
+  var eqno: Option[Box] = None
+
   /** The font this list's symbols are set in: the base math font scaled to this style's size level. */
   val mathFont: MathFont =
     baseMathFont.atScale(style.scale(baseMathFont.scriptPercentScaleDown, baseMathFont.scriptScriptPercentScaleDown))
@@ -49,7 +53,7 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
   def setLimits(on: Boolean): Unit =
     nodes.lastOption match
       case Some(a: MathAtom) if a.cls == MathClass.Op =>
-        nodes(nodes.length - 1) = a.copy(limits = on)
+        nodes(nodes.length - 1) = a.copy(limits = Some(on))
       case _ => sys.error("limit controls must follow a math operator")
 
   /** Attach an already-laid-out script box to the most recent atom. When no atom precedes — a leading `^`
@@ -122,4 +126,4 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
     HBox(pieces.result())
 
-  def result: Box | Null = HBox(MathList.translate(nodes.toVector, mathFont, style.cramped))
+  def result: Box | Null = HBox(MathList.translate(nodes.toVector, mathFont, style.cramped, style.isDisplay))

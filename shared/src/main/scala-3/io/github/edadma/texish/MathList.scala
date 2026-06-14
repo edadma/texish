@@ -11,16 +11,18 @@ sealed trait MathNode
 /** A math atom: a nucleus box together with the [[MathClass]] that governs the space around it, and the
   * optional super- and subscript boxes attached to it. The scripts are already laid out at the script size
   * when they are attached; [[MathList.translate]] positions them around the nucleus. `italicCorrection` is
-  * the nucleus's, used to set the superscript out past a slanted nucleus. `limits`, set by `\limits` on a
-  * large operator, asks for the scripts to be set above and below rather than to the side; `bigOp` is the
-  * operator's codepoint when it is one that can grow to a display-size variant under limits. */
+  * the nucleus's, used to set the superscript out past a slanted nucleus. `limits` overrides where a large
+  * operator's scripts go: `Some(true)` (`\limits`) forces them above and below, `Some(false)` (`\nolimits`)
+  * forces them to the side, and `None` leaves it to the style — display style stacks them, inline sets them
+  * to the side. `bigOp` is the operator's codepoint when it is one that can grow to a display-size variant
+  * under limits. */
 case class MathAtom(
     cls: MathClass,
     nucleus: Box,
     sup: Option[Box] = None,
     sub: Option[Box] = None,
     italicCorrection: Double = 0.0,
-    limits: Boolean = false,
+    limits: Option[Boolean] = None,
     bigOp: Option[Int] = None,
 ) extends MathNode
 
@@ -73,7 +75,7 @@ object MathList:
     * `mf` is the font this list is set in (its size drives the spacing, its constants the script placement);
     * `cramped` is whether the list's style is cramped, which lowers superscripts.
     */
-  def translate(nodes: Vector[MathNode], mf: MathFont, cramped: Boolean): Vector[Box] =
+  def translate(nodes: Vector[MathNode], mf: MathFont, cramped: Boolean, isDisplay: Boolean): Vector[Box] =
     val em                          = mf.size
     val out                         = ArrayBuffer[Box]()
     var prevAtom: Option[MathClass] = None
@@ -82,21 +84,27 @@ object MathList:
       node match
         case a: MathAtom =>
           prevAtom.foreach(p => MathSpacing.glue(MathSpacing.code(p, a.cls), em).foreach(out += _))
-          out += nucleusBox(a, mf, cramped)
+          out += nucleusBox(a, mf, cramped, isDisplay)
           prevAtom = Some(a.cls)
         case MathSpace(g) =>
           out += g
 
     out.toVector
 
+  /** Whether an operator codepoint sets its limits to the side even in display style. The integral signs do —
+    * stacking bounds over and under an integral is non-standard — while sums, products and the other big
+    * operators stack theirs. */
+  private def sidesetInDisplay(cp: Int): Boolean = cp >= 0x222B && cp <= 0x2233
+
   /** An atom's nucleus, with its super/subscript attached if it has any. A script-less atom is just its
     * nucleus. A large operator marked `\limits` sets its scripts above and below as limits (over an enlarged,
     * axis-centred operator glyph when the operator has a display variant). Otherwise the scripts are shifted
     * into place to the side by [[MathScriptBox]] using the nucleus font's script parameters, with the
     * nucleus's italic correction applied horizontally per [[scriptOffsets]]. */
-  private def nucleusBox(a: MathAtom, mf: MathFont, cramped: Boolean): Box =
+  private def nucleusBox(a: MathAtom, mf: MathFont, cramped: Boolean, isDisplay: Boolean): Box =
+    val limitDefault = isDisplay && !a.bigOp.exists(sidesetInDisplay)
     if a.sup.isEmpty && a.sub.isEmpty then a.nucleus
-    else if a.cls == Op && a.limits then
+    else if a.cls == Op && a.limits.getOrElse(limitDefault) then
       val opBox = a.bigOp.map(cp => mf.largeOperator(cp, display = true)).getOrElse(a.nucleus)
       new LimitsBox(mf.t, opBox, a.sup, a.sub, mf.limitParams)
     else
