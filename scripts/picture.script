@@ -1,15 +1,11 @@
-% Picture / vector-graphics demonstration. Grows as the graphics layer lands.
-%   Phase 0 (done): display-list types — PictureOp, Anchor, LineCap, LineJoin.
-%   Phase 1 (done): the drawing seam on the Cairo and Graphics2D backends.
-%   Phase 2 (todo): PictureBox + PictureMode — layout and op replay.
-%   Phase 3 (todo): the \picture language primitives used below become live.
+% Picture / vector-graphics demonstration for the \picture layer.
 %
-% Until Phase 3 lands, the \picture sections are the TARGET SYNTAX — they show
-% what the engine will draw, and become runnable when the primitives exist.
 % Render with:  texish scripts/picture.script -o picture -p letter
 %
 % Coordinate convention inside a picture: y-up, origin at the bottom-left.
 % A bare number is a point; a unit suffix (in, mm, pt, em) is honoured too.
+% Coordinates may be computed — a bare variable \x is its value, and arithmetic
+% like \*{\x}{14} or \forloop.index works, so plots are built in a \for loop.
 
 \def headline {\italic{Picture demo} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
@@ -82,7 +78,7 @@ undone after. Rotating one square in a loop draws a fan.
   \nofill \stroke{mediumpurple} \linewidth{1pt}
   \for\i{\range{1}{12}}{
     \group{
-      \rotate{\*{\the\i}{30}}
+      \rotate{\*{\i}{30}}
       \rect{0 0 1.2in 0.12in}
     }
   }
@@ -119,7 +115,7 @@ built in a \italic{\\for}. Axes are lines; the curve samples $y = x^2$.
   \path{
     \moveto{0 0}
     \for\i{\range{1}{14}}{
-      \lineto{\*{\the\i}{14}  \*{\*{\the\i}{\the\i}}{0.8}}
+      \lineto{\*{\i}{14}  \*{\*{\i}{\i}}{0.8}}
     }
   }
   \at anchor:south {1.4in -0.1in}{$x$}
@@ -135,8 +131,8 @@ A data sequence drives the bars; \italic{\\forloop.index} positions each one.
 \picture width:3in height:2.4in {
   \stroke{gray} \linewidth{1pt} \line{0 0  2.8in 0}
   \fill{teal} \nostroke
-  \for\v{\the\data}{
-    \rect{\*{\forloop.index}{42} 0 30 \the\v}
+  \for\v{\data}{
+    \rect{\*{\forloop.index}{42} 0 30 \v}
   }
 }
 

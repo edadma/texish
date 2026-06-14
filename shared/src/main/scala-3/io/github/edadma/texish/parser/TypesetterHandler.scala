@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{Box, HorizontalMode, MathMode, MathStyle, Typesetter, VerticalMode}
+import io.github.edadma.texish.{Box, HorizontalMode, MathMode, MathStyle, PictureMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -19,6 +19,9 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
           // in math, each character is a symbol classified into its own atom — not a string to shape
           var i = 0
           while i < s.length do { m.addChar(s.charAt(i).toInt); i += 1 }
+        case _: PictureMode =>
+          // a picture body is drawing commands, not prose; stray text between them is insignificant
+          ()
         case _ =>
           // A single pending newline is an interword space — but only while we are still in the
           // paragraph. If a vertical command (\vskip, \vfill, …) closed the paragraph since the
@@ -30,9 +33,10 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def space(): Unit =
     if !suppressed then
-      // spaces are ignored in math (atom spacing is computed, not typed); otherwise add a space unless in
-      // vertical mode (halign cells are not HorizontalMode but accept spaces)
-      if typesetter.mode.isInstanceOf[MathMode] then ()
+      // spaces are ignored in math (atom spacing is computed, not typed) and in a picture body (drawing commands,
+      // not prose); otherwise add a space unless in vertical mode (halign cells are not HorizontalMode but accept
+      // spaces)
+      if typesetter.mode.isInstanceOf[MathMode] || typesetter.mode.isInstanceOf[PictureMode] then ()
       else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then typesetter.start add " "
 
   def newline(): Unit =

@@ -444,6 +444,13 @@ class Processor(val handler: Handler):
   def evalArgumentExpr(pos: CharReader): Value =
     evalTokensExpr(stripOuterBraces(readArgument(pos)), pos)
 
+  /** Evaluate an already-extracted token run as an expression — including a primitive applied to its braced
+    * arguments (`\*{a}{b}`) and dotted access (`\forloop.index`), which the plain [[evalTokens]] does not. For
+    * callers that have split a compound argument into pieces themselves, such as the space-separated coordinates
+    * of a picture shape. */
+  def evalExpr(tokens: Vector[Token], pos: CharReader): Value =
+    evalTokensExpr(tokens, pos)
+
   /** Evaluate a list of tokens as an expression (without outputting to handler) */
   private def evalTokensExpr(tokens: Vector[Token], pos: CharReader): Value =
     tokens match
@@ -833,8 +840,8 @@ object IncludePrimitive extends Primitive:
 
 object AddPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => Value.Num(x + y)
       case (Value.Text(x), Value.Text(y)) => Value.Text(x + y)
@@ -845,8 +852,8 @@ object AddPrimitive extends Primitive:
 
 object SubPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => Value.Num(x - y)
       case _ => proc.handler.error(s"Cannot subtract ${Value.display(a)} and ${Value.display(b)}", pos)
@@ -855,8 +862,8 @@ object SubPrimitive extends Primitive:
 
 object MulPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => Value.Num(x * y)
       case _ => proc.handler.error(s"Cannot multiply ${Value.display(a)} and ${Value.display(b)}", pos)
@@ -865,8 +872,8 @@ object MulPrimitive extends Primitive:
 
 object DivPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) =>
         if y == 0 then proc.handler.error("Division by zero", pos)
@@ -879,8 +886,8 @@ object DivPrimitive extends Primitive:
 
 object EqPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x == y
       case (Value.Text(x), Value.Text(y)) => x == y
@@ -891,8 +898,8 @@ object EqPrimitive extends Primitive:
 
 object LtPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x < y
       case (Value.Text(x), Value.Text(y)) => x < y
@@ -901,8 +908,8 @@ object LtPrimitive extends Primitive:
 
 object GtPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x > y
       case (Value.Text(x), Value.Text(y)) => x > y
@@ -911,8 +918,8 @@ object GtPrimitive extends Primitive:
 
 object LePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x <= y
       case (Value.Text(x), Value.Text(y)) => x <= y
@@ -921,8 +928,8 @@ object LePrimitive extends Primitive:
 
 object GePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x >= y
       case (Value.Text(x), Value.Text(y)) => x >= y
@@ -931,8 +938,8 @@ object GePrimitive extends Primitive:
 
 object NePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = evalTokens(proc.readArgument(pos), proc.handler)
-    val b = evalTokens(proc.readArgument(pos), proc.handler)
+    val a = proc.evalArgumentExpr(pos)
+    val b = proc.evalArgumentExpr(pos)
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x != y
       case (Value.Text(x), Value.Text(y)) => x != y
@@ -999,17 +1006,17 @@ object AccentPrimitive extends Primitive:
 
 object UpcasePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = evalTokens(proc.readArgument(pos), proc.handler)
+    val arg = proc.evalArgumentExpr(pos)
     proc.handler.text(Value.display(arg).toUpperCase)
 
 object DowncasePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = evalTokens(proc.readArgument(pos), proc.handler)
+    val arg = proc.evalArgumentExpr(pos)
     proc.handler.text(Value.display(arg).toLowerCase)
 
 object TrimPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = evalTokens(proc.readArgument(pos), proc.handler)
+    val arg = proc.evalArgumentExpr(pos)
     proc.handler.text(Value.display(arg).trim)
 
 object SizePrimitive extends Primitive:
@@ -1059,7 +1066,7 @@ object RangePrimitive extends Primitive:
 
 object HeadPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = evalTokens(proc.readArgument(pos), proc.handler)
+    val arg = proc.evalArgumentExpr(pos)
     val result = arg match
       case Value.Seq(items) if items.nonEmpty => items.head
       case Value.Text(s) if s.nonEmpty => Value.Text(s.head.toString)
@@ -1068,7 +1075,7 @@ object HeadPrimitive extends Primitive:
 
 object TailPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = evalTokens(proc.readArgument(pos), proc.handler)
+    val arg = proc.evalArgumentExpr(pos)
     val result = arg match
       case Value.Seq(items) if items.nonEmpty => Value.Seq(items.tail)
       case Value.Text(s) if s.nonEmpty => Value.Text(s.tail)
@@ -1077,7 +1084,7 @@ object TailPrimitive extends Primitive:
 
 object LastPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = evalTokens(proc.readArgument(pos), proc.handler)
+    val arg = proc.evalArgumentExpr(pos)
     val result = arg match
       case Value.Seq(items) if items.nonEmpty => items.last
       case Value.Text(s) if s.nonEmpty => Value.Text(s.last.toString)

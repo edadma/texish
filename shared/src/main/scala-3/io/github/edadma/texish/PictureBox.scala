@@ -24,6 +24,9 @@ class PictureBox(t: Typesetter, val width: Double, height: Double, ops: Vector[P
   val descent: Double  = 0
   val xAdvance: Double = width
 
+  /** The display list this box replays, for introspection and testing. */
+  def displayList: Vector[PictureOp] = ops
+
   /** Where the anchored handle of a placed `box` sits relative to the box's own origin — the offsets
     * `(bx, by)` to pass to `box.draw` so the chosen handle lands on the placement point. Computed in the
     * upright (un-flipped) frame, where larger `y` is lower on the page: the box spans `[bx, bx+width]`

@@ -54,6 +54,10 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   def setFill(c: Color): Unit   = fillColour = Some(c)
   def noFill(): Unit            = fillColour = None
 
+  /** The active fill / stroke colour, for a `\glyph` that wants to draw in the picture's current ink. */
+  def fillColor: Option[Color]   = fillColour
+  def strokeColor: Option[Color] = strokeColour
+
   def setLineWidth(w: Double): Unit               = emit(PictureOp.SetLineWidth(w))
   def setDash(pattern: Vector[Double], offset: Double): Unit = emit(PictureOp.SetDash(pattern, offset))
   def setLineCap(cap: LineCap): Unit              = emit(PictureOp.SetLineCap(cap))
