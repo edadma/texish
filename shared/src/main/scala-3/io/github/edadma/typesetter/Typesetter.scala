@@ -2,6 +2,7 @@ package io.github.edadma.typesetter
 
 //import pprint.pprintln
 
+import io.github.edadma.typesetter.opentype.{ByteCursor, MathTable}
 import io.github.edadma.typesetter.parser.Value
 
 import scala.collection.mutable
@@ -302,6 +303,11 @@ abstract class Typesetter:
     "Regular",
   )
 
+  // The default math font: Latin Modern Math, an OpenType font with a full MATH table. Loaded by file
+  // directly (not loadTypeface, whose naming assumes a .ttf) since it is a CFF/.otf and stands alone with
+  // no style variants. Math mode reads its MATH table through the SFNT seam (see mathTableFor).
+  loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-Regular.otf", Set(), Set())
+
   init(1, 1)
   selectFont("noto", 14, Set("regular"))
   set(defaultParameters)
@@ -502,6 +508,44 @@ abstract class Typesetter:
   def halign: Typesetter =
     push(new HAlignMode(this))
     this
+
+  // ---- Math mode ----
+
+  /** The typeface math mode sets symbols in. Defaults to Latin Modern Math; an application can point it at
+    * another OpenType math font it has loaded. */
+  var mathTypeface: String = "lmmath"
+
+  private val mathTableCache = mutable.HashMap[String, Option[MathTable]]()
+
+  /** The parsed OpenType `MATH` table for a font's typeface, read once through the SFNT seam and cached by
+    * typeface name. `None` when the typeface carries no `MATH` table (an ordinary text font), in which case
+    * math layout falls back to TeX's traditional constants. */
+  def mathTableFor(font: Font): Option[MathTable] =
+    mathTableCache.getOrElseUpdate(
+      font.typeface, {
+        val rf = font.renderFont.asInstanceOf[RenderFont]
+
+        sfntTable(rf, "MATH").map { bytes =>
+          val upm = sfntTable(rf, "head").map(h => ByteCursor(h, 18).u16).getOrElse(1000)
+
+          MathTable.parse(bytes, upm)
+        }
+      },
+    )
+
+  /** Begin inline math: ensure a horizontal list is open (so the finished math box has somewhere to land),
+    * then push a [[MathMode]] that collects atoms set in the math typeface at the current text size. */
+  def enterMath(): MathMode =
+    start // a $...$ in vertical mode starts a paragraph, exactly as text would
+
+    val mf = makeFont(mathTypeface, currentFont.size, Set.empty)
+    val m  = new MathMode(this, new MathFont(this, mf, mathTableFor(mf)))
+
+    push(m)
+    m
+
+  /** End inline math: lay the collected math list out and add the resulting box to the surrounding list. */
+  def exitMath(): Unit = mode.done()
 
   def op(operation: String): Typesetter =
     modeStack.top.op(operation)

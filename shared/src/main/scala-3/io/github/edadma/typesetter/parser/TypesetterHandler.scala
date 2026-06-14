@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.typesetter.{Box, HorizontalMode, Typesetter, VerticalMode}
+import io.github.edadma.typesetter.{Box, HorizontalMode, MathMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -14,18 +14,26 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def text(s: String): Unit =
     if !suppressed then
-      // A single pending newline is an interword space — but only while we are still in the
-      // paragraph. If a vertical command (\vskip, \vfill, …) closed the paragraph since the
-      // newline, the pending space is stale and must be dropped, or it leaks a stray box into
-      // the vertical list before the next paragraph starts.
-      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
-      typesetter.start add s
-      newlineCount = 0
+      typesetter.mode match
+        case m: MathMode =>
+          // in math, each character is a symbol classified into its own atom — not a string to shape
+          var i = 0
+          while i < s.length do { m.addChar(s.charAt(i).toInt); i += 1 }
+        case _ =>
+          // A single pending newline is an interword space — but only while we are still in the
+          // paragraph. If a vertical command (\vskip, \vfill, …) closed the paragraph since the
+          // newline, the pending space is stale and must be dropped, or it leaks a stray box into
+          // the vertical list before the next paragraph starts.
+          if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
+          typesetter.start add s
+          newlineCount = 0
 
   def space(): Unit =
     if !suppressed then
-      // Add space unless in vertical mode (halign cells are not HorizontalMode but accept spaces)
-      if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then typesetter.start add " "
+      // spaces are ignored in math (atom spacing is computed, not typed); otherwise add a space unless in
+      // vertical mode (halign cells are not HorizontalMode but accept spaces)
+      if typesetter.mode.isInstanceOf[MathMode] then ()
+      else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then typesetter.start add " "
 
   def newline(): Unit =
     if !suppressed then
@@ -59,8 +67,26 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
         case _    => None
 
   def command(name: String, args: Seq[Value], pos: CharReader): Value =
-    // Typesetting commands are registered as Primitives; unknown commands are errors
-    error(s"Unknown command: \\$name", pos)
+    typesetter.mode match
+      case m: MathMode =>
+        // in math, an unknown control sequence is looked up in the math symbol tables before it is an error
+        if m.addCommand(name) then Value.Nil
+        else error(s"Unknown math symbol: \\$name", pos)
+      case _ =>
+        // Typesetting commands are registered as Primitives; unknown commands are errors
+        error(s"Unknown command: \\$name", pos)
+
+  /** Toggle inline math at a `$`. Entering flushes any pending interword space (a newline just before the
+    * `$` is a space, as in text) and clears the pending-newline state so the math box joins the line
+    * cleanly; exiting lays the math list out and drops the resulting box back into the line. */
+  def toggleMath(): Unit =
+    if typesetter.mode.isInstanceOf[MathMode] then
+      typesetter.exitMath()
+      newlineCount = 0
+    else
+      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
+      newlineCount = 0
+      typesetter.enterMath()
 
   /** Add a Box directly to the current mode */
   def addBox(box: Box): Unit =

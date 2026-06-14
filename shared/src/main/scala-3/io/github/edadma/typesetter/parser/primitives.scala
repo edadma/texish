@@ -415,6 +415,16 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     (line("headline"), line("footline"))
 
   // Active characters
+
+  // $ toggles inline math mode, as in TeX. The first $ opens a math list; the next closes it, lays it out
+  // and drops the resulting box into the running text. (Display math $$...$$ is a later stage.)
+  proc.registerActive(
+    '$',
+    new Active {
+      def execute(proc: Processor, c: Char, pos: CharReader): Unit = handler.toggleMath()
+    },
+  )
+
   proc.registerActive(
     '#',
     new Active {
