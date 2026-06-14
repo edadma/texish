@@ -138,19 +138,38 @@ A data sequence drives the bars; \italic{\\forloop.index} positions each one.
 
 \bold{Application — a molecule}
 
-A skeletal benzene ring: a hexagon of bonds, inner lines for the aromatic
-double bonds, and atom labels placed with \italic{\\at}.
+A skeletal benzene ring whose geometry is computed, not hand-placed: the six
+vertices sit on a circle every 60° and the aromatic inner bonds run along
+alternating edge mid-lines, all worked out with \italic{\\calc} and trigonometry.
 
 \picture width:2.4in height:2in {
+  \set cx {72} \set cy {72} \set R {36}
   \nofill \stroke{black} \linewidth{1.5pt}
-  \polygon{108 72  90 103  54 103  36 72  54 41  90 41}
+
+  % the ring: six vertices on a circle, every 60 degrees, computed with \calc
+  \path{
+    \moveto{\calc{cx + R*cosd(0)}  \calc{cy + R*sind(0)}}
+    \for\k{\range{1}{5}}{
+      \lineto{\calc{cx + R*cosd(k*60)}  \calc{cy + R*sind(k*60)}}
+    }
+    \close
+  }
+
+  % three aromatic inner bonds, parallel to alternating edges and inset toward
+  % the centre. an edge's mid-line is at angle 30+60k and radius = apothem; the
+  % bond runs perpendicular to that (angle m+90), half-length hl on each side.
   \linewidth{1pt}
-  \line{98 74  86 93}
-  \line{58 93  46 74}
-  \line{60 49  84 49}
+  \set ai {\calc{R*cosd(30) - 6}}
+  \set hl {13}
+  \for\m{\seq{30 150 270}}{
+    \line{\calc{cx + ai*cosd(m) + hl*cosd(m+90)}  \calc{cy + ai*sind(m) + hl*sind(m+90)}
+          \calc{cx + ai*cosd(m) - hl*cosd(m+90)}  \calc{cy + ai*sind(m) - hl*sind(m+90)}}
+  }
+
+  % a bond out to the hydroxyl at the angle-0 vertex
   \linewidth{1.5pt}
-  \line{108 72  128 72}
-  \at anchor:west {132 72}{OH}
+  \line{\calc{cx + R} \calc{cy}  \calc{cx + R + 20} \calc{cy}}
+  \at anchor:west {\calc{cx + R + 24} \calc{cy}}{OH}
 }
 
 This page is set entirely by \TeXish: the prose, the running heads, and every
