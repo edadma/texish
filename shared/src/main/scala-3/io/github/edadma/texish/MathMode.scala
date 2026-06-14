@@ -13,16 +13,30 @@ import scala.collection.mutable.ArrayBuffer
   * to the nested script modes so each scales from the base, not compounded. Fractions, radicals and stretchy
   * delimiters arrive in later stages.
   */
-class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathStyle = MathStyle.Text) extends Mode:
+class MathMode(
+    val t: Typesetter,
+    val baseMathFont: MathFont,
+    val style: MathStyle = MathStyle.Text,
+    val grouped: Boolean = false,
+) extends Mode:
   private val nodes = ArrayBuffer[MathNode]()
+
+  /** Set by an infix `\over` or `\atop`: the kind of fraction to build from this list at exit (`true` = a
+    * barred fraction, `false` = the bar-less `\atop`), and the nodes gathered before the operator, which
+    * become the numerator. After the operator fires, the mode keeps collecting the denominator into `nodes`. */
+  private var fractionBar:    Option[Boolean]  = None
+  private var numeratorNodes: Vector[MathNode] = Vector.empty
 
   /** The equation number set by `\eqno` on a display, laid out in this mode's font; placed flush right on the
     * display line when the math is shipped. `None` for an unnumbered display or any inline formula. */
   var eqno: Option[Box] = None
 
+  /** The base math font scaled to a given style's size level — the font a sub-list set in that style uses. */
+  private def fontForStyle(s: MathStyle): MathFont =
+    baseMathFont.atScale(s.scale(baseMathFont.scriptPercentScaleDown, baseMathFont.scriptScriptPercentScaleDown))
+
   /** The font this list's symbols are set in: the base math font scaled to this style's size level. */
-  val mathFont: MathFont =
-    baseMathFont.atScale(style.scale(baseMathFont.scriptPercentScaleDown, baseMathFont.scriptScriptPercentScaleDown))
+  val mathFont: MathFont = fontForStyle(style)
 
   def init(): Unit = ()
 
@@ -46,6 +60,15 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
   /** The style a super- or subscript of this list's atoms is set in. */
   def scriptStyle(superscript: Boolean): MathStyle = if superscript then style.sup else style.sub
+
+  /** Begin a fraction at an infix `\over` (barred) or `\atop` (bar-less): everything collected so far in this
+    * list becomes the numerator, and what follows becomes the denominator. As in TeX a group may hold only one
+    * such operator, so a second is an error — `{a \over b \over c}` is ambiguous and must be parenthesised. */
+  def setFraction(bar: Boolean): Unit =
+    if fractionBar.isDefined then sys.error("ambiguous fraction: more than one \\over or \\atop in the same group")
+    fractionBar = Some(bar)
+    numeratorNodes = nodes.toVector
+    nodes.clear()
 
   /** Set (or clear) limit placement on the most recent atom, for `\limits` / `\nolimits`. The control must
     * follow a large operator, as in TeX; otherwise it is an error. Scripts attached afterward are carried
@@ -126,4 +149,36 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
     HBox(pieces.result())
 
-  def result: Box | Null = HBox(MathList.translate(nodes.toVector, mathFont, style.cramped, style.isDisplay))
+  /** Re-set a list's single-glyph atoms in a different font — what a `\over`/`\atop` operand needs when it
+    * moves from the list's own style down to fraction style (a size step smaller, except in display). Only an
+    * atom whose nucleus is one glyph (and which carries no script) can be cheaply rebuilt from its codepoint;
+    * an atom holding an already-built sub-box (a script, a nested fraction or radical, an operator name) keeps
+    * its box, set at the list's style. In practice `\over` operands are simple symbol runs, so this restyles
+    * them exactly; the rare nested construct in an inline `\over` is left at the surrounding size. */
+  private def restyle(ns: Vector[MathNode], mf: MathFont): Vector[MathNode] =
+    ns.map {
+      case a: MathAtom if a.sup.isEmpty && a.sub.isEmpty =>
+        a.nucleusCp match
+          case Some(cp) => a.copy(nucleus = mf.glyphBox(cp), italicCorrection = mf.italicCorrection(cp))
+          case None     => a
+      case other => other
+    }
+
+  /** Lay the list out. Ordinarily this is the horizontal box of its atoms with the inter-atom spacing applied.
+    * When an infix `\over`/`\atop` split the list, it is instead a fraction: the numerator (the atoms before
+    * the operator) over the denominator (those after), each re-set one style smaller — script style inline,
+    * text style in display — exactly as TeX styles `\over`. A barred `\over` draws the rule; `\atop` omits it. */
+  def result: Box | Null =
+    fractionBar match
+      case Some(bar) =>
+        val numStyle = style.num
+        val denStyle = style.denom
+        val numFont  = fontForStyle(numStyle)
+        val denFont  = fontForStyle(denStyle)
+        val num = HBox(MathList.translate(restyle(numeratorNodes, numFont), numFont, numStyle.cramped, numStyle.isDisplay))
+        val den = HBox(MathList.translate(restyle(nodes.toVector, denFont), denFont, denStyle.cramped, denStyle.isDisplay))
+        val params = mathFont.fractionParams(style.isDisplay)
+
+        new FractionBox(t, num, den, if bar then params else params.copy(ruleThickness = 0.0))
+      case None =>
+        HBox(MathList.translate(nodes.toVector, mathFont, style.cramped, style.isDisplay))

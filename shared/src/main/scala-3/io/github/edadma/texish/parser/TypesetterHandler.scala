@@ -50,9 +50,27 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def set(name: String, value: Value): Unit = typesetter.set(name, value)
 
-  def enterScope(): Unit = typesetter.enter()
+  /** Open a group `{`. Besides the variable scope every group opens, a group inside math begins a sub-formula:
+    * a `{…}` in math is a self-contained math list set as a single ordinary atom, exactly as in TeX — so font
+    * or class changes inside it stay inside, and an infix `\over`/`\atop` is scoped to the braces. The nested
+    * mode inherits the enclosing style and the root base font, so its size cascades correctly. */
+  def enterScope(): Unit =
+    typesetter.enter()
+    typesetter.mode match
+      case parent: MathMode =>
+        typesetter.push(new MathMode(typesetter, parent.baseMathFont, parent.style, grouped = true))
+      case _ =>
 
-  def exitScope(): Unit = typesetter.exit()
+  /** Close a group `}`. A grouped math sub-formula is laid out and dropped into its parent list as one ordinary
+    * atom before the variable scope is closed; any other mode just closes its scope. */
+  def exitScope(): Unit =
+    typesetter.mode match
+      case m: MathMode if m.grouped =>
+        val box = m.exit // pop the sub-formula's mode and lay its list out
+
+        typesetter.exit()
+        if box ne null then typesetter add box // enters the parent math list as an Ord atom
+      case _ => typesetter.exit()
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
 

@@ -202,3 +202,33 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     val ex = the[ParserException] thrownBy proc.process("$x \\eqno{(1)}$") // inline, not a display
     ex.getMessage should include("display math")
   }
+
+  "an infix \\over builds a fraction, braced and unbraced, inline and display, without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$x + {a + b \\over c + d}$")
+    noException should be thrownBy { val (_, p) = fixture(); p.process("$$1 \\over 2$$") }
+    noException should be thrownBy { val (_, p) = fixture(); p.process("$$n! \\over k! (n - k)!$$") }
+  }
+
+  "\\atop stacks without a rule, without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\left( {n \\atop k} \\right)$")
+  }
+
+  "\\over outside math is reported as a math-only command" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("a \\over b")
+    ex.getMessage should include("math mode")
+  }
+
+  "two \\over in one group is reported as ambiguous" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("$1 \\over 2 \\over 3$")
+    ex.getMessage should include("ambiguous")
+  }
+
+  "braces scope an \\over: material outside the braces is not swept into the fraction" in {
+    val (_, proc) = fixture()
+    // x stays an atom beside the fraction; the \over is confined to its group
+    noException should be thrownBy proc.process("$x{a \\over b}y$")
+  }

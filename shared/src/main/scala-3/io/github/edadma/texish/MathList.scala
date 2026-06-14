@@ -15,7 +15,8 @@ sealed trait MathNode
   * operator's scripts go: `Some(true)` (`\limits`) forces them above and below, `Some(false)` (`\nolimits`)
   * forces them to the side, and `None` leaves it to the style — display style stacks them, inline sets them
   * to the side. `bigOp` is the operator's codepoint when it is one that can grow to a display-size variant
-  * under limits. */
+  * under limits. `nucleusCp` is the input codepoint when the nucleus is a single glyph, kept so the atom can
+  * be rebuilt at another size — what an infix `\over`/`\atop` needs to reset its operands to fraction style. */
 case class MathAtom(
     cls: MathClass,
     nucleus: Box,
@@ -24,6 +25,7 @@ case class MathAtom(
     italicCorrection: Double = 0.0,
     limits: Option[Boolean] = None,
     bigOp: Option[Int] = None,
+    nucleusCp: Option[Int] = None,
 ) extends MathNode
 
 /** An explicit, author-inserted space — fixed glue that is emitted verbatim and is transparent to the

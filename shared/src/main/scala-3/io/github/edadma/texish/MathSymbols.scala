@@ -159,6 +159,7 @@ object MathSymbols:
       mf.glyphBox(codepoint),
       italicCorrection = mf.italicCorrection(codepoint),
       bigOp = if cls == Op then Some(codepoint) else None,
+      nucleusCp = Some(codepoint),
     )
 
   /** An upright row of Latin glyphs for an operator name like `sin`. */

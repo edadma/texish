@@ -424,6 +424,30 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // over / atop - infix fraction operators. Math-mode only; everything in the current group before the
+  // operator is the numerator and everything after is the denominator, each set one style smaller (script
+  // size inline, text size in display), exactly as in plain TeX. \over draws the fraction rule; \atop stacks
+  // the operands with no rule. They are scoped by braces — {a+b \over c+d} — because a {…} in math is its own
+  // sub-formula; without braces the operator takes the whole formula, as a display \over usually does.
+  proc.registerPrimitive(
+    "over",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode => parent.setFraction(bar = true)
+          case _                => handler.error("\\over is only allowed in math mode", pos)
+    },
+  )
+  proc.registerPrimitive(
+    "atop",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode => parent.setFraction(bar = false)
+          case _                => handler.error("\\atop is only allowed in math mode", pos)
+    },
+  )
+
   // eqno - 1 body arg: an equation number for the surrounding display. Display-math only; the number is
   // typeset by a nested math mode at text size and flushed to the right margin on the display line. As in
   // plain TeX, the material is set in math (so "(3.1)" sets its parens and digits as math symbols).

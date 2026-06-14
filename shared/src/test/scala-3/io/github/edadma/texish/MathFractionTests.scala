@@ -69,3 +69,40 @@ class MathFractionTests extends AnyFreeSpec with Matchers:
     box.boxes.head shouldBe a[FractionBox]
     box.height should be > 0.0
   }
+
+  "an infix \\over splits the list into a fraction at exit" in {
+    val t = new StubTypesetter
+    val m = new MathMode(t, base(t), MathStyle.Text)
+
+    m.addChar('a')
+    m.setFraction(bar = true) // the 'a' becomes the numerator
+    m.addChar('b')            // and 'b' the denominator
+
+    m.result shouldBe a[FractionBox]
+  }
+
+  "\\over draws the fraction rule while \\atop omits it" in {
+    def ruleCount(bar: Boolean): Int =
+      val rec = new RuleRecordingTypesetter
+      val m   = new MathMode(rec, new MathFont(rec, rec.currentFont, None), MathStyle.Text)
+      m.addChar('a'); m.setFraction(bar); m.addChar('b')
+      rec.draw(m.result.asInstanceOf[Box])
+      rec.rules
+
+    ruleCount(bar = true) shouldBe 1  // \over: one rule centred on the axis
+    ruleCount(bar = false) shouldBe 0 // \atop: stacked with no rule
+  }
+
+  "a second \\over in the same group is an ambiguity error" in {
+    val t = new StubTypesetter
+    val m = new MathMode(t, base(t), MathStyle.Text)
+
+    m.addChar('a'); m.setFraction(bar = true); m.addChar('b')
+    an[RuntimeException] should be thrownBy m.setFraction(bar = false)
+  }
+
+/** Records fillRect calls so a test can tell whether a fraction drew its bar. */
+class RuleRecordingTypesetter extends StubTypesetter:
+  var rules: Int = 0
+
+  override def fillRect(x: Double, y: Double, width: Double, height: Double): Unit = rules += 1
