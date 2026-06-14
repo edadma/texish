@@ -4,6 +4,8 @@ import io.github.edadma.char_reader.CharReader
 import io.github.edadma.texish.{
   Box,
   Glue,
+  GlyphBox,
+  HBox,
   HSpaceBox,
   Hyphenation,
   InfGlue,
@@ -541,6 +543,12 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // TeX / TeXish - the engine's logos, set in the current text font through the glyph seam so the letters are
+  // placed by their own advances (no string-shaping in between) and the E nestles between the T and X. \TeXish
+  // is the same logo with "ish" trailing — the name is the pun.
+  proc.registerPrimitive("TeX", SimplePrimitive(() => handler.addBox(texLogo(t, ish = false))))
+  proc.registerPrimitive("TeXish", SimplePrimitive(() => handler.addBox(texLogo(t, ish = true))))
+
   // Running headers and footers: if the document defines a headline or footline macro, each shipped page builds
   // an hbox to hsize from its body at shipout time — pageno is already set to the shipping page's number, so
   // \the\pageno in the macro is always current. The hbox is built on a temporary mode pushed over whatever is
@@ -615,6 +623,46 @@ class SimplePrimitive(action: () => Any) extends Primitive:
 // Helper to evaluate an argument and get its value
 private def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
+
+// Build the TeX (or TeXish) logo in the current text font: a T, an E lowered half an x-height and kerned
+// back under the T, then an X kerned back under the E. The three capitals ride the glyph seam (placed by
+// their own advances) so no string-shaping creeps between them; the kern fractions are the classic plain-TeX
+// values. TeXish adds "ish" trailing, set smaller and raised — echoing the lifted "A" of the LaTeX logo.
+private def texLogo(t: Typesetter, ish: Boolean): Box =
+  val font = t.currentFont
+  val rf   = font.renderFont.asInstanceOf[t.RenderFont]
+  val em   = font.size
+  val ex   = font.xHeight
+
+  def glyph(c: Char): Box = new GlyphBox(t, t.glyphIndex(rf, c.toInt), font, t.currentColor)
+
+  val pieces = Vector.newBuilder[Box]
+  pieces += glyph('T')
+  pieces += HSpaceBox(-0.1667 * em)
+  pieces += new ShiftBox(glyph('E'), 0.5 * ex)
+  pieces += HSpaceBox(-0.125 * em)
+  pieces += glyph('X')
+
+  if ish then
+    // "ish" set smaller, slanted, and raised a little — echoing the lifted "A" of the LaTeX logo. Built in the
+    // current typeface's slanted face (falling back to italic, then upright, for a font without one) at 70%
+    // size on the string seam, since it is ordinary text; then kerned back so it tucks against the top-right
+    // arm of the X, and shifted up so it rides above the baseline of the capitals.
+    def face(extra: String) =
+      try Some(t.makeFont(font.typeface, font.size * 0.7, font.style + extra))
+      catch case _: RuntimeException => None
+
+    val small = face("slanted").orElse(face("italic")).getOrElse(t.makeFont(font.typeface, font.size * 0.7, font.style))
+    val saved = t.currentFont
+
+    t.currentFont = small
+    val ishBox = t.charBox("ish")
+    t.currentFont = saved
+
+    pieces += HSpaceBox(-0.14 * em)
+    pieces += new ShiftBox(ishBox, -0.22 * em)
+
+  HBox(pieces.result())
 
 // Read an optional bracketed argument like \sqrt's [degree]. Brackets are ordinary text characters, not
 // tokenizer-special, so the opening '[' may share a text token with the degree and the closing ']' may sit

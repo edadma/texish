@@ -312,6 +312,7 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bold.otf", lmLigatures, Set("bold"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
+  loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
 
   // The default math font: Latin Modern Math, an OpenType font with a full MATH table. Loaded by file
   // directly (not loadTypeface, whose naming assumes a .ttf) since it is a CFF/.otf and stands alone with
@@ -319,7 +320,7 @@ abstract class Typesetter:
   loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-Regular.otf", Set(), Set())
 
   init(1, 1)
-  selectFont("noto", 14, Set("regular"))
+  selectFont("lmroman", 14, Set("regular"))
   set(defaultParameters)
   push(document)
   push(new PageMode(this))

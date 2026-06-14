@@ -11,9 +11,4 @@ package io.github.edadma.texish
   */
 val standardPrelude: String =
   raw"""
-% The traditional TeX logo: a T, the E lowered half an x-height, and an X, kerned together.
-\def\TeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}
-
-% This engine's own logo: the TeX logo with "ish" trailing — the name is the pun, "TeX-ish".
-\def\TeXish{\TeX\kern-.03em ish}
 """

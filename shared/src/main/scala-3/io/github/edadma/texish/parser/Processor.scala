@@ -135,42 +135,43 @@ class Processor(val handler: Handler):
     handler.exitScope()
 
   private def handleControlSeq(name: String, pos: CharReader): Unit =
-    // Check for primitive first
-    primitives.get(name) match
-      case Some(prim) =>
-        prim.execute(this, pos)
-      case None =>
-        // Check for macro
-        handler.get(name) match
-          case Value.Macro(params, body, _) =>
-            expandMacro(name, params, body, pos)
-          case Value.Undefined =>
-            // Unknown command - pass to handler
-            val result = handler.command(name, Seq.empty, pos)
-            outputValue(result)
-          case mapValue @ Value.Map(entries) =>
-            // Check for dotted access like \forloop.index
-            if hasMoreTokens then
-              peekToken() match
-                case Token.Text(s, _) if s.startsWith(".") =>
-                  nextToken() // consume the text token
-                  val rest = s.drop(1) // remove the dot
-                  // Find the field name (up to any non-identifier char)
-                  val fieldEnd = rest.indexWhere(c => !c.isLetterOrDigit && c != '_')
-                  val (field, remaining) = if fieldEnd == -1 then (rest, "") else rest.splitAt(fieldEnd)
-                  entries.get(field) match
-                    case Some(v) =>
-                      outputValue(v)
-                      // Output any remaining text after the field
-                      if remaining.nonEmpty then handler.text(remaining)
-                    case None => outputValue(Value.Undefined)
-                case _ =>
-                  outputValue(mapValue)
-            else
+    // A user-defined macro (\def) overrides a built-in primitive of the same name, as in TeX — so e.g. a
+    // document can redefine \TeX even though it ships as a primitive. Only an explicit macro overrides;
+    // ordinary variables of the same name do not, so they can't accidentally shadow a primitive.
+    val defined = handler.get(name)
+
+    defined match
+      case Value.Macro(params, body, _) =>
+        expandMacro(name, params, body, pos)
+      case _ if primitives.contains(name) =>
+        primitives(name).execute(this, pos)
+      case Value.Undefined =>
+        // Unknown command - pass to handler
+        val result = handler.command(name, Seq.empty, pos)
+        outputValue(result)
+      case mapValue @ Value.Map(entries) =>
+        // Check for dotted access like \forloop.index
+        if hasMoreTokens then
+          peekToken() match
+            case Token.Text(s, _) if s.startsWith(".") =>
+              nextToken() // consume the text token
+              val rest = s.drop(1) // remove the dot
+              // Find the field name (up to any non-identifier char)
+              val fieldEnd = rest.indexWhere(c => !c.isLetterOrDigit && c != '_')
+              val (field, remaining) = if fieldEnd == -1 then (rest, "") else rest.splitAt(fieldEnd)
+              entries.get(field) match
+                case Some(v) =>
+                  outputValue(v)
+                  // Output any remaining text after the field
+                  if remaining.nonEmpty then handler.text(remaining)
+                case None => outputValue(Value.Undefined)
+            case _ =>
               outputValue(mapValue)
-          case other =>
-            // It's a variable - output its value
-            outputValue(other)
+        else
+          outputValue(mapValue)
+      case other =>
+        // It's a variable - output its value
+        outputValue(other)
 
   private def handleActive(c: Char, pos: CharReader): Unit =
     // Check for registered active handler first
