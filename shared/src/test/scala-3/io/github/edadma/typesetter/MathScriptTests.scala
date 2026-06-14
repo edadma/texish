@@ -96,6 +96,33 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
     box.boxes.head shouldBe a[MathScriptBox]
   }
 
+  "a large operator skews its limits left; an ordinary atom sets the superscript out right" in {
+    // both classes carry the same italic correction (5) on a 6-wide nucleus; only the class differs, so the
+    // horizontal placement of the limits is what these assertions isolate
+    def place(cls: MathClass): (Double, Double) =
+      val rec = new RecordingGlyphTypesetter
+      val bf  = new MathFont(rec, rec.currentFont, None)
+      val m   = new MathMode(rec, bf, MathStyle.Text)
+
+      // digit scripts stay upright (no math-italic remapping), so their glyph index is the digit itself
+      m.addNode(MathAtom(cls, bf.glyphBox('I'.toInt), italicCorrection = 5.0))
+      m.addScript(superscript = true, script(rec, bf, MathStyle.Text.sup, '7'))
+      m.addScript(superscript = false, script(rec, bf, MathStyle.Text.sub, '3'))
+      rec.draw(m.result.asInstanceOf[HBox])
+
+      val subX = rec.drawn.collectFirst { case (g, x, _) if g == '3'.toInt => x }.get
+      val supX = rec.drawn.collectFirst { case (g, x, _) if g == '7'.toInt => x }.get
+      (subX, supX)
+
+    val (opSub, opSup) = place(MathClass.Op)
+    opSub shouldBe (1.0 +- 0.001) // 6 − 5: the subscript tucks left under the leaning operator
+    opSup shouldBe (6.0 +- 0.001) // the superscript stays at the operator's right edge
+
+    val (ordSub, ordSup) = place(MathClass.Ord)
+    ordSub shouldBe (6.0 +- 0.001)  // an ordinary subscript sits at the nucleus's right edge
+    ordSup shouldBe (11.0 +- 0.001) // 6 + 5: the superscript is set out past the slanted nucleus
+  }
+
   "a second script of the same kind on one atom is an error" in {
     val t  = new StubTypesetter
     val bf = base(t)

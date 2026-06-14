@@ -35,10 +35,11 @@ object MathScriptParams:
   )
 
 /** A nucleus with a superscript and/or subscript attached. The superscript is raised by `supShift` and the
-  * subscript lowered by `subShift` (both positive distances from the baseline); the superscript is also
-  * shifted right by the nucleus's italic correction, so a script after a slanted letter does not sit on top
-  * of it, and a little space follows the scripts. The box reports the true vertical extent of the assembly,
-  * so the line it sits on leaves room for the raised and lowered scripts.
+  * subscript lowered by `subShift` (both positive distances from the baseline), and each is offset
+  * horizontally from the nucleus's right edge by `supDx` / `subDx` — how the nucleus's italic correction is
+  * applied (a superscript set out past a slanted letter, or a large operator's limits skewed to follow its
+  * slant). A little space follows the scripts. The box reports the true vertical extent of the assembly, so
+  * the line it sits on leaves room for the raised and lowered scripts.
   */
 class MathScriptBox(
     nucleus: Box,
@@ -46,14 +47,16 @@ class MathScriptBox(
     sub: Option[Box],
     supShift: Double,
     subShift: Double,
-    italicCorrection: Double,
+    supDx: Double,
+    subDx: Double,
     scriptSpace: Double,
 ) extends ContentBox:
 
-  // The superscript is set out past the italic correction; the widest of the two scripts (so measured) plus
-  // the nucleus and a trailing script space sets the whole box's width.
+  // The widest of the two scripts (each measured from its own horizontal offset) plus the nucleus and a
+  // trailing script space sets the whole box's width; a script tucked left of the nucleus edge never pulls
+  // the width in below the nucleus.
   private val scriptsWidth: Double =
-    math.max(sub.map(_.width).getOrElse(0.0), sup.map(_.width + italicCorrection).getOrElse(0.0))
+    math.max(0.0, math.max(sub.map(_.width + subDx).getOrElse(0.0), sup.map(_.width + supDx).getOrElse(0.0)))
 
   val width: Double    = nucleus.width + scriptsWidth + (if sup.isEmpty && sub.isEmpty then 0.0 else scriptSpace)
   val xAdvance: Double = width
@@ -67,8 +70,8 @@ class MathScriptBox(
   def draw(t: Typesetter, x: Double, y: Double): Unit =
     box(t, x, y)
     nucleus.draw(t, x, y)
-    sup.foreach(_.draw(t, x + nucleus.width + italicCorrection, y - supShift))
-    sub.foreach(_.draw(t, x + nucleus.width, y + subShift))
+    sup.foreach(_.draw(t, x + nucleus.width + supDx, y - supShift))
+    sub.foreach(_.draw(t, x + nucleus.width + subDx, y + subShift))
 
   override def toString: String =
     s"MathScriptBox(nucleus=$nucleus, sup=$sup, sub=$sub, supShift=$supShift, subShift=$subShift)"

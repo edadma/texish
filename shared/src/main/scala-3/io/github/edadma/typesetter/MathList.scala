@@ -87,11 +87,22 @@ object MathList:
 
   /** An atom's nucleus, with its super/subscript attached if it has any. A script-less atom is just its
     * nucleus; otherwise the scripts are shifted into place by [[MathScriptBox]] using the nucleus font's
-    * script parameters and the nucleus's italic correction. */
+    * script parameters, with the nucleus's italic correction applied horizontally per [[scriptOffsets]]. */
   private def nucleusBox(a: MathAtom, mf: MathFont, cramped: Boolean): Box =
     if a.sup.isEmpty && a.sub.isEmpty then a.nucleus
     else
-      val p          = mf.scriptParams
-      val (up, down) = MathScriptBox.shifts(a.nucleus, a.sup, a.sub, p, cramped)
+      val p              = mf.scriptParams
+      val (up, down)     = MathScriptBox.shifts(a.nucleus, a.sup, a.sub, p, cramped)
+      val (supDx, subDx) = scriptOffsets(a.cls, a.italicCorrection)
 
-      new MathScriptBox(a.nucleus, a.sup, a.sub, up, down, a.italicCorrection, p.spaceAfterScript)
+      new MathScriptBox(a.nucleus, a.sup, a.sub, up, down, supDx, subDx, p.spaceAfterScript)
+
+  /** How a nucleus's italic correction offsets its scripts horizontally, returned as (superscript, subscript)
+    * shifts from the nucleus's right edge. For an ordinary atom the correction sets the superscript out to
+    * the right, clearing a slanted letter whose ink overhangs its advance. For a large operator it is a limit
+    * skew instead: the subscript tucks left under the slant while the superscript stays at the right edge —
+    * the characteristic placement of integral limits. (The font's per-corner kern cut-ins would refine both;
+    * they arrive with stretchy operators.) */
+  private def scriptOffsets(cls: MathClass, italicCorrection: Double): (Double, Double) =
+    if cls == MathClass.Op then (0.0, -italicCorrection)
+    else (italicCorrection, 0.0)
