@@ -345,18 +345,26 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // sqrt - 1 body arg: a square root. Math-mode only; the radicand is typeset by a nested math mode in the
-  // cramped current style, then a surd glyph tall enough to span it is set on the left with a vinculum drawn
-  // across the top. The result enters the list as an Ord atom.
+  // sqrt - an optional [degree] then 1 body arg: a square root, or a higher root when the degree is given
+  // (\sqrt[3]{x} is a cube root). Math-mode only; the radicand is typeset by a nested math mode in the cramped
+  // current style and the degree, if any, in scriptscript; a surd glyph tall enough to span the radicand is
+  // set on the left with a vinculum across the top, the degree tucked into its kink. Enters as an Ord atom.
   proc.registerPrimitive(
     "sqrt",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         t.mode match
           case parent: MathMode =>
-            val radicand = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+            val degreeTokens = readOptionalDegree(proc)
+            val radicand     = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+            val degree: Option[Box] = degreeTokens match
+              case Some(toks) =>
+                handler.mathSubFormula(proc, parent.style.rootDegree, toks) match
+                  case b: Box => Some(b)
+                  case _      => None
+              case None => None
 
-            if radicand ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeRadical(radicand)))
+            if radicand ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeRadical(radicand, degree)))
           case _ => handler.error("\\sqrt is only allowed in math mode", pos)
     },
   )
@@ -533,6 +541,36 @@ class SimplePrimitive(action: () => Any) extends Primitive:
 // Helper to evaluate an argument and get its value
 private def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
+
+// Read an optional bracketed argument like \sqrt's [degree]. Brackets are ordinary text characters, not
+// tokenizer-special, so the opening '[' may share a text token with the degree and the closing ']' may sit
+// mid-token; this scans across tokens, splitting text runs at the brackets and pushing back any tail after
+// ']'. Returns None when the next token is not a '[' run (no degree present), leaving the stream untouched.
+private def readOptionalDegree(proc: Processor): Option[Vector[Token]] =
+  proc.skipSpaces()
+  proc.peekToken() match
+    case Token.Text(s, sp) if s.startsWith("[") =>
+      proc.nextToken()
+      val out = Vector.newBuilder[Token]
+
+      def takeText(str: String, p: io.github.edadma.char_reader.CharReader): Boolean =
+        val idx = str.indexOf(']')
+        if idx < 0 then { if str.nonEmpty then out += Token.Text(str, p); false }
+        else
+          val before = str.substring(0, idx)
+          val after  = str.substring(idx + 1)
+          if before.nonEmpty then out += Token.Text(before, p)
+          if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, p)))
+          true
+
+      var closed = takeText(s.substring(1), sp)
+      while !closed && proc.hasMoreTokens do
+        proc.nextToken() match
+          case Token.Text(str, p) => closed = takeText(str, p)
+          case Token.EOF(_)       => closed = true
+          case other              => out += other
+      Some(out.result())
+    case _ => None
 
 // Read the delimiter that follows \left or \right: a single character (the first of the next text run, with
 // the rest pushed back) or a control sequence, resolved through MathDelimiters. `.` and any unrecognized

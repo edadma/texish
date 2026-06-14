@@ -133,6 +133,24 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     rad.width should be > full.glyphBox(0x1D465).width // surd plus the radicand
   }
 
+  "a radical degree (a cube root's index) widens the radical and rides above its baseline" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    val m   = new MathMode(t, full, MathStyle.Text)
+    val r   = { val s = new MathMode(t, full, MathStyle.Text.cramp); s.addChar('x'); s.result.asInstanceOf[Box] }
+    val deg = { val s = new MathMode(t, full, MathStyle.Text.rootDegree); s.addChar('3'); s.result.asInstanceOf[Box] }
+
+    val plain  = m.makeRadical(r).asInstanceOf[RadicalBox]
+    val rooted = m.makeRadical(r, Some(deg)).asInstanceOf[RadicalBox]
+
+    // the index never shrinks the radical, and Latin Modern's degree kerns/raise produce a finite, sane box;
+    // the precise left-of-stem, raised placement is pinned on the fixed-metric stub in MathRadicalTests
+    rooted.width should be >= plain.width
+    rooted.height should be >= plain.height
+    rooted.height.isFinite shouldBe true
+  }
+
   "a stretchy delimiter grows past the base glyph to span a tall target, centred on the axis" in {
     val t    = new Graphics2DTypesetter(dpi = 72)
     val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))

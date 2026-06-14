@@ -109,6 +109,11 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     noException should be thrownBy proc.process("$\\sqrt{x + 1} + \\sqrt{\\frac{a}{b}}$")
   }
 
+  "\\sqrt[3]{x} builds a cube root (an optional degree) without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\sqrt[3]{x} + \\sqrt[n+1]{x} + \\sqrt{y}$")
+  }
+
   "\\sqrt outside math is reported as a math-only command" in {
     val (_, proc) = fixture()
     val ex = the[ParserException] thrownBy proc.process("\\sqrt{x}")

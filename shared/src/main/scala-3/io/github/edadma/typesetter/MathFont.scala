@@ -77,9 +77,12 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
       case Some(m) =>
         val c = m.constants
         RadicalParams(
-          ruleThickness = c.value("radicalRuleThickness") * size,
-          verticalGap   = c.value(if display then "radicalDisplayStyleVerticalGap" else "radicalVerticalGap") * size,
-          extraAscender = c.value("radicalExtraAscender") * size,
+          ruleThickness    = c.value("radicalRuleThickness") * size,
+          verticalGap      = c.value(if display then "radicalDisplayStyleVerticalGap" else "radicalVerticalGap") * size,
+          extraAscender    = c.value("radicalExtraAscender") * size,
+          degreeRaise      = c.radicalDegreeBottomRaisePercent,
+          kernBeforeDegree = c.value("radicalKernBeforeDegree") * size,
+          kernAfterDegree  = c.value("radicalKernAfterDegree") * size,
         )
       case None => RadicalParams.texDefaults(size, display)
 

@@ -43,6 +43,26 @@ class MathRadicalTests extends AnyFreeSpec with Matchers:
     randX should be > surdX // the radicand sits to the right of the surd
   }
 
+  "a degree (a cube root's index) widens the radical and rides high to the surd's left" in {
+    val rec = new RecordingGlyphTypesetter
+    val bf  = base(rec)
+    val m   = new MathMode(rec, bf, MathStyle.Text)
+    val r   = part(rec, bf, MathStyle.Text.cramp, '8')
+    val deg = part(rec, bf, MathStyle.Text.rootDegree, '3')
+
+    val plain  = m.makeRadical(r).asInstanceOf[RadicalBox]
+    val rooted = m.makeRadical(r, Some(deg)).asInstanceOf[RadicalBox]
+
+    rooted.width should be > plain.width   // the degree adds width on the left
+    rooted.ascent should be >= plain.ascent
+
+    rec.draw(rooted, 0.0, 100.0)
+    val (_, degX, degY)   = rec.drawn.find { case (g, _, _) => g == '3'.toInt }.get
+    val (_, randX, randY) = rec.drawn.find { case (g, _, _) => g == '8'.toInt }.get
+    degX should be < randX // the index sits left of the radicand, in the surd's kink
+    degY should be < randY // and rides high — its baseline is above the radicand's
+  }
+
   "a radical enters the list as an Ord atom and lays out with positive size" in {
     val t  = new StubTypesetter
     val bf = base(t)

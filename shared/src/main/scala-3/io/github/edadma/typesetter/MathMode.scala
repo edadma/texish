@@ -69,12 +69,13 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
   /** Build a radical (`\sqrt`) over an already-laid-out radicand, using this list's font and style. The
     * radicand is expected to have been set in [[style]]`.cramp`. The surd glyph is chosen tall enough to
-    * span the radicand plus the bar and its clearance. */
-  def makeRadical(radicand: Box): Box =
+    * span the radicand plus the bar and its clearance. An optional `degree` (the index of a higher root,
+    * `\sqrt[3]{…}`) is expected to have been set in [[style]]`.rootDegree`. */
+  def makeRadical(radicand: Box, degree: Option[Box] = None): Box =
     val p      = mathFont.radicalParams(style.isDisplay)
     val target = p.verticalGap + p.ruleThickness + radicand.ascent + radicand.descent
 
-    new RadicalBox(t, mathFont.radicalGlyph(target), radicand, p)
+    new RadicalBox(t, mathFont.radicalGlyph(target), radicand, p, degree)
 
   /** Build a `\left…\right` delimited sub-formula: the already-laid-out inner formula flanked by stretchy
     * fences tall enough to span it about the math axis. Either delimiter may be absent (a null delimiter,

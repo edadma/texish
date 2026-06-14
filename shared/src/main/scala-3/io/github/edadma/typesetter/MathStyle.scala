@@ -31,6 +31,10 @@ case class MathStyle(size: MathSize, cramped: Boolean):
   /** The style a fraction denominator is set in: one size level smaller and always cramped. */
   def denom: MathStyle = MathStyle(fracSize, cramped = true)
 
+  /** The style a radical's degree (the small index of `\sqrt[3]{…}`) is set in: always scriptscript and
+    * cramped, regardless of the current style — a cube root's 3 is tiny even in display. */
+  def rootDegree: MathStyle = MathStyle(ScriptScript, cramped = true)
+
   /** Whether this is display style — display fractions/radicals use the wider gaps and shifts. */
   def isDisplay: Boolean = size == Display
 
