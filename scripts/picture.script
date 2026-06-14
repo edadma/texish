@@ -141,17 +141,16 @@ A data sequence drives the bars; \italic{\\forloop.index} positions each one.
 A skeletal benzene ring: a hexagon of bonds, inner lines for the aromatic
 double bonds, and atom labels placed with \italic{\\at}.
 
-\picture width:2in height:2in {
+\picture width:2.4in height:2in {
   \nofill \stroke{black} \linewidth{1.5pt}
   \polygon{108 72  90 103  54 103  36 72  54 41  90 41}
   \linewidth{1pt}
-  \line{99 67  85 92}
-  \line{63 92  49 67}
-  \line{63 52  99 52}
-  \fill{white} \stroke{white} \linewidth{0pt}
-  \rect{100 64 16 16}
-  \nofill \stroke{black}
-  \at anchor:west {110 72}{OH}
+  \line{98 74  86 93}
+  \line{58 93  46 74}
+  \line{60 49  84 49}
+  \linewidth{1.5pt}
+  \line{108 72  128 72}
+  \at anchor:west {132 72}{OH}
 }
 
 This page is set entirely by \TeXish: the prose, the running heads, and every
