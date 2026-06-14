@@ -613,7 +613,10 @@ object DefPrimitive extends Primitive:
         case _ => // shouldn't happen
       proc.skipSpaces()
 
-    val body = proc.readArgument(pos)
+    // Strip the braces that delimit the body in the \def syntax: a macro is pure token substitution and must not
+    // open a scope of its own, so a \set or \coordinate in its body lands in the caller's scope, as in TeX.
+    // Grouping inside a macro is whatever explicit { } the body itself contains.
+    val body = stripOuterBraces(proc.readArgument(pos))
     proc.handler.set(name, Value.Macro(params.result(), body, pos))
 
 object GdefPrimitive extends Primitive:

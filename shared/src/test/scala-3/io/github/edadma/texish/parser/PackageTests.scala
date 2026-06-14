@@ -63,6 +63,27 @@ class PackageTests extends AnyFreeSpec with Matchers:
     ly shouldBe 0.0 +- 1e-9
   }
 
+  "a coordinate named inside a macro persists to the caller (macro is not its own scope)" in {
+    val (t, proc) = fixture()
+    proc.process("\\use{chem}")
+    // \atom is a macro that calls \coordinate; the named point must survive past the macro for \bond to find it
+    proc.process(
+      "\\picture width:2in height:1in { \\atom{A}{(0,0)}{a} \\atom{B}{(100,0)}{b} \\bond{(A)}{(B)} }",
+    )
+    val ops = t.pictures.head.displayList
+    val Some(PictureOp.MoveTo(mx, _)) = ops.collectFirst { case m: PictureOp.MoveTo => m }: @unchecked
+    mx shouldBe 9.0 +- 1e-9 // bond from named A=(0,0), shortened by bondgap=9
+  }
+
+  "the chem \\tbond macro draws three parallel lines" in {
+    val (t, proc) = fixture()
+    proc.process("\\use{chem}")
+    proc.process(
+      "\\picture width:2in height:1in { \\coordinate{A}{(0,0)} \\coordinate{B}{(100,0)} \\tbond{(A)}{(B)} }",
+    )
+    t.pictures.head.displayList.count(_.isInstanceOf[PictureOp.MoveTo]) shouldBe 3
+  }
+
   "the chem \\dbond macro draws two parallel lines" in {
     val (t, proc) = fixture()
     proc.process("\\use{chem}")

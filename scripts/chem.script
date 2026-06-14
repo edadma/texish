@@ -1,0 +1,103 @@
+// chem package demonstration — every capability of the bundled chem package.
+// Render with:  texish scripts/chem.script
+
+\def headline {\italic{chem package} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+
+\font lmroman 12 regular
+
+\use{chem}
+
+\bold{The \italic{chem} package}
+
+Loaded with \italic{\\use{chem}}, the package draws chemical structures. Name an
+atom with \italic{\\atom}, then connect named atoms with \italic{\\bond} (single),
+\italic{\\dbond} (double), or \italic{\\tbond} (triple). Every bond is shortened
+at both ends so the atom labels stay clear. The package is written entirely in
+\TeXish: its bond geometry is computed with \italic{\\xof}, \italic{\\yof}, and
+\italic{\\calc} over the picture primitives — no engine code.
+
+\bold{Atoms and single bonds — water}
+
+\italic{\\atom} places a centred element label and names the point, and
+\italic{\\bond} joins two named atoms by their names.
+
+\picture width:2in height:1.4in {
+  \translate{72 34}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{O}{(0, 44)}{O}
+  \atom{Ha}{(-36, 4)}{H}
+  \atom{Hb}{(36, 4)}{H}
+  \bond{(O)}{(Ha)}
+  \bond{(O)}{(Hb)}
+}
+
+\bold{Double bonds — carbon dioxide}
+
+\italic{\\dbond} draws two parallel lines. Here the linear O=C=O of carbon
+dioxide, both bonds double.
+
+\picture width:3in height:0.8in {
+  \translate{34 30}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{O1}{(0, 0)}{O}
+  \atom{C}{(72, 0)}{C}
+  \atom{O2}{(144, 0)}{O}
+  \dbond{(O1)}{(C)}
+  \dbond{(C)}{(O2)}
+}
+
+\bold{Triple bonds — acetylene}
+
+\italic{\\tbond} draws a triple bond — three parallel lines. Acetylene is
+H–C≡C–H, a triple bond between the carbons.
+
+\picture width:3in height:0.7in {
+  \translate{20 26}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{Ha}{(0, 0)}{H}
+  \atom{C1}{(54, 0)}{C}
+  \atom{C2}{(120, 0)}{C}
+  \atom{Hb}{(174, 0)}{H}
+  \bond{(Ha)}{(C1)}
+  \tbond{(C1)}{(C2)}
+  \bond{(C2)}{(Hb)}
+}
+
+\bold{Rings — benzene}
+
+Coordinates make rings easy: place the carbons and hydrogens on two polar rings,
+then loop the bonds, alternating single and double around the ring.
+
+\picture width:3in height:3in {
+  \translate{108 108}
+  \set R {46} \set HR {86}
+  \stroke{black} \linewidth{1.2pt}
+  \for\k{\range{0}{5}}{
+    \set a {\calc{k*60}} \set b {\calc{(k+1)*60}}
+    \if{\calc{k % 2}}
+      \bond{(a:R)}{(b:R)}
+    \else
+      \dbond{(a:R)}{(b:R)}
+    \fi
+    \bond{(a:R)}{(a:HR)}
+    \at anchor:center {(a:R)}{C}
+    \at anchor:center {(a:HR)}{H}
+  }
+}
+
+\bold{Tuning}
+
+The clearance at each bond end and the gap of a multiple bond are the variables
+\italic{bondgap} and \italic{doublesep}; set them to restyle every bond. Below,
+the same ethene C=C drawn at the defaults and then with a wider double-bond gap.
+
+\picture width:3in height:0.9in {
+  \translate{30 30}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{C1}{(0, 0)}{C}  \atom{C2}{(72, 0)}{C}
+  \dbond{(C1)}{(C2)}
+  \set doublesep {5}
+  \atom{C3}{(150, 0)}{C}  \atom{C4}{(222, 0)}{C}
+  \dbond{(C3)}{(C4)}
+}

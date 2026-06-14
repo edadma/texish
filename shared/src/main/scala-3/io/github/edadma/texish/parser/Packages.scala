@@ -56,6 +56,23 @@ object Packages:
         (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
 }
 
+// \tbond{A}{B} — a triple bond: a central line flanked by two parallel lines a little wider apart.
+\def tbond a b {
+  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
+  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
+  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
+  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
+  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
+  \set chemOx {\calc{-chemUy * doublesep * 1.8}}
+  \set chemOy {\calc{chemUx * doublesep * 1.8}}
+  \line{(chemAx + chemUx*bondgap, chemAy + chemUy*bondgap)
+        (chemBx - chemUx*bondgap, chemBy - chemUy*bondgap)}
+  \line{(chemAx + chemUx*bondgap + chemOx, chemAy + chemUy*bondgap + chemOy)
+        (chemBx - chemUx*bondgap + chemOx, chemBy - chemUy*bondgap + chemOy)}
+  \line{(chemAx + chemUx*bondgap - chemOx, chemAy + chemUy*bondgap - chemOy)
+        (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
+}
+
 // \atom{name}{coord}{label} — name a coordinate and set its element label, centred on the point.
 \def atom n c l {
   \coordinate{\n}{\c}
