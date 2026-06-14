@@ -133,6 +133,19 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     rad.width should be > full.glyphBox(0x1D465).width // surd plus the radicand
   }
 
+  "the surd is sized to the nearest variant, not rounded up to a far taller one" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    // Latin Modern's surd variants step coarsely (~14.4 then ~21.6 at 12pt). A target between them must land
+    // on the nearer (shorter) glyph — rounding up to the far taller one is what made the surd dive below the
+    // radicand and float its bar high above it.
+    val target  = 15.5
+    val nearer  = full.radicalGlyph(target).height
+    nearer should be < 18.0          // the ~14.4 variant, not the ~21.6 one
+    nearer should be > 13.0          // but still a real, near-target surd
+  }
+
   "a radical degree (a cube root's index) widens the radical and rides above its baseline" in {
     val t    = new Graphics2DTypesetter(dpi = 72)
     val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))

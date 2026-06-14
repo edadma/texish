@@ -28,9 +28,10 @@ object RadicalParams:
 
 /** A built radical: a surd glyph on the left and the radicand to its right, with a vinculum (overbar) drawn
   * from the surd's top across the radicand, the font's gap of clearance above the radicand. The surd glyph
-  * is chosen tall enough to span the radicand; when the available glyph is taller than strictly needed, the
-  * excess is split evenly above and below — raising the bar and letting the surd dip below the baseline —
-  * exactly as TeXbook rule 11 distributes it, so the radicand stays centred in the surd.
+  * is chosen tall enough to span the radicand; the bar sits exactly the font's vertical gap above the
+  * radicand, and any surd height beyond what the radicand needs extends below the baseline — the OpenType
+  * MATH model, which keeps the clearance over the radicand tight however much taller than necessary the
+  * available surd glyph happens to be.
   *
   * An optional `degree` is the small index of a higher root (`\sqrt[3]{…}`): set in scriptscript style and
   * tucked into the surd's left kink, its bottom raised by a fraction of the surd's height, with the font's
@@ -39,11 +40,8 @@ object RadicalParams:
 class RadicalBox(t: Typesetter, surd: Box, radicand: Box, p: RadicalParams, degree: Option[Box] = None)
     extends ContentBox:
 
-  // the surd should cover the radicand plus the gap and the bar; any height beyond that is shared above/below
-  private val needed = p.verticalGap + p.ruleThickness + radicand.ascent + radicand.descent
-  private val excess = math.max(0.0, surd.height - needed)
-
-  private val gap        = p.verticalGap + excess / 2     // raise the bar by half the surplus
+  // the bar clears the radicand by exactly the font's vertical gap; surd height beyond that drops below
+  private val gap        = p.verticalGap
   private val barBottom  = radicand.ascent + gap
   private val barTop     = barBottom + p.ruleThickness
 

@@ -108,8 +108,31 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
                 new GlyphBox(t, gc.variants.lastOption.map(_.glyph).getOrElse(baseIdx), font, t.currentColor)
       case None => new GlyphBox(t, baseIdx, font, t.currentColor)
 
-  /** A surd glyph (√) at least `targetHeight` points tall — the vertical variant, or assembly, of √. */
-  def radicalGlyph(targetHeight: Double): Box = verticalVariant(0x221A, targetHeight)
+  /** A surd glyph (√) sized for a `targetHeight`-tall radicand. Unlike a delimiter — which must reach its
+    * target — a surd looks best at the size *nearest* the target: the precomposed variants step coarsely, and
+    * rounding up to the smallest one that reaches the target can land on a glyph far taller than needed, whose
+    * point then dives well below the radicand. So this picks the variant closest to the target, preferring a
+    * slightly short one (its point simply sits a little higher) over a grossly oversized one. Past the largest
+    * variant it assembles the extensible surd to span the target; with no MATH table it is the base glyph. */
+  def radicalGlyph(targetHeight: Double): Box =
+    val baseIdx = glyphIndex(0x221A)
+
+    math.flatMap(_.variants.vertical.get(baseIdx)) match
+      case Some(gc) if gc.variants.nonEmpty =>
+        val sized = gc.variants.map(v => (v.glyph, v.advance * size))
+        val over  = sized.find(_._2 >= targetHeight)
+        val under = sized.filter(_._2 < targetHeight).lastOption
+
+        (over, under) match
+          case (Some((g, h)), Some((ug, uh))) =>
+            val glyph = if targetHeight - uh <= h - targetHeight then ug else g // the nearer of the two
+            new GlyphBox(t, glyph, font, t.currentColor)
+          case (Some((g, _)), None) => new GlyphBox(t, g, font, t.currentColor)
+          case (None, _) =>
+            gc.assembly match
+              case Some(asm) => new GlyphAssemblyBox(t, font, t.currentColor, asm, targetHeight, minConnectorOverlap)
+              case None      => new GlyphBox(t, sized.last._1, font, t.currentColor)
+      case _ => new GlyphBox(t, baseIdx, font, t.currentColor)
 
   /** A stretchy delimiter at least `targetHeight` points tall, centred on the math axis so it brackets a
     * formula symmetrically — the box `\left`/`\right` set the fence with. */
