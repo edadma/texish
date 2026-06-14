@@ -1,0 +1,74 @@
+package io.github.edadma.texish
+
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
+
+import java.io.File
+import java.nio.file.Files
+
+/** The command-line tool turns a texish source document into PDF or PNG files on disk. These tests drive the
+  * same rendering helpers the `texish` executable uses and check that real, non-trivial output files appear.
+  */
+class CliTests extends AnyFreeSpec with Matchers:
+
+  private val source =
+    "A short document with inline math $x^2 + y^2 = z^2$ and a fraction $\\frac{a+b}{c}$.\n\n"
+
+  "renderPdf writes a non-empty PDF with a %PDF header" in {
+    val out = File.createTempFile("texish-cli", ".pdf")
+
+    try
+      renderPdf(source, out.getAbsolutePath, "letter")
+
+      out.length should be > 0L
+
+      val head = new String(Files.readAllBytes(out.toPath).take(5))
+      head shouldBe "%PDF-"
+    finally out.delete()
+  }
+
+  "renderPng writes one PNG per page with a PNG signature" in {
+    val dir  = Files.createTempDirectory("texish-cli").toFile
+    val base = new File(dir, "page").getAbsolutePath
+
+    try
+      // two pages, so the helper numbers the files page_1.png / page_2.png
+      renderPng("first\n\n\\vfill\\eject second\n\n", base, "letter", "sd")
+
+      val one = new File(dir, "page_1.png")
+      val two = new File(dir, "page_2.png")
+
+      one.exists shouldBe true
+      two.exists shouldBe true
+
+      val sig = Files.readAllBytes(one.toPath).take(4).map(_ & 0xff)
+      sig shouldBe Array(0x89, 0x50, 0x4e, 0x47) // \x89 P N G
+    finally
+      dir.listFiles.foreach(_.delete())
+      dir.delete()
+  }
+
+  "a single-page PNG keeps the base name with a .png extension" in {
+    val dir  = Files.createTempDirectory("texish-cli").toFile
+    val base = new File(dir, "solo").getAbsolutePath
+
+    try
+      renderPng(source, base, "letter", "sd")
+
+      new File(dir, "solo.png").exists shouldBe true
+    finally
+      dir.listFiles.foreach(_.delete())
+      dir.delete()
+  }
+
+  "ensureExtension only appends when the extension is missing" in {
+    ensureExtension("doc", "pdf") shouldBe "doc.pdf"
+    ensureExtension("doc.pdf", "pdf") shouldBe "doc.pdf"
+    ensureExtension("doc.PDF", "pdf") shouldBe "doc.PDF" // case-insensitive match, original kept
+  }
+
+  "stripExtension removes a trailing extension but leaves bare names alone" in {
+    stripExtension("doc.pdf") shouldBe "doc"
+    stripExtension("doc") shouldBe "doc"
+    stripExtension(".hidden") shouldBe ".hidden" // leading dot is not an extension separator
+  }

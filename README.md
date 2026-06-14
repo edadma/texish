@@ -18,6 +18,30 @@ a Cairo image-and-PDF backend on Native.
 
 Full documentation is coming — a dedicated docs site will be linked here once it's published.
 
+## Command-line tool
+
+The Scala Native build links a standalone `texish` executable that turns a source document into a PDF
+(or one PNG per page) using the Cairo backend:
+
+```
+texish [options] [input-file]
+
+  input-file                    texish source to typeset; reads standard input if omitted
+  -o, --output <file>           output path (default: out, or the input file's base name)
+  -t, --type <pdf | png>        output type (default: pdf)
+  -p, --paper <a4 | letter>     paper size (default: letter)
+  -r, --resolution <sd|hd|fhd>  PNG device resolution (default: hd)
+```
+
+```sh
+texish doc.texish -o doc -p a4          # writes doc.pdf
+texish doc.texish -t png -r fhd         # writes doc.png (or doc_1.png, doc_2.png, … for multiple pages)
+cat doc.texish | texish -o doc          # read the source from standard input
+```
+
+Build the binary with `sbt texishNative/nativeLink`; it is produced at
+`native/target/scala-3.8.4/texish`.
+
 ## Installation
 
 texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an sbt build with the
