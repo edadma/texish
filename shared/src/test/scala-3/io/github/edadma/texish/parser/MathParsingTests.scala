@@ -232,3 +232,31 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     // x stays an atom beside the fraction; the \over is confined to its group
     noException should be thrownBy proc.process("$x{a \\over b}y$")
   }
+
+  "\\matrix and its bracketed forms lay out without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\matrix{a & b \\cr c & d}$")
+    noException should be thrownBy { val (_, p) = fixture(); p.process("$\\pmatrix{1 & 0 \\cr 0 & 1}$") }
+    noException should be thrownBy { val (_, p) = fixture(); p.process("$\\bmatrix{x \\cr y \\cr z}$") }
+  }
+
+  "\\cases lays out a left-braced two-column array without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$f(x) = \\cases{1 & x > 0 \\cr 0 & x = 0 \\cr -1 & x < 0}$")
+  }
+
+  "matrix cells may themselves be fractions and scripts" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\pmatrix{\\frac{a}{b} & x^2 \\cr \\sqrt{y} & z_i}$")
+  }
+
+  "a matrix row may end with \\\\ as well as \\cr, and a trailing separator adds no blank row" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\matrix{a & b \\\\ c & d \\\\}$")
+  }
+
+  "\\matrix outside math is reported as a math-only command" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("\\matrix{a & b}")
+    ex.getMessage should include("math mode")
+  }

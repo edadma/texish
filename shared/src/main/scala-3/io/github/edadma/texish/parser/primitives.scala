@@ -493,6 +493,35 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       },
     )
 
+  // matrix and its bracketed forms - 1 body arg: a grid of math cells, & between columns and \cr (or \\)
+  // between rows. Math-mode only; each cell is typeset by a nested math mode in the array's cell style (text
+  // style, so a matrix in a display does not enlarge its entries), the cells are aligned into columns and
+  // baseline-spaced rows centred on the math axis, and \pmatrix/\bmatrix/\cases wrap the array in stretchy
+  // fences sized to span it. \cases sets its columns flush left under a single left brace. Enters as an Inner
+  // atom, so a matrix gets the spacing of a parenthesised subexpression.
+  def matrixPrimitive(left: Option[Int], right: Option[Int], leftAlign: Boolean): Primitive =
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val body = stripOuterBraces(proc.readArgument(pos))
+            val rows = splitMatrixBody(body).map(_.map { cellTokens =>
+              handler.mathSubFormula(proc, parent.cellStyle, cellTokens) match
+                case b: Box => b
+                case _      => HBox(Vector.empty): Box
+            })
+            val array = parent.makeMatrix(rows, leftAlign)
+            val box   = if left.isEmpty && right.isEmpty then array else parent.makeDelimited(left, array, right)
+
+            parent.addNode(MathAtom(MathClass.Inner, box))
+          case _ => handler.error("\\matrix is only allowed in math mode", pos)
+    }
+
+  proc.registerPrimitive("matrix", matrixPrimitive(None, None, leftAlign = false))
+  proc.registerPrimitive("pmatrix", matrixPrimitive(Some(0x28), Some(0x29), leftAlign = false))
+  proc.registerPrimitive("bmatrix", matrixPrimitive(Some(0x5B), Some(0x5D), leftAlign = false))
+  proc.registerPrimitive("cases", matrixPrimitive(Some(0x7B), None, leftAlign = true))
+
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
     "noalign",
@@ -717,6 +746,39 @@ private def readOptionalDegree(proc: Processor): Option[Vector[Token]] =
           case other              => out += other
       Some(out.result())
     case _ => None
+
+// Split a math-array body into rows of cells. At brace depth zero the column-separator active character `&`
+// ends a cell and `\cr` or `\\` ends a row; nested {…} groups pass through verbatim so a braced cell is not
+// split. A trailing row that holds nothing but the empty cell left by a final `\cr` is dropped, so a body
+// that ends in a row separator does not add a spurious blank row. Each cell is the raw token run between
+// separators, to be laid out by a nested math mode.
+private def splitMatrixBody(body: Vector[Token]): Vector[Vector[Vector[Token]]] =
+  val rows  = Vector.newBuilder[Vector[Vector[Token]]]
+  var row   = Vector.newBuilder[Vector[Token]]
+  var cell  = Vector.newBuilder[Token]
+  var depth = 0
+
+  def endCell(): Unit = { row += cell.result(); cell = Vector.newBuilder[Token] }
+  def endRow(): Unit  = { endCell(); rows += row.result(); row = Vector.newBuilder[Vector[Token]] }
+
+  for tok <- body do
+    tok match
+      case Token.BeginGroup(_)                     => depth += 1; cell += tok
+      case Token.EndGroup(_)                       => depth -= 1; cell += tok
+      case Token.Active('&', _) if depth == 0      => endCell()
+      case Token.ControlSeq("cr", _) if depth == 0 => endRow()
+      case Token.ControlSeq("\\", _) if depth == 0 => endRow()
+      case _                                       => cell += tok
+
+  endRow()
+
+  def cellEmpty(c: Vector[Token]): Boolean = c.forall {
+    case _: Token.Space | _: Token.Newline => true
+    case _                                 => false
+  }
+
+  val all = rows.result()
+  if all.nonEmpty && all.last.forall(cellEmpty) then all.init else all
 
 // Read the delimiter that follows \left or \right: a single character (the first of the next text run, with
 // the rest pushed back) or a control sequence, resolved through MathDelimiters. `.` and any unrecognized

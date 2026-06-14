@@ -133,6 +133,17 @@ class MathMode(
 
     new AccentBox(nucleus, accent, shift, nucleusAttach - accentAttach)
 
+  /** The style a matrix's cells are set in: a matrix sets its entries in text (or smaller) style, never the
+    * enlarged display style, so a matrix inside a display does not blow its entries up. */
+  def cellStyle: MathStyle = if style.isDisplay then MathStyle.Text else style
+
+  /** Build a math array (`\matrix`, and the bracketed `\pmatrix`/`\bmatrix`/`\cases`): a grid of already-
+    * laid-out cells, columns aligned and rows baseline-spaced, centred on the math axis so a delimiter set
+    * around it spans it symmetrically. Columns are centred for a matrix, flush left for `\cases`. */
+  def makeMatrix(rows: Vector[Vector[Box]], leftAlign: Boolean): Box =
+    val em = mathFont.size
+    new MatrixBox(rows, mathFont.axisHeight, rowSep = 0.45 * em, colSep = 0.9 * em, leftAlign)
+
   /** Build a `\left…\right` delimited sub-formula: the already-laid-out inner formula flanked by stretchy
     * fences tall enough to span it about the math axis. Either delimiter may be absent (a null delimiter,
     * `\left.` or `\right.`). The fences are sized to cover the inner box's reach above and below the axis,

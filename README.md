@@ -3,9 +3,10 @@
 A TeX-style document layout and rendering engine for Scala, cross-built for the JVM, Scala Native,
 and Scala.js. Body text is set in Latin Modern Roman, with TeX-style math mode set in the matching
 Latin Modern Math through an OpenType `MATH` table. Math covers inline `$…$` and centered display
-`$$…$$` (with `\eqno` equation numbers): atoms and spacing, super/subscripts, fractions, radicals
-(including higher roots), stretchy delimiters, accents, and big operators whose limits stack in
-display style.
+`$$…$$` (with `\eqno` equation numbers): atoms and spacing, super/subscripts, fractions (`\frac` and
+the infix `\over`/`\atop`), radicals (including higher roots), stretchy delimiters, accents, big
+operators whose limits stack in display style, and matrices (`\matrix`, `\pmatrix`, `\bmatrix`,
+`\cases`).
 
 It breaks paragraphs into lines and lines into pages the way TeX does — Knuth-Plass line breaking,
 Liang hyphenation, legal page breaks with widow/orphan control, footnotes, and glue/kern spacing in
