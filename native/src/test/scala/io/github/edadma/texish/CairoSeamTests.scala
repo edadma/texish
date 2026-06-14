@@ -81,3 +81,22 @@ class CairoSeamTests extends AnyFreeSpec with Matchers:
 
     inkOnRow(dash = true) should be < inkOnRow(dash = false)
   }
+
+  // A full PictureBox replayed through the real backend: a rect drawn near the bottom of the box's own y-up
+  // space must land near the bottom of the page, confirming the y-up→device flip points the right way.
+  "a PictureBox draws its display list with y up, origin at the bottom" in {
+    val (t, s) = page()
+
+    val pm = new PictureMode(t, 100, 100)
+    pm.setFill(Color("red"))
+    pm.rect(0, 0, 100, 20) // a strip along the bottom edge in picture-local coordinates
+    val box = pm.result.asInstanceOf[PictureBox]
+
+    box.draw(t, 0, 100) // baseline at the bottom of a 100-tall page
+
+    val (r, g, b) = rgb(s, 50, 90) // near the page bottom — inside the strip
+    r should be > 200
+    g should be < 60
+    b should be < 60
+    luminance(s, 50, 10) should be > 240 // near the page top — above the strip, still white
+  }

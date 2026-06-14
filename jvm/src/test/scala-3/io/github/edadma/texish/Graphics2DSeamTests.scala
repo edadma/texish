@@ -72,3 +72,21 @@ class Graphics2DSeamTests extends AnyFreeSpec with Matchers:
 
     inkOnRow(dash = true) should be < inkOnRow(dash = false)
   }
+
+  // A full PictureBox replayed through the real backend: a rect drawn near the bottom of the box's own y-up
+  // space must land near the bottom of the page, confirming the y-up→device flip points the right way.
+  "a PictureBox draws its display list with y up, origin at the bottom" in {
+    val (t, img) = page()
+
+    val pm = new PictureMode(t, 100, 100)
+    pm.setFill(Color("red"))
+    pm.rect(0, 0, 100, 20) // a strip along the bottom edge in picture-local coordinates
+    val box = pm.result.asInstanceOf[PictureBox]
+
+    box.draw(t, 0, 100) // baseline at the bottom of a 100-tall page
+
+    red(img.getRGB(50, 90)) should be > 200    // near the page bottom — inside the strip
+    green(img.getRGB(50, 90)) should be < 60
+    blue(img.getRGB(50, 90)) should be < 60
+    luminance(img.getRGB(50, 10)) should be > 240 // near the page top — above the strip, still white
+  }
