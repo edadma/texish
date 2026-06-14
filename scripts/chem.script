@@ -6,6 +6,10 @@
 
 \font lmroman 12 regular
 
+// keep natural spacing between blocks; collect leftover space at the page bottom
+// rather than stretching the gaps to fill the page (the default)
+\set raggedbottom {1}
+
 \use{chem}
 
 \bold{The \italic{chem} package}
@@ -69,8 +73,8 @@ H–C≡C–H, a triple bond between the carbons.
 Coordinates make rings easy: place the carbons and hydrogens on two polar rings,
 then loop the bonds, alternating single and double around the ring.
 
-\picture width:3in height:3in {
-  \translate{108 108}
+\picture width:2.7in height:2.6in {
+  \translate{97 94}
   \set R {46} \set HR {86}
   \stroke{black} \linewidth{1.2pt}
   \for\k{\range{0}{5}}{
