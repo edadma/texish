@@ -54,8 +54,8 @@ lazy val typesetter = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     organization := "io.github.edadma",
     libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "char_reader"    % "0.1.27",
-      "io.github.edadma" %%% "cross_platform" % "0.1.6",
+      "io.github.edadma" %%% "char_reader"    % "0.1.29",
+      "io.github.edadma" %%% "cross_platform" % "0.1.7",
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
