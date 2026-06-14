@@ -72,3 +72,12 @@ class CliTests extends AnyFreeSpec with Matchers:
     stripExtension("doc") shouldBe "doc"
     stripExtension(".hidden") shouldBe ".hidden" // leading dot is not an extension separator
   }
+
+  "the default output base lands beside the input file, not in the current directory" in {
+    // no -o: keep the input's directory, drop the extension — so the output sits next to the source
+    defaultOutputBase(Some("scripts/picture.script"), None) shouldBe "scripts/picture"
+    defaultOutputBase(Some("/tmp/sub/doc.texish"), None) shouldBe "/tmp/sub/doc"
+    defaultOutputBase(Some("bare.texish"), None) shouldBe "bare" // no directory component
+    defaultOutputBase(None, None) shouldBe "out"                 // reading stdin
+    defaultOutputBase(Some("scripts/picture.script"), Some("/x/y")) shouldBe "/x/y" // explicit -o wins
+  }

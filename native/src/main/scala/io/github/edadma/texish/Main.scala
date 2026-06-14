@@ -40,7 +40,7 @@ private def fail(msg: String): Nothing =
       opt[String]('o', "output")
         .valueName("<file>")
         .action((x, c) => c.copy(output = Some(x)))
-        .text("output path (default: out, or the input file's base name)"),
+        .text("output path (default: the input file's path with the output extension, or out)"),
       opt[String]('t', "type")
         .valueName("<pdf | png>")
         .action((x, c) => c.copy(typ = x))
@@ -91,11 +91,7 @@ private def render(config: Config): Unit =
         if isatty(0) == 1 then fail("no input file given and standard input is a terminal")
         Source.stdin.mkString
 
-  // default output base: explicit, else the input file's name without extension, else "out"
-  val base =
-    config.output.getOrElse(
-      config.input.map(p => stripExtension(new java.io.File(p).getName)).getOrElse("out"),
-    )
+  val base = defaultOutputBase(config.input, config.output)
 
   config.typ match
     case "pdf" => renderPdf(source, ensureExtension(base, "pdf"), config.paper)
@@ -154,6 +150,19 @@ private def paperDimensions(paper: String, t: Typesetter): (Double, Double) =
   paper match
     case "letter" => (8.5 * t.in, 11 * t.in)
     case "a4"     => (210 * t.mm, 297 * t.mm)
+
+/** The output base path: an explicit `-o` wins; otherwise the input file's own path with its extension dropped
+  * but its directory kept, so the result lands beside the source rather than in the current directory; with no
+  * input file (reading stdin) it is "out".
+  */
+private[texish] def defaultOutputBase(input: Option[String], output: Option[String]): String =
+  output.getOrElse(
+    input.map { p =>
+      val f    = new java.io.File(p)
+      val name = stripExtension(f.getName)
+      Option(f.getParentFile).map(d => new java.io.File(d, name).getPath).getOrElse(name)
+    }.getOrElse("out"),
+  )
 
 private[texish] def stripExtension(name: String): String =
   val dot = name.lastIndexOf('.')
