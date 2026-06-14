@@ -5,6 +5,8 @@ import io.github.edadma.libcairo.{
   Context,
   FontFace as CairoFontFace,
   Glyph,
+  LineCap as CairoLineCap,
+  LineJoin as CairoLineJoin,
   Surface,
   fontFaceCreateForFTFace,
   imageSurfaceCreateFromPNG,
@@ -109,3 +111,42 @@ abstract class CairoTypesetter extends Typesetter:
     ctx.setSourceSurface(image, x, y)
     ctx.paint()
     ctx.restore()
+
+  // Picture-graphics seam — thin pass-throughs onto the Cairo context, which models exactly this vocabulary.
+
+  override def gsave(): Unit    = ctx.save()
+  override def grestore(): Unit = ctx.restore()
+
+  override def translate(dx: Double, dy: Double): Unit = ctx.translate(dx, dy)
+  override def scale(sx: Double, sy: Double): Unit     = ctx.scale(sx, sy)
+  override def rotate(radians: Double): Unit           = ctx.rotate(radians)
+
+  override def newPath(): Unit           = ctx.newPath()
+  override def moveTo(x: Double, y: Double): Unit = ctx.moveTo(x, y)
+  override def lineTo(x: Double, y: Double): Unit = ctx.lineTo(x, y)
+
+  override def curveTo(c1x: Double, c1y: Double, c2x: Double, c2y: Double, x: Double, y: Double): Unit =
+    ctx.curveTo(c1x, c1y, c2x, c2y, x, y)
+
+  override def arc(cx: Double, cy: Double, r: Double, a0: Double, a1: Double, negative: Boolean): Unit =
+    if negative then ctx.arcNegative(cx, cy, r, a0, a1) else ctx.arc(cx, cy, r, a0, a1)
+
+  override def closePath(): Unit = ctx.closePath()
+
+  override def fillPath(preserve: Boolean): Unit = if preserve then ctx.fillPreserve() else ctx.fill()
+  override def strokePath(): Unit                = ctx.stroke()
+  override def clipPath(): Unit                  = ctx.clip()
+
+  override def setDash(pattern: Seq[Double], offset: Double): Unit = ctx.setDash(pattern, offset)
+
+  override def setLineCap(cap: LineCap): Unit = ctx.setLineCap(cap match
+    case LineCap.Butt   => CairoLineCap.BUTT
+    case LineCap.Round  => CairoLineCap.ROUND
+    case LineCap.Square => CairoLineCap.SQUARE,
+  )
+
+  override def setLineJoin(join: LineJoin): Unit = ctx.setLineJoin(join match
+    case LineJoin.Miter => CairoLineJoin.MITER
+    case LineJoin.Round => CairoLineJoin.ROUND
+    case LineJoin.Bevel => CairoLineJoin.BEVEL,
+  )

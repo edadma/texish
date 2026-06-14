@@ -1,8 +1,9 @@
 package io.github.edadma.texish
 
 import java.awt.font.{FontRenderContext, TextLayout}
+import java.awt.geom.{AffineTransform, GeneralPath}
 import java.awt.image.BufferedImage
-import java.awt.{BasicStroke, Graphics2D, RenderingHints, Font as JFont}
+import java.awt.{BasicStroke, Graphics2D, Paint as JPaint, RenderingHints, Shape as JShape, Font as JFont}
 import java.io.File
 import java.nio.file.{Files, Paths}
 import javax.imageio.ImageIO
@@ -72,7 +73,9 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
   def setColor(color: Color): Unit =
     g.setColor(new java.awt.Color(color.redInt, color.greenInt, color.blueInt, color.alphaInt))
 
-  def setLineWidth(width: Double): Unit = g.setStroke(new BasicStroke(width.toFloat))
+  def setLineWidth(width: Double): Unit =
+    lineWidth = width.toFloat
+    rebuildStroke()
 
   // geometry goes through Shape so fractional coordinates and sizes rasterize by coverage: a rule thinner
   // than a device pixel (0.4pt at screen resolutions) still leaves proportional ink instead of truncating to
@@ -152,5 +155,137 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
     g.drawImage(image, x.toInt, y.toInt, null)
+
+  // Picture-graphics seam. java.awt has no implicit current-path or device stroke state, so this layer keeps
+  // its own: a GeneralPath accumulator built up by the path ops and painted by fill/stroke, and the stroke
+  // parameters (width, dash, caps, joins) tracked as fields so each can be set independently and combined into
+  // one BasicStroke. Transforms and clip compose on the Graphics2D itself.
+
+  private var path: GeneralPath = new GeneralPath
+
+  // BasicStroke(width) defaults to square caps and miter joins; mirror that so an engine rule drawn through
+  // setLineWidth keeps rendering exactly as before this seam existed.
+  private var lineWidth: Float        = 1f
+  private var lineCap: Int            = BasicStroke.CAP_SQUARE
+  private var lineJoin: Int           = BasicStroke.JOIN_MITER
+  private var dashArray: Array[Float] = null
+  private var dashPhase: Float        = 0f
+
+  private def rebuildStroke(): Unit =
+    g.setStroke(
+      if dashArray == null || dashArray.isEmpty then new BasicStroke(lineWidth, lineCap, lineJoin)
+      else new BasicStroke(lineWidth, lineCap, lineJoin, 10f, dashArray, dashPhase),
+    )
+
+  private case class GState(
+      transform: AffineTransform,
+      clip: JShape | Null,
+      paint: JPaint,
+      lineWidth: Float,
+      lineCap: Int,
+      lineJoin: Int,
+      dashArray: Array[Float],
+      dashPhase: Float,
+  )
+
+  private var gstack: List[GState] = Nil
+
+  override def gsave(): Unit =
+    gstack ::= GState(g.getTransform, g.getClip, g.getPaint, lineWidth, lineCap, lineJoin, dashArray, dashPhase)
+
+  override def grestore(): Unit =
+    gstack match
+      case s :: rest =>
+        gstack = rest
+        g.setTransform(s.transform)
+        g.setClip(s.clip)
+        g.setPaint(s.paint)
+        lineWidth = s.lineWidth
+        lineCap = s.lineCap
+        lineJoin = s.lineJoin
+        dashArray = s.dashArray
+        dashPhase = s.dashPhase
+        rebuildStroke()
+      case Nil => // unbalanced restore: ignore, as the rasterizer's own stack would
+
+  override def translate(dx: Double, dy: Double): Unit = g.translate(dx, dy)
+  override def scale(sx: Double, sy: Double): Unit     = g.scale(sx, sy)
+  override def rotate(radians: Double): Unit           = g.rotate(radians)
+
+  override def newPath(): Unit                    = path = new GeneralPath
+  override def moveTo(x: Double, y: Double): Unit = path.moveTo(x, y)
+  override def lineTo(x: Double, y: Double): Unit = path.lineTo(x, y)
+
+  override def curveTo(c1x: Double, c1y: Double, c2x: Double, c2y: Double, x: Double, y: Double): Unit =
+    path.curveTo(c1x, c1y, c2x, c2y, x, y)
+
+  // Approximate the arc with cubic Béziers (≤90° per segment) using the same parametric circle
+  // point = (cx + r·cosθ, cy + r·sinθ) that Cairo's native arc traces, so both backends draw the same curve
+  // under the same transform. The control-handle length k = 4/3·tan(Δ/4) is the standard arc-to-Bézier fit.
+  override def arc(cx: Double, cy: Double, r: Double, a0: Double, a1: Double, negative: Boolean): Unit =
+    var end = a1
+    if !negative then while end < a0 do end += 2 * math.Pi
+    else while end > a0 do end -= 2 * math.Pi
+
+    val sweep = end - a0
+    val nseg  = math.max(1, math.ceil(math.abs(sweep) / (math.Pi / 2)).toInt)
+    val delta = sweep / nseg
+    val k     = 4.0 / 3.0 * math.tan(delta / 4)
+
+    val sx = cx + r * math.cos(a0)
+    val sy = cy + r * math.sin(a0)
+    if path.getCurrentPoint == null then path.moveTo(sx, sy) else path.lineTo(sx, sy)
+
+    var theta = a0
+    var i     = 0
+    while i < nseg do
+      val t2  = theta + delta
+      val p1x = cx + r * math.cos(theta)
+      val p1y = cy + r * math.sin(theta)
+      val p2x = cx + r * math.cos(t2)
+      val p2y = cy + r * math.sin(t2)
+      path.curveTo(
+        p1x - k * r * math.sin(theta),
+        p1y + k * r * math.cos(theta),
+        p2x + k * r * math.sin(t2),
+        p2y - k * r * math.cos(t2),
+        p2x,
+        p2y,
+      )
+      theta = t2
+      i += 1
+
+  override def closePath(): Unit = path.closePath()
+
+  override def fillPath(preserve: Boolean): Unit =
+    g.fill(path)
+    if !preserve then path = new GeneralPath
+
+  override def strokePath(): Unit =
+    g.draw(path)
+    path = new GeneralPath
+
+  override def clipPath(): Unit =
+    g.clip(path)
+    path = new GeneralPath
+
+  override def setDash(pattern: Seq[Double], offset: Double): Unit =
+    dashArray = if pattern.isEmpty then null else pattern.map(_.toFloat).toArray
+    dashPhase = offset.toFloat
+    rebuildStroke()
+
+  override def setLineCap(cap: LineCap): Unit =
+    lineCap = cap match
+      case LineCap.Butt   => BasicStroke.CAP_BUTT
+      case LineCap.Round  => BasicStroke.CAP_ROUND
+      case LineCap.Square => BasicStroke.CAP_SQUARE
+    rebuildStroke()
+
+  override def setLineJoin(join: LineJoin): Unit =
+    lineJoin = join match
+      case LineJoin.Miter => BasicStroke.JOIN_MITER
+      case LineJoin.Round => BasicStroke.JOIN_ROUND
+      case LineJoin.Bevel => BasicStroke.JOIN_BEVEL
+    rebuildStroke()
 
   def destroy(): Unit = ()

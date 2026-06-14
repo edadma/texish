@@ -135,6 +135,56 @@ abstract class Typesetter:
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit
 
+  // Picture-graphics seam — the path/transform/clip vocabulary a PictureBox replays to draw vector graphics
+  // (paths, shapes, fills and strokes, placed labels) in a y-up coordinate system. It is separate from the
+  // immediate drawLine/fillRect calls above: those draw one primitive in device space, whereas these build a
+  // path, paint it with the current stroke parameters, and compose an affine transform on the backend's CTM —
+  // which is what lets graphics rotate and scale, and lets placed text stay upright over a flipped picture.
+  //
+  // The default bodies are no-ops so backends without a raster surface (and test stubs) need not implement
+  // them; the Cairo and Graphics2D backends override the whole set. Coordinates are in points, like the rest
+  // of the seam. Angles are radians.
+
+  /** Save the full graphics state (transform, clip, colour, and stroke parameters) for a later [[grestore]]. */
+  def gsave(): Unit = ()
+
+  /** Restore the graphics state saved by the matching [[gsave]]. */
+  def grestore(): Unit = ()
+
+  def translate(dx: Double, dy: Double): Unit = ()
+  def scale(sx: Double, sy: Double): Unit     = ()
+  def rotate(radians: Double): Unit           = ()
+
+  /** Begin a fresh path, discarding any path under construction. */
+  def newPath(): Unit = ()
+
+  def moveTo(x: Double, y: Double): Unit = ()
+  def lineTo(x: Double, y: Double): Unit = ()
+
+  /** Add a cubic Bézier from the current point through `(c1x,c1y)` and `(c2x,c2y)` to `(x,y)`. */
+  def curveTo(c1x: Double, c1y: Double, c2x: Double, c2y: Double, x: Double, y: Double): Unit = ()
+
+  /** Add a circular arc of radius `r` about `(cx,cy)` from angle `a0` to `a1`; `negative` sweeps clockwise. */
+  def arc(cx: Double, cy: Double, r: Double, a0: Double, a1: Double, negative: Boolean): Unit = ()
+
+  def closePath(): Unit = ()
+
+  /** Fill the current path with the current colour. When `preserve` is true the path is kept (so it can then
+    * be stroked over the fill); otherwise it is cleared, like the underlying rasterizer's fill. */
+  def fillPath(preserve: Boolean = false): Unit = ()
+
+  /** Stroke the current path with the current colour, width, dash, caps and joins; clears the path. */
+  def strokePath(): Unit = ()
+
+  /** Intersect the clip region with the current path, for the rest of the enclosing [[gsave]]/[[grestore]]. */
+  def clipPath(): Unit = ()
+
+  /** Set the stroke dash pattern (alternating on/off lengths) with a starting phase; empty means solid. */
+  def setDash(pattern: Seq[Double], offset: Double): Unit = ()
+
+  def setLineCap(cap: LineCap): Unit    = ()
+  def setLineJoin(join: LineJoin): Unit = ()
+
   def destroy(): Unit
 
   def getDocument: DocumentMode = document
