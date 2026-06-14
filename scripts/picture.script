@@ -138,38 +138,37 @@ A data sequence drives the bars; \italic{\\forloop.index} positions each one.
 
 \bold{Application — a molecule}
 
-A skeletal benzene ring whose geometry is computed, not hand-placed: the six
-vertices sit on a circle every 60° and the aromatic inner bonds run along
-alternating edge mid-lines, all worked out with \italic{\\calc} and trigonometry.
+A skeletal benzene ring drawn with coordinates, not arithmetic: the six carbons
+are \italic{named} and placed by \italic{polar} coordinates — \italic{(60:R)} is
+the vertex 60° round a circle of radius R — and the aromatic inner bonds use
+Cartesian coordinates whose components are expressions.
 
 \picture width:2.4in height:2in {
-  \set cx {72} \set cy {72} \set R {36}
+  \translate{72 72}
+  \set R {36}
+
+  % name the six carbons, each placed by a polar coordinate around the centre
+  \coordinate{C1}{(0:R)}    \coordinate{C2}{(60:R)}   \coordinate{C3}{(120:R)}
+  \coordinate{C4}{(180:R)}  \coordinate{C5}{(240:R)}  \coordinate{C6}{(300:R)}
+
+  % the ring, from the named carbons
   \nofill \stroke{black} \linewidth{1.5pt}
+  \polygon{(C1) (C2) (C3) (C4) (C5) (C6)}
 
-  % the ring: six vertices on a circle, every 60 degrees, computed with \calc
-  \path{
-    \moveto{\calc{cx + R*cosd(0)}  \calc{cy + R*sind(0)}}
-    \for\k{\range{1}{5}}{
-      \lineto{\calc{cx + R*cosd(k*60)}  \calc{cy + R*sind(k*60)}}
-    }
-    \close
-  }
-
-  % three aromatic inner bonds, parallel to alternating edges and inset toward
-  % the centre. an edge's mid-line is at angle 30+60k and radius = apothem; the
-  % bond runs perpendicular to that (angle m+90), half-length hl on each side.
+  % three aromatic inner bonds along alternating edge mid-lines (angle m, inner
+  % radius ai), each running perpendicular (m+90) for half-length hl on each side
   \linewidth{1pt}
   \set ai {\calc{R*cosd(30) - 6}}
   \set hl {13}
   \for\m{\seq{30 150 270}}{
-    \line{\calc{cx + ai*cosd(m) + hl*cosd(m+90)}  \calc{cy + ai*sind(m) + hl*sind(m+90)}
-          \calc{cx + ai*cosd(m) - hl*cosd(m+90)}  \calc{cy + ai*sind(m) - hl*sind(m+90)}}
+    \line{(ai*cosd(m) + hl*cosd(m+90), ai*sind(m) + hl*sind(m+90))
+          (ai*cosd(m) - hl*cosd(m+90), ai*sind(m) - hl*sind(m+90))}
   }
 
-  % a bond out to the hydroxyl at the angle-0 vertex
+  % a bond out to the hydroxyl from carbon C1
   \linewidth{1.5pt}
-  \line{\calc{cx + R} \calc{cy}  \calc{cx + R + 20} \calc{cy}}
-  \at anchor:west {\calc{cx + R + 24} \calc{cy}}{OH}
+  \line{(C1) (R+20, 0)}
+  \at anchor:west {(R+24, 0)}{OH}
 }
 
 This page is set entirely by \TeXish: the prose, the running heads, and every

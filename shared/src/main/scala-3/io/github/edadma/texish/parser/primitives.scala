@@ -701,6 +701,19 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
     },
   )
 
+  // \coordinate{name}{coord} - name a point for later reference as (name). Stored as a two-element numeric
+  // sequence in the document scope, so it reads back through the same variable machinery everything else uses.
+  picturePrimitive(
+    proc,
+    handler,
+    "coordinate",
+    (_, p) =>
+      val name = Value.display(proc.evalArgumentExpr(p))
+      val c    = readNumbers(proc, p)
+      if c.length < 2 then handler.error(s"\\coordinate '$name' expects a point", p)
+      t.set(name, Value.Seq(Vector(Value.Num(c(0)), Value.Num(c(1))))),
+  )
+
   // State: colours are picture-mode state baked into each shape's paint; widths/dashes/caps/joins become ops.
   picturePrimitive(proc, handler, "stroke", (pm, p) => pm.setStroke(readColorArg(proc, p)))
   picturePrimitive(proc, handler, "fill", (pm, p) => pm.setFill(readColorArg(proc, p)))
@@ -875,22 +888,58 @@ private def requirePicture(t: Typesetter, handler: TypesetterHandler, name: Stri
     case pm: PictureMode => pm
     case _               => handler.error(s"\\$name is only allowed inside \\picture", pos)
 
-// Read a `{x y …}` coordinate group as points. Each whitespace-separated piece at brace depth zero is one
-// coordinate, evaluated as an expression — so a literal `2in`, a variable `\the\x`, and a computed `\*{a}{b}`
-// all work, and a piece's own braces keep its spaces from splitting it.
+// Read a coordinate group as a flat list of points (in the engine's point space). Each whitespace-separated
+// piece is either a parenthesised coordinate — Cartesian `(x,y)`, polar `(a:r)`, or a named `(name)`, each
+// contributing two numbers (see `Coord`) — or a bare scalar expression contributing one (a literal `2in`, a
+// variable `\the\x`, a computed `\*{a}{b}` or `\calc{…}`). So `\line{(0,0) (60:1in)}` and `\line{0 0 36 62}`
+// produce the same flat stream the shape primitives consume, and the two notations interoperate.
 private def readNumbers(proc: Processor, pos: CharReader): Vector[Double] =
-  splitTopLevel(stripOuterBraces(proc.readArgument(pos))).map(chunk => points(proc.evalExpr(chunk, pos)).getOrElse(0.0))
+  splitTopLevel(stripOuterBraces(proc.readArgument(pos))).flatMap { chunk =>
+    val text = coordText(chunk)
+    if Coord.looksLikeCoord(text) then
+      val (x, y) = Coord.parse(text, varResolver(proc), proc.handler.fontUnit, namedResolver(proc))
+      Vector(x, y)
+    else Vector(points(proc.evalExpr(chunk, pos)).getOrElse(0.0))
+  }
+
+// Reconstruct a chunk's raw text for the coordinate parser: a control sequence contributes its bare name (so a
+// variable `\R` reads as the identifier `R`) and an active character its symbol, matching how `\calc` flattens.
+private def coordText(tokens: Vector[Token]): String =
+  tokens.map {
+    case Token.Text(s, _)       => s
+    case Token.Space(s, _)      => s
+    case Token.Newline(_)       => " "
+    case Token.ControlSeq(n, _) => n
+    case Token.Active(c, _)     => c.toString
+    case _                      => ""
+  }.mkString
+
+// Resolve a bare identifier in a coordinate component expression to a document variable's number.
+private def varResolver(proc: Processor): String => Option[Double] = name =>
+  proc.handler.get(name) match
+    case Value.Num(n)   => Some(n)
+    case Value.Dimen(p) => Some(p)
+    case _              => None
+
+// Resolve a `(name)` reference to a point stored by \coordinate (a two-element numeric sequence).
+private def namedResolver(proc: Processor): String => Option[(Double, Double)] = name =>
+  proc.handler.get(name) match
+    case Value.Seq(Vector(Value.Num(x), Value.Num(y))) => Some((x, y))
+    case _                                             => None
 
 // Read a single-number group, e.g. \linewidth{2pt} or \rotate{30}.
 private def num1(proc: Processor, pos: CharReader): Double =
   points(proc.evalArgumentExpr(pos)).getOrElse(0.0)
 
-// Split a coordinate group into its whitespace-separated pieces, keeping each piece's braced sub-groups intact
-// (so `\*{a}{b}` stays one piece while the space before the next coordinate separates them).
+// Split a coordinate group into its whitespace-separated pieces, keeping each piece intact across a brace group
+// (`\*{a}{b}`) and across a parenthesised coordinate (`(60:1in)`, even with an internal space like `(2, 3)`).
+// Brace depth is tracked from the group tokens; parenthesis depth from the characters of text tokens outside any
+// braces, since parentheses are ordinary text. A whitespace token splits only when both depths are zero.
 private def splitTopLevel(tokens: Vector[Token]): Vector[Vector[Token]] =
   val chunks = Vector.newBuilder[Vector[Token]]
   var cur    = Vector.newBuilder[Token]
   var depth  = 0
+  var parens = 0
   var any    = false
 
   def flush(): Unit =
@@ -900,10 +949,13 @@ private def splitTopLevel(tokens: Vector[Token]): Vector[Vector[Token]] =
 
   for tok <- tokens do
     tok match
-      case Token.BeginGroup(_)                            => depth += 1; cur += tok; any = true
-      case Token.EndGroup(_)                              => depth -= 1; cur += tok; any = true
-      case (_: Token.Space | _: Token.Newline) if depth == 0 => flush()
-      case _                                              => cur += tok; any = true
+      case Token.BeginGroup(_)                                       => depth += 1; cur += tok; any = true
+      case Token.EndGroup(_)                                         => depth -= 1; cur += tok; any = true
+      case (_: Token.Space | _: Token.Newline) if depth == 0 && parens == 0 => flush()
+      case t @ Token.Text(s, _) =>
+        if depth == 0 then parens += s.count(_ == '(') - s.count(_ == ')')
+        cur += t; any = true
+      case t => cur += t; any = true
 
   flush()
   chunks.result()
