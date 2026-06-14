@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter
 
 import io.github.edadma.libcairo.Surface
-import io.github.edadma.typesetter.texish.{Processor, TypesetterHandler, registerTypesettingPrimitives}
+import io.github.edadma.typesetter.parser.{Processor, TypesetterHandler, registerTypesettingPrimitives}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

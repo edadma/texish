@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.typesetter.texish.Value
+import io.github.edadma.typesetter.parser.Value
 
 /** Builds the main vertical list and breaks it into pages.
   *

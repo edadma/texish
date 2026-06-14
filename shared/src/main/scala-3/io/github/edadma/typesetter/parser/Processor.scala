@@ -1,9 +1,9 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 import scala.collection.mutable
 
-/** The streaming processor/expander for texish.
+/** The streaming processor/expander for parser.
   *
   * This is the core engine that reads tokens, expands macros, and calls the handler. Unlike an AST-based interpreter,
   * this processes tokens as they come, expanding macros immediately.
@@ -124,7 +124,7 @@ class Processor(val handler: Handler):
         case Token.Active(c, pos)        => handleActive(c, pos)
         case Token.EOF(_)                => // done
     catch
-      case e: TexishException => throw e
+      case e: ParserException => throw e
       case e: RuntimeException =>
         handler.error(Option(e.getMessage).getOrElse(e.toString), Token.pos(token))
 
@@ -217,7 +217,7 @@ class Processor(val handler: Handler):
         Vector(begin) ++ readBalancedGroup() :+ Token.EndGroup(begin.pos)
       case _ =>
         val tok = Vector(nextToken())
-        skipSpaces() // consume trailing whitespace after non-braced argument (matches texish-old behavior)
+        skipSpaces() // consume trailing whitespace after non-braced argument
         tok
 
   /** Read tokens until matching } */
@@ -740,7 +740,7 @@ object ForPrimitive extends Primitive:
       // Set loop variable
       proc.handler.set(varName, item)
 
-      // Set forloop metadata as a map (like texish-old)
+      // Set forloop metadata as a map
       val forloop = Value.Map(Map(
         "index" -> Value.Num(idx + 1),
         "indexz" -> Value.Num(idx),

@@ -1,8 +1,8 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 
-/** Tokenizer for the texish macro language.
+/** Tokenizer for the parser macro language.
   *
   * Converts character input into a stream of tokens. This is a pull-based tokenizer - call next() to get each token.
   *

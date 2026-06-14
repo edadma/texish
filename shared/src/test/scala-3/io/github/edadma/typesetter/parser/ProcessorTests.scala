@@ -1,4 +1,4 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 import org.scalatest.freespec.AnyFreeSpec
@@ -348,7 +348,7 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
     // ============ FILE INCLUSION TESTS ============
 
     "should handle \\include" in {
-      process("\\include{shared/src/test/resources/test-include.texish}\\greeting") shouldBe "Hello from included file!"
+      process("\\include{shared/src/test/resources/test-include.parser}\\greeting") shouldBe "Hello from included file!"
     }
 
     // ============ TEMPLATE TESTS ============
@@ -577,7 +577,7 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
 
     "should preserve space after braced args" in {
       // Space after "}" is NOT consumed (braced args don't consume trailing space)
-      // This matches texish-old behavior
+      // Matches the reference implementation
       process("\\set x {42} hello") shouldBe " hello"
     }
 
@@ -617,6 +617,6 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
     }
 
     "should error on unknown accent combination" in {
-      a[TexishException] should be thrownBy process("\\accent c x")
+      a[ParserException] should be thrownBy process("\\accent c x")
     }
   }

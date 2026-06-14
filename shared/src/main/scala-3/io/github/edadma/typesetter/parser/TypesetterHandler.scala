@@ -1,9 +1,9 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.typesetter.{Box, HorizontalMode, Typesetter, VerticalMode}
 
-/** Handler that connects the texish language layer to a Typesetter.
+/** Handler that connects the parser language layer to a Typesetter.
   *
   * Variables live in the typesetter's scope, which stores Value directly — the parser and the layout engine read and
   * write the same map with no translation. Text, spaces and newlines are routed into the current typesetting mode.

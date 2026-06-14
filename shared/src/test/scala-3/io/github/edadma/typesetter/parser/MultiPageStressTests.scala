@@ -1,4 +1,4 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.typesetter.{Box, DocumentMode, StubTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec

@@ -1,8 +1,8 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 
-/** Handler interface for integrating texish with a typesetter or other backend.
+/** Handler interface for integrating parser with a typesetter or other backend.
   *
   * The processor calls these methods as it expands and executes the input. This is a streaming interface - events are
   * delivered as they occur, not as a tree to walk.
@@ -45,8 +45,8 @@ trait Handler:
 
   /** Report an error at the given position. Uses char-reader's error formatting. */
   def error(msg: String, pos: CharReader): Nothing =
-    if pos == null then throw TexishException(msg, null)
-    else throw TexishException(pos.longErrorText(msg), pos)
+    if pos == null then throw ParserException(msg, null)
+    else throw ParserException(pos.longErrorText(msg), pos)
 
   /** Report a warning at the given position */
   def warning(msg: String, pos: CharReader): Unit =
@@ -85,7 +85,7 @@ class StringHandler extends Handler:
     // Default: unknown commands produce nothing
     Value.Nil
 
-/** A handler for using texish as a template engine.
+/** A handler for using parser as a template engine.
   *
   * Pre-populates variables from a data map, then collects output as a string.
   */
@@ -102,5 +102,5 @@ object Template:
     proc.process(template)
     handler.result
 
-/** Exception thrown for texish errors */
-case class TexishException(msg: String, pos: CharReader) extends RuntimeException(msg)
+/** Exception thrown for parser errors */
+case class ParserException(msg: String, pos: CharReader) extends RuntimeException(msg)

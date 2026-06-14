@@ -1,4 +1,4 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

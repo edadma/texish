@@ -1,10 +1,10 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 
-/** The core value type for the texish language.
+/** The core value type for the parser language.
   *
-  * All values in texish are represented by this sealed enum, providing exhaustive pattern matching and type safety.
+  * All values in parser are represented by this sealed enum, providing exhaustive pattern matching and type safety.
   */
 enum Value:
   /** Text content */

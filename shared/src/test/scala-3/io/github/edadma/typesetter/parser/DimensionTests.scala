@@ -1,4 +1,4 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.typesetter.{Font, StubTypesetter}
 import org.scalatest.freespec.AnyFreeSpec

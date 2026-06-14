@@ -1,6 +1,6 @@
 package io.github.edadma.typesetter
 
-import io.github.edadma.typesetter.texish.Value
+import io.github.edadma.typesetter.parser.Value
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized

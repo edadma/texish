@@ -1,4 +1,4 @@
-package io.github.edadma.typesetter.texish
+package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.typesetter.StubTypesetter
@@ -26,7 +26,7 @@ class ErrorReportingTests extends AnyFreeSpec with Matchers:
         def execute(proc: Processor, pos: CharReader): Unit = sys.error("engine failure")
       },
     )
-    val e = intercept[TexishException](proc.process("first line\n\\boom"))
+    val e = intercept[ParserException](proc.process("first line\n\\boom"))
     e.getMessage should include("engine failure")
     e.pos should not be null
     e.pos.line shouldBe 2
@@ -34,7 +34,7 @@ class ErrorReportingTests extends AnyFreeSpec with Matchers:
 
   "language errors keep their original position and are not re-wrapped" in {
     val (_, proc) = fixture()
-    val e = intercept[TexishException](proc.process("\\vskip {nonsense}"))
+    val e = intercept[ParserException](proc.process("\\vskip {nonsense}"))
     e.getMessage should include("\\vskip expects a dimension or glue")
     e.pos.line shouldBe 1
   }

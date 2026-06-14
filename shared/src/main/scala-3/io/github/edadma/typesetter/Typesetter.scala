@@ -2,7 +2,7 @@ package io.github.edadma.typesetter
 
 //import pprint.pprintln
 
-import io.github.edadma.typesetter.texish.Value
+import io.github.edadma.typesetter.parser.Value
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
