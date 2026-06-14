@@ -95,3 +95,22 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     sb.ascent should be > nucleusAscent      // the superscript pushes the box's top up
     sb.width should be > full.glyphBox(0x1D465).width
   }
+
+  "fraction parameters come from the MATH table, and a fraction straddles the axis" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+    val fp   = full.fractionParams(display = false)
+
+    fp.ruleThickness should be > 0.0
+    fp.axisHeight shouldBe (0.25 * full.size +- 0.5) // the bar sits on the math axis, ~quarter em
+    fp.numShiftUp should be > 0.0
+    fp.denomShiftDown should be > 0.0
+
+    val m   = new MathMode(t, full, MathStyle.Text)
+    val num = { val s = new MathMode(t, full, MathStyle.Text.num); s.addChar('1'); s.result.asInstanceOf[Box] }
+    val den = { val s = new MathMode(t, full, MathStyle.Text.denom); s.addChar('2'); s.result.asInstanceOf[Box] }
+    val frac = m.makeFraction(num, den).asInstanceOf[FractionBox]
+
+    frac.ascent should be > full.axisHeight  // numerator rises above the axis
+    frac.descent should be > 0.0             // denominator drops below the baseline
+  }

@@ -25,8 +25,22 @@ case class MathStyle(size: MathSize, cramped: Boolean):
   /** The cramped form of this style, at the same size. */
   def cramp: MathStyle = MathStyle(size, cramped = true)
 
+  /** The style a fraction numerator is set in: one size level smaller, keeping the current cramping. */
+  def num: MathStyle = MathStyle(fracSize, cramped)
+
+  /** The style a fraction denominator is set in: one size level smaller and always cramped. */
+  def denom: MathStyle = MathStyle(fracSize, cramped = true)
+
+  /** Whether this is display style — display fractions/radicals use the wider gaps and shifts. */
+  def isDisplay: Boolean = size == Display
+
   private def scriptSize: MathSize = size match
     case Display | Text        => Script
+    case Script | ScriptScript => ScriptScript
+
+  private def fracSize: MathSize = size match
+    case Display               => Text
+    case Text                  => Script
     case Script | ScriptScript => ScriptScript
 
   /** The size factor relative to the base (display/text) font, taken from the font's MATH percentages — or

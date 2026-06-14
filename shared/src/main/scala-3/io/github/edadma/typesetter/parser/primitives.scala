@@ -9,6 +9,9 @@ import io.github.edadma.typesetter.{
   InfGlue,
   InsertBox,
   MarkBox,
+  MathAtom,
+  MathClass,
+  MathMode,
   Penalty,
   RuleBox,
   ShiftBox,
@@ -318,6 +321,26 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
               case b: Box => t.add(ShiftBox(b, -d))
               case null   => handler.error("\\raise expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\raise expects a dimension", argPos)
+    },
+  )
+
+  // frac - 2 body args: a fraction numerator over denominator. Math-mode only; the numerator and denominator
+  // are each typeset by a nested math mode one style smaller (so an inline fraction sets its parts at script
+  // size), then stacked over a rule centered on the math axis. The result enters the list as an Inner atom.
+  proc.registerPrimitive(
+    "frac",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val numTokens   = proc.readArgument(pos)
+            val denomTokens = proc.readArgument(pos)
+            val numBox      = handler.mathSubFormula(proc, parent.style.num, numTokens)
+            val denomBox    = handler.mathSubFormula(proc, parent.style.denom, denomTokens)
+
+            if (numBox ne null) && (denomBox ne null) then
+              parent.addNode(MathAtom(MathClass.Inner, parent.makeFraction(numBox, denomBox)))
+          case _ => handler.error("\\frac is only allowed in math mode", pos)
     },
   )
 

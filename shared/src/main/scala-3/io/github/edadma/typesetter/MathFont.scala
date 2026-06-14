@@ -53,6 +53,24 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
         )
       case None => MathScriptParams.texDefaults(size)
 
+  /** The fraction-layout parameters at this font's size, for text or display style: from the MATH constants
+    * (the display-style variants when `display`) when present, otherwise TeX's Computer Modern defaults. */
+  def fractionParams(display: Boolean): FractionParams =
+    math match
+      case Some(m) =>
+        val c = m.constants
+        def v(name: String): Double = c.value(name) * size
+        FractionParams(
+          axisHeight     = c.axisHeight * size,
+          ruleThickness  = v("fractionRuleThickness"),
+          numGapMin      = v(if display then "fractionNumDisplayStyleGapMin" else "fractionNumeratorGapMin"),
+          denomGapMin    = v(if display then "fractionDenomDisplayStyleGapMin" else "fractionDenominatorGapMin"),
+          numShiftUp     = v(if display then "fractionNumeratorDisplayStyleShiftUp" else "fractionNumeratorShiftUp"),
+          denomShiftDown =
+            v(if display then "fractionDenominatorDisplayStyleShiftDown" else "fractionDenominatorShiftDown"),
+        )
+      case None => FractionParams.texDefaults(size, display)
+
   /** The math axis height in points: the line relations, binary operators, fraction bars and fences centre
     * on. Comes from the `MATH` table when present, otherwise a quarter em — TeX's `axis_height` for
     * Computer Modern at text size. */

@@ -61,4 +61,10 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
 
     nodes += updated
 
+  /** Build a fraction box from an already-laid-out numerator and denominator, using this list's font and
+    * style (its size sets the bar thickness, axis and shifts; display style opens the gaps). The numerator
+    * and denominator are expected to have been set in [[style]]`.num`/`.denom`. */
+  def makeFraction(numerator: Box, denominator: Box): Box =
+    new FractionBox(t, numerator, denominator, mathFont.fractionParams(style.isDisplay))
+
   def result: Box | Null = HBox(MathList.translate(nodes.toVector, mathFont, style.cramped))

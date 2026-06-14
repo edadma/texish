@@ -1,7 +1,7 @@
 package io.github.edadma.typesetter.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.typesetter.{Box, HorizontalMode, MathMode, Typesetter, VerticalMode}
+import io.github.edadma.typesetter.{Box, HorizontalMode, MathMode, MathStyle, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -88,6 +88,17 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       newlineCount = 0
       typesetter.enterMath()
 
+  /** Typeset a math sub-formula — a script field, a fraction numerator, a radicand — by running its tokens
+    * through a nested [[MathMode]] at the given style (so it is set at the right smaller size), and return
+    * the laid-out box. Must be called with a math mode on top, which it scales from. */
+  def mathSubFormula(proc: Processor, style: MathStyle, body: Vector[Token]): Box | Null =
+    typesetter.mode match
+      case parent: MathMode =>
+        typesetter.push(new MathMode(typesetter, parent.baseMathFont, style))
+        proc.processTokenList(body)
+        typesetter.mode.exit // pop the sub-formula's mode and lay its list out
+      case _ => null
+
   /** Attach a super- or subscript at a `^` / `_`. Inside math, the script field (the next group or token) is
     * read, typeset by a nested math mode one style smaller, and attached to the most recent atom. Outside
     * math the marker is just its literal character, so prose containing `^` or `_` is left untouched. */
@@ -96,10 +107,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       typesetter.mode match
         case parent: MathMode =>
           val field = proc.readScriptField(pos)
-
-          typesetter.push(new MathMode(typesetter, parent.baseMathFont, parent.scriptStyle(superscript)))
-          proc.processTokenList(field)
-          val box = typesetter.mode.exit // pop the script mode and lay its list out
+          val box   = mathSubFormula(proc, parent.scriptStyle(superscript), field)
 
           if box ne null then parent.addScript(superscript, box)
         case _ =>
