@@ -114,3 +114,21 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     frac.ascent should be > full.axisHeight  // numerator rises above the axis
     frac.descent should be > 0.0             // denominator drops below the baseline
   }
+
+  "the radical glyph grows with the target height, and a radical sets a bar above its radicand" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    // a taller target selects a surd at least as tall as a short one (LM Math supplies vertical variants)
+    val small = full.radicalGlyph(5).height
+    val large = full.radicalGlyph(60).height
+    small should be > 0.0
+    large should be >= small
+
+    val m = new MathMode(t, full, MathStyle.Text)
+    val r = { val s = new MathMode(t, full, MathStyle.Text.cramp); s.addChar('x'); s.result.asInstanceOf[Box] }
+    val rad = m.makeRadical(r).asInstanceOf[RadicalBox]
+
+    rad.ascent should be > r.ascent                  // the vinculum rises above the radicand
+    rad.width should be > full.glyphBox(0x1D465).width // surd plus the radicand
+  }

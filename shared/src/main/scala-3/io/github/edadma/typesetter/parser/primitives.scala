@@ -344,6 +344,22 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // sqrt - 1 body arg: a square root. Math-mode only; the radicand is typeset by a nested math mode in the
+  // cramped current style, then a surd glyph tall enough to span it is set on the left with a vinculum drawn
+  // across the top. The result enters the list as an Ord atom.
+  proc.registerPrimitive(
+    "sqrt",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val radicand = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+
+            if radicand ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeRadical(radicand)))
+          case _ => handler.error("\\sqrt is only allowed in math mode", pos)
+    },
+  )
+
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
     "noalign",

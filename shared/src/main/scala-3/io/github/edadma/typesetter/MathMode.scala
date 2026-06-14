@@ -67,4 +67,13 @@ class MathMode(val t: Typesetter, val baseMathFont: MathFont, val style: MathSty
   def makeFraction(numerator: Box, denominator: Box): Box =
     new FractionBox(t, numerator, denominator, mathFont.fractionParams(style.isDisplay))
 
+  /** Build a radical (`\sqrt`) over an already-laid-out radicand, using this list's font and style. The
+    * radicand is expected to have been set in [[style]]`.cramp`. The surd glyph is chosen tall enough to
+    * span the radicand plus the bar and its clearance. */
+  def makeRadical(radicand: Box): Box =
+    val p      = mathFont.radicalParams(style.isDisplay)
+    val target = p.verticalGap + p.ruleThickness + radicand.ascent + radicand.descent
+
+    new RadicalBox(t, mathFont.radicalGlyph(target), radicand, p)
+
   def result: Box | Null = HBox(MathList.translate(nodes.toVector, mathFont, style.cramped))

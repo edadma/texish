@@ -71,6 +71,34 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
         )
       case None => FractionParams.texDefaults(size, display)
 
+  /** The radical-layout parameters at this font's size, for text or display style. */
+  def radicalParams(display: Boolean): RadicalParams =
+    math match
+      case Some(m) =>
+        val c = m.constants
+        RadicalParams(
+          ruleThickness = c.value("radicalRuleThickness") * size,
+          verticalGap   = c.value(if display then "radicalDisplayStyleVerticalGap" else "radicalVerticalGap") * size,
+          extraAscender = c.value("radicalExtraAscender") * size,
+        )
+      case None => RadicalParams.texDefaults(size, display)
+
+  /** A surd glyph (√) at least `targetHeight` points tall: the smallest of the font's vertical size variants
+    * that reaches the target, or the largest available when none does (glyph assembly for radicands taller
+    * than any precomposed variant arrives with stretchy delimiters). Falls back to the base glyph when the
+    * font carries no variant data. */
+  def radicalGlyph(targetHeight: Double): GlyphBox =
+    val baseIdx  = glyphIndex(0x221A)
+    val variants = math.flatMap(_.variants.vertical.get(baseIdx)).map(_.variants).getOrElse(Vector.empty)
+    val chosen =
+      variants
+        .find(_.advance * size >= targetHeight)
+        .orElse(variants.lastOption)
+        .map(_.glyph)
+        .getOrElse(baseIdx)
+
+    new GlyphBox(t, chosen, font, t.currentColor)
+
   /** The math axis height in points: the line relations, binary operators, fraction bars and fences centre
     * on. Comes from the `MATH` table when present, otherwise a quarter em — TeX's `axis_height` for
     * Computer Modern at text size. */
