@@ -1,0 +1,162 @@
+% Picture / vector-graphics demonstration. Grows as the graphics layer lands.
+%   Phase 0 (done): display-list types — PictureOp, Anchor, LineCap, LineJoin.
+%   Phase 1 (done): the drawing seam on the Cairo and Graphics2D backends.
+%   Phase 2 (todo): PictureBox + PictureMode — layout and op replay.
+%   Phase 3 (todo): the \picture language primitives used below become live.
+%
+% Until Phase 3 lands, the \picture sections are the TARGET SYNTAX — they show
+% what the engine will draw, and become runnable when the primitives exist.
+% Render with:  texish scripts/picture.script -o picture -p letter
+%
+% Coordinate convention inside a picture: y-up, origin at the bottom-left.
+% A bare number is a point; a unit suffix (in, mm, pt, em) is honoured too.
+
+\def headline {\italic{Picture demo} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+
+\font lmroman 12 regular
+
+\bold{\TeXish{} pictures — vector graphics in the document}
+
+A \italic{picture} is a fixed-size box you draw into with shapes, paths, and
+placed type. It flows in the text like any other box, so a diagram sits beside
+prose, scales with the surrounding units, and prints through the same Cairo or
+Graphics2D backend as the page itself.
+
+\bold{Shapes and colour}
+
+Each shape draws immediately using the current fill and stroke colour. Set the
+pen with \italic{\\stroke}, the fill with \italic{\\fill}, and turn either off
+with \italic{\\nostroke} / \italic{\\nofill}.
+
+\picture width:4in height:1.6in {
+  \fill{lightsteelblue} \stroke{steelblue} \linewidth{1.5pt}
+  \rect{0.2in 0.2in 1in 1in}
+  \circle{2in 0.7in 0.5in}
+  \nofill \stroke{firebrick}
+  \ellipse{3.2in 0.7in 0.6in 0.4in}
+  \fill{seagreen} \nostroke
+  \polygon{0.2in 1.4in  0.7in 1.4in  0.45in 0.2in}
+}
+
+\bold{Line thickness and line type}
+
+Stroke style is graphics state: line width in any unit, and a line type that is
+either a named preset or a raw dash array. Round caps render a dotted line as
+true dots.
+
+\picture width:4in height:1.4in {
+  \stroke{black}
+  \linewidth{0.5pt} \line{0.2in 1.2in  3.8in 1.2in}
+  \linewidth{2pt}   \line{0.2in 0.95in 3.8in 0.95in}
+  \linewidth{4pt}   \line{0.2in 0.7in  3.8in 0.7in}
+  \linewidth{1.5pt} \linetype{dashed} \line{0.2in 0.45in 3.8in 0.45in}
+  \linetype{dotted} \linecap{round}   \line{0.2in 0.2in  3.8in 0.2in}
+}
+
+\bold{Paths and curves}
+
+A \italic{\\path} builds a freeform outline from move/line/curve/arc segments
+and draws it with the current state. Here a filled Bézier wave with a stroked
+edge.
+
+\picture width:4in height:1.4in {
+  \fill{papayawhip} \stroke{chocolate} \linewidth{1.5pt}
+  \path{
+    \moveto{0.2in 0.2in}
+    \lineto{0.2in 0.8in}
+    \curveto{1.2in 1.6in  2.6in -0.4in  3.8in 0.8in}
+    \lineto{3.8in 0.2in}
+    \close
+  }
+}
+
+\bold{Transforms and groups}
+
+\italic{\\translate}, \italic{\\scale}, and \italic{\\rotate} compose on the
+coordinate system; \italic{\\group} saves the state so changes inside it are
+undone after. Rotating one square in a loop draws a fan.
+
+\picture width:3in height:3in {
+  \translate{1.5in 1.5in}
+  \nofill \stroke{mediumpurple} \linewidth{1pt}
+  \for\i{\range{1}{12}}{
+    \group{
+      \rotate{\*{\the\i}{30}}
+      \rect{0 0 1.2in 0.12in}
+    }
+  }
+}
+
+\bold{Placing type and glyphs}
+
+\italic{\\at} drops fully typeset content — text or math — at a coordinate with
+an anchor; \italic{\\glyph} places a single glyph for a marker. Relative
+coordinates (\italic{++}) are measured from the current point.
+
+\picture width:4in height:1.6in {
+  \stroke{gray} \linewidth{1pt}
+  \line{0.3in 0.3in  3.7in 1.3in}
+  \fill{crimson} \glyph anchor:center {0.3in 0.3in}{8226}
+  \fill{crimson} \glyph anchor:center {3.7in 1.3in}{8226}
+  \at anchor:south {2in 0.8in}{$E = mc^2$}
+  \at anchor:west {0.3in 0.3in}{start}
+  \at anchor:east {3.7in 1.3in}{end}
+}
+
+\eject
+
+\bold{Application — a line graph}
+
+The texish language already has loops and arithmetic, so a plot is just a path
+built in a \italic{\\for}. Axes are lines; the curve samples $y = x^2$.
+
+\picture width:3in height:2.4in {
+  \stroke{gray} \linewidth{1pt}
+  \line{0 0  2.8in 0}
+  \line{0 0  0 2.2in}
+  \stroke{royalblue} \linewidth{1.5pt}
+  \path{
+    \moveto{0 0}
+    \for\i{\range{1}{14}}{
+      \lineto{\*{\the\i}{14}  \*{\*{\the\i}{\the\i}}{0.8}}
+    }
+  }
+  \at anchor:south {1.4in -0.1in}{$x$}
+  \at anchor:west {0.05in 2.1in}{$y = x^2$}
+}
+
+\bold{Application — a bar chart}
+
+A data sequence drives the bars; \italic{\\forloop.index} positions each one.
+
+\set data {\seq{60 110 80 140 95 120}}
+
+\picture width:3in height:2.4in {
+  \stroke{gray} \linewidth{1pt} \line{0 0  2.8in 0}
+  \fill{teal} \nostroke
+  \for\v{\the\data}{
+    \rect{\*{\forloop.index}{42} 0 30 \the\v}
+  }
+}
+
+\bold{Application — a molecule}
+
+A skeletal benzene ring: a hexagon of bonds, inner lines for the aromatic
+double bonds, and atom labels placed with \italic{\\at}.
+
+\picture width:2in height:2in {
+  \nofill \stroke{black} \linewidth{1.5pt}
+  \polygon{108 72  90 103  54 103  36 72  54 41  90 41}
+  \linewidth{1pt}
+  \line{99 67  85 92}
+  \line{63 92  49 67}
+  \line{63 52  99 52}
+  \fill{white} \stroke{white} \linewidth{0pt}
+  \rect{100 64 16 16}
+  \nofill \stroke{black}
+  \at anchor:west {110 72}{OH}
+}
+
+This page is set entirely by \TeXish: the prose, the running heads, and every
+figure above share one rendering pipeline.
