@@ -364,7 +364,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
               case Some(toks) =>
                 handler.mathSubFormula(proc, parent.style.rootDegree, toks) match
                   case b: Box => Some(b)
-                  case _      => None
+                  case null   => None
               case None => None
 
             if radicand ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeRadical(radicand, degree)))
@@ -508,7 +508,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
             val rows = splitMatrixBody(body).map(_.map { cellTokens =>
               handler.mathSubFormula(proc, parent.cellStyle, cellTokens) match
                 case b: Box => b
-                case _      => HBox(Vector.empty): Box
+                case null   => HBox(Vector.empty)
             })
             val array = parent.makeMatrix(rows, leftAlign)
             val box   = if left.isEmpty && right.isEmpty then array else parent.makeDelimited(left, array, right)
