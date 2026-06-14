@@ -4,6 +4,7 @@ import io.github.edadma.char_reader.CharReader
 import io.github.edadma.typesetter.{
   Box,
   Glue,
+  HSpaceBox,
   Hyphenation,
   InfGlue,
   InsertBox,
@@ -11,6 +12,7 @@ import io.github.edadma.typesetter.{
   Penalty,
   RuleBox,
   ShiftBox,
+  Typesetter,
   UnderlineBox,
 }
 
@@ -278,6 +280,47 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // kern - a rigid horizontal space of the given dimension (may be negative), e.g. \kern-.1667em
+  proc.registerPrimitive(
+    "kern",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
+        points(proc.evalArgumentExpr(pos)) match
+          case Some(d) => t.add(HSpaceBox(d))
+          case None    => handler.error("\\kern expects a dimension", argPos)
+    },
+  )
+
+  // lower / raise - shift the following box (an \hbox or \vbox) down / up by a dimension, e.g.
+  // \lower.5ex\hbox{E}. The box keeps its own width and height; only where it draws moves.
+  proc.registerPrimitive(
+    "lower",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
+        points(proc.evalArgumentExpr(pos)) match
+          case Some(d) =>
+            readBoxArg(proc, t, pos) match
+              case b: Box => t.add(ShiftBox(b, d))
+              case null   => handler.error("\\lower expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
+          case None => handler.error("\\lower expects a dimension", argPos)
+    },
+  )
+  proc.registerPrimitive(
+    "raise",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
+        points(proc.evalArgumentExpr(pos)) match
+          case Some(d) =>
+            readBoxArg(proc, t, pos) match
+              case b: Box => t.add(ShiftBox(b, -d))
+              case null   => handler.error("\\raise expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
+          case None => handler.error("\\raise expects a dimension", argPos)
+    },
+  )
+
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
     "noalign",
@@ -401,6 +444,26 @@ private def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
+
+// Read the <box> that follows \lower / \raise — the next \hbox or \vbox, built and returned
+// *without* adding it to the current list, so the caller can wrap it (in a ShiftBox). Returns null
+// for anything that is not a box command.
+private def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | Null =
+  proc.skipSpaces()
+  if !proc.hasMoreTokens then null
+  else
+    proc.peekToken() match
+      case Token.ControlSeq(name, _) if name == "hbox" || name == "vbox" =>
+        proc.nextToken() // consume the box command
+        val opts = proc.readOptionalParams(pos)
+        val body = proc.readArgument(pos)
+        val toVal: Double | Null = opts.get("to").flatMap(points) match
+          case Some(d) => d
+          case None    => null
+        if name == "hbox" then t.hbox(toVal) else t.vbox(toVal)
+        proc.processTokenList(body)
+        t.mode.exit
+      case _ => null
 
 // Resolve a glue argument: a braced glue spec ({12pt plus 2pt}), a glue-valued variable, or a bare dimension
 // optionally continued by `plus`/`minus` keywords in the token stream (\vskip 12pt plus 2pt minus 1fil)

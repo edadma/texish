@@ -468,11 +468,14 @@ class Processor(val handler: Handler):
       case Token.ControlSeq(name, _) => name
       case other => handler.error(s"Expected control sequence, got ${Token.show(other)}", pos)
 
-  /** Read a simple identifier name (for \def, \set, etc.) */
+  /** Read a simple identifier name (for \def, \set, etc.). A bare word names it; a control
+    * sequence names it by its control-sequence name, so the original TeX form `\def\TeX{…}` works
+    * as well as `\def TeX{…}`. */
   def readIdentifier(pos: CharReader): String =
     skipSpaces()
     nextToken() match
       case Token.Text(s, _) if s.nonEmpty && s.head.isLetter && s.forall(c => c.isLetterOrDigit || c == '_') => s
+      case Token.ControlSeq(name, _) => name
       case other => handler.error(s"Expected identifier, got ${Token.show(other)}", pos)
 
   /** Read tokens until \else or \fi at the current conditional level */
