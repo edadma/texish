@@ -124,6 +124,12 @@ abstract class Typesetter:
   /** Draw a single glyph, by index, at a baseline origin, in the current color. */
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit
 
+  /** The raw bytes of one SFNT table of `font`, by four-character tag (e.g. "MATH"), or `None` if the
+    * font has no such table. This is how the math layer reaches the OpenType `MATH` table, which the
+    * rasterizers expose no structured API for; see [[io.github.edadma.typesetter.opentype.MathTable]].
+    */
+  def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]]
+
   def loadImage(path: String): (ImageHandle, Int, Int)
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit

@@ -97,6 +97,8 @@ abstract class CairoTypesetter extends Typesetter:
     setFont(font)
     ctx.showGlyphs(Seq(Glyph(glyph.toLong, x, y)))
 
+  def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]] = font.ft.loadSfntTable(tag)
+
   def loadImage(path: String): (ImageHandle, Int, Int) =
     val loaded = imageSurfaceCreateFromPNG(path).reference
 

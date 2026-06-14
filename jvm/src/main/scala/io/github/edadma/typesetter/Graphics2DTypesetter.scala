@@ -4,8 +4,18 @@ import java.awt.font.{FontRenderContext, TextLayout}
 import java.awt.image.BufferedImage
 import java.awt.{BasicStroke, Graphics2D, RenderingHints, Font as JFont}
 import java.io.File
+import java.nio.file.{Files, Paths}
 import javax.imageio.ImageIO
 import scala.compiletime.uninitialized
+
+import io.github.edadma.typesetter.opentype.Sfnt
+
+/** A loaded typeface, retaining the file it came from so the glyph/math layer can read raw SFNT tables
+  * (java.awt.Font exposes no way back to its source bytes). */
+case class AwtFace(font: JFont, path: String)
+
+/** A sized font, carrying the source path forward from its [[AwtFace]] for the same reason. */
+case class AwtRenderFont(font: JFont, path: String)
 
 /** Raster backend over java.awt. The engine hands this class coordinates and sizes in big points (1/72 inch); the
   * device transform (dpi/72) is applied in exactly one place — a scale on the Graphics2D — so layout is identical
@@ -15,8 +25,8 @@ import scala.compiletime.uninitialized
 class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   type ImageHandle = BufferedImage
-  type FontFace    = JFont
-  type RenderFont  = JFont
+  type FontFace    = AwtFace
+  type RenderFont  = AwtRenderFont
 
   val output: String = null
 
@@ -57,7 +67,7 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   def ejectPageTarget(): Unit = ()
 
-  def setFont(font: RenderFont): Unit = g.setFont(font)
+  def setFont(font: RenderFont): Unit = g.setFont(font.font)
 
   def setColor(color: Color): Unit =
     g.setColor(new java.awt.Color(color.redInt, color.greenInt, color.blueInt, color.alphaInt))
@@ -75,10 +85,11 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
     g.fill(new java.awt.geom.Rectangle2D.Double(x, y, width, height))
 
-  def loadFont(path: String): FontFace = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path))
+  def loadFont(path: String): FontFace =
+    AwtFace(java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path)), path)
 
   def getTextExtents(text: String, font: RenderFont): TextExtents =
-    val layout = new TextLayout(text, font, frc)
+    val layout = new TextLayout(text, font.font, frc)
     val bounds = layout.getBounds
 
     val ascent = -bounds.getY
@@ -96,21 +107,21 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
       yAdvance = 0, // In horizontal typesetting, yAdvance is 0
     )
 
-  def makeFont(font: FontFace, size: Double): RenderFont = font.deriveFont(size.toFloat)
+  def makeFont(font: FontFace, size: Double): RenderFont = AwtRenderFont(font.font.deriveFont(size.toFloat), font.path)
 
   def charWidth(font: RenderFont, c: Char): Double =
-    val layout = new TextLayout(c.toString, font, frc)
+    val layout = new TextLayout(c.toString, font.font, frc)
 
     layout.getAdvance
 
   def glyphIndex(font: RenderFont, codepoint: Int): Int =
-    font.createGlyphVector(frc, new String(Character.toChars(codepoint))).getGlyphCode(0)
+    font.font.createGlyphVector(frc, new String(Character.toChars(codepoint))).getGlyphCode(0)
 
   // createGlyphVector(frc, int[]) treats the ints as glyph codes (no cmap mapping), which is exactly
   // what we want once we already hold an index. GlyphMetrics gives the advance and the visual bounds
   // relative to the baseline origin (y grows downward, so the top of the glyph has negative y).
   def glyphExtents(font: RenderFont, glyph: Int): TextExtents =
-    val gv     = font.createGlyphVector(frc, Array(glyph))
+    val gv     = font.font.createGlyphVector(frc, Array(glyph))
     val m      = gv.getGlyphMetrics(0)
     val bounds = m.getBounds2D
 
@@ -124,7 +135,14 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
     )
 
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit =
-    g.drawGlyphVector(font.createGlyphVector(frc, Array(glyph)), x.toFloat, y.toFloat)
+    g.drawGlyphVector(font.font.createGlyphVector(frc, Array(glyph)), x.toFloat, y.toFloat)
+
+  // java.awt.Font won't surface its raw table bytes, so reach the SFNT directory by reading the font
+  // file the face was loaded from and slicing the requested table out of it.
+  def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]] =
+    val bytes = Files.readAllBytes(Paths.get(font.path))
+
+    Sfnt(bytes).table(tag).map(r => bytes.slice(r.offset, r.offset + r.length))
 
   def loadImage(path: String): (ImageHandle, Int, Int) =
     val image = ImageIO.read(new File(path))

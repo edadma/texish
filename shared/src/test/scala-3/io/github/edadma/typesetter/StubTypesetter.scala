@@ -48,6 +48,8 @@ class StubTypesetter extends Typesetter:
 
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit = ()
 
+  def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]] = None
+
   def loadImage(path: String): (ImageHandle, Int, Int) = ((), 1, 1)
 
   def drawImage(image: ImageHandle, x: Double, y: Double): Unit = ()
