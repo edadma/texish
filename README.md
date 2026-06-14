@@ -13,10 +13,19 @@ Liang hyphenation, legal page breaks with widow/orphan control, footnotes, and g
 a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
 layer over the engine's primitives, with macros, a standard prelude/"format", `\hbox`/`\vbox`,
 `\kern`, `\lower`/`\raise`, the `\TeX` and `\TeXish` logos, units like `pt`/`in`/`em`/`ex`, and
-more). Pages render through pluggable backends — a Graphics2D/PDF backend on the JVM and a Cairo
-image/PDF backend on Native.
+more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM and
+a Cairo image-and-PDF backend on Native.
 
 Full documentation is coming — a dedicated docs site will be linked here once it's published.
+
+## Installation
+
+texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an sbt build with the
+`%%%` operator so the right platform artifact is selected:
+
+```scala
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.3.0"
+```
 
 ## License
 
