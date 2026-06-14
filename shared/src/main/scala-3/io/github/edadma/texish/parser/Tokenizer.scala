@@ -41,7 +41,7 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
     if reader.eoi then Token.EOF(reader)
     else
       val c = reader.ch
-      // Active characters take precedence over default special handling (except \ { } %)
+      // Active characters take precedence over default special handling (except \ { } and // comments)
       if isActive(c) then readActive()
       else c match
         case '\\' => readControlSeq()
@@ -51,10 +51,16 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
         case _ if c.isWhitespace => readSpace()
         case _                   => readText()
 
+  // Comments run from `//` to the end of the line. `%` is an ordinary character (so "50%" and the `%` modulo
+  // operator inside \calc work); a single `/` is ordinary text — only a doubled `//` starts a comment.
   private def skipComments(): Unit =
-    while reader.ch == '%' do
+    while reader.ch == '/' && peekNextIs('/') do
       while !reader.eoi && reader.ch != '\n' do reader = reader.next
       if reader.ch == '\n' then reader = reader.next
+
+  private def peekNextIs(c: Char): Boolean =
+    val nx = reader.next
+    !nx.eoi && nx.ch == c
 
   private def readControlSeq(): Token =
     val pos = reader
@@ -112,13 +118,13 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
   private def readText(): Token =
     val pos = reader
     val sb = new StringBuilder
-    while !reader.eoi && !isSpecial(reader.ch) do
+    while !reader.eoi && !isSpecial(reader.ch) && !(reader.ch == '/' && peekNextIs('/')) do
       sb.append(reader.ch)
       reader = reader.next
     Token.Text(sb.toString, pos)
 
   private def isSpecial(c: Char): Boolean =
-    c == '\\' || c == '{' || c == '}' || c == '%' || c == '\n' || c.isWhitespace || isActive(c)
+    c == '\\' || c == '{' || c == '}' || c == '\n' || c.isWhitespace || isActive(c)
 
   private def isActive(c: Char): Boolean = activeChars.contains(c)
 

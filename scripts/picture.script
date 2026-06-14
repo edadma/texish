@@ -1,11 +1,11 @@
-% Picture / vector-graphics demonstration for the \picture layer.
-%
-% Render with:  texish scripts/picture.script -o picture -p letter
-%
-% Coordinate convention inside a picture: y-up, origin at the bottom-left.
-% A bare number is a point; a unit suffix (in, mm, pt, em) is honoured too.
-% Coordinates may be computed — a bare variable \x is its value, and arithmetic
-% like \*{\x}{14} or \forloop.index works, so plots are built in a \for loop.
+// Picture / vector-graphics demonstration for the \picture layer.
+//
+// Render with:  texish scripts/picture.script -o picture -p letter
+//
+// Coordinate convention inside a picture: y-up, origin at the bottom-left.
+// A bare number is a point; a unit suffix (in, mm, pt, em) is honoured too.
+// Coordinates may be computed — a bare variable \x is its value, and arithmetic
+// like \*{\x}{14} or \forloop.index works, so plots are built in a \for loop.
 
 \def headline {\italic{Picture demo} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
@@ -149,16 +149,16 @@ Cartesian coordinates whose components are expressions.
   \translate{72 72}
   \set R {36}
 
-  % name the six carbons, each placed by a polar coordinate around the centre
+  // name the six carbons, each placed by a polar coordinate around the centre
   \coordinate{C1}{(0:R)}    \coordinate{C2}{(60:R)}   \coordinate{C3}{(120:R)}
   \coordinate{C4}{(180:R)}  \coordinate{C5}{(240:R)}  \coordinate{C6}{(300:R)}
 
-  % the ring, from the named carbons
+  // the ring, from the named carbons
   \nofill \stroke{black} \linewidth{1.5pt}
   \polygon{(C1) (C2) (C3) (C4) (C5) (C6)}
 
-  % three aromatic inner bonds along alternating edge mid-lines (angle m, inner
-  % radius ai), each running perpendicular (m+90) for half-length hl on each side
+  // three aromatic inner bonds along alternating edge mid-lines (angle m, inner
+  // radius ai), each running perpendicular (m+90) for half-length hl on each side
   \linewidth{1pt}
   \set ai {\calc{R*cosd(30) - 6}}
   \set hl {13}
@@ -167,7 +167,7 @@ Cartesian coordinates whose components are expressions.
           (ai*cosd(m) - hl*cosd(m+90), ai*sind(m) - hl*sind(m+90))}
   }
 
-  % a bond out to the hydroxyl from carbon C1
+  // a bond out to the hydroxyl from carbon C1
   \linewidth{1.5pt}
   \line{(C1) (R+20, 0)}
   \at anchor:west {(R+24, 0)}{OH}
@@ -187,7 +187,7 @@ polar rings of atoms, single and double bonds alternating around the ring.
   \stroke{black} \linewidth{1.2pt}
   \for\k{\range{0}{5}}{
     \set a {\calc{k*60}} \set b {\calc{(k+1)*60}}
-    \if{\calc{mod(k, 2)}}
+    \if{\calc{k % 2}}
       \bond{(a:R)}{(b:R)}
     \else
       \dbond{(a:R)}{(b:R)}

@@ -30,7 +30,7 @@ object Packages:
 \set bondgap {9}
 \set doublesep {2.5}
 
-% \bond{A}{B} — a single bond between two coordinates, shortened by bondgap at each end.
+// \bond{A}{B} — a single bond between two coordinates, shortened by bondgap at each end.
 \def bond a b {
   \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
   \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
@@ -41,7 +41,7 @@ object Packages:
         (chemBx - chemUx*bondgap, chemBy - chemUy*bondgap)}
 }
 
-% \dbond{A}{B} — a double bond: two parallel lines, offset doublesep either side of the bond axis.
+// \dbond{A}{B} — a double bond: two parallel lines, offset doublesep either side of the bond axis.
 \def dbond a b {
   \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
   \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
@@ -56,7 +56,7 @@ object Packages:
         (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
 }
 
-% \atom{name}{coord}{label} — name a coordinate and set its element label, centred on the point.
+// \atom{name}{coord}{label} — name a coordinate and set its element label, centred on the point.
 \def atom n c l {
   \coordinate{\n}{\c}
   \at anchor:center {\c}{\l}

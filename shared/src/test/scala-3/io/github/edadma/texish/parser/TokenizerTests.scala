@@ -45,10 +45,15 @@ class TokenizerTests extends AnyFreeSpec with Matchers:
       t.asInstanceOf[Token.Text].s shouldBe "#1#2"
     }
 
-    "should skip comments" in {
-      val tok = Tokenizer("hello%comment\nworld")
+    "should skip // comments to end of line" in {
+      val tok = Tokenizer("hello//comment\nworld")
       tok.next().asInstanceOf[Token.Text].s shouldBe "hello"
       tok.next() shouldBe a[Token.Text] // "world"
+    }
+
+    "treats % as ordinary text and a single / as text" in {
+      Tokenizer("50%").next().asInstanceOf[Token.Text].s shouldBe "50%"
+      Tokenizer("a/b").next().asInstanceOf[Token.Text].s shouldBe "a/b"
     }
 
     "should tokenize newlines" in {
