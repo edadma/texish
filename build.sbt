@@ -19,8 +19,8 @@ ThisBuild / sonatypeProfileName := "io.github.edadma"
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
-    url("https://github.com/edadma/typesetter"),
-    "scm:git@github.com:edadma/typesetter.git",
+    url("https://github.com/edadma/texish"),
+    "scm:git@github.com:edadma/texish.git",
   ),
 )
 ThisBuild / developers := List(
@@ -32,15 +32,15 @@ ThisBuild / developers := List(
   ),
 )
 
-ThisBuild / homepage    := Some(url("https://github.com/edadma/typesetter"))
-ThisBuild / description := "A document layout and PDF rendering engine for Scala"
+ThisBuild / homepage    := Some(url("https://github.com/edadma/texish"))
+ThisBuild / description := "A TeX-style document layout and PDF rendering engine for Scala"
 
 ThisBuild / publishTo := sonatypePublishToBundle.value
 
-lazy val typesetter = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
-    name := "typesetter",
+    name := "texish",
     scalacOptions ++=
       Seq(
         "-deprecation",
@@ -68,13 +68,13 @@ lazy val typesetter = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     Compile / sourceGenerators += Def.task {
       val root    = (LocalRootProject / baseDirectory).value
       val src     = root / "shared" / "src" / "main" / "resources" / "hyph-en-us.tex"
-      val out     = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "typesetter" / "EnglishHyphenationPatterns.scala"
+      val out     = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EnglishHyphenationPatterns.scala"
       val escaped = IO.read(src).replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
       IO.write(
         out,
-        "package io.github.edadma.typesetter\n\n" +
+        "package io.github.edadma.texish\n\n" +
           "// Generated at build time from shared/src/main/resources/hyph-en-us.tex — do not edit.\n" +
-          "private[typesetter] object EnglishHyphenationPatterns:\n" +
+          "private[texish] object EnglishHyphenationPatterns:\n" +
           "  val content: String = \"" + escaped + "\"\n",
       )
       Seq(out)
@@ -102,9 +102,9 @@ lazy val typesetter = crossProject(JSPlatform, JVMPlatform, NativePlatform)
 
 lazy val root = project
   .in(file("."))
-  .aggregate(typesetter.js, typesetter.jvm, typesetter.native)
+  .aggregate(texish.js, texish.jvm, texish.native)
   .settings(
-    name                := "typesetter",
+    name                := "texish",
     publish / skip      := true,
     publishLocal / skip := true,
   )

@@ -1,7 +1,9 @@
-# typesetter
+# texish
 
 A TeX-style document layout and rendering engine for Scala, cross-built for the JVM, Scala Native,
-and Scala.js.
+and Scala.js. Includes TeX-style math mode (`$…$`) set in Latin Modern Math through an OpenType
+`MATH` table: atoms and spacing, super/subscripts, fractions, radicals (including higher roots),
+stretchy delimiters, accents, and big operators with limits.
 
 It breaks paragraphs into lines and lines into pages the way TeX does — Knuth-Plass line breaking,
 Liang hyphenation, legal page breaks with widow/orphan control, footnotes, and glue/kern spacing in
