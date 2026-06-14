@@ -13,6 +13,7 @@ import io.github.edadma.texish.{
   MathClass,
   MathDelimiters,
   MathMode,
+  MathStyle,
   Penalty,
   RuleBox,
   ShiftBox,
@@ -418,6 +419,22 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         t.mode match
           case parent: MathMode => parent.setLimits(false)
           case _                => handler.error("\\nolimits is only allowed in math mode", pos)
+    },
+  )
+
+  // eqno - 1 body arg: an equation number for the surrounding display. Display-math only; the number is
+  // typeset by a nested math mode at text size and flushed to the right margin on the display line. As in
+  // plain TeX, the material is set in math (so "(3.1)" sets its parens and digits as math symbols).
+  proc.registerPrimitive(
+    "eqno",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode if parent.style.isDisplay =>
+            val box = handler.mathSubFormula(proc, MathStyle.Text, proc.readArgument(pos))
+
+            if box ne null then parent.eqno = Some(box)
+          case _ => handler.error("\\eqno is only allowed in display math", pos)
     },
   )
 

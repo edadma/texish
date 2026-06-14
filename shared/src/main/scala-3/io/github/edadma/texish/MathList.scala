@@ -103,16 +103,23 @@ object MathList:
     * nucleus's italic correction applied horizontally per [[scriptOffsets]]. */
   private def nucleusBox(a: MathAtom, mf: MathFont, cramped: Boolean, isDisplay: Boolean): Box =
     val limitDefault = isDisplay && !a.bigOp.exists(sidesetInDisplay)
-    if a.sup.isEmpty && a.sub.isEmpty then a.nucleus
-    else if a.cls == Op && a.limits.getOrElse(limitDefault) then
-      val opBox = a.bigOp.map(cp => mf.largeOperator(cp, display = true)).getOrElse(a.nucleus)
-      new LimitsBox(mf.t, opBox, a.sup, a.sub, mf.limitParams)
+    val useLimits    = a.cls == Op && a.limits.getOrElse(limitDefault)
+
+    // A large operator grows to its display-size glyph in display style — whether its bounds stack as limits
+    // or sit to the side, so a display integral is tall even though its bounds stay beside it — and also when
+    // \limits stacks them inline. Otherwise it is the base glyph, sitting on the baseline like any symbol.
+    val nucleus =
+      if a.cls == Op then a.bigOp.map(cp => mf.largeOperator(cp, isDisplay || useLimits)).getOrElse(a.nucleus)
+      else a.nucleus
+
+    if a.sup.isEmpty && a.sub.isEmpty then nucleus
+    else if useLimits then new LimitsBox(mf.t, nucleus, a.sup, a.sub, mf.limitParams)
     else
       val p              = mf.scriptParams
-      val (up, down)     = MathScriptBox.shifts(a.nucleus, a.sup, a.sub, p, cramped)
+      val (up, down)     = MathScriptBox.shifts(nucleus, a.sup, a.sub, p, cramped)
       val (supDx, subDx) = scriptOffsets(a.cls, a.italicCorrection)
 
-      new MathScriptBox(a.nucleus, a.sup, a.sub, up, down, supDx, subDx, p.spaceAfterScript)
+      new MathScriptBox(nucleus, a.sup, a.sub, up, down, supDx, subDx, p.spaceAfterScript)
 
   /** How a nucleus's italic correction offsets its scripts horizontally, returned as (superscript, subscript)
     * shifts from the nucleus's right edge. For an ordinary atom the correction sets the superscript out to

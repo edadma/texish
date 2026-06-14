@@ -191,3 +191,14 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     noException should be thrownBy proc.process("$$\\sum_{i=1}^{n} \\frac{1}{i} + \\int_0^1 f$$")
   }
+
+  "\\eqno numbers a display without error" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$$a^2 + b^2 = c^2 \\eqno{(3.1)}$$")
+  }
+
+  "\\eqno outside display math is reported" in {
+    val (_, proc) = fixture()
+    val ex = the[ParserException] thrownBy proc.process("$x \\eqno{(1)}$") // inline, not a display
+    ex.getMessage should include("display math")
+  }

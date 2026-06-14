@@ -171,6 +171,25 @@ class MathFontTests extends AnyFreeSpec with Matchers:
     box.height should be > displaySum // the stacked limits make it taller than the operator alone
   }
 
+  "in display style an integral grows even though its bounds stay to the side" in {
+    val t    = new Graphics2DTypesetter(dpi = 72)
+    val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
+
+    def intWithBounds(style: MathStyle): Box =
+      val m = new MathMode(t, full, style)
+      m.addCommand("int") shouldBe true
+      m.addScript(superscript = false, { val s = new MathMode(t, full, style.sub); s.addChar('0'); s.result.asInstanceOf[Box] })
+      m.addScript(superscript = true, { val s = new MathMode(t, full, style.sup); s.addChar('1'); s.result.asInstanceOf[Box] })
+      m.result.asInstanceOf[HBox].boxes.head
+
+    val inlineInt = intWithBounds(MathStyle.Text)
+    val displayInt = intWithBounds(MathStyle.Display)
+
+    inlineInt shouldBe a[MathScriptBox]  // ∫ keeps side-set bounds in both styles
+    displayInt shouldBe a[MathScriptBox]
+    displayInt.height should be > inlineInt.height // but the display integral sign is taller
+  }
+
   "an accent rises above its nucleus, and a wide accent spans a multi-letter base" in {
     val t    = new Graphics2DTypesetter(dpi = 72)
     val full = new MathFont(t, lmmath(t), t.mathTableFor(lmmath(t)))
