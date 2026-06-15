@@ -111,6 +111,34 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // topinsert - 1 body arg: a block (a figure, a table) that detaches from the running text and floats to the
+  // top of whatever page it lands on. The body is typeset immediately into its own vertical box, which rides the
+  // vertical list as a zero-size float (see FloatBox); the page builder counts its height against the page and
+  // lifts it to the page top above the float separator at shipout.
+  proc.registerPrimitive(
+    "topinsert",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+
+        // the body is typeset now, into its own vertical box; the scope brackets any font or spacing changes the
+        // body makes so the surrounding text resumes unaffected
+        t.enter()
+        t.vbox()
+        proc.processTokenList(body)
+        t.paragraph()
+
+        val content = t.mode.exit
+
+        t.exit()
+
+        // contributed to the current list directly: between paragraphs that is the vertical list (a float is a
+        // zero-size control item, so no interline glue attaches), and inside a paragraph it rides the line and
+        // migrates out to the vertical list with the other migrating items
+        if content ne null then t.add(FloatBox(content))
+    },
+  )
+
   // penalty - 1 numeric arg: how undesirable a page break is here (10000 forbids, -10000 forces)
   proc.registerPrimitive(
     "penalty",

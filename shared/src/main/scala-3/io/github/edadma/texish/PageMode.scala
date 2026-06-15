@@ -27,13 +27,23 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
   private def separatorSize: Double =
     t.getGlue("footnotesep").naturalSize + FootnoteRuleHeight + FootnoteRuleGap
 
-  /** Page height the given items will occupy once shipped: their own heights plus the footnote content carried by
-    * any inserts among them, plus the separator (counted once) when any insert is present.
+  /** Height the top floats among `items` add to a page once shipped: the floats' own heights, the floatsep glue
+    * between each adjacent pair, and the textfloatsep glue below the whole block before the body. Zero when no
+    * float is present.
+    */
+  private def floatAreaSize(items: collection.Seq[Box]): Double =
+    val floats = items.collect { case f: FloatBox => f.content.height }
+
+    if floats.isEmpty then 0
+    else floats.sum + (floats.length - 1) * t.getGlue("floatsep").naturalSize + t.getGlue("textfloatsep").naturalSize
+
+  /** Page height the given items will occupy once shipped: their own heights, the footnote content carried by any
+    * inserts among them (plus the footnote separator, once), and the top-float area (floats plus their spacing).
     */
   private def shippedSize(items: collection.Seq[Box]): Double =
     val notes = items.collect { case ins: InsertBox => ins.content.height }
 
-    items.map(measure).sum + (if notes.isEmpty then 0 else notes.sum + separatorSize)
+    items.map(measure).sum + (if notes.isEmpty then 0 else notes.sum + separatorSize) + floatAreaSize(items)
 
   override def clear(): Unit =
     super.clear()
@@ -72,14 +82,16 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
         case _          => false
 
     // sizes(i) is the shipped height of boxes(0 until i), i.e. the page if we break at item i — including the
-    // footnote content of any inserts in the prefix, by the same rule the overflow check in add uses
+    // footnote content of any inserts and the top floats in the prefix, by the same rule the overflow check in
+    // add uses
     val heights = boxes.scanLeft(0.0)(_ + measure(_))
     val notes = boxes.scanLeft(0.0)((acc, b) =>
       acc + (b match
         case ins: InsertBox => ins.content.height
         case _              => 0.0))
 
-    def sizes(i: Int): Double = heights(i) + (if notes(i) > 0 then notes(i) + separatorSize else 0)
+    def sizes(i: Int): Double =
+      heights(i) + (if notes(i) > 0 then notes(i) + separatorSize else 0) + floatAreaSize(boxes.take(i))
 
     val candidates = (boxes.length - 1) to 1 by -1
 
@@ -119,22 +131,32 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     clear()
 
   override def result: Box =
-    // the inserts come out of the body and their content reappears at the foot of the page, below the
-    // footnotesep space and the separator rule; the body is built short by exactly that much, so the page is
-    // still exactly vsize tall
-    val notes = boxes.collect { case ins: InsertBox => ins.content }.toList
+    // the floats and inserts come out of the body: float content reappears at the top of the page above a
+    // textfloatsep space, insert content at the foot below the footnotesep space and the separator rule. The body
+    // is built short by exactly the height the two areas take, so the page is still exactly vsize tall.
+    val floats = boxes.collect { case f: FloatBox => f.content }.toList
+    val notes  = boxes.collect { case ins: InsertBox => ins.content }.toList
 
-    boxes.filterInPlace(!_.isInstanceOf[InsertBox])
+    boxes.filterInPlace(b => !b.isInstanceOf[FloatBox] && !b.isInstanceOf[InsertBox])
 
     // ragged bottoms trade vertical justification for never stretching the page's own glue: the fil soaks up
     // all the slack, so content stays at its natural spacing and short pages end quietly
     if t.getNumber("raggedbottom") != 0 then super.add(FilGlue)
 
-    if notes.isEmpty then wrap(buildTo(t.getNumber("vsize")))
+    val top: List[Box] =
+      if floats.isEmpty then Nil
+      else
+        val sep = VSpaceBox(t.getGlue("floatsep").naturalSize)
+
+        floats.head :: floats.tail.flatMap(f => List(sep, f)) ::: List(VSpaceBox(t.getGlue("textfloatsep").naturalSize))
+
+    val topHeight = top.map(_.height).sum
+
+    if notes.isEmpty then wrap(top ++ buildTo(t.getNumber("vsize") - topHeight))
     else
-      val body = buildTo(t.getNumber("vsize") - notes.map(_.height).sum - separatorSize)
+      val body = buildTo(t.getNumber("vsize") - topHeight - notes.map(_.height).sum - separatorSize)
       val foot = VSpaceBox(t.getGlue("footnotesep").naturalSize)
         :: RuleBox(t, FootnoteRuleWidth, FootnoteRuleHeight, 0)
         :: VSpaceBox(FootnoteRuleGap) :: notes
 
-      wrap(body ++ foot)
+      wrap(top ++ body ++ foot)

@@ -737,6 +737,11 @@ abstract class Typesetter:
       "footnotesize" -> 0.8,
       "footnoteno"   -> 0.0,
 
+      // top floats (see FloatBox): the space between two floats stacked in a page's float area, and the space
+      // between that float area and the body text below it
+      "floatsep"     -> Glue(currentFont.size * 0.85 * pt),
+      "textfloatsep" -> Glue(currentFont.size * 1.4 * pt),
+
       // mark state, maintained by the page builder as pages ship (see MarkBox)
       "topmark"   -> "", // the last mark of the previous page
       "firstmark" -> "", // the first mark on the page being shipped
