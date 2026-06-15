@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, HSpaceBox, StubTypesetter, Typesetter, VBox}
+import io.github.edadma.texish.{Box, CharBox, HBox, HSpaceBox, StubTypesetter, Typesetter, VBox, VerticalBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -97,6 +97,25 @@ class BoxRegisterTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     proc.process("\\setbox a \\hbox{ABCD} \\set w {\\wd a} \\set s {\\calc{w + 6}}")
     proc.handler.get("s") shouldBe Value.Num(30.0)
+  }
+
+  "\\vtop saves a vtop box that \\unvbox can splice" in {
+    val (t, proc) = fixture()
+    proc.process("\\setbox v \\vtop{\\hbox{AB}} \\unvbox v")
+    t.added.last shouldBe a[HBox]                              // the line, spliced in
+    t.added.exists(_.isInstanceOf[VerticalBox]) shouldBe false // the vtop wrapper was unpacked, not placed
+    proc.handler.get("v") shouldBe Value.Undefined
+  }
+
+  "\\hbox spread: widens a box past its natural size" in {
+    val (_, proc) = fixture()
+    proc.process("\\setbox a \\hbox spread:18{C\\hfil} \\set w {\\wd a}")
+    proc.handler.get("w") shouldBe Value.Dimen(24.0) // natural 6 (one char) + 18 of spread
+  }
+
+  "a box rejects both to: and spread:" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy proc.process("\\hbox to:10 spread:5{x}")
   }
 
   "\\setbox without a following box is an error" in {

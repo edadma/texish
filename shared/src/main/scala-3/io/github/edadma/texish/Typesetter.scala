@@ -638,12 +638,17 @@ abstract class Typesetter:
     modeStack.top.op(operation)
     this
 
-  def hbox(toSize: Double | Null = null): Typesetter =
-    push(new HBoxBuilder(this, toSize))
+  def hbox(toSize: Double | Null = null, spread: Double | Null = null): Typesetter =
+    push(new HBoxBuilder(this, toSize, spread))
     this
 
-  def vbox(toSize: Double | Null = null): Typesetter =
-    push(new VBoxBuilder(this, toSize))
+  def vbox(toSize: Double | Null = null, spread: Double | Null = null): Typesetter =
+    push(new VBoxBuilder(this, toSize, spread))
+    this
+
+  // A \vtop: like \vbox but with the reference point on the first line's baseline.
+  def vtop(toSize: Double | Null = null, spread: Double | Null = null): Typesetter =
+    push(new VBoxBuilder(this, toSize, spread, top = true))
     this
 
   def image(path: String): Typesetter =

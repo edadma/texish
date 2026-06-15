@@ -8,14 +8,20 @@ abstract class ListBoxBuilder extends Builder:
   protected val measure: Box => Double
   protected val skip: Double => Box
   protected var toSize: Double | Null
+  // `to` fixes the final size absolutely; `spread` adds to the natural size (the box stretches/shrinks by this
+  // much). At most one is set; `to` wins if both somehow are.
+  protected var spread: Double | Null = null
   protected val wrap: Seq[Box] => Box
 
   def size: Double = boxes map measure sum
 
   def result: Box =
     toSize match
-      case null      => wrap(build)
       case s: Double => wrap(buildTo(s))
+      case null =>
+        spread match
+          case sp: Double => wrap(buildTo((boxes map measure sum) + sp))
+          case null       => wrap(build)
 
   protected def build: Seq[Box] =
     boxes map {
