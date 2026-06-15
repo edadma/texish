@@ -1,6 +1,7 @@
 package io.github.edadma.texish
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 
 class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   def result: Box = ???
@@ -17,7 +18,27 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         buildLinesGreedy(hsize)
 
     t.indentParagraph = true
+    // \hangindent / \hangafter apply to a single paragraph and revert afterwards, as in TeX;
+    // \leftskip / \rightskip persist until the document changes them.
+    t.set("hangindent", 0.0)
+    t.set("hangafter", 1.0)
     pop
+
+  /** The left and right margin glue for the line whose 0-based number is `n`, from `\leftskip` /
+    * `\rightskip` and a `\hangindent` selected by `\hangafter`. The box builder still sets the whole
+    * line to `hsize`, so these insets push the justified text into the same narrowed measure the
+    * breaker chose its breaks against. A positive `\hangindent` indents on the left, a negative one
+    * on the right. */
+  private def lineMargins(n: Int): (Glue, Glue) =
+    val leftskip   = t.getGlue("leftskip")
+    val rightskip  = t.getGlue("rightskip")
+    val hangindent = t.getNumber("hangindent")
+    val hangafter  = t.getNumber("hangafter").toInt
+    val hung       = if hangafter >= 0 then n >= hangafter else n < -hangafter
+    val hang       = if hangindent != 0 && hung then hangindent else 0.0
+    val left       = if hang > 0 then leftskip + hang else leftskip
+    val right      = if hang < 0 then rightskip + -hang else rightskip
+    (left, right)
 
   /** The page-break penalty between two consecutive lines of a paragraph: interlinepenalty everywhere, plus
     * clubpenalty after the first line and widowpenalty before the last, as in TeX.
@@ -38,14 +59,17 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       // marks and inserts migrate out of the line to the vertical list, where the page builder can see them
       val migrating = lineBoxes.collect { case m: MigratingBox => m }
 
-      for box <- lineBoxes do
-        if !box.isInstanceOf[MigratingBox] then hbox add box
+      // the line's own content, trailing interword space trimmed before the margins are applied
+      val content = ArrayBuffer.from(lineBoxes.iterator.filterNot(_.isInstanceOf[MigratingBox]))
+      if content.nonEmpty && content.last.isSpace then content.remove(content.length - 1)
 
-      // Remove trailing space
-      if hbox.nonEmpty && hbox.last.isSpace then hbox.removeLast()
-
-      // Add parfillskip to last line
+      // \leftskip (and a left hanging indent) opens the line; the content, then \parfillskip on the
+      // last line, then \rightskip (and a right hanging indent) close it — the whole line set to hsize
+      val (leftMargin, rightMargin) = lineMargins(lineIdx)
+      hbox add leftMargin
+      content.foreach(hbox.add)
       if isLast then hbox add t.getGlue("parfillskip")
+      hbox add rightMargin
 
       val newLine = hbox.result
       t.modeStack(1) add newLine
@@ -67,8 +91,14 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     var lineIdx = 0
 
     while boxes.nonEmpty do
-      val hbox      = new HBoxBuilder(t, t.getNumber("hsize"))
-      val migrating = scala.collection.mutable.ArrayBuffer[MigratingBox]()
+      // the same per-line measure the optimal path uses: \leftskip/\rightskip and a \hangindent
+      // narrow the line, and the margins bracket the content so the whole line still sets to hsize
+      val (leftMargin, rightMargin) = lineMargins(lineIdx)
+      val rightLimit = hsize - rightMargin.naturalSize
+      val measure    = rightLimit - leftMargin.naturalSize
+      val hbox       = new HBoxBuilder(t, t.getNumber("hsize"))
+      val migrating  = scala.collection.mutable.ArrayBuffer[MigratingBox]()
+      hbox add leftMargin
 
       @tailrec
       def line(): Unit =
@@ -77,10 +107,10 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
             // marks and inserts migrate out of the line to the vertical list, where the page builder can see them
             migrating += boxes.remove(0).asInstanceOf[MigratingBox]
             line()
-          else if hbox.size + boxes.head.width <= hsize then
+          else if hbox.size + boxes.head.width <= rightLimit then
             hbox add boxes.remove(0)
             line()
-          else if boxes.head.width > hsize then
+          else if boxes.head.width > measure then
             println(s"Warning: overflow: ${boxes.head}")
             hbox add boxes.remove(0)
           else
@@ -100,7 +130,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
                             val (before, after) = hyphenation.next()
                             val beforeHyphen    = b.newCharBox(before)
 
-                            if hbox.size + beforeHyphen.width <= t.getNumber("hsize") then
+                            if hbox.size + beforeHyphen.width <= rightLimit then
                               lastBefore = beforeHyphen
                               lastAfter = after
                               longest()
@@ -115,7 +145,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
                   case idx =>
                     val beforeHyphen = b.newCharBox(b.text.substring(0, idx + 1))
 
-                    if hbox.size + beforeHyphen.width <= t.getNumber("hsize") then
+                    if hbox.size + beforeHyphen.width <= rightLimit then
                       hbox add beforeHyphen
                       boxes.remove(0)
                       boxes.insert(0, b.newCharBox(b.text.substring(idx + 1)))
@@ -127,6 +157,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       if hbox.nonEmpty && hbox.last.isSpace then hbox.removeLast()
       if boxes.nonEmpty && boxes.head.isSpace then boxes.remove(0)
       if boxes.isEmpty then hbox add t.getGlue("parfillskip")
+      hbox add rightMargin
 
       val newLine = hbox.result
 
