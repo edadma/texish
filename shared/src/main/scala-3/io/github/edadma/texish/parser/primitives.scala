@@ -111,13 +111,16 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // topinsert / botinsert - 1 body arg: a block (a figure, a table) that detaches from the running text and floats
-  // to the top or bottom of whatever page it lands on. The body is typeset immediately into its own vertical box,
-  // which rides the vertical list as a zero-size float (see FloatBox); the page builder counts its height against
-  // the page and lifts it to the page top, or sinks it to the bottom below the footnotes, at shipout.
-  def floatPrimitive(top: Boolean): Primitive =
+  // topinsert / midinsert / botinsert - an optional [htb] placement spec then 1 body arg: a block (a figure, a
+  // table) that detaches from the running text and floats to a page edge. The body is typeset immediately into its
+  // own vertical box, which rides the vertical list as a zero-size float (see FloatBox); the page builder counts its
+  // height against the page and, at shipout, lifts a top float above the body or sinks a bottom float below the
+  // footnotes. The spec (any of h=here, t=top, b=bottom, order significant) overrides the command's default: a
+  // here-preferring float stays inline where it sits if the page can still hold it, otherwise falls to its next edge.
+  def floatPrimitive(default: String): Primitive =
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val spec = readPlacementSpec(proc).filter(_.nonEmpty).getOrElse(default)
         val body = proc.readArgument(pos)
 
         // the body is typeset now, into its own vertical box; the scope brackets any font or spacing changes the
@@ -134,11 +137,12 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         // contributed to the current list directly: between paragraphs that is the vertical list (a float is a
         // zero-size control item, so no interline glue attaches), and inside a paragraph it rides the line and
         // migrates out to the vertical list with the other migrating items
-        if content ne null then t.add(FloatBox(content, top))
+        if content ne null then t.add(new FloatBox(content, spec.toList))
     }
 
-  proc.registerPrimitive("topinsert", floatPrimitive(top = true))
-  proc.registerPrimitive("botinsert", floatPrimitive(top = false))
+  proc.registerPrimitive("topinsert", floatPrimitive("t"))
+  proc.registerPrimitive("midinsert", floatPrimitive("ht"))
+  proc.registerPrimitive("botinsert", floatPrimitive("b"))
 
   // penalty - 1 numeric arg: how undesirable a page break is here (10000 forbids, -10000 forces)
   proc.registerPrimitive(
@@ -696,3 +700,33 @@ private[parser] def glueContinuation(proc: Processor, natural: Double, pos: Char
   proc.readGlueContinuation(natural, pos) match
     case Value.Glue(n, st, sh, sto, sho) => Glue(n, st, sh, sto, sho)
     case _                               => Glue(natural)
+
+// Read an optional [htb] placement specifier following a float command, in the style of \sqrt's [degree]. Brackets
+// are ordinary text, so the opening '[' may begin a text token and the closing ']' may sit mid-token; this scans
+// across tokens, splitting text runs at the brackets and pushing back any tail after ']'. The result keeps only the
+// placement letters h/t/b, in order. Returns None when no '[' run follows, leaving the stream untouched.
+private[parser] def readPlacementSpec(proc: Processor): Option[String] =
+  proc.skipSpaces()
+  proc.peekToken() match
+    case Token.Text(s, sp) if s.startsWith("[") =>
+      proc.nextToken()
+      val out    = new StringBuilder
+      var closed = false
+
+      def takeText(str: String, p: CharReader): Unit =
+        val idx = str.indexOf(']')
+        if idx < 0 then out ++= str
+        else
+          out ++= str.substring(0, idx)
+          val after = str.substring(idx + 1)
+          if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, p)))
+          closed = true
+
+      takeText(s.substring(1), sp)
+      while !closed && proc.hasMoreTokens do
+        proc.nextToken() match
+          case Token.Text(str, p) => takeText(str, p)
+          case Token.EOF(_)       => closed = true
+          case _                  => ()
+      Some(out.toString.filter("htb".contains(_)))
+    case _ => None

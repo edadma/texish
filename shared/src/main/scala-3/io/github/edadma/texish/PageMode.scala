@@ -38,8 +38,8 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     * each with its own separators.
     */
   private def floatAreaSize(items: collection.Seq[Box]): Double =
-    floatStackSize(items.collect { case f: FloatBox if f.top => f.content.height }) +
-      floatStackSize(items.collect { case f: FloatBox if !f.top => f.content.height })
+    floatStackSize(items.collect { case f: FloatBox if f.edgeTop => f.content.height }) +
+      floatStackSize(items.collect { case f: FloatBox if !f.edgeTop => f.content.height })
 
   /** Page height the given items will occupy once shipped: their own heights, the footnote content carried by any
     * inserts among them (plus the footnote separator, once), and the top-float area (floats plus their spacing).
@@ -57,6 +57,17 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     box match
       case p: Penalty if p.penalty <= Penalty.Force =>
         if nonEmpty then newpage()
+
+      // a float that prefers "here" placement stays inline at this point when the current page can still hold its
+      // block; otherwise it falls back to its next listed edge (and then floats like any top/bottom insert). With
+      // no further preference it floats to the top, so a here-only float that does not fit is never lost — the
+      // plain-TeX \midinsert rule, "leave it here if it fits, else turn it into a \topinsert".
+      case f: FloatBox if f.placement.headOption.contains('h') =>
+        if shippedSize(boxes) + f.content.height <= t.getNumber("vsize") then add(f.content)
+        else
+          val rest = f.placement.tail
+          add(new FloatBox(f.content, if rest.isEmpty then List('t') else rest))
+
       case _ =>
         super.add(box)
 
@@ -139,8 +150,8 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     // top floats, body, footnotes, bottom floats — the order TeX/LaTeX use: top floats head the page above a
     // textfloatsep space, footnotes sit at the foot of the text below the separator rule, and bottom floats sink
     // below them. The body is built short by exactly the height all three areas take, so the page stays vsize tall.
-    val topFloats = boxes.collect { case f: FloatBox if f.top => f.content }.toList
-    val botFloats = boxes.collect { case f: FloatBox if !f.top => f.content }.toList
+    val topFloats = boxes.collect { case f: FloatBox if f.edgeTop => f.content }.toList
+    val botFloats = boxes.collect { case f: FloatBox if !f.edgeTop => f.content }.toList
     val notes     = boxes.collect { case ins: InsertBox => ins.content }.toList
 
     boxes.filterInPlace(b => !b.isInstanceOf[FloatBox] && !b.isInstanceOf[InsertBox])

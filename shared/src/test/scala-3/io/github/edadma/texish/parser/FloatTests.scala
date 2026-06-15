@@ -148,6 +148,64 @@ class FloatTests extends AnyFreeSpec with Matchers:
     page0.last shouldBe "BOTFIG"
   }
 
+  "\\midinsert keeps its block inline when the page can still hold it" in quietly {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+
+    proc.process("alpha\n\n\\midinsert{HEREFIG}\n\nbeta\n\n")
+    t.end()
+
+    // a here-float that fits is left where it sits, in document order — not lifted to the top of the page
+    val page = texts(doc.shipped(0))
+    page.indexOf("alpha") should be < page.indexOf("HEREFIG")
+    page.indexOf("HEREFIG") should be < page.indexOf("beta")
+  }
+
+  "\\midinsert that cannot fit here floats to the top of a later page" in quietly {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+    t.set("vsize", 80.0)
+    t.set("hsize", 200.0)
+
+    // the page fills with lines, then a here-float too tall for the room left is asked for; it falls back to its
+    // next preference (top), counts its height, overflows, and so heads the next page like a \topinsert
+    proc.process("l1\n\nl2\n\nl3\n\n\\midinsert{LATEFIG\n\nrow2\n\nrow3\n\nrow4} after\n\n")
+    t.end()
+
+    doc.shipped.length should be > 1
+    val onLate = doc.shipped.indexWhere(p => texts(p) contains "LATEFIG")
+    onLate should be > 0
+    texts(doc.shipped(onLate)).head shouldBe "LATEFIG"
+  }
+
+  "a placement spec overrides the command's default edge" in quietly {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+
+    proc.process("one \\topinsert[b]{OVERFIG} two\n\n\\vfill\\eject after\n\n")
+    t.end()
+
+    // [b] turns this \topinsert into a bottom float
+    val page0 = texts(doc.shipped(0))
+    page0.last shouldBe "OVERFIG"
+    page0.indexOf("one") should be < page0.indexOf("OVERFIG")
+  }
+
+  "deferred floats keep their contribution order across pages" in quietly {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+    t.set("vsize", 120.0)
+    t.set("hsize", 200.0)
+
+    val source = (1 to 6).map(i => s"\\topinsert{F$i} w$i x$i y$i z$i p$i q$i").mkString(" ") + "\n\n"
+    proc.process(source)
+    t.end()
+
+    // the vertical list is the deferral queue: floats spilling across pages stay in contribution order
+    val labels = doc.shipped.toList.flatMap(texts).filter(_.startsWith("F"))
+    labels shouldBe (1 to 6).map(i => s"F$i").toList
+  }
+
   "top and bottom floats both build the page to exactly vsize" in {
     val (t, doc, proc) = fixture()
     t.set("raggedbottom", 1.0)
