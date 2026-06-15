@@ -120,3 +120,54 @@ class FloatTests extends AnyFreeSpec with Matchers:
     onLate should be > 0
     texts(doc.shipped(onLate)).head shouldBe "LATE"
   }
+
+  "\\botinsert sinks the float to the foot of its page, below the body" in quietly {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+
+    proc.process("one \\botinsert{BOTFIG} two\n\n\\vfill\\eject after\n\n")
+    t.end()
+
+    doc.shipped.length shouldBe 2
+
+    val page0 = texts(doc.shipped(0))
+    page0.last shouldBe "BOTFIG"                    // the float is the last thing on the page
+    page0.indexOf("one") should be < page0.indexOf("BOTFIG")
+    texts(doc.shipped(1)) should not contain "BOTFIG"
+  }
+
+  "footnotes sit above bottom floats on the same page" in quietly {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+
+    proc.process("ref \\footnote{NOTE} text \\botinsert{BOTFIG} end\n\n")
+    t.end()
+
+    val page0 = texts(doc.shipped(0))
+    page0.indexOf("NOTE") should be < page0.indexOf("BOTFIG")
+    page0.last shouldBe "BOTFIG"
+  }
+
+  "top and bottom floats both build the page to exactly vsize" in {
+    val (t, doc, proc) = fixture()
+    t.set("raggedbottom", 1.0)
+    t.set("vsize", 200.0)
+    t.set("hsize", 200.0)
+
+    val source =
+      (1 to 6)
+        .map(i => s"\\topinsert{top$i} \\botinsert{bot$i} word$i tail$i more$i stuff$i extra$i padding$i")
+        .mkString(" ")
+    val out    = new java.io.ByteArrayOutputStream
+
+    Console.withOut(out) {
+      proc.process(source)
+      t.end()
+    }
+
+    out.toString shouldBe empty
+    for page <- doc.shipped do page.height shouldBe 200.0 +- 1e-9
+    for i <- 1 to 6 do
+      doc.shipped.count(p => texts(p) contains s"top$i") shouldBe 1
+      doc.shipped.count(p => texts(p) contains s"bot$i") shouldBe 1
+  }

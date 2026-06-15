@@ -27,15 +27,19 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
   private def separatorSize: Double =
     t.getGlue("footnotesep").naturalSize + FootnoteRuleHeight + FootnoteRuleGap
 
-  /** Height the top floats among `items` add to a page once shipped: the floats' own heights, the floatsep glue
-    * between each adjacent pair, and the textfloatsep glue below the whole block before the body. Zero when no
-    * float is present.
+  /** Height a stack of float blocks adds to a page once shipped: the floats' own heights, the floatsep glue between
+    * each adjacent pair, and the textfloatsep glue separating the whole block from the body. Zero when empty.
+    */
+  private def floatStackSize(heights: collection.Seq[Double]): Double =
+    if heights.isEmpty then 0
+    else heights.sum + (heights.length - 1) * t.getGlue("floatsep").naturalSize + t.getGlue("textfloatsep").naturalSize
+
+  /** Height the floats among `items` add to a page once shipped: the top-float stack plus the bottom-float stack,
+    * each with its own separators.
     */
   private def floatAreaSize(items: collection.Seq[Box]): Double =
-    val floats = items.collect { case f: FloatBox => f.content.height }
-
-    if floats.isEmpty then 0
-    else floats.sum + (floats.length - 1) * t.getGlue("floatsep").naturalSize + t.getGlue("textfloatsep").naturalSize
+    floatStackSize(items.collect { case f: FloatBox if f.top => f.content.height }) +
+      floatStackSize(items.collect { case f: FloatBox if !f.top => f.content.height })
 
   /** Page height the given items will occupy once shipped: their own heights, the footnote content carried by any
     * inserts among them (plus the footnote separator, once), and the top-float area (floats plus their spacing).
@@ -131,11 +135,13 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     clear()
 
   override def result: Box =
-    // the floats and inserts come out of the body: float content reappears at the top of the page above a
-    // textfloatsep space, insert content at the foot below the footnotesep space and the separator rule. The body
-    // is built short by exactly the height the two areas take, so the page is still exactly vsize tall.
-    val floats = boxes.collect { case f: FloatBox => f.content }.toList
-    val notes  = boxes.collect { case ins: InsertBox => ins.content }.toList
+    // the floats and inserts come out of the body and reappear around it. The page is assembled top to bottom as
+    // top floats, body, footnotes, bottom floats — the order TeX/LaTeX use: top floats head the page above a
+    // textfloatsep space, footnotes sit at the foot of the text below the separator rule, and bottom floats sink
+    // below them. The body is built short by exactly the height all three areas take, so the page stays vsize tall.
+    val topFloats = boxes.collect { case f: FloatBox if f.top => f.content }.toList
+    val botFloats = boxes.collect { case f: FloatBox if !f.top => f.content }.toList
+    val notes     = boxes.collect { case ins: InsertBox => ins.content }.toList
 
     boxes.filterInPlace(b => !b.isInstanceOf[FloatBox] && !b.isInstanceOf[InsertBox])
 
@@ -143,20 +149,26 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     // all the slack, so content stays at its natural spacing and short pages end quietly
     if t.getNumber("raggedbottom") != 0 then super.add(FilGlue)
 
-    val top: List[Box] =
+    // a float stack with its blocks separated by floatsep and the textfloatsep that holds it off the body — placed
+    // before the body for a top stack, after it for a bottom stack
+    def floatStack(floats: List[Box], top: Boolean): List[Box] =
       if floats.isEmpty then Nil
       else
-        val sep = VSpaceBox(t.getGlue("floatsep").naturalSize)
+        val sep     = VSpaceBox(t.getGlue("floatsep").naturalSize)
+        val stacked = floats.head :: floats.tail.flatMap(f => List(sep, f))
 
-        floats.head :: floats.tail.flatMap(f => List(sep, f)) ::: List(VSpaceBox(t.getGlue("textfloatsep").naturalSize))
+        if top then stacked :+ VSpaceBox(t.getGlue("textfloatsep").naturalSize)
+        else VSpaceBox(t.getGlue("textfloatsep").naturalSize) :: stacked
 
-    val topHeight = top.map(_.height).sum
+    val top    = floatStack(topFloats, top = true)
+    val bottom = floatStack(botFloats, top = false)
+    val around = top.map(_.height).sum + bottom.map(_.height).sum
 
-    if notes.isEmpty then wrap(top ++ buildTo(t.getNumber("vsize") - topHeight))
+    if notes.isEmpty then wrap(top ++ buildTo(t.getNumber("vsize") - around) ++ bottom)
     else
-      val body = buildTo(t.getNumber("vsize") - topHeight - notes.map(_.height).sum - separatorSize)
+      val body = buildTo(t.getNumber("vsize") - around - notes.map(_.height).sum - separatorSize)
       val foot = VSpaceBox(t.getGlue("footnotesep").naturalSize)
         :: RuleBox(t, FootnoteRuleWidth, FootnoteRuleHeight, 0)
         :: VSpaceBox(FootnoteRuleGap) :: notes
 
-      wrap(top ++ body ++ foot)
+      wrap(top ++ body ++ foot ++ bottom)
