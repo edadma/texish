@@ -84,6 +84,10 @@ class Processor(val handler: Handler):
   registerPrimitive("mapget", MapGetPrimitive)
   registerPrimitive("maphas", MapHasPrimitive)
 
+  // Hooks: register deferred code under a name, run it later
+  registerPrimitive("addtohook", AddToHookPrimitive)
+  registerPrimitive("usehook", UseHookPrimitive)
+
   // Number-formatting primitives (section/list/footnote labels)
   registerPrimitive("arabic", ArabicPrimitive)
   registerPrimitive("roman", RomanPrimitive)
@@ -1321,6 +1325,47 @@ object MapHasPrimitive extends Primitive:
     proc.setResult(Value.Bool(proc.handler.get(name) match
       case Value.Map(m) => m.contains(key)
       case _            => false))
+
+// ============ HOOKS ============
+
+/** All hooks live in one global map variable `hookStore`: hook name → a `Seq` of code fragments, each a
+  * parameterless `Macro` holding the *unevaluated* tokens registered for it. The list preserves registration
+  * order so `\usehook` runs the fragments in the order they were added. */
+private val HookStoreName = "hookStore"
+
+private def hookFragments(proc: Processor, name: String): Vector[Value] =
+  proc.handler.get(HookStoreName) match
+    case Value.Map(m) =>
+      m.get(name) match
+        case Some(Value.Seq(items)) => items
+        case _                      => Vector.empty
+    case _ => Vector.empty
+
+/** `\addtohook name {code}` — append a fragment of (unevaluated) code to the named hook, to be run later by
+  * `\usehook`. Hooks are stored globally so a package can register set-up or clean-up code that the document — or
+  * the host driver, for lifecycle hooks like `begindocument`/`enddocument` — fires at the right moment. The code
+  * is kept verbatim and only executed when the hook runs, which is the whole point of deferring it. */
+object AddToHookPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    proc.handler.globalAssign = false // hooks are always global; ignore any stray prefix
+    val name = proc.readIdentifier(pos)
+    val code = stripOuterBraces(proc.readArgument(pos))
+    val fragment = Value.Macro(Vector.empty, code, pos)
+    val updated = proc.handler.get(HookStoreName) match
+      case Value.Map(m) => Value.Map(m + (name -> Value.Seq(hookFragments(proc, name) :+ fragment)))
+      case _            => Value.Map(Map(name -> Value.Seq(Vector(fragment))))
+    proc.handler.setGlobal(HookStoreName, updated)
+
+/** `\usehook name` — run every fragment registered for the named hook, in registration order, at the current
+  * point in the document. An empty or never-registered hook is a silent no-op (hooks are routinely empty). */
+object UseHookPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name   = proc.readIdentifier(pos)
+    val tokens = hookFragments(proc, name).flatMap {
+      case Value.Macro(_, body, _) => body
+      case _                       => Vector.empty
+    }
+    proc.pushBack(tokens)
 
 // ============ ESCAPE SEQUENCES ============
 
