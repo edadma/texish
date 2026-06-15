@@ -228,6 +228,64 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // tabular - a LaTeX-style table written with a column spec instead of a hand-rolled \halign template. The spec
+  // uses l, c, and r for left/centre/right columns and | for a vertical rule; in the body, rows are separated by
+  // \\ and a horizontal rule is \hline. It lowers to \halign: the spec becomes the template line, each \\ becomes
+  // \cr, and each \hline becomes \noalign{\hrule}.
+  proc.registerPrimitive(
+    "tabular",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val spec = stripOuterBraces(proc.readArgument(pos)).collect { case Token.Text(s, _) => s }.mkString
+        val body = stripOuterBraces(proc.readArgument(pos))
+        t.halign
+        proc.processTokenList(tabularPreamble(proc, spec, pos) ++ (Token.ControlSeq("cr", pos) +: tabularBody(body)))
+        t.done()
+    },
+  )
+
+/** Translate a `\tabular` column spec (l/c/r columns, | rules) into an \halign template line. Each column letter
+  * becomes a `#` placeholder with the alignment glue TeX uses — l = `#\hfil`, r = `\hfil#`, c = `\hfil#\hfil` — and
+  * a `|` becomes a `\vrule` glued to the front of the following column (or, when it is the last character, to the
+  * back of the final column). Columns are separated by the alignment-active `&`. */
+private def tabularPreamble(proc: Processor, spec: String, pos: CharReader): Vector[Token] =
+  val hfil = Token.ControlSeq("hfil", pos)
+  val hash = Token.Active('#', pos)
+  def vrule = Token.ControlSeq("vrule", pos)
+  val columns      = Vector.newBuilder[Vector[Token]]
+  var pendingRules = 0
+  for c <- spec do
+    c match
+      case '|'                 => pendingRules += 1
+      case 'l'                 => columns += Vector.fill(pendingRules)(vrule) ++ Vector(hash, hfil); pendingRules = 0
+      case 'r'                 => columns += Vector.fill(pendingRules)(vrule) ++ Vector(hfil, hash); pendingRules = 0
+      case 'c'                 => columns += Vector.fill(pendingRules)(vrule) ++ Vector(hfil, hash, hfil); pendingRules = 0
+      case w if w.isWhitespace => // spaces in the spec are ignored
+      case other               => proc.handler.error(s"Unknown column specifier '$other' in \\tabular", pos)
+  var cols = columns.result()
+  if cols.isEmpty then proc.handler.error("\\tabular needs at least one column", pos)
+  if pendingRules > 0 then cols = cols.init :+ (cols.last ++ Vector.fill(pendingRules)(vrule))
+  cols.zipWithIndex.flatMap { case (col, i) => if i == 0 then col else Token.Active('&', pos) +: col }
+
+/** Rewrite a `\tabular` body into `\halign` row syntax: `\\` ends a row (`\cr`) and `\hline` draws a rule across
+  * the whole table (`\noalign{\hrule}`). A single space or newline immediately after `\hline` is dropped so the
+  * rule does not open the next row with a blank leading cell. */
+private def tabularBody(body: Vector[Token]): Vector[Token] =
+  val out = Vector.newBuilder[Token]
+  var i   = 0
+  while i < body.length do
+    body(i) match
+      case Token.ControlSeq("\\", p) => out += Token.ControlSeq("cr", p)
+      case Token.ControlSeq("hline", p) =>
+        out ++= Vector(Token.ControlSeq("noalign", p), Token.BeginGroup(p), Token.ControlSeq("hrule", p), Token.EndGroup(p))
+        if i + 1 < body.length then
+          body(i + 1) match
+            case Token.Space(_, _) | Token.Newline(_) => i += 1
+            case _                                     =>
+      case other => out += other
+    i += 1
+  out.result()
+
 // Read an optional bracketed argument like \sqrt's [degree]. Brackets are ordinary text characters, not
 // tokenizer-special, so the opening '[' may share a text token with the degree and the closing ']' may sit
 // mid-token; this scans across tokens, splitting text runs at the brackets and pushing back any tail after
