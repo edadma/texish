@@ -53,8 +53,8 @@ class CairoImageTypesetter(dpi: Double = 100) extends CairoTypesetter:
     // map the engine's point coordinates onto device pixels for this page
     ctx.scale(deviceScale, deviceScale)
 
-    // image surfaces start fully transparent; lay down an opaque white page to draw onto
-    ctx.setSourceRGBA(1, 1, 1, 1)
+    // image surfaces start fully transparent; lay down the opaque page colour to draw onto
+    setColor(backgroundColor)
     ctx.paint()
     pageStarted = true
     surface

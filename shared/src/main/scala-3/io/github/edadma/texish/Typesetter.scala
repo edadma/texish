@@ -29,6 +29,12 @@ abstract class Typesetter:
   var debug: Boolean           = false
   var currentFont: Font        = uninitialized
   var currentColor: Color      = Color("black")
+
+  /** The colour the page is painted before any content is drawn. White by default — the colour of
+    * paper, and what print output (PDF) expects. A screen preview may set it dark to render the
+    * document in a dark scheme; the ink is the pen ([[currentColor]]), so pairing a dark background
+    * with a light pen inverts the page while leaving any author-specified colours untouched. */
+  var backgroundColor: Color   = Color("white")
   val converter                = UnitConverter(this)
   val pages                    = new ArrayBuffer[Any]
   var ligatures: Boolean       = true

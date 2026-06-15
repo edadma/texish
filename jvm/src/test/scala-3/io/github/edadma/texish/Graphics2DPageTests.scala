@@ -28,6 +28,23 @@ class Graphics2DPageTests extends AnyFreeSpec with Matchers:
     pixels(pages(0)) should not equal pixels(pages(1))
   }
 
+  "the page background honours backgroundColor" in {
+    // a dark page colour fills the page instead of white; the default leaves the white paper that
+    // print output expects
+    val t = new Graphics2DTypesetter(dpi = 36)
+    t.backgroundColor = Color("black")
+
+    Console.withOut(new java.io.ByteArrayOutputStream) {
+      t.add(new CharBox(t, "x"))
+      t.end()
+    }
+
+    val img    = t.getDocument.printedPages.head.asInstanceOf[BufferedImage]
+    val corner = img.getRGB(0, 0)
+    (corner & 0xffffff) shouldBe 0x000000   // bare page is black, not white
+    (corner >>> 24) shouldBe 0xff           // and opaque
+  }
+
   private def luminance(rgb: Int): Int =
     val r = (rgb >> 16) & 0xff
     val g = (rgb >> 8) & 0xff
