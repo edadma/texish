@@ -1,33 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{
-  Anchor,
-  Box,
-  Color,
-  Glue,
-  GlyphBox,
-  HBox,
-  HSpaceBox,
-  Hyphenation,
-  InfGlue,
-  InsertBox,
-  LineCap,
-  LineJoin,
-  MarkBox,
-  MathAtom,
-  MathClass,
-  MathDelimiters,
-  MathMode,
-  MathStyle,
-  Penalty,
-  PictureMode,
-  RuleBox,
-  ShiftBox,
-  Typesetter,
-  UnderlineBox,
-  VerticalBox,
-}
+import io.github.edadma.texish.*
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
   *
@@ -421,223 +395,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // frac - 2 body args: a fraction numerator over denominator. Math-mode only; the numerator and denominator
-  // are each typeset by a nested math mode one style smaller (so an inline fraction sets its parts at script
-  // size), then stacked over a rule centered on the math axis. The result enters the list as an Inner atom.
-  proc.registerPrimitive(
-    "frac",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode =>
-            val numTokens   = proc.readArgument(pos)
-            val denomTokens = proc.readArgument(pos)
-            val numBox      = handler.mathSubFormula(proc, parent.style.num, numTokens)
-            val denomBox    = handler.mathSubFormula(proc, parent.style.denom, denomTokens)
-
-            if (numBox ne null) && (denomBox ne null) then
-              parent.addNode(MathAtom(MathClass.Inner, parent.makeFraction(numBox, denomBox)))
-          case _ => handler.error("\\frac is only allowed in math mode", pos)
-    },
-  )
-
-  // sqrt - an optional [degree] then 1 body arg: a square root, or a higher root when the degree is given
-  // (\sqrt[3]{x} is a cube root). Math-mode only; the radicand is typeset by a nested math mode in the cramped
-  // current style and the degree, if any, in scriptscript; a surd glyph tall enough to span the radicand is
-  // set on the left with a vinculum across the top, the degree tucked into its kink. Enters as an Ord atom.
-  proc.registerPrimitive(
-    "sqrt",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode =>
-            val degreeTokens = readOptionalDegree(proc)
-            val radicand     = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
-            val degree: Option[Box] = degreeTokens match
-              case Some(toks) =>
-                handler.mathSubFormula(proc, parent.style.rootDegree, toks) match
-                  case b: Box => Some(b)
-                  case null   => None
-              case None => None
-
-            if radicand ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeRadical(radicand, degree)))
-          case _ => handler.error("\\sqrt is only allowed in math mode", pos)
-    },
-  )
-
-  // left - opens a stretchy delimited sub-formula. Math-mode only; reads the opening delimiter, collects the
-  // body up to the matching \right, reads the closing delimiter, then sizes both fences to span the body about
-  // the math axis. Either delimiter may be `.` (drawn as nothing). The whole thing enters the list as an Inner
-  // atom, so it gets the spacing of a parenthesized subexpression.
-  proc.registerPrimitive(
-    "left",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode =>
-            val leftDelim  = readDelimiter(proc, handler, pos)
-            val body       = proc.collectDelimitedBody(pos)
-            val rightDelim = readDelimiter(proc, handler, pos)
-            val inner      = handler.mathSubFormula(proc, parent.style, body)
-
-            if inner ne null then
-              parent.addNode(MathAtom(MathClass.Inner, parent.makeDelimited(leftDelim, inner, rightDelim)))
-          case _ => handler.error("\\left is only allowed in math mode", pos)
-    },
-  )
-
-  // right - only meaningful as the close of a \left group, which consumes it directly; standing alone it is an
-  // error (an unmatched \right).
-  proc.registerPrimitive(
-    "right",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit = handler.error("\\right without matching \\left", pos)
-    },
-  )
-
-  // limits / nolimits - force a large operator's scripts above/below (limits) or to the side. Math-mode only;
-  // must follow an operator. Inline math defaults to side-set scripts, so \limits is how a \sum or \prod gets
-  // its bounds stacked over and under (and its glyph enlarged) without display mode.
-  proc.registerPrimitive(
-    "limits",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode => parent.setLimits(true)
-          case _                => handler.error("\\limits is only allowed in math mode", pos)
-    },
-  )
-  proc.registerPrimitive(
-    "nolimits",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode => parent.setLimits(false)
-          case _                => handler.error("\\nolimits is only allowed in math mode", pos)
-    },
-  )
-
-  // over / atop - infix fraction operators. Math-mode only; everything in the current group before the
-  // operator is the numerator and everything after is the denominator, each set one style smaller (script
-  // size inline, text size in display), exactly as in plain TeX. \over draws the fraction rule; \atop stacks
-  // the operands with no rule. They are scoped by braces — {a+b \over c+d} — because a {…} in math is its own
-  // sub-formula; without braces the operator takes the whole formula, as a display \over usually does.
-  proc.registerPrimitive(
-    "over",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode => parent.setFraction(bar = true)
-          case _                => handler.error("\\over is only allowed in math mode", pos)
-    },
-  )
-  proc.registerPrimitive(
-    "atop",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode => parent.setFraction(bar = false)
-          case _                => handler.error("\\atop is only allowed in math mode", pos)
-    },
-  )
-
-  // eqno - 1 body arg: an equation number for the surrounding display. Display-math only; the number is
-  // typeset by a nested math mode at text size and flushed to the right margin on the display line. As in
-  // plain TeX, the material is set in math (so "(3.1)" sets its parens and digits as math symbols).
-  proc.registerPrimitive(
-    "eqno",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode if parent.style.isDisplay =>
-            val box = handler.mathSubFormula(proc, MathStyle.Text, proc.readArgument(pos))
-
-            if box ne null then parent.eqno = Some(box)
-          case _ => handler.error("\\eqno is only allowed in display math", pos)
-    },
-  )
-
-  // Math accents: each sets an accent glyph over its single argument's nucleus. Math-mode only; the nucleus
-  // is typeset by a nested math mode in the cramped current style, then the accent is centred over it. The
-  // wide forms (\widehat, \widetilde) grow a horizontal variant to span a multi-character nucleus. Enters as
-  // an Ord atom.
-  val mathAccents: Map[String, (Int, Boolean)] = Map(
-    "hat"      -> (0x0302, false), "widehat"   -> (0x0302, true),
-    "tilde"    -> (0x0303, false), "widetilde" -> (0x0303, true),
-    "check"    -> (0x030C, false), "breve"     -> (0x0306, false),
-    "acute"    -> (0x0301, false), "grave"     -> (0x0300, false),
-    "dot"      -> (0x0307, false), "ddot"      -> (0x0308, false),
-    "bar"      -> (0x0304, false), "vec"       -> (0x20D7, false),
-    "mathring" -> (0x030A, false),
-  )
-
-  for (name, (codepoint, wide)) <- mathAccents do
-    proc.registerPrimitive(
-      name,
-      new Primitive {
-        def execute(proc: Processor, pos: CharReader): Unit =
-          t.mode match
-            case parent: MathMode =>
-              val nucleus = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
-
-              if nucleus ne null then
-                parent.addNode(MathAtom(MathClass.Ord, parent.makeAccent(codepoint, nucleus, wide)))
-            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
-      },
-    )
-
-  // matrix and its bracketed forms - 1 body arg: a grid of math cells, & between columns and \cr (or \\)
-  // between rows. Math-mode only; each cell is typeset by a nested math mode in the array's cell style (text
-  // style, so a matrix in a display does not enlarge its entries), the cells are aligned into columns and
-  // baseline-spaced rows centred on the math axis, and \pmatrix/\bmatrix/\cases wrap the array in stretchy
-  // fences sized to span it. \cases sets its columns flush left under a single left brace. Enters as an Inner
-  // atom, so a matrix gets the spacing of a parenthesised subexpression.
-  def matrixPrimitive(left: Option[Int], right: Option[Int], leftAlign: Boolean): Primitive =
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode =>
-            val body = stripOuterBraces(proc.readArgument(pos))
-            val rows = splitMatrixBody(body).map(_.map { cellTokens =>
-              handler.mathSubFormula(proc, parent.cellStyle, cellTokens) match
-                case b: Box => b
-                case null   => HBox(Vector.empty)
-            })
-            val array = parent.makeMatrix(rows, leftAlign)
-            val box   = if left.isEmpty && right.isEmpty then array else parent.makeDelimited(left, array, right)
-
-            parent.addNode(MathAtom(MathClass.Inner, box))
-          case _ => handler.error("\\matrix is only allowed in math mode", pos)
-    }
-
-  proc.registerPrimitive("matrix", matrixPrimitive(None, None, leftAlign = false))
-  proc.registerPrimitive("pmatrix", matrixPrimitive(Some(0x28), Some(0x29), leftAlign = false))
-  proc.registerPrimitive("bmatrix", matrixPrimitive(Some(0x5B), Some(0x5D), leftAlign = false))
-  proc.registerPrimitive("cases", matrixPrimitive(Some(0x7B), None, leftAlign = true))
-
-  // noalign - 1 body arg (no scoping - it's inline content in table)
-  proc.registerPrimitive(
-    "noalign",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        t.op("noalign-begin")
-        proc.processTokenList(body)
-        t.op("noalign-end")
-    },
-  )
-
-  // halign - 1 body arg (no scoping - table inherits outer context)
-  proc.registerPrimitive(
-    "halign",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        t.halign
-        proc.processTokenList(body)
-        t.done()
-    },
-  )
+  registerMathPrimitives(proc, handler)
 
   // bold - 1 body arg
   proc.registerPrimitive(
@@ -764,333 +522,19 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
 
   registerPictureGraphicsPrimitives(proc, handler)
 
-// The vector-graphics vocabulary: `\picture` opens a drawing, the rest of these are only meaningful inside one.
-// `\picture` mirrors `\hbox` — it pushes a PictureMode, processes its body (the drawing commands fill a display
-// list), and on done() drops the resulting PictureBox into the surrounding text. Each drawing command guards
-// that a PictureMode is on top and calls the matching collector method; coordinates parse through `readNumbers`,
-// which evaluates each whitespace-separated piece of a `{x y …}` group as an expression (so a literal `2in`, a
-// variable `\the\x`, and a computed `\*{\the\i}{14}` are all valid coordinates).
-def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandler): Unit =
-  val t = handler.typesetter
-
-  // \picture - optional width:/height: params + 1 body arg, like \hbox to:. Pushes a PictureMode, processes the
-  // body, and lets Mode.done() add the PictureBox to the surrounding list.
-  proc.registerPrimitive(
-    "picture",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val opts   = proc.readOptionalParams(pos)
-        val width  = opts.get("width").flatMap(points).getOrElse(0.0)
-        val height = opts.get("height").flatMap(points).getOrElse(0.0)
-        val body   = proc.readArgument(pos)
-        t.push(new PictureMode(t, width, height))
-        proc.processTokenList(body)
-        t.mode.done()
-    },
-  )
-
-  // \coordinate{name}{coord} - name a point for later reference as (name). Stored as a two-element numeric
-  // sequence in the document scope, so it reads back through the same variable machinery everything else uses.
-  picturePrimitive(
-    proc,
-    handler,
-    "coordinate",
-    (_, p) =>
-      val name = Value.display(proc.evalArgumentExpr(p))
-      val c    = readNumbers(proc, p)
-      if c.length < 2 then handler.error(s"\\coordinate '$name' expects a point", p)
-      t.set(name, Value.Seq(Vector(Value.Num(c(0)), Value.Num(c(1))))),
-  )
-
-  // \xof{coord} / \yof{coord} - the x or y of a coordinate, as a number for use in expressions. These let a
-  // package compute with points (a bond's perpendicular offset, a midpoint) in the document language itself.
-  proc.registerPrimitive(
-    "xof",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val c = readNumbers(proc, pos)
-        proc.setResult(Value.Num(if c.nonEmpty then c.head else 0.0))
-    },
-  )
-  proc.registerPrimitive(
-    "yof",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val c = readNumbers(proc, pos)
-        proc.setResult(Value.Num(if c.length > 1 then c(1) else 0.0))
-    },
-  )
-
-  // State: colours are picture-mode state baked into each shape's paint; widths/dashes/caps/joins become ops.
-  picturePrimitive(proc, handler, "stroke", (pm, p) => pm.setStroke(readColorArg(proc, p)))
-  picturePrimitive(proc, handler, "fill", (pm, p) => pm.setFill(readColorArg(proc, p)))
-  picturePrimitive(proc, handler, "nostroke", (pm, _) => pm.noStroke())
-  picturePrimitive(proc, handler, "nofill", (pm, _) => pm.noFill())
-  picturePrimitive(proc, handler, "linewidth", (pm, p) => pm.setLineWidth(num1(proc, p)))
-  picturePrimitive(
-    proc,
-    handler,
-    "linecap",
-    (pm, p) =>
-      val s = Value.display(proc.evalArgumentExpr(p))
-      LineCap.fromString(s) match
-        case Some(c) => pm.setLineCap(c)
-        case None    => handler.error(s"unknown line cap '$s' (expected butt, round, or square)", p),
-  )
-  picturePrimitive(
-    proc,
-    handler,
-    "linejoin",
-    (pm, p) =>
-      val s = Value.display(proc.evalArgumentExpr(p))
-      LineJoin.fromString(s) match
-        case Some(j) => pm.setLineJoin(j)
-        case None    => handler.error(s"unknown line join '$s' (expected miter, round, or bevel)", p),
-  )
-  picturePrimitive(proc, handler, "dash", (pm, p) => pm.setDash(readNumbers(proc, p), 0))
-
-  // \linetype - named stroke-style presets over \dash. Dotted pairs well with \linecap{round} to render as dots.
-  picturePrimitive(
-    proc,
-    handler,
-    "linetype",
-    (pm, p) =>
-      Value.display(proc.evalArgumentExpr(p)) match
-        case "solid"   => pm.setDash(Vector.empty, 0)
-        case "dashed"  => pm.setDash(Vector(4.0, 4.0), 0)
-        case "dotted"  => pm.setDash(Vector(1.0, 3.0), 0)
-        case "dashdot" => pm.setDash(Vector(4.0, 2.0, 1.0, 2.0), 0)
-        case other     => handler.error(s"unknown line type '$other' (solid, dashed, dotted, dashdot)", p),
-  )
-
-  // Transforms: \rotate is in degrees, counter-clockwise in the picture's y-up space.
-  picturePrimitive(proc, handler, "translate", (pm, p) => { val c = readNumbers(proc, p); pm.translate(c(0), c(1)) })
-  picturePrimitive(proc, handler, "scale", (pm, p) => { val c = readNumbers(proc, p); pm.scale(c(0), c(1)) })
-  picturePrimitive(proc, handler, "rotate", (pm, p) => pm.rotate(math.toRadians(num1(proc, p))))
-
-  // Shapes lower to a path plus one paint with the current colours.
-  picturePrimitive(proc, handler, "line", (pm, p) => { val c = readNumbers(proc, p); pm.line(c(0), c(1), c(2), c(3)) })
-  picturePrimitive(proc, handler, "rect", (pm, p) => { val c = readNumbers(proc, p); pm.rect(c(0), c(1), c(2), c(3)) })
-  picturePrimitive(proc, handler, "circle", (pm, p) => { val c = readNumbers(proc, p); pm.circle(c(0), c(1), c(2)) })
-  picturePrimitive(
-    proc,
-    handler,
-    "ellipse",
-    (pm, p) => { val c = readNumbers(proc, p); pm.ellipse(c(0), c(1), c(2), c(3)) },
-  )
-  picturePrimitive(proc, handler, "polygon", (pm, p) => pm.polygon(coordPairs(readNumbers(proc, p))))
-  picturePrimitive(proc, handler, "polyline", (pm, p) => pm.polyline(coordPairs(readNumbers(proc, p))))
-  picturePrimitive(
-    proc,
-    handler,
-    "arc",
-    (pm, p) =>
-      val c = readNumbers(proc, p)
-      pm.arcShape(c(0), c(1), c(2), math.toRadians(c(3)), math.toRadians(c(4)), negative = false),
-  )
-  picturePrimitive(
-    proc,
-    handler,
-    "arcn",
-    (pm, p) =>
-      val c = readNumbers(proc, p)
-      pm.arcShape(c(0), c(1), c(2), math.toRadians(c(3)), math.toRadians(c(4)), negative = true),
-  )
-
-  // Freeform path: \path{ \moveto \lineto \curveto \close } builds a path with these segment commands and paints
-  // it with the current state. The segment commands are themselves picture-only.
-  picturePrimitive(
-    proc,
-    handler,
-    "path",
-    (pm, p) =>
-      pm.newPath()
-      proc.processTokenList(proc.readArgument(p))
-      pm.paint(),
-  )
-  picturePrimitive(proc, handler, "moveto", (pm, p) => { val c = readNumbers(proc, p); pm.moveTo(c(0), c(1)) })
-  picturePrimitive(proc, handler, "lineto", (pm, p) => { val c = readNumbers(proc, p); pm.lineTo(c(0), c(1)) })
-  picturePrimitive(
-    proc,
-    handler,
-    "curveto",
-    (pm, p) => { val c = readNumbers(proc, p); pm.curveTo(c(0), c(1), c(2), c(3), c(4), c(5)) },
-  )
-  picturePrimitive(proc, handler, "close", (pm, _) => pm.close())
-
-  // Grouping and clipping: \group save/restores the whole graphics state; \clip intersects the clip with a path
-  // built the same way \path's body is.
-  picturePrimitive(
-    proc,
-    handler,
-    "group",
-    (pm, p) =>
-      val body = proc.readArgument(p)
-      pm.groupBegin()
-      proc.processTokenList(body)
-      pm.groupEnd(),
-  )
-  picturePrimitive(
-    proc,
-    handler,
-    "clip",
-    (pm, p) =>
-      pm.newPath()
-      proc.processTokenList(proc.readArgument(p))
-      pm.clip(),
-  )
-
-  // \at[anchor:]{x y}{content} - place fully typeset content (text, math) at a coordinate. The content is set in
-  // its own horizontal box, exactly as \lower/\raise read a box, then placed with its anchor on the point.
-  proc.registerPrimitive(
-    "at",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val pm     = requirePicture(t, handler, "at", pos)
-        val anchor = readAnchor(proc, pos, Anchor.Center)
-        val c      = readNumbers(proc, pos)
-        val body   = proc.readArgument(pos)
-        t.hbox(null)
-        proc.processTokenList(body)
-        t.mode.exit match
-          case b: Box => pm.place(b, anchor, c(0), c(1))
-          case null   =>
-    },
-  )
-
-  // \glyph[anchor:]{x y}{codepoint} - place one glyph (a marker, arrowhead, charge sign) by codepoint, drawn in
-  // the current fill colour. Defaults to a baseline anchor, the natural attach point for a glyph.
-  proc.registerPrimitive(
-    "glyph",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val pm     = requirePicture(t, handler, "glyph", pos)
-        val anchor = readAnchor(proc, pos, Anchor.Baseline)
-        val c      = readNumbers(proc, pos)
-        val cp     = num1(proc, pos).toInt
-        val rf     = t.currentFont.renderFont.asInstanceOf[t.RenderFont]
-        val color  = pm.fillColor.orElse(pm.strokeColor).getOrElse(Color("black"))
-        pm.place(new GlyphBox(t, t.glyphIndex(rf, cp), t.currentFont, color), anchor, c(0), c(1))
-    },
-  )
-
-// Register a picture-only command: it guards that a PictureMode is on top (else a clear error) and runs `body`
-// with that mode. Keeps the many shape/state primitives to one line each.
-private def picturePrimitive(
-    proc: Processor,
-    handler: TypesetterHandler,
-    name: String,
-    body: (PictureMode, CharReader) => Unit,
-): Unit =
-  proc.registerPrimitive(
-    name,
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        body(requirePicture(handler.typesetter, handler, name, pos), pos)
-    },
-  )
-
-private def requirePicture(t: Typesetter, handler: TypesetterHandler, name: String, pos: CharReader): PictureMode =
-  t.mode match
-    case pm: PictureMode => pm
-    case _               => handler.error(s"\\$name is only allowed inside \\picture", pos)
-
-// Read a coordinate group as a flat list of points (in the engine's point space). Each whitespace-separated
-// piece is either a parenthesised coordinate — Cartesian `(x,y)`, polar `(a:r)`, or a named `(name)`, each
-// contributing two numbers (see `Coord`) — or a bare scalar expression contributing one (a literal `2in`, a
-// variable `\the\x`, a computed `\*{a}{b}` or `\calc{…}`). So `\line{(0,0) (60:1in)}` and `\line{0 0 36 62}`
-// produce the same flat stream the shape primitives consume, and the two notations interoperate.
-private def readNumbers(proc: Processor, pos: CharReader): Vector[Double] =
-  splitTopLevel(stripOuterBraces(proc.readArgument(pos))).flatMap { chunk =>
-    val text = coordText(chunk)
-    if Coord.looksLikeCoord(text) then
-      val (x, y) = Coord.parse(text, varResolver(proc), proc.handler.fontUnit, namedResolver(proc))
-      Vector(x, y)
-    else Vector(points(proc.evalExpr(chunk, pos)).getOrElse(0.0))
-  }
-
-// Reconstruct a chunk's raw text for the coordinate parser: a control sequence contributes its bare name (so a
-// variable `\R` reads as the identifier `R`) and an active character its symbol, matching how `\calc` flattens.
-private def coordText(tokens: Vector[Token]): String =
-  tokens.map {
-    case Token.Text(s, _)       => s
-    case Token.Space(s, _)      => s
-    case Token.Newline(_)       => " "
-    case Token.ControlSeq(n, _) => n
-    case Token.Active(c, _)     => c.toString
-    case _                      => ""
-  }.mkString
-
-// Resolve a bare identifier in a coordinate component expression to a document variable's number.
-private def varResolver(proc: Processor): String => Option[Double] = name =>
-  proc.handler.get(name) match
-    case Value.Num(n)   => Some(n)
-    case Value.Dimen(p) => Some(p)
-    case _              => None
-
-// Resolve a `(name)` reference to a point stored by \coordinate (a two-element numeric sequence).
-private def namedResolver(proc: Processor): String => Option[(Double, Double)] = name =>
-  proc.handler.get(name) match
-    case Value.Seq(Vector(Value.Num(x), Value.Num(y))) => Some((x, y))
-    case _                                             => None
-
-// Read a single-number group, e.g. \linewidth{2pt} or \rotate{30}.
-private def num1(proc: Processor, pos: CharReader): Double =
-  points(proc.evalArgumentExpr(pos)).getOrElse(0.0)
-
-// Split a coordinate group into its whitespace-separated pieces, keeping each piece intact across a brace group
-// (`\*{a}{b}`) and across a parenthesised coordinate (`(60:1in)`, even with an internal space like `(2, 3)`).
-// Brace depth is tracked from the group tokens; parenthesis depth from the characters of text tokens outside any
-// braces, since parentheses are ordinary text. A whitespace token splits only when both depths are zero.
-private def splitTopLevel(tokens: Vector[Token]): Vector[Vector[Token]] =
-  val chunks = Vector.newBuilder[Vector[Token]]
-  var cur    = Vector.newBuilder[Token]
-  var depth  = 0
-  var parens = 0
-  var any    = false
-
-  def flush(): Unit =
-    if any then chunks += cur.result()
-    cur = Vector.newBuilder[Token]
-    any = false
-
-  for tok <- tokens do
-    tok match
-      case Token.BeginGroup(_)                                       => depth += 1; cur += tok; any = true
-      case Token.EndGroup(_)                                         => depth -= 1; cur += tok; any = true
-      case (_: Token.Space | _: Token.Newline) if depth == 0 && parens == 0 => flush()
-      case t @ Token.Text(s, _) =>
-        if depth == 0 then parens += s.count(_ == '(') - s.count(_ == ')')
-        cur += t; any = true
-      case t => cur += t; any = true
-
-  flush()
-  chunks.result()
-
-private def coordPairs(ns: Vector[Double]): Vector[(Double, Double)] =
-  ns.grouped(2).collect { case Vector(x, y) => (x, y) }.toVector
-
-// Evaluate a color argument: a named color (steelblue) or an #rrggbb hex code.
-private def readColorArg(proc: Processor, pos: CharReader): Color =
-  Color(Value.display(proc.evalArgumentExpr(pos)))
-
-// Read an optional anchor:NAME parameter before a placement's coordinates.
-private def readAnchor(proc: Processor, pos: CharReader, default: Anchor): Anchor =
-  proc.readOptionalParams(pos).get("anchor").flatMap(v => Anchor.fromString(Value.display(v))).getOrElse(default)
-
 // Helper class for simple 0-arg commands
 class SimplePrimitive(action: () => Any) extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit = action()
 
 // Helper to evaluate an argument and get its value
-private def evalArg(proc: Processor, pos: CharReader): Value =
+private[parser] def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
 
 // Build the TeX (or TeXish) logo in the current text font: a T, an E lowered half an x-height and kerned
 // back under the T, then an X kerned back under the E. The three capitals ride the glyph seam (placed by
 // their own advances) so no string-shaping creeps between them; the kern fractions are the classic plain-TeX
 // values. TeXish adds "ish" trailing, set smaller and raised — echoing the lifted "A" of the LaTeX logo.
-private def texLogo(t: Typesetter, ish: Boolean): Box =
+private[parser] def texLogo(t: Typesetter, ish: Boolean): Box =
   val font = t.currentFont
   val rf   = font.renderFont.asInstanceOf[t.RenderFont]
   val em   = font.size
@@ -1126,86 +570,8 @@ private def texLogo(t: Typesetter, ish: Boolean): Box =
 
   HBox(pieces.result())
 
-// Read an optional bracketed argument like \sqrt's [degree]. Brackets are ordinary text characters, not
-// tokenizer-special, so the opening '[' may share a text token with the degree and the closing ']' may sit
-// mid-token; this scans across tokens, splitting text runs at the brackets and pushing back any tail after
-// ']'. Returns None when the next token is not a '[' run (no degree present), leaving the stream untouched.
-private def readOptionalDegree(proc: Processor): Option[Vector[Token]] =
-  proc.skipSpaces()
-  proc.peekToken() match
-    case Token.Text(s, sp) if s.startsWith("[") =>
-      proc.nextToken()
-      val out = Vector.newBuilder[Token]
-
-      def takeText(str: String, p: io.github.edadma.char_reader.CharReader): Boolean =
-        val idx = str.indexOf(']')
-        if idx < 0 then { if str.nonEmpty then out += Token.Text(str, p); false }
-        else
-          val before = str.substring(0, idx)
-          val after  = str.substring(idx + 1)
-          if before.nonEmpty then out += Token.Text(before, p)
-          if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, p)))
-          true
-
-      var closed = takeText(s.substring(1), sp)
-      while !closed && proc.hasMoreTokens do
-        proc.nextToken() match
-          case Token.Text(str, p) => closed = takeText(str, p)
-          case Token.EOF(_)       => closed = true
-          case other              => out += other
-      Some(out.result())
-    case _ => None
-
-// Split a math-array body into rows of cells. At brace depth zero the column-separator active character `&`
-// ends a cell and `\cr` or `\\` ends a row; nested {…} groups pass through verbatim so a braced cell is not
-// split. A trailing row that holds nothing but the empty cell left by a final `\cr` is dropped, so a body
-// that ends in a row separator does not add a spurious blank row. Each cell is the raw token run between
-// separators, to be laid out by a nested math mode.
-private def splitMatrixBody(body: Vector[Token]): Vector[Vector[Vector[Token]]] =
-  val rows  = Vector.newBuilder[Vector[Vector[Token]]]
-  var row   = Vector.newBuilder[Vector[Token]]
-  var cell  = Vector.newBuilder[Token]
-  var depth = 0
-
-  def endCell(): Unit = { row += cell.result(); cell = Vector.newBuilder[Token] }
-  def endRow(): Unit  = { endCell(); rows += row.result(); row = Vector.newBuilder[Vector[Token]] }
-
-  for tok <- body do
-    tok match
-      case Token.BeginGroup(_)                     => depth += 1; cell += tok
-      case Token.EndGroup(_)                       => depth -= 1; cell += tok
-      case Token.Active('&', _) if depth == 0      => endCell()
-      case Token.ControlSeq("cr", _) if depth == 0 => endRow()
-      case Token.ControlSeq("\\", _) if depth == 0 => endRow()
-      case _                                       => cell += tok
-
-  endRow()
-
-  def cellEmpty(c: Vector[Token]): Boolean = c.forall {
-    case _: Token.Space | _: Token.Newline => true
-    case _                                 => false
-  }
-
-  val all = rows.result()
-  if all.nonEmpty && all.last.forall(cellEmpty) then all.init else all
-
-// Read the delimiter that follows \left or \right: a single character (the first of the next text run, with
-// the rest pushed back) or a control sequence, resolved through MathDelimiters. `.` and any unrecognized
-// delimiter yield None — the null (undrawn) fence.
-private def readDelimiter(proc: Processor, handler: TypesetterHandler, pos: CharReader): Option[Int] =
-  proc.skipSpaces()
-  proc.peekToken() match
-    case Token.Text(s, p) if s.nonEmpty =>
-      proc.nextToken()
-      if s.length > 1 then proc.pushBack(Vector(Token.Text(s.substring(1), p)))
-      MathDelimiters.forChar(s.charAt(0))
-    case Token.ControlSeq(name, _) =>
-      proc.nextToken()
-      MathDelimiters.forCommand(name)
-    case _ => handler.error("expected a delimiter after \\left or \\right", pos)
-
 // A dimension value in big points: Dimen carries its own unit; a bare number means points
-private def points(v: Value): Option[Double] = v match
+private[parser] def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
@@ -1215,7 +581,7 @@ private def points(v: Value): Option[Double] = v match
 // to the current list. Shared by the \hbox / \vbox / \vtop / \setbox primitives and \lower / \raise. `vertical`
 // selects a vertical builder, `top` makes it a \vtop (reference point on the first line). The optional `to:` sets
 // the final size and `spread:` adds to the natural size; at most one may be given.
-private def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, top: Boolean, pos: CharReader): Box | Null =
+private[parser] def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, top: Boolean, pos: CharReader): Box | Null =
   val opts = proc.readOptionalParams(pos)
   val body = proc.readArgument(pos)
   // build Double | Null directly — boxing through java.lang.Double would unbox null to 0.0
@@ -1234,7 +600,7 @@ private def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, top: Boo
 // Read the <box> that follows \lower / \raise / \setbox — the next \hbox, \vbox, or \vtop, built and returned
 // without adding it to the current list, so the caller can wrap, shift, or store it. Returns null for
 // anything that is not a box command.
-private def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | Null =
+private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | Null =
   proc.skipSpaces()
   if !proc.hasMoreTokens then null
   else
@@ -1246,7 +612,7 @@ private def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | N
 
 // Fetch a box stored in a register by \setbox. Errors (rather than returning a sentinel) when the register
 // is empty or holds a non-box, so a misused box command points at the offending name.
-private def boxRegister(proc: Processor, handler: TypesetterHandler, name: String, cmd: String, pos: CharReader): Box =
+private[parser] def boxRegister(proc: Processor, handler: TypesetterHandler, name: String, cmd: String, pos: CharReader): Box =
   proc.handler.get(name) match
     case Value.Native(b: Box) => b
     case Value.Undefined      => handler.error(s"\\$cmd: box register '$name' is empty", pos)
@@ -1257,11 +623,11 @@ private def boxRegister(proc: Processor, handler: TypesetterHandler, name: Strin
 // The position of the next argument token (after any intervening spaces), or the command's own
 // position when nothing follows. An "expects an argument" error reports this, so the caret points
 // at the offending argument rather than at the start of the command.
-private def argumentPos(proc: Processor, command: CharReader): CharReader =
+private[parser] def argumentPos(proc: Processor, command: CharReader): CharReader =
   proc.skipSpaces()
   if proc.hasMoreTokens then Token.pos(proc.peekToken()) else command
 
-private def glueArg(proc: Processor, pos: CharReader): Option[Glue] =
+private[parser] def glueArg(proc: Processor, pos: CharReader): Option[Glue] =
   proc.evalArgumentExpr(pos) match
     case Value.Glue(n, st, sh, sto, sho) => Some(Glue(n, st, sh, sto, sho))
     case Value.Native(g: Glue)           => Some(g)
@@ -1269,7 +635,7 @@ private def glueArg(proc: Processor, pos: CharReader): Option[Glue] =
     case Value.Num(n)                    => Some(glueContinuation(proc, n, pos))
     case _                               => None
 
-private def glueContinuation(proc: Processor, natural: Double, pos: CharReader): Glue =
+private[parser] def glueContinuation(proc: Processor, natural: Double, pos: CharReader): Glue =
   proc.readGlueContinuation(natural, pos) match
     case Value.Glue(n, st, sh, sto, sho) => Glue(n, st, sh, sto, sho)
     case _                               => Glue(natural)
