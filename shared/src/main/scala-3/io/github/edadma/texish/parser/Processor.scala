@@ -474,15 +474,37 @@ class Processor(val handler: Handler):
   def evalExpr(tokens: Vector[Token], pos: CharReader): Value =
     evalTokensExpr(tokens, pos)
 
+  /** True when the tokens are a single balanced group wrapping everything — `{ … }` with the opening brace closed
+    * only by the final token. (Distinguishes a genuine wrapper from `{a}{b}`, whose first brace closes early.) */
+  private def isWrappingGroup(tokens: Vector[Token]): Boolean =
+    tokens.length >= 2 && tokens.head.isInstanceOf[Token.BeginGroup] && {
+      var depth = 0
+      var closedEarly = false
+      for (t, i) <- tokens.zipWithIndex do
+        t match
+          case _: Token.BeginGroup => depth += 1
+          case _: Token.EndGroup   => depth -= 1; if depth == 0 && i != tokens.length - 1 then closedEarly = true
+          case _                   =>
+      depth == 0 && !closedEarly && tokens.last.isInstanceOf[Token.EndGroup]
+    }
+
   /** Evaluate a list of tokens as an expression (without outputting to handler) */
   private def evalTokensExpr(tokens: Vector[Token], pos: CharReader): Value =
     tokens match
       // Empty
       case Vector() => Value.Nil
 
+      // A single wrapping group is the parenthesised expression — evaluate its contents. This makes `{\e.key}`
+      // and `{\mapget m {k}}` evaluate as values even when an extra brace layer is introduced by macro parameter
+      // substitution (a braced argument carries its braces, so `{\param}` in a body becomes `{{arg}}`).
+      case ts if isWrappingGroup(ts) => evalTokensExpr(stripOuterBraces(ts), pos)
+
       // Simple variable reference
       case Vector(Token.ControlSeq(name, csPos)) =>
         handler.get(name) match
+          // A macro overrides a primitive of the same name (as in document position); expand it and evaluate
+          // its body as an expression, so a macro that yields a value (e.g. \value over \mapget) composes here.
+          case Value.Macro(params, body, _) => evalMacroExpr(params, body, Vector.empty, csPos)
           case Value.Undefined =>
             // Try executing as primitive that sets a result
             primitives.get(name) match
@@ -505,34 +527,49 @@ class Processor(val handler: Handler):
           case Value.Map(entries) => entries.getOrElse(field, Value.Undefined)
           case _ => Value.Undefined
 
-      // Primitive followed by arguments (like \range{1}{5})
+      // A control sequence applied to following arguments — a macro (\value{c}) or a primitive (\range{1}{5}).
       case tokens if tokens.nonEmpty && tokens.head.isInstanceOf[Token.ControlSeq] =>
         val Token.ControlSeq(name, csPos) = tokens.head: @unchecked
-        primitives.get(name) match
-          case Some(prim) =>
-            // Push remaining tokens as a source for the primitive to read its arguments from, then clean it up.
-            // Track the pushed source by identity: reading an unbraced argument ends with a skipSpaces that can
-            // exhaust and pop this source already, so popping whatever is now on top would over-pop into the
-            // enclosing source. Only pop our own source, and only if the primitive left it on top unexhausted.
-            val rest       = tokens.tail
-            val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
-            restSource.foreach(tokenSources.push)
-            lastResult = Value.Nil
-            handler.suppressOutput(true)
-            prim.execute(this, csPos)
-            handler.suppressOutput(false)
-            restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
-            val r = getResult
-            if r == Value.Nil then evalTokens(tokens, handler) else r
-          case None =>
-            // Check if it's a variable
-            handler.get(name) match
-              case Value.Undefined => evalTokens(tokens, handler)
-              case v => v
+        handler.get(name) match
+          // A macro overrides a same-named primitive: read its arguments from the remaining tokens, expand, and
+          // evaluate the body as an expression so a value-yielding macro composes inside other expressions.
+          case Value.Macro(params, body, _) => evalMacroExpr(params, body, tokens.tail, csPos)
+          case _ =>
+            primitives.get(name) match
+              case Some(prim) =>
+                // Push remaining tokens as a source for the primitive to read its arguments from, then clean it up.
+                // Track the pushed source by identity: reading an unbraced argument ends with a skipSpaces that can
+                // exhaust and pop this source already, so popping whatever is now on top would over-pop into the
+                // enclosing source. Only pop our own source, and only if the primitive left it on top unexhausted.
+                val rest       = tokens.tail
+                val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
+                restSource.foreach(tokenSources.push)
+                lastResult = Value.Nil
+                handler.suppressOutput(true)
+                prim.execute(this, csPos)
+                handler.suppressOutput(false)
+                restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
+                val r = getResult
+                if r == Value.Nil then evalTokens(tokens, handler) else r
+              case None =>
+                // Check if it's a variable
+                handler.get(name) match
+                  case Value.Undefined => evalTokens(tokens, handler)
+                  case v => v
 
       case _ =>
         // Simple tokens - just interpret as text/number
         evalTokens(tokens, handler)
+
+  /** Expand a macro in expression position: push the remaining tokens so the macro can read its arguments, read
+    * them, substitute into the body, then evaluate the expanded body as an expression. The pushed source is
+    * tracked by identity and only popped if argument reading left it on top (see the primitive case). */
+  private def evalMacroExpr(params: Vector[String], body: Vector[Token], rest: Vector[Token], pos: CharReader): Value =
+    val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
+    restSource.foreach(tokenSources.push)
+    val args = readMacroArgs(params.size, pos)
+    restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
+    evalTokensExpr(substituteNamedParams(body, params.zip(args).toMap), pos)
 
   /** Read a control sequence name (for \let, etc.) */
   def readControlSeqName(pos: CharReader): String =

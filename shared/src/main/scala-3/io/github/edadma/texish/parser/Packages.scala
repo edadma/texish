@@ -17,8 +17,58 @@ object Packages:
   def exists(name: String): Boolean = registry.contains(name)
 
   private val registry: Map[String, String] = Map(
-    "chem" -> chem,
+    "chem"     -> chem,
+    "counters" -> counters,
   )
+
+  /** `counters` — LaTeX-style document counters, written entirely in the document language over the engine's
+    * global keyed store (`\global\mapset`/`\mapget`), `\calc`, and the number-formatting primitives. Two global
+    * maps hold all state: `counterStore` (name → value) and `counterParent` (child → parent), so counters survive
+    * groups. Reset-lists work the LaTeX way: stepping a counter zeroes every counter declared `\counterwithin` it,
+    * recursively. Display a counter by formatting its value, e.g. `\arabic{\value section}` or `\roman{\value
+    * page}`. Each macro body is wrapped in an explicit group so its scratch variables stay local while the
+    * `\global` writes escape. */
+  private def counters: String =
+    raw"""// counters — every source line ends with // so its newline is stripped at tokenise time and the package
+// emits no stray whitespace when used in running text.
+//
+// \newcounter{name} — create a counter, initialised to 0.
+\def newcounter n {{//
+\global\mapset counterStore {\n} {0}//
+}}//
+// \setcounter{name}{value} — set a counter to an explicit value.
+\def setcounter n v {{//
+\global\mapset counterStore {\n} {\v}//
+}}//
+// \addtocounter{name}{amount} — add amount (may be negative) to a counter.
+\def addtocounter n amt {{//
+\set counterCur {\mapget counterStore {\n}}//
+\global\mapset counterStore {\n} {\calc{counterCur + \amt}}//
+}}//
+// \value{name} — the counter's number, for use in expressions and the formatters (\arabic{\value foo}).
+// No scratch group here: this macro must yield a value, so its body is a bare expression.
+\def value n {\mapget counterStore {\n}}//
+// \counterwithin{child}{parent} — register that stepping parent resets child to 0 (the reset-list relation).
+\def counterwithin child parent {{//
+\global\mapset counterParent {\child} {\parent}//
+}}//
+// \stepcounter{name} — increment a counter by 1 and reset every counter declared within it, recursively.
+\def stepcounter n {{//
+\addtocounter {\n} {1}//
+\resetwithin {\n}//
+}}//
+// \resetwithin{parent} — zero every counter whose parent is `parent`, then recurse into each so grandchildren
+// reset too. Iterates the whole counterParent map and matches by value, so no per-parent child list is needed.
+\def resetwithin parent {{//
+\for\counterLink {\counterParent} {//
+\if {\= {\counterLink.value} {\parent}}//
+\set resetChild {\counterLink.key}//
+\setcounter \resetChild {0}//
+\resetwithin \resetChild//
+\fi//
+}//
+}}//
+"""
 
   /** `chem` — drawing chemical structures. Bonds between coordinates (single, double), shortened at each end so
     * atom labels have room, and a helper to name-and-label an atom. Written entirely in the document language:
