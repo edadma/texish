@@ -39,3 +39,21 @@ class EnvironmentTests extends AnyFreeSpec with Matchers:
   "an unknown environment is an error" in {
     a[ParserException] should be thrownBy run("\\begin{nope}x\\end{nope}")
   }
+
+  "an environment can take arguments, bound in the begin-code" in {
+    run("\\newenvironment named title {\\title: }{}\\begin{named}{Lemma}x\\end{named}") shouldBe "Lemma: x"
+  }
+
+  "multiple arguments substitute in order" in {
+    run("\\newenvironment pair a b {\\a-\\b }{}\\begin{pair}{one}{two}body\\end{pair}") shouldBe "one-two body"
+  }
+
+  "\\end must match the innermost \\begin" in {
+    a[ParserException] should be thrownBy run(
+      "\\newenvironment a {(}{)}\\newenvironment b {[}{]}\\begin{a}\\begin{b}x\\end{a}\\end{b}",
+    )
+  }
+
+  "an \\end with no open environment is an error" in {
+    a[ParserException] should be thrownBy run("\\newenvironment e {}{}\\end{e}")
+  }

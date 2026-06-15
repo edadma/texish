@@ -26,6 +26,9 @@ class Processor(val handler: Handler):
   // Bundled/loaded package names, so \use loads each at most once
   private val loadedPackages = mutable.Set[String]()
 
+  // Names of the environments currently open, innermost last, so \end can verify it matches \begin
+  private[parser] val envStack = mutable.Stack[String]()
+
   /** Record a package as loaded; returns true the first time (so \use loads it) and false thereafter. */
   def markPackageLoaded(name: String): Boolean = loadedPackages.add(name)
 
@@ -314,7 +317,7 @@ class Processor(val handler: Handler):
           tokens += t
     tokens.result()
 
-  private def substituteNamedParams(body: Vector[Token], params: Map[String, Vector[Token]]): Vector[Token] =
+  private[parser] def substituteNamedParams(body: Vector[Token], params: Map[String, Vector[Token]]): Vector[Token] =
     body.flatMap {
       case Token.ControlSeq(name, _) if params.contains(name) =>
         // Replace \paramname with the argument tokens
@@ -1389,48 +1392,74 @@ private def readEnvName(proc: Processor, pos: CharReader): String =
     case _                      => ""
   }.mkString.trim
 
-private def envCode(proc: Processor, name: String): Option[(Vector[Token], Vector[Token])] =
+/** Look up an environment: its begin-code's parameter names, the begin-code tokens, and the end-code tokens. */
+private def envCode(proc: Processor, name: String): Option[(Vector[String], Vector[Token], Vector[Token])] =
   proc.handler.get(EnvStoreName) match
     case Value.Map(m) =>
       m.get(name) match
-        case Some(Value.Seq(Vector(Value.Macro(_, begin, _), Value.Macro(_, end, _)))) => Some((begin, end))
-        case _                                                                          => None
+        case Some(Value.Seq(Vector(Value.Macro(params, begin, _), Value.Macro(_, end, _)))) =>
+          Some((params, begin, end))
+        case _ => None
     case _ => None
 
-/** `\newenvironment name {begin-code} {end-code}` — define an environment. Both code blocks are stored
-  * verbatim and only run when the environment is used. The definition is global so a package can supply
-  * environments to a document. */
+/** `\newenvironment name [param…] {begin-code} {end-code}` — define an environment. Parameters are named
+  * identifiers (as in `\def`) and are bound only in the begin-code, where `\begin{name}` supplies them as
+  * arguments. Both code blocks are stored verbatim and only run when the environment is used. The definition is
+  * global so a package can supply environments to a document. */
 object NewEnvironmentPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     proc.handler.globalAssign = false // environment definitions are always global; ignore any stray prefix
-    val name      = readEnvName(proc, pos)
+    val name = readEnvName(proc, pos)
+
+    // Read named parameters (identifiers) until the begin-code brace, exactly as \def does.
+    val params = Vector.newBuilder[String]
+    proc.skipSpaces()
+    while proc.hasMoreTokens && (proc.peekToken() match
+        case Token.Text(s, _) if s.nonEmpty && s.head.isLetter => true
+        case _                                                  => false
+      )
+    do
+      proc.nextToken() match
+        case Token.Text(s, _) => params += s
+        case _                => // unreachable
+      proc.skipSpaces()
+
     val beginCode = stripOuterBraces(proc.readArgument(pos))
     val endCode   = stripOuterBraces(proc.readArgument(pos))
-    val pair      = Value.Seq(Vector(Value.Macro(Vector.empty, beginCode, pos), Value.Macro(Vector.empty, endCode, pos)))
+    val pair = Value.Seq(Vector(Value.Macro(params.result(), beginCode, pos), Value.Macro(Vector.empty, endCode, pos)))
     val updated = proc.handler.get(EnvStoreName) match
       case Value.Map(m) => Value.Map(m + (name -> pair))
       case _            => Value.Map(Map(name -> pair))
     proc.handler.setGlobal(EnvStoreName, updated)
 
-/** `\begin{name}` — open a fresh scope and run the environment's begin-code inside it. The synthetic
-  * `BeginGroup` drives the normal scope machinery, so locals set in the body (or by the begin-code) stay
-  * contained and `\global` still escapes. */
+/** `\begin{name}` — open a fresh scope and run the environment's begin-code inside it, after reading and
+  * substituting any declared arguments. The synthetic `BeginGroup` drives the normal scope machinery, so locals
+  * set in the body (or by the begin-code) stay contained and `\global` still escapes. The name is pushed on the
+  * environment stack so the matching `\end` can verify it. */
 object BeginPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = readEnvName(proc, pos)
     envCode(proc, name) match
-      case Some((begin, _)) => proc.pushBack(Token.BeginGroup(pos) +: begin)
-      case None             => proc.handler.error(s"Unknown environment '$name'", pos)
+      case Some((params, begin, _)) =>
+        val args     = (0 until params.size).map(_ => proc.readArgument(pos)).toVector
+        val expanded = proc.substituteNamedParams(begin, params.zip(args).toMap)
+        proc.envStack.push(name)
+        proc.pushBack(Token.BeginGroup(pos) +: expanded)
+      case None => proc.handler.error(s"Unknown environment '$name'", pos)
 
 /** `\end{name}` — run the environment's end-code (still inside the body's scope) and then close the scope. The
   * trailing synthetic `EndGroup` runs after the end-code, so the end-code can see anything the begin-code or the
-  * body set locally. */
+  * body set locally. The name must match the innermost open `\begin`. */
 object EndPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = readEnvName(proc, pos)
     envCode(proc, name) match
-      case Some((_, end)) => proc.pushBack(end :+ Token.EndGroup(pos))
-      case None           => proc.handler.error(s"Unknown environment '$name'", pos)
+      case Some((_, _, end)) =>
+        if proc.envStack.isEmpty then proc.handler.error(s"\\end{$name} with no open environment", pos)
+        val open = proc.envStack.pop()
+        if open != name then proc.handler.error(s"\\end{$name} does not match \\begin{$open}", pos)
+        proc.pushBack(end :+ Token.EndGroup(pos))
+      case None => proc.handler.error(s"Unknown environment '$name'", pos)
 
 // ============ ESCAPE SEQUENCES ============
 
