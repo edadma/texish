@@ -71,6 +71,13 @@ class HAlignTests extends AnyFreeSpec with Matchers:
     colWidths(rows(0)).head should be >= 24.0                // at least the 4 chars of AAAA
   }
 
+  "a cell with no alignment glue in its template is still padded to the column width" in {
+    // bare # template (no \hfil): the short cell must still fill its column so columns line up
+    val rows = hrows(run("\\halign{#&#\\cr AAAA&B\\cr C&DDDD\\cr}"))
+    rows should have size 2
+    colWidths(rows(0)) shouldBe colWidths(rows(1))
+  }
+
   "a trailing \\cr does not add a blank row" in {
     hrows(run("\\halign{#\\hfil\\cr A\\cr B\\cr}")) should have size 2
   }
@@ -90,6 +97,24 @@ class HAlignTests extends AnyFreeSpec with Matchers:
     rows should have size 2
     text(rows(0)) should include("Z")     // template "Z" prepended to the normal cell
     text(rows(1)) should not include "Z"  // omitted on the \omit cell
+  }
+
+  "a space after \\cr does not leak into the next cell" in {
+    val rows = hrows(run("\\halign{#\\cr X\\cr Y\\cr}"))
+    rows should have size 2
+    text(rows(0)) shouldBe "X" // not " X"
+    text(rows(1)) shouldBe "Y"
+  }
+
+  "\\tabskip inserts glue before, between, and after the columns" in {
+    val row  = hrows(run("\\set tabskip {7}\\halign{#\\hfil&#\\hfil\\cr A&B\\cr}")).head
+    val gaps = row.asInstanceOf[HBox].boxes.filter(_.width == 7.0)
+    gaps should have size 3 // before col0, between, after col1
+  }
+
+  "without \\tabskip the columns abut (no gap boxes)" in {
+    val row = hrows(run("\\halign{#\\hfil&#\\hfil\\cr A&B\\cr}")).head
+    row.asInstanceOf[HBox].boxes should have size 2 // just the two cells
   }
 
   "& and # are literal characters outside a table" in {

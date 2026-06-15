@@ -1,13 +1,28 @@
 package io.github.edadma.texish
 
+import io.github.edadma.texish.parser.Value
+
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 //import pprint.pprintln
 
 class HAlignMode(val t: Typesetter) extends Mode:
+
+  /** The inter-column glue (TeX's \tabskip), placed before the first column, between columns, and after the last.
+    * Read from the `tabskip` variable; absent or zero means columns simply abut, as before.
+    */
+  private def tabskip: Glue =
+    t.get("tabskip") match
+      case Some(Value.Glue(n, st, sh, sto, sho)) => Glue(n, st, sh, sto, sho)
+      case Some(Value.Native(g: Glue))           => g
+      case Some(Value.Dimen(p))                  => Glue(p)
+      case Some(Value.Num(n))                    => Glue(n)
+      case _                                     => Glue(0)
   private var state: "START" | "FORMAT_LEFT" | "FORMAT_RIGHT" | "ROW" | "NOALIGN" = "START"
 
-  case class Cell(var format: Boolean, material: HBoxBuilder)
+  // `started` flips once the cell receives its first real (non-space) content, so a space at the very start of a
+  // cell entry — e.g. the space after the \cr that ends the previous row — can be dropped, as in TeX.
+  case class Cell(var format: Boolean, material: HBoxBuilder, var started: Boolean = false)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
   // `filled` records whether the row received any typeset content; a row opened by a trailing \cr but never
   // filled is dropped at done() rather than emitted as a blank line (as in TeX).
@@ -71,6 +86,7 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "ROW" =>
         content.last.row.last.material.clear()
         content.last.row.last.format = false
+        content.last.row.last.started = false // a fresh cell entry: its leading space is dropped too
       case "NOALIGN" => sys.error("\\omit cannot be used in 'noalign'")
       case _         => sys.error("\\omit cannot be used in the format line")
 
@@ -89,8 +105,19 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "FORMAT_LEFT"  => format.last.left += box
       case "FORMAT_RIGHT" => format.last.right += box
       case "ROW" =>
-        content.last.row.last.material add box
-        content.last.filled = true
+        val cell = content.last.row.last
+        box match
+          case c: CharBox if !cell.started =>
+            // drop leading whitespace at the start of the cell entry (a pure-space box vanishes entirely)
+            val trimmed = c.text.dropWhile(_.isWhitespace)
+            if trimmed.nonEmpty then
+              cell.material add (if trimmed.length == c.text.length then c else c.newCharBox(trimmed))
+              cell.started = true
+              content.last.filled = true
+          case _ =>
+            cell.material add box
+            cell.started = true
+            content.last.filled = true
       case "NOALIGN" =>
         if content.last.noalign eq null then content.last.noalign = new ListBuffer
 
@@ -127,11 +154,23 @@ class HAlignMode(val t: Typesetter) extends Mode:
           builder.toSize = width
           hboxes(line) += builder.result.asInstanceOf[HBox]
 
+    val skip = tabskip
+    val gap  = skip.naturalSize != 0 || skip.stretch != 0 || skip.shrink != 0
+
     for line <- content.indices do
       if content(line).noalign eq null then
         val hbox = new HBoxBuilder(t)
 
-        hbox addSeq hboxes(line)
+        if gap then
+          // \tabskip glue surrounds and separates the columns; a fresh Glue per slot since glue-setting mutates
+          // the builder's box list in place
+          def skipBox = Glue(skip.naturalSize, skip.stretch, skip.shrink, skip.stretchOrder, skip.shrinkOrder)
+          hbox add skipBox
+          for cell <- hboxes(line) do
+            hbox add cell
+            hbox add skipBox
+        else hbox addSeq hboxes(line)
+
         t.modeStack(1) add hbox.result
       else
         content(line).noalign foreach t.modeStack(1).add

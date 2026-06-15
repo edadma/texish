@@ -52,7 +52,11 @@ abstract class ListBoxBuilder extends Builder:
       reported = true
 
     if glue.isEmpty then
-      if math.abs(delta) > 1e-6 then warn(f"box is ${-delta}%.2f off its target size and contains no glue")
+      // No glue to stretch or shrink. Underfull: pad to the target so the box reaches its declared size with the
+      // content left-aligned, as an underfull \hbox/\vbox to: does in TeX (and as table columns rely on to line
+      // up cells whose template has no \hfil). Overfull: nothing can shrink, so report the overflow.
+      if delta > 1e-6 then boxes += skip(delta)
+      else if delta < -1e-6 then warn(f"overfull box: content exceeds the target size by ${-delta}%.2f and no glue can shrink")
     else if math.abs(delta) <= 1e-6 then setGlue(_.naturalSize)
     else if delta > 0 then
       glue.collect { case (g, _) if g.stretch > 0 => g.stretchOrder }.maxOption match

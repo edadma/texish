@@ -194,17 +194,15 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
   }
 
   "ending the document builds the final page only once" in {
-    // done() must ship the box result already built — rebuilding would double the work and, because glue
-    // setting replaces the glue in place, mis-report the second pass as a glueless off-size box
-    val t   = new StubTypesetter
-    val out = new java.io.ByteArrayOutputStream
+    // done() must ship the final page exactly once; a regression that rebuilds or re-ships would ship it twice
+    val t = new StubTypesetter
 
-    Console.withOut(out) {
+    Console.withOut(new java.io.ByteArrayOutputStream) {
       t.add(new CharBox(t, "one"))
       t.end()
     }
 
-    out.toString.linesIterator.count(_.startsWith("Warning")) shouldBe 1
+    t.document.page shouldBe 1
   }
 
   "interline glue is inserted across a penalty, measured from the last box" in {
