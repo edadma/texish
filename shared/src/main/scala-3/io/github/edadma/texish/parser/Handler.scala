@@ -23,6 +23,12 @@ trait Handler:
   /** Set a variable's value */
   def set(name: String, value: Value): Unit
 
+  /** Set a variable globally: visible now and still set after every enclosing group closes (TeX's \global). */
+  def setGlobal(name: String, value: Value): Unit
+
+  /** Set by a `\global` prefix, consumed by the next assignment to make it global. */
+  var globalAssign: Boolean = false
+
   /** Enter a new scope (for grouping) */
   def enterScope(): Unit
 
@@ -74,6 +80,10 @@ class StringHandler extends Handler:
 
   def set(name: String, value: Value): Unit =
     scopes.head(name) = value
+
+  // global: set in every open scope, so it is visible now and survives every group exit down to the outermost
+  def setGlobal(name: String, value: Value): Unit =
+    scopes.foreach(_(name) = value)
 
   def enterScope(): Unit =
     scopes = scala.collection.mutable.Map[String, Value]() :: scopes

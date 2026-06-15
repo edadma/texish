@@ -416,6 +416,12 @@ abstract class Typesetter:
   def set(name: String, value: Any): Unit =
     scopes(0) += (name -> Value.from(value))
 
+  // global: set in every open scope (each is an independent snapshot), so the value is visible now and remains
+  // after every enclosing group exits down to the outermost scope
+  def setGlobal(name: String, value: Any): Unit =
+    val v = Value.from(value)
+    for i <- 0 until scopes.length do scopes(i) = scopes(i) + (name -> v)
+
   def set(pairs: Seq[(String, Any)]): Unit =
     scopes(0) ++= pairs.map((k, v) => (k, Value.from(v)))
 

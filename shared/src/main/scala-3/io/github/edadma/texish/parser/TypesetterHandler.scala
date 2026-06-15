@@ -54,6 +54,8 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def set(name: String, value: Value): Unit = typesetter.set(name, value)
 
+  def setGlobal(name: String, value: Value): Unit = typesetter.setGlobal(name, value)
+
   /** Open a group `{`. Besides the variable scope every group opens, a group inside math begins a sub-formula:
     * a `{…}` in math is a self-contained math list set as a single ordinary atom, exactly as in TeX — so font
     * or class changes inside it stay inside, and an infix `\over`/`\atop` is scoped to the braces. The nested

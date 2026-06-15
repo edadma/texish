@@ -32,6 +32,7 @@ class Processor(val handler: Handler):
   // Register default primitives
   registerPrimitive("def", DefPrimitive)
   registerPrimitive("gdef", GdefPrimitive)
+  registerPrimitive("global", GlobalPrimitive)
   registerPrimitive("set", SetPrimitive)
   registerPrimitive("if", IfPrimitive)
   registerPrimitive("ifx", IfxPrimitive)
@@ -601,6 +602,9 @@ trait Active:
 object DefPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = proc.readIdentifier(pos)
+    // capture and clear the \global flag up front, so evaluating params/body can't be confused by it
+    val global = proc.handler.globalAssign
+    proc.handler.globalAssign = false
 
     // Read named parameters (identifiers) until we hit the body brace
     val params = Vector.newBuilder[String]
@@ -620,19 +624,29 @@ object DefPrimitive extends Primitive:
     // open a scope of its own, so a \set or \coordinate in its body lands in the caller's scope, as in TeX.
     // Grouping inside a macro is whatever explicit { } the body itself contains.
     val body = stripOuterBraces(proc.readArgument(pos))
-    proc.handler.set(name, Value.Macro(params.result(), body, pos))
+    val mac  = Value.Macro(params.result(), body, pos)
+
+    if global then proc.handler.setGlobal(name, mac) else proc.handler.set(name, mac)
 
 object GdefPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    // Global def - for now same as def (TODO: implement global scope)
+    proc.handler.globalAssign = true
     DefPrimitive.execute(proc, pos)
+
+/** `\global` — a prefix that makes the following assignment (\set, \def, …) global. */
+object GlobalPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    proc.handler.globalAssign = true
 
 object SetPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = proc.readIdentifier(pos)
-    // Evaluate the expression to get a value
+    // capture and clear the \global flag before evaluating the value, so a nested assignment in the value
+    // expression can't steal it
+    val global = proc.handler.globalAssign
+    proc.handler.globalAssign = false
     val value = proc.evalArgumentExpr(pos)
-    proc.handler.set(name, value)
+    if global then proc.handler.setGlobal(name, value) else proc.handler.set(name, value)
 
 object IfPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
