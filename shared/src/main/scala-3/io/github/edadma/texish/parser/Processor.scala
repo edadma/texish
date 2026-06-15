@@ -79,6 +79,9 @@ class Processor(val handler: Handler):
 
   // Map/object primitive
   registerPrimitive("map", MapPrimitive)
+  registerPrimitive("mapset", MapSetPrimitive)
+  registerPrimitive("mapget", MapGetPrimitive)
+  registerPrimitive("maphas", MapHasPrimitive)
 
   // Escape sequences for special characters
   registerPrimitive("{", LiteralPrimitive("{"))
@@ -1208,6 +1211,44 @@ object MapPrimitive extends Primitive:
     }.toMap
 
     proc.setResult(Value.Map(map))
+
+/** `\mapset name {key} {value}` — store `value` under a computed `key` in the map variable `name` (creating the
+  * map if absent). The key is any expression, so it can be built with `\calc`/string ops — this is texish's answer
+  * to TeX's `\csname`, the keyed store the counters package and option machinery sit on. Honours a `\global`
+  * prefix, so a global map (e.g. counters) updates across groups.
+  */
+object MapSetPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name   = proc.readIdentifier(pos)
+    val global = proc.handler.globalAssign
+    proc.handler.globalAssign = false
+    val key   = Value.display(proc.evalArgumentExpr(pos))
+    val value = proc.evalArgumentExpr(pos)
+    val current = proc.handler.get(name) match
+      case Value.Map(m) => m
+      case _            => scala.collection.immutable.Map.empty[String, Value]
+    val updated = Value.Map(current + (key -> value))
+    if global then proc.handler.setGlobal(name, updated) else proc.handler.set(name, updated)
+
+/** `\mapget name {key}` — the value stored under a computed `key` in the map variable `name`, or Undefined if the
+  * variable is not a map or has no such key. Sets a result, so it composes in expressions (`\set v {\mapget …}`).
+  */
+object MapGetPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name = proc.readIdentifier(pos)
+    val key  = Value.display(proc.evalArgumentExpr(pos))
+    proc.setResult(proc.handler.get(name) match
+      case Value.Map(m) => m.getOrElse(key, Value.Undefined)
+      case _            => Value.Undefined)
+
+/** `\maphas name {key}` — whether the map variable `name` has a computed `key`. Sets a Bool result for `\if`. */
+object MapHasPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name = proc.readIdentifier(pos)
+    val key  = Value.display(proc.evalArgumentExpr(pos))
+    proc.setResult(Value.Bool(proc.handler.get(name) match
+      case Value.Map(m) => m.contains(key)
+      case _            => false))
 
 // ============ ESCAPE SEQUENCES ============
 
