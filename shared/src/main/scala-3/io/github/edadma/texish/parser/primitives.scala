@@ -26,6 +26,7 @@ import io.github.edadma.texish.{
   ShiftBox,
   Typesetter,
   UnderlineBox,
+  VBox,
 }
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
@@ -258,37 +259,114 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // hbox - 1 body arg + optional "to" param
+  // hbox / vbox - typeset a braced body into a horizontal (resp. vertical) box, with an optional `to:`
+  // target size that glue stretches or shrinks to fill. The box is added to the current list.
   proc.registerPrimitive(
     "hbox",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val opts = proc.readOptionalParams(pos)
-        val body = proc.readArgument(pos)
-        // build Double | Null directly — boxing through java.lang.Double would unbox null to 0.0
-        val toVal: Double | Null = opts.get("to").flatMap(points) match
-          case Some(d) => d
-          case None    => null
-        t.hbox(toVal)
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        t.mode.done()
+        buildBox(proc, t, vertical = false, pos) match
+          case b: Box => t.add(b)
+          case null   =>
     },
   )
-
-  // vbox - 1 body arg + optional "to" param
   proc.registerPrimitive(
     "vbox",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val opts = proc.readOptionalParams(pos)
-        val body = proc.readArgument(pos)
-        // build Double | Null directly — boxing through java.lang.Double would unbox null to 0.0
-        val toVal: Double | Null = opts.get("to").flatMap(points) match
-          case Some(d) => d
-          case None    => null
-        t.vbox(toVal)
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        t.mode.done()
+        buildBox(proc, t, vertical = true, pos) match
+          case b: Box => t.add(b)
+          case null   =>
+    },
+  )
+
+  // setbox name \hbox{...} (or \vbox) - typeset a box now and save it in a register under `name`, for later
+  // measurement (\wd / \ht / \dp) and placement (\box / \copy). Like \set, the assignment is local to the
+  // current group. The box's contents are typeset at this point, not when the register is later used.
+  proc.registerPrimitive(
+    "setbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        readBoxArg(proc, t, pos) match
+          case b: Box => proc.handler.set(name, Value.Native(b))
+          case null   => handler.error("\\setbox expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
+    },
+  )
+
+  // box name - place the saved box into the current list and empty the register (the box is "used up", as in
+  // TeX). copy name - place the box but leave the register intact for reuse. Boxes are immutable, so the copy
+  // shares the same instance.
+  proc.registerPrimitive(
+    "box",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        t.add(boxRegister(proc, handler, name, "box", pos))
+        proc.handler.set(name, Value.Undefined)
+    },
+  )
+  proc.registerPrimitive(
+    "copy",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        t.add(boxRegister(proc, handler, name, "copy", pos))
+    },
+  )
+
+  // unhbox name / unvbox name - splice the saved box's contents directly into the current list (rather than
+  // nesting the box itself), then empty the register. unhbox requires an \hbox register, unvbox a \vbox.
+  proc.registerPrimitive(
+    "unhbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        boxRegister(proc, handler, name, "unhbox", pos) match
+          case hb: HBox => hb.boxes.foreach(t.add)
+          case _        => handler.error(s"\\unhbox: '$name' is not an \\hbox", pos)
+        proc.handler.set(name, Value.Undefined)
+    },
+  )
+  proc.registerPrimitive(
+    "unvbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        boxRegister(proc, handler, name, "unvbox", pos) match
+          case vb: VBox => vb.boxes.foreach(t.add)
+          case _        => handler.error(s"\\unvbox: '$name' is not a \\vbox", pos)
+        proc.handler.set(name, Value.Undefined)
+    },
+  )
+
+  // wd / ht / dp name - the width, height (above the baseline), and depth (below the baseline) of a saved box,
+  // each a dimension. They feed any primitive that takes a dimension — \kern\wd title (a rigid space as wide as
+  // the box), \hbox to:{\wd ref}{...} (match another box's width) — and, stored first with \set, into \calc:
+  // \set h {\ht a} then \calc{h + 2}. ht maps to the box's ascent and dp to its descent, matching TeX's
+  // reference-point split of the total height.
+  proc.registerPrimitive(
+    "wd",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        proc.setResult(Value.Dimen(boxRegister(proc, handler, name, "wd", pos).width))
+    },
+  )
+  proc.registerPrimitive(
+    "ht",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        proc.setResult(Value.Dimen(boxRegister(proc, handler, name, "ht", pos).ascent))
+    },
+  )
+  proc.registerPrimitive(
+    "dp",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        proc.setResult(Value.Dimen(boxRegister(proc, handler, name, "dp", pos).descent))
     },
   )
 
@@ -1122,9 +1200,24 @@ private def points(v: Value): Option[Double] = v match
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
 
-// Read the <box> that follows \lower / \raise — the next \hbox or \vbox, built and returned
-// *without* adding it to the current list, so the caller can wrap it (in a ShiftBox). Returns null
-// for anything that is not a box command.
+// Build an \hbox or \vbox whose command token has already been consumed: read its optional `to:` target
+// and braced body, typeset the body into a fresh builder, and return the finished box *without* adding it
+// to the current list. Shared by the \hbox / \vbox / \setbox primitives and \lower / \raise.
+private def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, pos: CharReader): Box | Null =
+  val opts = proc.readOptionalParams(pos)
+  val body = proc.readArgument(pos)
+  // build Double | Null directly — boxing through java.lang.Double would unbox null to 0.0
+  val toVal: Double | Null = opts.get("to").flatMap(points) match
+    case Some(d) => d
+    case None    => null
+  if vertical then t.vbox(toVal) else t.hbox(toVal)
+  proc.processTokenList(body) // scoping happens automatically from { } tokens
+  t.paragraph() // close any paragraph the body opened in vertical mode, so exit sees the box builder itself
+  t.mode.exit
+
+// Read the <box> that follows \lower / \raise / \setbox — the next \hbox or \vbox, built and returned
+// without adding it to the current list, so the caller can wrap, shift, or store it. Returns null for
+// anything that is not a box command.
 private def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | Null =
   proc.skipSpaces()
   if !proc.hasMoreTokens then null
@@ -1132,15 +1225,16 @@ private def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | N
     proc.peekToken() match
       case Token.ControlSeq(name, _) if name == "hbox" || name == "vbox" =>
         proc.nextToken() // consume the box command
-        val opts = proc.readOptionalParams(pos)
-        val body = proc.readArgument(pos)
-        val toVal: Double | Null = opts.get("to").flatMap(points) match
-          case Some(d) => d
-          case None    => null
-        if name == "hbox" then t.hbox(toVal) else t.vbox(toVal)
-        proc.processTokenList(body)
-        t.mode.exit
+        buildBox(proc, t, vertical = name == "vbox", pos)
       case _ => null
+
+// Fetch a box stored in a register by \setbox. Errors (rather than returning a sentinel) when the register
+// is empty or holds a non-box, so a misused box command points at the offending name.
+private def boxRegister(proc: Processor, handler: TypesetterHandler, name: String, cmd: String, pos: CharReader): Box =
+  proc.handler.get(name) match
+    case Value.Native(b: Box) => b
+    case Value.Undefined      => handler.error(s"\\$cmd: box register '$name' is empty", pos)
+    case _                    => handler.error(s"\\$cmd: '$name' is not a box", pos)
 
 // Resolve a glue argument: a braced glue spec ({12pt plus 2pt}), a glue-valued variable, or a bare dimension
 // optionally continued by `plus`/`minus` keywords in the token stream (\vskip 12pt plus 2pt minus 1fil)
