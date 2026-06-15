@@ -32,6 +32,19 @@ class HAlignTests extends AnyFreeSpec with Matchers:
     Console.withOut(new java.io.ByteArrayOutputStream)(proc.process(src)) // swallow any underfull warnings
     cap.rows.toSeq
 
+  /** Typeset a body into an \hbox (where # and & are not alignment-active) and return its concatenated text, so
+    * literal-character behaviour outside a table is easy to assert.
+    */
+  private def hboxText(body: String): String =
+    val t       = new StubTypesetter
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    proc.process(s"\\setbox probe \\hbox{$body}")
+    proc.handler.get("probe") match
+      case Value.Native(b: Box) => text(b)
+      case _                    => ""
+
   private def hrows(rows: Seq[Box]): Seq[HBox]    = rows.collect { case h: HBox => h }
   private def colWidths(row: Box): Seq[Double]    = row.asInstanceOf[HBox].boxes.map(_.width)
   private def text(box: Box): String = box match
@@ -77,4 +90,18 @@ class HAlignTests extends AnyFreeSpec with Matchers:
     rows should have size 2
     text(rows(0)) should include("Z")     // template "Z" prepended to the normal cell
     text(rows(1)) should not include "Z"  // omitted on the \omit cell
+  }
+
+  "& and # are literal characters outside a table" in {
+    noException should be thrownBy hboxText("AT&T")
+    hboxText("AT&T") shouldBe "AT&T"
+    hboxText("C#") shouldBe "C#"
+  }
+
+  "\\& and \\# are literals even where & / # would be active" in {
+    hboxText("A\\&B\\#C") shouldBe "A&B#C"
+    // inside a table cell, \& is a literal & (not a column break), so this stays a single column
+    val rows = hrows(run("\\halign{#\\hfil\\cr A\\&B\\cr}"))
+    rows should have size 1
+    text(rows(0)) should include("&")
   }

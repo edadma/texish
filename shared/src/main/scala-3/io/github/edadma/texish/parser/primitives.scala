@@ -504,11 +504,16 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // # and & are alignment-active only when an \halign is the current mode: # marks the template placeholder,
+  // & separates columns. Anywhere else (ordinary prose, an \hbox, a picture) they are literal characters, so a
+  // document can write "AT&T" or "C#" without escaping. \# and \& force the literal even inside a table.
   proc.registerActive(
     '#',
     new Active {
       def execute(proc: Processor, c: Char, pos: CharReader): Unit =
-        t.op("placeholder")
+        t.mode match
+          case _: HAlignMode => t.op("placeholder")
+          case _             => handler.text(c.toString)
     },
   )
 
@@ -516,7 +521,9 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     '&',
     new Active {
       def execute(proc: Processor, c: Char, pos: CharReader): Unit =
-        t.op("newColumn")
+        t.mode match
+          case _: HAlignMode => t.op("newColumn")
+          case _             => handler.text(c.toString)
     },
   )
 

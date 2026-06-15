@@ -85,6 +85,9 @@ class Processor(val handler: Handler):
   registerPrimitive("%", LiteralPrimitive("%"))
   registerPrimitive("\\", LiteralPrimitive("\\"))
   registerPrimitive("~", LiteralPrimitive("~"))
+  // & and # are alignment-active only inside \halign; \& and \# are their literals everywhere
+  registerPrimitive("&", LiteralPrimitive("&"))
+  registerPrimitive("#", LiteralPrimitive("#"))
 
   def registerPrimitive(name: String, prim: Primitive): Unit =
     primitives(name) = prim
