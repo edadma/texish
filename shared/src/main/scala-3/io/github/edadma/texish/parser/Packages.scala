@@ -19,7 +19,40 @@ object Packages:
   private val registry: Map[String, String] = Map(
     "chem"     -> chem,
     "counters" -> counters,
+    "floats"   -> floats,
   )
+
+  /** `floats` — LaTeX-style `\figure`/`\table` floats with auto-numbered `\caption`s, layered over the
+    * `\topinsert` primitive (top-of-page placement) and the [[counters]] package. `\figure{…}` and `\table{…}`
+    * detach their body to the top of whatever page they land on; a `\caption{…}` written inside one steps that
+    * float's own counter (figure or table, kept independent) and typesets a numbered line such as `Figure 1: …`.
+    * The kind and counter name are passed to the shared `\caption` through two scratch variables the float sets
+    * before delegating to `\topinsert`, so the caption inherits them when it runs inside the floated block. */
+  private def floats: String =
+    raw"""// floats — figure and table floats with numbered captions, over the \topinsert primitive and the counters
+// package. Each source line ends with // so its newline is stripped and no stray whitespace reaches the output.
+\use{counters}//
+\newcounter{figure}//
+\newcounter{table}//
+// \figure{body} — float body to the top of its page; a \caption inside numbers as a figure.
+\def figure body {{//
+\set captionkind {Figure}//
+\set captioncounter {figure}//
+\topinsert{\body}//
+}}//
+// \table{body} — like \figure, but a \caption inside numbers as a table (an independent counter).
+\def table body {{//
+\set captionkind {Table}//
+\set captioncounter {table}//
+\topinsert{\body}//
+}}//
+// \caption{text} — step the enclosing float's counter and typeset a numbered caption line, e.g. "Figure 1: text".
+// Reads captionkind/captioncounter, which the surrounding \figure or \table set before entering the float.
+\def caption text {{//
+\stepcounter \captioncounter//
+\the\captionkind \arabic{\value \captioncounter}: \text//
+}}//
+"""
 
   /** `counters` — LaTeX-style document counters, written entirely in the document language over the engine's
     * global keyed store (`\global\mapset`/`\mapget`), `\calc`, and the number-formatting primitives. Two global
