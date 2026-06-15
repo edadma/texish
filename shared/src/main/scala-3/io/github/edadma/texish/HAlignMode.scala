@@ -142,10 +142,12 @@ class HAlignMode(val t: Typesetter) extends Mode:
       if content.last.row.length < format.length then sys.error("too few columns in the last row (missing \\cr?)")
       if content.last.row.last.format then content.last.row.last.material addSeq format.last.right
 
-    val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
+    val hboxes   = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
+    val colWidth = new Array[Double](format.length)
 
     for column <- format.indices do
       val width = content.map(line => if line.noalign ne null then 0 else line.row(column).material.size).max
+      colWidth(column) = width
 
       for line <- content.indices do
         if content(line).noalign eq null then
@@ -156,6 +158,10 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
     val skip = tabskip
     val gap  = skip.naturalSize != 0 || skip.stretch != 0 || skip.shrink != 0
+
+    // the assembled table width — every column plus the tabskip glue around and between them — so a running \hrule
+    // in a \noalign spans exactly the table
+    val tableWidth = colWidth.sum + (if gap then (format.length + 1) * skip.naturalSize else 0)
 
     for line <- content.indices do
       if content(line).noalign eq null then
@@ -173,7 +179,10 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
         t.modeStack(1) add hbox.result
       else
-        content(line).noalign foreach t.modeStack(1).add
+        content(line).noalign.foreach {
+          case r: RuleBox if r.running => t.modeStack(1) add r.withWidth(tableWidth) // \hrule spans the table
+          case b                       => t.modeStack(1) add b
+        }
 
     super.done()
 

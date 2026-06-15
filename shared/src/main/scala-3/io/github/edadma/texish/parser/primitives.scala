@@ -220,16 +220,37 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // hrule - 0 args but optional params
+  // hrule - 0 args but optional params. With no width: it runs to the width of the box it lands in (the table
+  // width inside an \halign's \noalign; otherwise the hsize fallback). With width: that exact width.
   proc.registerPrimitive(
     "hrule",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val opts    = proc.readOptionalParams(pos)
-        val width   = opts.get("width").flatMap(points).getOrElse(t.getNumber("hsize"))
-        val ascent  = opts.get("ascent").flatMap(points).getOrElse(3.0)
-        val descent = opts.get("descent").flatMap(points).getOrElse(0.0)
-        t.add(RuleBox(t, width, ascent, descent))
+        val opts          = proc.readOptionalParams(pos)
+        val explicitWidth = opts.get("width").flatMap(points)
+        val ascent        = opts.get("ascent").flatMap(points).getOrElse(3.0)
+        val descent       = opts.get("descent").flatMap(points).getOrElse(0.0)
+        t.add(
+          new RuleBox(t, explicitWidth.getOrElse(t.getNumber("hsize")), ascent, descent, t.currentColor,
+            running = explicitWidth.isEmpty),
+        )
+    },
+  )
+
+  // vrule - 0 args but optional params. With no height/depth: a vertical rule that runs to the height of the line
+  // it sits in (so a \vrule in a table cell spans that cell). With height:/depth:: a rule of exactly that size.
+  // width: sets the rule's thickness (default 0.4pt, as in TeX).
+  proc.registerPrimitive(
+    "vrule",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts      = proc.readOptionalParams(pos)
+        val thickness = opts.get("width").flatMap(points).getOrElse(0.4)
+        val height    = opts.get("height").flatMap(points)
+        val depth     = opts.get("depth").flatMap(points)
+        if height.isDefined || depth.isDefined then
+          t.add(new RuleBox(t, thickness, height.getOrElse(0.0), depth.getOrElse(0.0)))
+        else t.add(new VRule(t, thickness))
     },
   )
 

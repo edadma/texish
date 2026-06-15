@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, Mode, StubTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, StubTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -115,6 +115,25 @@ class HAlignTests extends AnyFreeSpec with Matchers:
   "without \\tabskip the columns abut (no gap boxes)" in {
     val row = hrows(run("\\halign{#\\hfil&#\\hfil\\cr A&B\\cr}")).head
     row.asInstanceOf[HBox].boxes should have size 2 // just the two cells
+  }
+
+  "\\noalign{\\hrule} draws a rule spanning the table width" in {
+    val rows    = run("\\halign{#\\hfil&#\\hfil\\cr A&BB\\cr\\noalign{\\hrule}CCC&D\\cr}")
+    val rule    = rows.collectFirst { case r: RuleBox => r }.get
+    val rowWide = hrows(rows).head.width
+    rule.width shouldBe rowWide // the rule matches the table width, not the full hsize
+  }
+
+  "\\noalign{\\hrule width:N} keeps its explicit width" in {
+    val rows = run("\\halign{#\\hfil\\cr A\\cr\\noalign{\\hrule width:5}B\\cr}")
+    rows.collectFirst { case r: RuleBox => r }.get.width shouldBe 5.0
+  }
+
+  "\\vrule in a cell runs to the line height" in {
+    val cell = hrows(run("\\halign{\\vrule#\\cr A\\cr}")).head.boxes.head.asInstanceOf[HBox]
+    val rule = cell.boxes.collectFirst { case r: RuleBox => r }.get
+    rule.ascent shouldBe 8.0  // the line's ascent in the stub font
+    rule.descent shouldBe 2.0 // and its descent
   }
 
   "& and # are literal characters outside a table" in {
