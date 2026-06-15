@@ -9,7 +9,9 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   case class Cell(var format: Boolean, material: HBoxBuilder)
   case class Format(left: ListBuffer[Box], right: ListBuffer[Box])
-  case class Line(var noalign: ListBuffer[Box], row: ArrayBuffer[Cell])
+  // `filled` records whether the row received any typeset content; a row opened by a trailing \cr but never
+  // filled is dropped at done() rather than emitted as a blank line (as in TeX).
+  case class Line(var noalign: ListBuffer[Box], row: ArrayBuffer[Cell], var filled: Boolean = false)
 
   val format      = new ArrayBuffer[Format]
   val content     = new ArrayBuffer[Line]
@@ -86,14 +88,32 @@ class HAlignMode(val t: Typesetter) extends Mode:
       case "START"        => sys.error("can't add a box in the START state")
       case "FORMAT_LEFT"  => format.last.left += box
       case "FORMAT_RIGHT" => format.last.right += box
-      case "ROW"          => content.last.row.last.material add box
+      case "ROW" =>
+        content.last.row.last.material add box
+        content.last.filled = true
       case "NOALIGN" =>
         if content.last.noalign eq null then content.last.noalign = new ListBuffer
 
         content.last.noalign += box
 
   override def done(): Unit =
-    if content.last.row.last.format then content.last.row.last.material addSeq format.last.right
+    // A trailing \cr opens a row that never receives content. Drop that empty final row (TeX does the same);
+    // it also has too few cells to take part in the column-width pass, so leaving it would crash.
+    val droppedTrailing =
+      if content.nonEmpty && content.last.noalign == null && !content.last.filled then
+        content.remove(content.length - 1)
+        true
+      else false
+
+    if content.isEmpty then
+      super.done()
+      return
+
+    // If the table did not end with \cr, its last row was never closed by newLine; close its final cell's right
+    // template now. (When a trailing \cr was dropped, the real last row is already closed — don't double-add.)
+    if !droppedTrailing && content.last.noalign == null then
+      if content.last.row.length < format.length then sys.error("too few columns in the last row (missing \\cr?)")
+      if content.last.row.last.format then content.last.row.last.material addSeq format.last.right
 
     val hboxes = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])
 

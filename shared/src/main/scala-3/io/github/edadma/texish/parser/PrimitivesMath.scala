@@ -212,6 +212,10 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // omit - 0 args: at the start of a cell, drop that cell's column template (it is set with no \hfil etc.),
+  // as in TeX. Only meaningful inside a row.
+  proc.registerPrimitive("omit", SimplePrimitive(() => t.op("omit")))
+
   // halign - 1 body arg (no scoping - table inherits outer context)
   proc.registerPrimitive(
     "halign",
