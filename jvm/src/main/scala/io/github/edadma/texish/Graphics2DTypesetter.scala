@@ -62,7 +62,7 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   def createPageTarget: Any =
     newPageImage()
-    g.setColor(java.awt.Color.WHITE)
+    setColor(backgroundColor)
     g.fillRect(0, 0, (page.getWidth / deviceScale).toInt + 1, (page.getHeight / deviceScale).toInt + 1)
     page
 

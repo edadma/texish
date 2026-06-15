@@ -12,8 +12,9 @@ import scala.scalanative.unsafe.*
   */
 class CairoImageTests extends AnyFreeSpec with Matchers:
 
-  private def render(dpi: Double, script: String): List[Surface] =
+  private def render(dpi: Double, script: String, background: Color = Color("white")): List[Surface] =
     val t       = new CairoImageTypesetter(dpi)
+    t.backgroundColor = background
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
 
@@ -73,6 +74,23 @@ class CairoImageTests extends AnyFreeSpec with Matchers:
 
     whiteCorner(pages.head) shouldBe true
     inkPixels(pages.head) should be > 0
+  }
+
+  "the page background honours backgroundColor" in {
+    // A dark page colour (what a dark-scheme screen preview asks for) fills the page instead of
+    // white; the default keeps the white paper that print output expects.
+    val dark = render(100, "Hello world\n\n", background = Color("black"))
+
+    val p = dark.head
+    p.flush()
+    val data = p.getData
+    // the top-left corner is bare page: opaque, with every colour channel black
+    (data(3) & 0xff) shouldBe 0xff
+    (data(0) & 0xff) shouldBe 0x00
+    (data(1) & 0xff) shouldBe 0x00
+    (data(2) & 0xff) shouldBe 0x00
+
+    whiteCorner(render(100, "Hello world\n\n").head) shouldBe true
   }
 
   "a multi-page document ships one surface per page, each with content" in {
