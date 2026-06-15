@@ -33,6 +33,7 @@ class Processor(val handler: Handler):
   registerPrimitive("def", DefPrimitive)
   registerPrimitive("gdef", GdefPrimitive)
   registerPrimitive("global", GlobalPrimitive)
+  registerPrimitive("let", LetPrimitive)
   registerPrimitive("set", SetPrimitive)
   registerPrimitive("if", IfPrimitive)
   registerPrimitive("ifx", IfxPrimitive)
@@ -103,6 +104,9 @@ class Processor(val handler: Handler):
 
   def registerPrimitive(name: String, prim: Primitive): Unit =
     primitives(name) = prim
+
+  /** The primitive bound to `name`, if any — used by `\let` to alias a built-in. */
+  def lookupPrimitive(name: String): Option[Primitive] = primitives.get(name)
 
   /** Register an active character handler.
     *
@@ -689,6 +693,25 @@ object GdefPrimitive extends Primitive:
 object GlobalPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     proc.handler.globalAssign = true
+
+/** `\let newname oldname` — give `newname` the current meaning of `oldname`, snapshotting it. A macro or variable
+  * meaning is copied through the scope-aware store (so `\let` is local to its group, and honours a `\global`
+  * prefix); a built-in primitive is aliased by binding the same primitive under the new name. The snapshot is of
+  * the meaning *now*: a later redefinition of `oldname` does not change `newname`, as in TeX. */
+object LetPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name   = proc.readIdentifier(pos)
+    val source = proc.readIdentifier(pos)
+    val global = proc.handler.globalAssign
+    proc.handler.globalAssign = false
+    proc.handler.get(source) match
+      case Value.Undefined =>
+        // Not a macro or variable — alias a built-in primitive if there is one (primitive bindings are global).
+        proc.lookupPrimitive(source) match
+          case Some(prim) => proc.registerPrimitive(name, prim)
+          case None       => proc.handler.error(s"\\let: '$source' has no meaning to copy", pos)
+      case meaning =>
+        if global then proc.handler.setGlobal(name, meaning) else proc.handler.set(name, meaning)
 
 object SetPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
