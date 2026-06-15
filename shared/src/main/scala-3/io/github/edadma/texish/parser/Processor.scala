@@ -88,6 +88,11 @@ class Processor(val handler: Handler):
   registerPrimitive("addtohook", AddToHookPrimitive)
   registerPrimitive("usehook", UseHookPrimitive)
 
+  // Environments: \begin{name} … \end{name} runs the env's begin/end code around a scoped body
+  registerPrimitive("newenvironment", NewEnvironmentPrimitive)
+  registerPrimitive("begin", BeginPrimitive)
+  registerPrimitive("end", EndPrimitive)
+
   // Number-formatting primitives (section/list/footnote labels)
   registerPrimitive("arabic", ArabicPrimitive)
   registerPrimitive("roman", RomanPrimitive)
@@ -1366,6 +1371,66 @@ object UseHookPrimitive extends Primitive:
       case _                       => Vector.empty
     }
     proc.pushBack(tokens)
+
+// ============ ENVIRONMENTS ============
+
+/** Every environment is stored in one global map variable `envStore`: environment name → a two-element `Seq`
+  * of parameterless `Macro`s holding the *unevaluated* begin-code and end-code. `\begin{name}` opens a group and
+  * runs the begin-code; the matching `\end{name}` runs the end-code and then closes the group, so anything the
+  * begin-code sets is local to the body and visible to the end-code, exactly as a LaTeX environment behaves. */
+private val EnvStoreName = "envStore"
+
+/** Read an environment name written LaTeX-style in braces (`\begin{quote}`); a bare identifier is also accepted
+  * so the name can come from a variable or be written without braces. */
+private def readEnvName(proc: Processor, pos: CharReader): String =
+  stripOuterBraces(proc.readArgument(pos)).map {
+    case Token.Text(s, _)       => s
+    case Token.ControlSeq(n, _) => n
+    case _                      => ""
+  }.mkString.trim
+
+private def envCode(proc: Processor, name: String): Option[(Vector[Token], Vector[Token])] =
+  proc.handler.get(EnvStoreName) match
+    case Value.Map(m) =>
+      m.get(name) match
+        case Some(Value.Seq(Vector(Value.Macro(_, begin, _), Value.Macro(_, end, _)))) => Some((begin, end))
+        case _                                                                          => None
+    case _ => None
+
+/** `\newenvironment name {begin-code} {end-code}` — define an environment. Both code blocks are stored
+  * verbatim and only run when the environment is used. The definition is global so a package can supply
+  * environments to a document. */
+object NewEnvironmentPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    proc.handler.globalAssign = false // environment definitions are always global; ignore any stray prefix
+    val name      = readEnvName(proc, pos)
+    val beginCode = stripOuterBraces(proc.readArgument(pos))
+    val endCode   = stripOuterBraces(proc.readArgument(pos))
+    val pair      = Value.Seq(Vector(Value.Macro(Vector.empty, beginCode, pos), Value.Macro(Vector.empty, endCode, pos)))
+    val updated = proc.handler.get(EnvStoreName) match
+      case Value.Map(m) => Value.Map(m + (name -> pair))
+      case _            => Value.Map(Map(name -> pair))
+    proc.handler.setGlobal(EnvStoreName, updated)
+
+/** `\begin{name}` — open a fresh scope and run the environment's begin-code inside it. The synthetic
+  * `BeginGroup` drives the normal scope machinery, so locals set in the body (or by the begin-code) stay
+  * contained and `\global` still escapes. */
+object BeginPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name = readEnvName(proc, pos)
+    envCode(proc, name) match
+      case Some((begin, _)) => proc.pushBack(Token.BeginGroup(pos) +: begin)
+      case None             => proc.handler.error(s"Unknown environment '$name'", pos)
+
+/** `\end{name}` — run the environment's end-code (still inside the body's scope) and then close the scope. The
+  * trailing synthetic `EndGroup` runs after the end-code, so the end-code can see anything the begin-code or the
+  * body set locally. */
+object EndPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val name = readEnvName(proc, pos)
+    envCode(proc, name) match
+      case Some((_, end)) => proc.pushBack(end :+ Token.EndGroup(pos))
+      case None           => proc.handler.error(s"Unknown environment '$name'", pos)
 
 // ============ ESCAPE SEQUENCES ============
 
