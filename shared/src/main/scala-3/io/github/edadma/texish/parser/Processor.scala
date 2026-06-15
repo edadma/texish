@@ -83,6 +83,14 @@ class Processor(val handler: Handler):
   registerPrimitive("mapget", MapGetPrimitive)
   registerPrimitive("maphas", MapHasPrimitive)
 
+  // Number-formatting primitives (section/list/footnote labels)
+  registerPrimitive("arabic", ArabicPrimitive)
+  registerPrimitive("roman", RomanPrimitive)
+  registerPrimitive("Roman", RomanUpPrimitive)
+  registerPrimitive("alph", AlphPrimitive)
+  registerPrimitive("Alph", AlphUpPrimitive)
+  registerPrimitive("fnsymbol", FnSymbolPrimitive)
+
   // Escape sequences for special characters
   registerPrimitive("{", LiteralPrimitive("{"))
   registerPrimitive("}", LiteralPrimitive("}"))
@@ -502,14 +510,18 @@ class Processor(val handler: Handler):
         val Token.ControlSeq(name, csPos) = tokens.head: @unchecked
         primitives.get(name) match
           case Some(prim) =>
-            // Push remaining tokens as source, then execute primitive
-            val rest = tokens.tail
-            if rest.nonEmpty then tokenSources.push(TokenListSource(rest))
+            // Push remaining tokens as a source for the primitive to read its arguments from, then clean it up.
+            // Track the pushed source by identity: reading an unbraced argument ends with a skipSpaces that can
+            // exhaust and pop this source already, so popping whatever is now on top would over-pop into the
+            // enclosing source. Only pop our own source, and only if the primitive left it on top unexhausted.
+            val rest       = tokens.tail
+            val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
+            restSource.foreach(tokenSources.push)
             lastResult = Value.Nil
             handler.suppressOutput(true)
             prim.execute(this, csPos)
             handler.suppressOutput(false)
-            if rest.nonEmpty && tokenSources.nonEmpty && tokenSources.top.atEnd then tokenSources.pop()
+            restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
             val r = getResult
             if r == Value.Nil then evalTokens(tokens, handler) else r
           case None =>
