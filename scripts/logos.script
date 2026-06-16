@@ -1,0 +1,13 @@
+// logos — the TeX-family logos as macros over the engine's box primitives, for any
+// document that wants them. \include this file:
+//
+//     \include scripts/logos.script
+//
+// The engine ships only primitives; logos are document-language, like any other
+// format-level macro. \LaTeX sets the small A in a \vbox whose height is a measured
+// T, with \vss filling beneath, so its apex rides at the cap height (Lamport's own
+// construction). \TeXish is this engine's mark — \TeX with a slanted "ish" raised
+// against the X.
+\def TeX {T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}
+\def LaTeX {L\kern-.36em\setbox latexAbox \hbox{T}\vbox to:\ht latexAbox {\hbox{\font lmroman 7 regular A}\vss}\kern-.15em\TeX}
+\def TeXish {\TeX\kern-.14em\raise.22em\hbox{\font lmroman 7 slanted ish}}

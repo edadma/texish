@@ -7,12 +7,12 @@
 // Coordinates may be computed — a bare variable \x is its value, and arithmetic
 // like \*{\x}{14} or \forloop.index works, so plots are built in a \for loop.
 
+\include scripts/logos.script
+
 \def headline {\italic{Picture demo} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
 
 \font lmroman 12 regular
-
-\use{chem}
 
 \bold{\TeXish{} pictures — vector graphics in the document}
 
@@ -171,31 +171,6 @@ Cartesian coordinates whose components are expressions.
   \linewidth{1.5pt}
   \line{(C1) (R+20, 0)}
   \at anchor:west {(R+24, 0)}{OH}
-}
-
-\bold{A package — drawing chemistry}
-
-Domain libraries live in packages a document opts into with \italic{\\use}. The
-\italic{chem} package — itself written in \TeXish, its bond geometry computed with
-\italic{\\xof}/\italic{\\yof} and \italic{\\calc} — adds \italic{\\bond} and
-\italic{\\dbond} between coordinates. Benzene is then a \italic{\\for} over two
-polar rings of atoms, single and double bonds alternating around the ring.
-
-\picture width:3in height:3in {
-  \translate{108 108}
-  \set R {46} \set HR {86}
-  \stroke{black} \linewidth{1.2pt}
-  \for\k{\range{0}{5}}{
-    \set a {\calc{k*60}} \set b {\calc{(k+1)*60}}
-    \if{\calc{k % 2}}
-      \bond{(a:R)}{(b:R)}
-    \else
-      \dbond{(a:R)}{(b:R)}
-    \fi
-    \bond{(a:R)}{(a:HR)}
-    \at anchor:center {(a:R)}{C}
-    \at anchor:center {(a:HR)}{H}
-  }
 }
 
 This document is set entirely by \TeXish: the prose, the running heads, and every

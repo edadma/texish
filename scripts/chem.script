@@ -1,7 +1,67 @@
-// chem package demonstration — every capability of the bundled chem package.
-// Render with:  texish scripts/chem.script
+// chem — chemical-structure drawing, written entirely in the document language,
+// followed by a demonstration of every capability. Render with:
+//   texish scripts/chem.script
+//
+// The macros below are the whole library: bonds between named coordinates,
+// shortened at each end so atom labels stay clear, and \atom to name-and-label a
+// point. Bond geometry is computed with \xof/\yof and \calc over the picture
+// primitives — no engine code. Tunable through bondgap (clearance at each end) and
+// doublesep (half the gap between the two lines of a double bond).
+\set bondgap {9}
+\set doublesep {2.5}
 
-\def headline {\italic{chem package} \hfil page \the\pageno}
+// \bond{A}{B} — a single bond between two coordinates, shortened by bondgap at each end.
+\def bond a b {
+  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
+  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
+  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
+  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
+  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
+  \line{(chemAx + chemUx*bondgap, chemAy + chemUy*bondgap)
+        (chemBx - chemUx*bondgap, chemBy - chemUy*bondgap)}
+}
+
+// \dbond{A}{B} — a double bond: two parallel lines, offset doublesep either side of the bond axis.
+\def dbond a b {
+  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
+  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
+  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
+  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
+  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
+  \set chemOx {\calc{-chemUy * doublesep}}
+  \set chemOy {\calc{chemUx * doublesep}}
+  \line{(chemAx + chemUx*bondgap + chemOx, chemAy + chemUy*bondgap + chemOy)
+        (chemBx - chemUx*bondgap + chemOx, chemBy - chemUy*bondgap + chemOy)}
+  \line{(chemAx + chemUx*bondgap - chemOx, chemAy + chemUy*bondgap - chemOy)
+        (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
+}
+
+// \tbond{A}{B} — a triple bond: a central line flanked by two parallel lines a little wider apart.
+\def tbond a b {
+  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
+  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
+  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
+  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
+  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
+  \set chemOx {\calc{-chemUy * doublesep * 1.8}}
+  \set chemOy {\calc{chemUx * doublesep * 1.8}}
+  \line{(chemAx + chemUx*bondgap, chemAy + chemUy*bondgap)
+        (chemBx - chemUx*bondgap, chemBy - chemUy*bondgap)}
+  \line{(chemAx + chemUx*bondgap + chemOx, chemAy + chemUy*bondgap + chemOy)
+        (chemBx - chemUx*bondgap + chemOx, chemBy - chemUy*bondgap + chemOy)}
+  \line{(chemAx + chemUx*bondgap - chemOx, chemAy + chemUy*bondgap - chemOy)
+        (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
+}
+
+// \atom{name}{coord}{label} — name a coordinate and set its element label, centred on the point.
+\def atom n c l {
+  \coordinate{\n}{\c}
+  \at anchor:center {\c}{\l}
+}
+
+\include scripts/logos.script
+
+\def headline {\italic{chem} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
 
 \font lmroman 12 regular
@@ -10,15 +70,13 @@
 // rather than stretching the gaps to fill the page (the default)
 \set raggedbottom {1}
 
-\use{chem}
+\bold{Drawing chemistry}
 
-\bold{The \italic{chem} package}
-
-Loaded with \italic{\\use{chem}}, the package draws chemical structures. Name an
+These macros draw chemical structures. Name an
 atom with \italic{\\atom}, then connect named atoms with \italic{\\bond} (single),
 \italic{\\dbond} (double), or \italic{\\tbond} (triple). Every bond is shortened
-at both ends so the atom labels stay clear. The package is written entirely in
-\TeXish: its bond geometry is computed with \italic{\\xof}, \italic{\\yof}, and
+at both ends so the atom labels stay clear. The macros are written entirely in
+\TeXish: their bond geometry is computed with \italic{\\xof}, \italic{\\yof}, and
 \italic{\\calc} over the picture primitives — no engine code.
 
 \bold{Atoms and single bonds — water}
