@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Builder, HBox, StubTypesetter}
+import io.github.edadma.texish.{Builder, HBox, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -9,13 +9,13 @@ import java.io.ByteArrayOutputStream
 // \leftskip / \rightskip narrow every line of a paragraph and \hangindent / \hangafter narrow the
 // lines they select — TeX's paragraph-shape parameters, now honoured by the line breaker. Each line
 // is still set to the full \hsize, with the margins folded in as leading/trailing glue, so the
-// inset shows up as the width of a line's leading box. The StubTypesetter sets every character 6
+// inset shows up as the width of a line's leading box. The HeadlessTypesetter sets every character 6
 // wide, so the geometry is exact.
 class LineMarginTests extends AnyFreeSpec with Matchers:
 
   // The paragraph's set lines (each HBox is one line), after applying the given numeric variables.
   private def lines(src: String, vars: (String, Double)*): List[HBox] =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", 1.0e9) // one page, no page breaking during the probe
     vars.foreach((k, v) => t.set(k, v))
     val handler = new TypesetterHandler(t)
@@ -60,7 +60,7 @@ class LineMarginTests extends AnyFreeSpec with Matchers:
   }
 
   "\\hangindent and \\hangafter revert to their defaults after the paragraph" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", 1.0e9)
     t.set("hangindent", 30.0)
     t.set("hangafter", 2.0)

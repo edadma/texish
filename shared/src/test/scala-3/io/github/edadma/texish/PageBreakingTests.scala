@@ -29,7 +29,7 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
       page += 1
 
   private def setup(vsize: Double): (CapturingDocument, PageMode) =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", vsize)
     val doc = new CapturingDocument(t)
     t.document = doc
@@ -195,7 +195,7 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
 
   "ending the document builds the final page only once" in {
     // done() must ship the final page exactly once; a regression that rebuilds or re-ships would ship it twice
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
 
     Console.withOut(new java.io.ByteArrayOutputStream) {
       t.add(new CharBox(t, "one"))
@@ -206,7 +206,7 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
   }
 
   "interline glue is inserted across a penalty, measured from the last box" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("baselineskip", Glue(20))
     t.set("lineskiplimit", 0.0)
 

@@ -30,7 +30,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
 
   // footnotesep 10, the 0.4 rule, and the 2.6 gap below it: the separator above the footnote block costs 13
   private def setup(vsize: Double): (CapturingDocument, PageMode) =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", vsize)
     t.set("footnotesep", Glue(10))
     t.set("raggedbottom", 1.0)

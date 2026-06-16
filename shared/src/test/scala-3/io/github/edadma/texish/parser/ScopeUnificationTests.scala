@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Glue, StubTypesetter}
+import io.github.edadma.texish.{Glue, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -8,8 +8,8 @@ import org.scalatest.matchers.should.Matchers
   */
 class ScopeUnificationTests extends AnyFreeSpec with Matchers:
 
-  def fixture(): (StubTypesetter, TypesetterHandler, Processor) =
-    val t       = new StubTypesetter
+  def fixture(): (HeadlessTypesetter, TypesetterHandler, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

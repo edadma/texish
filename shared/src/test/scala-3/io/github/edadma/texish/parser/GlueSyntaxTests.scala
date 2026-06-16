@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Builder, Font, Glue, StubTypesetter}
+import io.github.edadma.texish.{Builder, Font, Glue, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -10,14 +10,14 @@ import org.scalatest.matchers.should.Matchers
   */
 class GlueSyntaxTests extends AnyFreeSpec with Matchers:
 
-  def fixture(): (StubTypesetter, Processor) =
-    val t       = new StubTypesetter
+  def fixture(): (HeadlessTypesetter, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
     (t, proc)
 
-  def lastGlue(t: StubTypesetter): Glue =
+  def lastGlue(t: HeadlessTypesetter): Glue =
     t.mode.asInstanceOf[Builder].last.asInstanceOf[Glue]
 
   "parseGlue" - {

@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, Builder, HBox, StubTypesetter}
+import io.github.edadma.texish.{Box, Builder, HBox, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -15,7 +15,7 @@ class PendingNewlineTests extends AnyFreeSpec with Matchers:
   // The x of the marker box (the width-18 \hbox each item opens with) on every set line. A leaked interword
   // space would sit before that box and push its x to the right on the offending line.
   private def markerXs(src: String): List[Double] =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", 1.0e9)
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
@@ -61,7 +61,7 @@ class PendingNewlineTests extends AnyFreeSpec with Matchers:
   }
 
   "a single newline between words is still an interword space within a paragraph" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", 1.0e9)
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)

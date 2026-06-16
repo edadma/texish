@@ -4,16 +4,16 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** \vbox and \vtop stack the same lines to the same total height; they differ only in where the reference point
-  * (the baseline aligning the box with its neighbours) falls. The StubTypesetter gives each line ascent 8,
+  * (the baseline aligning the box with its neighbours) falls. The HeadlessTypesetter gives each line ascent 8,
   * descent 2, height 10.
   */
 class VerticalBoxTests extends AnyFreeSpec with Matchers:
 
-  private def line(t: StubTypesetter, s: String): HBox =
+  private def line(t: HeadlessTypesetter, s: String): HBox =
     new HBox(Seq(new CharBox(t, s, t.currentFont, t.currentColor)))
 
   "a \\vbox references its last line's baseline; a \\vtop references its first" in {
-    val t    = new StubTypesetter
+    val t    = new HeadlessTypesetter
     val vbox = new VBox(Seq(line(t, "AB"), line(t, "CD")))
     val vtop = new VTop(Seq(line(t, "AB"), line(t, "CD")))
 
@@ -28,7 +28,7 @@ class VerticalBoxTests extends AnyFreeSpec with Matchers:
   }
 
   "a \\vbox ending in glue has zero depth, so its content rides above the baseline" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     // What `\vbox to:N {\hbox{..} \vss}` produces: a line at the top, then a vertical fill. The trailing glue
     // means the reference point is the very bottom, so the whole box sits above the baseline — this is what
     // lifts the small "A" of the LaTeX logo up to the cap height instead of leaving it on the baseline.

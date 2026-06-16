@@ -4,16 +4,16 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** Stage 3 of math support: math styles and super/subscripts. These run on the fixed-metric
-  * [[StubTypesetter]] (every glyph 6 wide, ascent 8, descent 2, regardless of size), so script geometry is
+  * [[HeadlessTypesetter]] (every glyph 6 wide, ascent 8, descent 2, regardless of size), so script geometry is
   * exact and font-independent. With no MATH table the math font falls back to TeX's Computer Modern script
   * parameters ([[MathScriptParams.texDefaults]]); the default text font is 14pt, so one em is 14.
   */
 class MathScriptTests extends AnyFreeSpec with Matchers:
 
-  def base(t: StubTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  def base(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
 
   /** A script box laid out by a nested math mode at the given style, the way the parser builds one. */
-  def script(t: StubTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
+  def script(t: HeadlessTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
     val sm = new MathMode(t, bf, style)
     sm.addChar(c)
     sm.result.asInstanceOf[Box]
@@ -29,7 +29,7 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
   }
 
   "script sizes are absolute fractions of the base, not compounded" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
 
     // a script of a script is scriptscript: half the base (50%), not 70% of 70%
@@ -39,7 +39,7 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
   }
 
   "a superscript is raised above the nucleus and shifts the box's ascent up" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 
@@ -57,7 +57,7 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
   }
 
   "a subscript is lowered below the nucleus and deepens the box" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 
@@ -70,7 +70,7 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
   }
 
   "an atom with both scripts keeps them clear of each other" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 
@@ -85,7 +85,7 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
   }
 
   "a script with no preceding atom attaches to an empty nucleus" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 
@@ -124,7 +124,7 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
   }
 
   "a second script of the same kind on one atom is an error" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 

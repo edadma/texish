@@ -3,7 +3,7 @@ package io.github.edadma.texish
 /** A headless Typesetter with fixed metrics, for testing the engine and language layer without a rendering backend or
   * font files. Every character is 6 units wide; drawing is a no-op.
   */
-class StubTypesetter extends Typesetter:
+class HeadlessTypesetter extends Typesetter:
 
   type ImageHandle = Unit
   type FontFace    = String

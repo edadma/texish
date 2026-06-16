@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Font, StubTypesetter}
+import io.github.edadma.texish.{Font, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -9,8 +9,8 @@ import org.scalatest.matchers.should.Matchers
   */
 class DimensionTests extends AnyFreeSpec with Matchers:
 
-  def fixture(): (StubTypesetter, Processor) =
-    val t       = new StubTypesetter
+  def fixture(): (HeadlessTypesetter, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

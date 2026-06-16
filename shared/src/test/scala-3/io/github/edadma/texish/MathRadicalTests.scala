@@ -3,21 +3,21 @@ package io.github.edadma.texish
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-/** Stage 4: radicals. On the fixed-metric [[StubTypesetter]] (glyph 6 wide, ascent 8, descent 2) with no
+/** Stage 4: radicals. On the fixed-metric [[HeadlessTypesetter]] (glyph 6 wide, ascent 8, descent 2) with no
   * MATH table, the surd is the base √ glyph and radical layout uses TeX's Computer Modern defaults
   * ([[RadicalParams.texDefaults]]) at the 14pt text font.
   */
 class MathRadicalTests extends AnyFreeSpec with Matchers:
 
-  def base(t: StubTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  def base(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
 
-  def part(t: StubTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
+  def part(t: HeadlessTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
     val sm = new MathMode(t, bf, style)
     sm.addChar(c)
     sm.result.asInstanceOf[Box]
 
   "a radical sets the bar above the radicand and is as wide as surd plus radicand" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
     val r  = part(t, bf, MathStyle.Text.cramp, 'x')
@@ -64,7 +64,7 @@ class MathRadicalTests extends AnyFreeSpec with Matchers:
   }
 
   "a radical enters the list as an Ord atom and lays out with positive size" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
     val r  = part(t, bf, MathStyle.Text.cramp, 'x')

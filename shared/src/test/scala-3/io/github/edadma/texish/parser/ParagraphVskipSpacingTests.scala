@@ -1,13 +1,13 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, Builder, Glue, StubTypesetter}
+import io.github.edadma.texish.{Box, Builder, Glue, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class ParagraphVskipSpacingTests extends AnyFreeSpec with Matchers:
 
   private def vlist(src: String): List[Box] =
-    val t       = new StubTypesetter
+    val t       = new HeadlessTypesetter
     t.set("vsize", 1.0e9) // one page, no page breaking during the probe
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)

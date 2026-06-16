@@ -6,7 +6,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** Phase 2 of the picture-graphics layer: the [[PictureMode]] display-list collector and the [[PictureBox]]
-  * that replays it. These are backend-independent, so they run on the headless [[StubTypesetter]] — op
+  * that replays it. These are backend-independent, so they run on the headless [[HeadlessTypesetter]] — op
   * collection is checked against the recorded list directly, and replay is checked through a typesetter that
   * logs every seam call instead of rasterizing. Pixel-level rendering is exercised separately on the Cairo and
   * Graphics2D backends.
@@ -27,7 +27,7 @@ class PictureTests extends AnyFreeSpec with Matchers:
 
   /** Records the picture seam (plus colour and the leaf fillRect a placed [[RuleBox]] draws with) so a
     * [[PictureBox]] replay can be asserted against an exact call sequence. */
-  private class RecordingTypesetter extends StubTypesetter:
+  private class RecordingTypesetter extends HeadlessTypesetter:
     val log = ArrayBuffer[Seam]()
 
     override def setColor(color: Color): Unit            = log += Seam.SetColor(color.redInt, color.greenInt, color.blueInt)
@@ -43,7 +43,7 @@ class PictureTests extends AnyFreeSpec with Matchers:
     override def strokePath(): Unit                      = log += Seam.Stroke
     override def fillRect(x: Double, y: Double, w: Double, h: Double): Unit = log += Seam.FillRect(x, y, w, h)
 
-  private def mode(w: Double = 100, h: Double = 50): PictureMode = new PictureMode(new StubTypesetter, w, h)
+  private def mode(w: Double = 100, h: Double = 50): PictureMode = new PictureMode(new HeadlessTypesetter, w, h)
 
   "PictureMode collects a display list" - {
 

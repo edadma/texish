@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, Builder, DocumentMode, Glue, Penalty, StubTypesetter, VBox}
+import io.github.edadma.texish.{Box, Builder, DocumentMode, Glue, Penalty, HeadlessTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -11,20 +11,20 @@ import scala.collection.mutable.ArrayBuffer
   */
 class PageBreakPrimitivesTests extends AnyFreeSpec with Matchers:
 
-  private class CapturingDocument(t: StubTypesetter) extends DocumentMode(t):
+  private class CapturingDocument(t: HeadlessTypesetter) extends DocumentMode(t):
     val shipped = new ArrayBuffer[VBox]
     override infix def add(box: Box): Unit =
       shipped += box.asInstanceOf[VBox]
       page += 1
 
-  private def fixture(): (StubTypesetter, Processor) =
-    val t       = new StubTypesetter
+  private def fixture(): (HeadlessTypesetter, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
     (t, proc)
 
-  private def capturing(): (StubTypesetter, CapturingDocument, Processor) =
+  private def capturing(): (HeadlessTypesetter, CapturingDocument, Processor) =
     val (t, proc) = fixture()
     val doc       = new CapturingDocument(t)
     t.document = doc

@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.StubTypesetter
+import io.github.edadma.texish.HeadlessTypesetter
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -75,7 +75,7 @@ class MathExprTests extends AnyFreeSpec with Matchers:
   }
 
   "the \\calc primitive computes, reads document variables, and flows into other expressions" in {
-    val t       = new StubTypesetter
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
 

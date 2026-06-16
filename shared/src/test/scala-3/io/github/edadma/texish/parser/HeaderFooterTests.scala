@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.StubTypesetter
+import io.github.edadma.texish.HeadlessTypesetter
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class HeaderFooterTests extends AnyFreeSpec with Matchers:
 
-  private class RecordingTypesetter extends StubTypesetter:
+  private class RecordingTypesetter extends HeadlessTypesetter:
     val drawn = new ArrayBuffer[(String, Double, Double)]
     override def drawString(text: String, x: Double, y: Double): Unit = drawn += ((text, x, y))
 

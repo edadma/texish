@@ -4,13 +4,13 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** Stage 0 of math support: the additive glyph seam and the box that rides on it. These run on the
-  * fixed-metric [[StubTypesetter]], so they exercise the engine wiring (glyphIndex → GlyphBox metrics →
+  * fixed-metric [[HeadlessTypesetter]], so they exercise the engine wiring (glyphIndex → GlyphBox metrics →
   * drawGlyph) without needing a font or a rendering backend.
   */
 class GlyphBoxTests extends AnyFreeSpec with Matchers:
 
   "a GlyphBox reports the glyph's metrics from the glyph seam, not the string seam" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val rf = t.currentFont.renderFont.asInstanceOf[t.RenderFont]
 
     val box = new GlyphBox(t, t.glyphIndex(rf, 'A'.toInt))
@@ -40,10 +40,10 @@ class GlyphBoxTests extends AnyFreeSpec with Matchers:
     rec.strings shouldBe List(("hi", 1.0, 2.0))
   }
 
-/** A StubTypesetter that records what gets placed through each seam, so a test can assert which path a
+/** A HeadlessTypesetter that records what gets placed through each seam, so a test can assert which path a
   * box used and where it drew.
   */
-class RecordingGlyphTypesetter extends StubTypesetter:
+class RecordingGlyphTypesetter extends HeadlessTypesetter:
   var drawn: List[(Int, Double, Double)]      = Nil
   var strings: List[(String, Double, Double)] = Nil
 

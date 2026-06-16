@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, PictureBox, PictureOp, StubTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -96,7 +96,7 @@ class PackageTests extends AnyFreeSpec with Matchers:
     moveYs.head should not be moveYs(1)        // offset to either side of the axis
   }
 
-  private class Capture extends StubTypesetter:
+  private class Capture extends HeadlessTypesetter:
     val pictures = ArrayBuffer[PictureBox]()
     override infix def add(box: Box): Typesetter =
       box match

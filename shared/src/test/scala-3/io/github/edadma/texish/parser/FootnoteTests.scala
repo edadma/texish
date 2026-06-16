@@ -9,7 +9,7 @@ import io.github.edadma.texish.{
   InsertBox,
   RuleBox,
   ShiftBox,
-  StubTypesetter,
+  HeadlessTypesetter,
   VBox,
 }
 import org.scalatest.freespec.AnyFreeSpec
@@ -23,14 +23,14 @@ import scala.collection.mutable.ArrayBuffer
   */
 class FootnoteTests extends AnyFreeSpec with Matchers:
 
-  private class CapturingDocument(t: StubTypesetter) extends DocumentMode(t):
+  private class CapturingDocument(t: HeadlessTypesetter) extends DocumentMode(t):
     val shipped = new ArrayBuffer[VBox]
     override infix def add(box: Box): Unit =
       shipped += box.asInstanceOf[VBox]
       super.add(box)
 
-  private def fixture(): (StubTypesetter, CapturingDocument, Processor) =
-    val t       = new StubTypesetter
+  private def fixture(): (HeadlessTypesetter, CapturingDocument, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

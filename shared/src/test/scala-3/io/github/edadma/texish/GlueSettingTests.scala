@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 class GlueSettingTests extends AnyFreeSpec with Matchers:
 
   def build(target: Double, boxes: Box*): HBox =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     val b = new HBoxBuilder(t, target)
     boxes.foreach(b add _)
     b.result.asInstanceOf[HBox]

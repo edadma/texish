@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, Color, PictureBox, PictureOp, StubTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, Color, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -15,7 +15,7 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
 
   /** A stub typesetter that captures the [[PictureBox]]es added to the document, so a test can inspect the
     * display list the primitives built. */
-  private class Capture extends StubTypesetter:
+  private class Capture extends HeadlessTypesetter:
     val pictures = ArrayBuffer[PictureBox]()
     override infix def add(box: Box): Typesetter =
       box match

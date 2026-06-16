@@ -2,14 +2,14 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, StubTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** \tabular is the LaTeX-style ergonomic wrapper over \halign: a column spec ({lcr}, with | for vertical rules)
   * instead of a hand-rolled template, \\ between rows, and \hline for a horizontal rule. It lowers to \halign, so
   * these tests assert the same layout facts HAlignTests does — column count, equal per-column widths, padding to
-  * the widest cell, vertical/horizontal rules — but driven from the friendlier surface. The StubTypesetter makes
+  * the widest cell, vertical/horizontal rules — but driven from the friendlier surface. The HeadlessTypesetter makes
   * every character 6 wide.
   */
 class TabularTests extends AnyFreeSpec with Matchers:
@@ -21,7 +21,7 @@ class TabularTests extends AnyFreeSpec with Matchers:
     def result: Box | Null        = null
 
   private def run(src: String): Seq[Box] =
-    val t       = new StubTypesetter
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

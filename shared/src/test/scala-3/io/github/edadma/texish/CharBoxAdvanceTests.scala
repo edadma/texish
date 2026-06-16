@@ -10,7 +10,7 @@ class CharBoxAdvanceTests extends AnyFreeSpec with Matchers:
 
   // A stub whose advance is deliberately wider than the ink box, so the two are distinguishable: each
   // character inks 6 wide but advances 6, plus a 3-unit side bearing at each end of the whole run.
-  private class BearingStub extends StubTypesetter:
+  private class BearingStub extends HeadlessTypesetter:
     override def getTextExtents(text: String, font: RenderFont): TextExtents =
       val ink     = text.length * 6.0
       val advance = ink + 6.0 // 3 units of side bearing at each end

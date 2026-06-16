@@ -3,16 +3,16 @@ package io.github.edadma.texish
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-/** Stage 5c: limits over and under large operators. On the fixed-metric [[StubTypesetter]] (glyph 6 wide,
+/** Stage 5c: limits over and under large operators. On the fixed-metric [[HeadlessTypesetter]] (glyph 6 wide,
   * ascent 8, descent 2) with no MATH table, limit placement uses [[LimitsParams.texDefaults]] at the 14pt
   * text font, so the geometry is exact; the real-font operator enlargement is covered by the font tests.
   */
 class MathLimitsTests extends AnyFreeSpec with Matchers:
 
-  def base(t: StubTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  def base(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
 
   "a limits box stacks the upper and lower over and under the operator" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val op = bf.glyphBox(0x2211); val up = bf.glyphBox('n'.toInt); val lo = bf.glyphBox('0'.toInt)
 
@@ -39,7 +39,7 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
   }
 
   "\\sum\\limits with scripts lays out as a limits box, not side-set scripts" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 
@@ -53,7 +53,7 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
   }
 
   "a \\sum without \\limits keeps side-set scripts inline" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
 
@@ -64,7 +64,7 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
   }
 
   "limit controls must follow an operator" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     val m = new MathMode(t, base(t), MathStyle.Text)
 
     m.addChar('x') // an ordinary atom, not an operator
@@ -72,7 +72,7 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
   }
 
   "in display style a \\sum stacks its bounds by default, with no \\limits" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Display)
 
@@ -84,7 +84,7 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
   }
 
   "in display style an integral keeps its bounds to the side by default" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Display)
 
@@ -96,7 +96,7 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
   }
 
   "\\nolimits overrides the display default back to side-set scripts" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Display)
 

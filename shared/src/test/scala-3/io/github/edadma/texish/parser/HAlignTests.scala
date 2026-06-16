@@ -2,14 +2,14 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, StubTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** \halign builds an aligned table: a format (template) line with one `#` per column (`&` between columns, `\cr`
   * ending each line), then content rows. Each column is set to the widest cell's natural size; the template's
   * surrounding material (e.g. \hfil) does the per-cell alignment. \noalign drops raw vertical material between
-  * rows; \omit suppresses one cell's template. The StubTypesetter makes every character 6 wide.
+  * rows; \omit suppresses one cell's template. The HeadlessTypesetter makes every character 6 wide.
   */
 class HAlignTests extends AnyFreeSpec with Matchers:
 
@@ -23,7 +23,7 @@ class HAlignTests extends AnyFreeSpec with Matchers:
     def result: Box | Null        = null
 
   private def run(src: String): Seq[Box] =
-    val t       = new StubTypesetter
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
@@ -36,7 +36,7 @@ class HAlignTests extends AnyFreeSpec with Matchers:
     * literal-character behaviour outside a table is easy to assert.
     */
   private def hboxText(body: String): String =
-    val t       = new StubTypesetter
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

@@ -2,13 +2,13 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, HSpaceBox, StubTypesetter, Typesetter, VBox, VerticalBox}
+import io.github.edadma.texish.{Box, CharBox, HBox, HSpaceBox, HeadlessTypesetter, Typesetter, VBox, VerticalBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** Box registers: \setbox saves a typeset \hbox / \vbox under a name; \wd / \ht / \dp measure it; \box and \copy
   * place it (\box voids the register, \copy keeps it); \unhbox / \unvbox splice its contents into the list. The
-  * StubTypesetter gives every character a width of 6 and metrics ascent 8 / descent 2, so dimensions are exact.
+  * HeadlessTypesetter gives every character a width of 6 and metrics ascent 8 / descent 2, so dimensions are exact.
   */
 class BoxRegisterTests extends AnyFreeSpec with Matchers:
 
@@ -16,7 +16,7 @@ class BoxRegisterTests extends AnyFreeSpec with Matchers:
     * are added to that builder (and recorded too); the box that is finally *placed* in the outer list is the
     * last add of the operation under test.
     */
-  private class Capture extends StubTypesetter:
+  private class Capture extends HeadlessTypesetter:
     val added = ArrayBuffer[Box]()
     override infix def add(box: Box): Typesetter =
       added += box

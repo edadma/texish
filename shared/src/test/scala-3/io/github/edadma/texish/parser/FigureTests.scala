@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, Builder, CharBox, FloatBox, HBox, StubTypesetter, VBox}
+import io.github.edadma.texish.{Box, Builder, CharBox, FloatBox, HBox, HeadlessTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -11,8 +11,8 @@ import org.scalatest.matchers.should.Matchers
   */
 class FigureTests extends AnyFreeSpec with Matchers:
 
-  private def fixture(): (StubTypesetter, Processor) =
-    val t       = new StubTypesetter
+  private def fixture(): (HeadlessTypesetter, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
@@ -25,7 +25,7 @@ class FigureTests extends AnyFreeSpec with Matchers:
     case _          => Nil
 
   /** The floated blocks contributed to the vertical list, in contribution order. */
-  private def floatContents(t: StubTypesetter): List[Box] =
+  private def floatContents(t: HeadlessTypesetter): List[Box] =
     t.paragraph()
     t.mode.asInstanceOf[Builder].list.collect { case f: FloatBox => f.content }.toList
 

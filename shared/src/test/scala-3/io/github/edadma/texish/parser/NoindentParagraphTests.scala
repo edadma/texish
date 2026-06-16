@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Builder, CharBox, HBox, HSpaceBox, StubTypesetter}
+import io.github.edadma.texish.{Builder, CharBox, HBox, HSpaceBox, HeadlessTypesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -21,7 +21,7 @@ class NoindentParagraphTests extends AnyFreeSpec with Matchers:
       .exists(b => b.isInstanceOf[HSpaceBox] && b.width > 1.0)
 
   private def run(body: TypesetterHandler => Unit): List[HBox] =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("vsize", 1.0e9)
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)

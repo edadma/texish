@@ -4,19 +4,19 @@ import io.github.edadma.texish.opentype.{GlyphAssembly, GlyphPart}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-/** Stage 5a: stretchy delimiters. On the fixed-metric [[StubTypesetter]] (every glyph 6 wide, ascent 8,
+/** Stage 5a: stretchy delimiters. On the fixed-metric [[HeadlessTypesetter]] (every glyph 6 wide, ascent 8,
   * descent 2, so height 10) with no MATH table, the assembly and centering geometry is exact and easy to
   * pin down; the real-font behaviour (picking a taller precomposed variant) is covered by the JVM/native
   * font tests.
   */
 class MathDelimiterTests extends AnyFreeSpec with Matchers:
 
-  def base(t: StubTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  def base(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
 
   private def part(glyph: Int, extender: Boolean) = GlyphPart(glyph, 0.0, 0.0, 0.0, if extender then 1 else 0)
 
   "an axis-centered box places its content's centre on the math axis" in {
-    val t     = new StubTypesetter
+    val t     = new HeadlessTypesetter
     val inner = base(t).glyphBox('x'.toInt) // ascent 8, descent 2, height 10
     val ax    = 3.0
     val box   = new AxisCenteredBox(inner, ax)
@@ -27,7 +27,7 @@ class MathDelimiterTests extends AnyFreeSpec with Matchers:
   }
 
   "an assembly stacks its parts, repeating the extender to span the target" in {
-    val t   = new StubTypesetter
+    val t   = new HeadlessTypesetter
     val asm = GlyphAssembly(0.0, Vector(part(100, false), part(101, true), part(102, false)))
 
     // each part is 10 tall, joints overlap by 2, so N parts span 10N - 2(N-1) = 8N + 2 points
@@ -39,7 +39,7 @@ class MathDelimiterTests extends AnyFreeSpec with Matchers:
   }
 
   "an assembly with no extender is used at its fixed size" in {
-    val t   = new StubTypesetter
+    val t   = new HeadlessTypesetter
     val asm = GlyphAssembly(0.0, Vector(part(100, false), part(102, false)))
     val box = new GlyphAssemblyBox(t, t.currentFont, t.currentColor, asm, target = 100, overlap = 2)
 
@@ -59,7 +59,7 @@ class MathDelimiterTests extends AnyFreeSpec with Matchers:
   }
 
   "a delimited sub-formula flanks the inner box with two fences as an Inner atom" in {
-    val t     = new StubTypesetter
+    val t     = new HeadlessTypesetter
     val bf    = base(t)
     val m     = new MathMode(t, bf, MathStyle.Text)
     val inner = bf.glyphBox('x'.toInt)
@@ -72,7 +72,7 @@ class MathDelimiterTests extends AnyFreeSpec with Matchers:
   }
 
   "a null delimiter draws no fence on that side" in {
-    val t     = new StubTypesetter
+    val t     = new HeadlessTypesetter
     val bf    = base(t)
     val m     = new MathMode(t, bf, MathStyle.Text)
     val inner = bf.glyphBox('x'.toInt)

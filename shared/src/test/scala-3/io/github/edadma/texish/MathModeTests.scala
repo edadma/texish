@@ -4,17 +4,17 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** Stage 2 of math support: atom classification and inter-atom spacing. These run on the fixed-metric
-  * [[StubTypesetter]] (every glyph 6 wide), so the geometry is exact and font-independent: a math list is
+  * [[HeadlessTypesetter]] (every glyph 6 wide), so the geometry is exact and font-independent: a math list is
   * built by hand, translated, and the resulting horizontal list of boxes and glue inspected. The default
   * font is 14pt, so one em is 14 and the math spaces are 3mu/4mu/5mu of that (thin/medium/thick).
   */
 class MathModeTests extends AnyFreeSpec with Matchers:
 
   // a math font over the stub's current (text) font: no MATH table, fixed 6-wide glyphs
-  def mathFont(t: StubTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  def mathFont(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
 
   def mathBox(build: MathMode => Unit): HBox =
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     val m = new MathMode(t, mathFont(t))
     build(m)
     m.result.asInstanceOf[HBox]
@@ -106,7 +106,7 @@ class MathModeTests extends AnyFreeSpec with Matchers:
   }
 
   "the symbol table classifies control sequences correctly" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val mf = mathFont(t)
 
     def cls(name: String) = MathSymbols.commandNode(mf, name).map { case a: MathAtom => a.cls; case _ => null }
@@ -119,7 +119,7 @@ class MathModeTests extends AnyFreeSpec with Matchers:
   }
 
   "single characters are classified by the character table" in {
-    val t  = new StubTypesetter
+    val t  = new HeadlessTypesetter
     val mf = mathFont(t)
 
     def cls(c: Char) = MathSymbols.charNode(mf, c.toInt).map { case a: MathAtom => a.cls; case _ => null }

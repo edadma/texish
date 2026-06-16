@@ -8,7 +8,7 @@ import io.github.edadma.texish.{
   HBox,
   MarkBox,
   Penalty,
-  StubTypesetter,
+  HeadlessTypesetter,
   VBox,
   VBoxBuilder,
   VSpaceBox,
@@ -24,7 +24,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class MarkTests extends AnyFreeSpec with Matchers:
 
-  private class MarkRecorder(t: StubTypesetter) extends DocumentMode(t):
+  private class MarkRecorder(t: HeadlessTypesetter) extends DocumentMode(t):
     val records = new ArrayBuffer[(String, String, String)]
     override infix def add(box: Box): Unit =
       records += ((text("topmark"), text("firstmark"), text("botmark")))
@@ -33,8 +33,8 @@ class MarkTests extends AnyFreeSpec with Matchers:
       case Some(Value.Text(s)) => s
       case v                   => s"?$v"
 
-  private def fixture(): (StubTypesetter, MarkRecorder, Processor) =
-    val t       = new StubTypesetter
+  private def fixture(): (HeadlessTypesetter, MarkRecorder, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
@@ -111,7 +111,7 @@ class MarkTests extends AnyFreeSpec with Matchers:
   }
 
   "interline glue is inserted across a mark, measured from the last box" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     t.set("baselineskip", Glue(20))
 
     class Line(val ascent: Double, val descent: Double) extends io.github.edadma.texish.ContentBox:

@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, Builder, DocumentMode, Glue, HBox, Penalty, StubTypesetter, VBox}
+import io.github.edadma.texish.{Box, Builder, DocumentMode, Glue, HBox, Penalty, HeadlessTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -14,14 +14,14 @@ class WidowOrphanTests extends AnyFreeSpec with Matchers:
 
   private val para = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"
 
-  private class CapturingDocument(t: StubTypesetter) extends DocumentMode(t):
+  private class CapturingDocument(t: HeadlessTypesetter) extends DocumentMode(t):
     val shipped = new ArrayBuffer[VBox]
     override infix def add(box: Box): Unit =
       shipped += box.asInstanceOf[VBox]
       page += 1
 
-  private def fixture(): (StubTypesetter, Processor) =
-    val t       = new StubTypesetter
+  private def fixture(): (HeadlessTypesetter, Processor) =
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

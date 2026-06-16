@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, DocumentMode, StubTypesetter, VBox}
+import io.github.edadma.texish.{Box, DocumentMode, HeadlessTypesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -12,14 +12,14 @@ import scala.collection.mutable.ArrayBuffer
   */
 class MultiPageStressTests extends AnyFreeSpec with Matchers:
 
-  private class CapturingDocument(t: StubTypesetter) extends DocumentMode(t):
+  private class CapturingDocument(t: HeadlessTypesetter) extends DocumentMode(t):
     val shipped = new ArrayBuffer[VBox]
     override infix def add(box: Box): Unit =
       shipped += box.asInstanceOf[VBox]
       super.add(box) // stub drawing is a no-op; this keeps page and pageno maintenance live
 
   "a long document paginates cleanly" in {
-    val t       = new StubTypesetter
+    val t       = new HeadlessTypesetter
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)

@@ -3,15 +3,15 @@ package io.github.edadma.texish
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-/** Stage 4: fractions. On the fixed-metric [[StubTypesetter]] (glyph 6 wide, ascent 8, descent 2) with no
+/** Stage 4: fractions. On the fixed-metric [[HeadlessTypesetter]] (glyph 6 wide, ascent 8, descent 2) with no
   * MATH table, fraction layout uses TeX's Computer Modern defaults ([[FractionParams.texDefaults]]) at the
   * 14pt text font, so the axis (0.25 em = 3.5), rule thickness and gaps are exact.
   */
 class MathFractionTests extends AnyFreeSpec with Matchers:
 
-  def base(t: StubTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  def base(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
 
-  def part(t: StubTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
+  def part(t: HeadlessTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
     val sm = new MathMode(t, bf, style)
     sm.addChar(c)
     sm.result.asInstanceOf[Box]
@@ -27,7 +27,7 @@ class MathFractionTests extends AnyFreeSpec with Matchers:
   }
 
   "a fraction stacks numerator over denominator about the math axis" in {
-    val t   = new StubTypesetter
+    val t   = new HeadlessTypesetter
     val bf  = base(t)
     val m   = new MathMode(t, bf, MathStyle.Text)
     val num = part(t, bf, MathStyle.Text.num, 'a')
@@ -56,7 +56,7 @@ class MathFractionTests extends AnyFreeSpec with Matchers:
   }
 
   "a fraction enters the list as an Inner atom and lays out with positive size" in {
-    val t   = new StubTypesetter
+    val t   = new HeadlessTypesetter
     val bf  = base(t)
     val m   = new MathMode(t, bf, MathStyle.Text)
     val num = part(t, bf, MathStyle.Text.num, 'a')
@@ -71,7 +71,7 @@ class MathFractionTests extends AnyFreeSpec with Matchers:
   }
 
   "an infix \\over splits the list into a fraction at exit" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     val m = new MathMode(t, base(t), MathStyle.Text)
 
     m.addChar('a')
@@ -94,7 +94,7 @@ class MathFractionTests extends AnyFreeSpec with Matchers:
   }
 
   "a second \\over in the same group is an ambiguity error" in {
-    val t = new StubTypesetter
+    val t = new HeadlessTypesetter
     val m = new MathMode(t, base(t), MathStyle.Text)
 
     m.addChar('a'); m.setFraction(bar = true); m.addChar('b')
@@ -102,7 +102,7 @@ class MathFractionTests extends AnyFreeSpec with Matchers:
   }
 
 /** Records fillRect calls so a test can tell whether a fraction drew its bar. */
-class RuleRecordingTypesetter extends StubTypesetter:
+class RuleRecordingTypesetter extends HeadlessTypesetter:
   var rules: Int = 0
 
   override def fillRect(x: Double, y: Double, width: Double, height: Double): Unit = rules += 1
