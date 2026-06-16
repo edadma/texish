@@ -62,6 +62,22 @@ object KnuthPlass:
     val linepenalty   = t.getNumber("linepenalty")
     val adjdemerits   = t.getNumber("adjdemerits")
 
+    // Per-line measure. \leftskip and \rightskip narrow every line by their natural size and lend it
+    // their flexibility; \hangindent narrows the lines selected by \hangafter by |hangindent| (a
+    // hanging indent — the basis for list items and quotations). `measure(n)` is the target width for
+    // the line whose 0-based number is n; the margins' stretch/shrink join the line's own glue so the
+    // breaker weighs badness against the same flexible margins the line will be set with.
+    val leftskip   = t.getGlue("leftskip")
+    val rightskip  = t.getGlue("rightskip")
+    val hangindent = t.getNumber("hangindent")
+    val hangafter  = t.getNumber("hangafter").toInt
+    val marginNat  = leftskip.naturalSize + rightskip.naturalSize
+    val marginStr  = leftskip.stretch + rightskip.stretch
+    val marginShr  = leftskip.shrink + rightskip.shrink
+    def hung(n: Int): Boolean = if hangafter >= 0 then n >= hangafter else n < -hangafter
+    def measure(n: Int): Double =
+      hsize - marginNat - (if hangindent != 0 && hung(n) then math.abs(hangindent) else 0.0)
+
     // Convert boxes to items, expanding hyphenation points
     val items = buildItems(boxes, hyphenpenalty)
 
@@ -129,10 +145,10 @@ object KnuthPlass:
               cumWidth(i) - cumWidth(math.max(0, startPos)) + w
             case _ => cumWidth(i + 1) - cumWidth(math.max(0, startPos))
 
-          val lineStretch = cumStretch(i) - cumStretch(math.max(0, startPos))
-          val lineShrink  = cumShrink(i) - cumShrink(math.max(0, startPos))
+          val lineStretch = cumStretch(i) - cumStretch(math.max(0, startPos)) + marginStr
+          val lineShrink  = cumShrink(i) - cumShrink(math.max(0, startPos)) + marginShr
 
-          val delta   = hsize - lineWidth
+          val delta   = measure(a.line) - lineWidth
           val badness = computeBadness(delta, lineStretch, lineShrink)
 
           if badness <= tolerance then
@@ -175,9 +191,9 @@ object KnuthPlass:
     for a <- activeBreaks do
       val startPos    = a.position + 1
       val lineWidth   = cumWidth(items.length) - cumWidth(math.max(0, startPos))
-      val lineStretch = cumStretch(items.length) - cumStretch(math.max(0, startPos))
-      val lineShrink  = cumShrink(items.length) - cumShrink(math.max(0, startPos))
-      val delta       = hsize - lineWidth
+      val lineStretch = cumStretch(items.length) - cumStretch(math.max(0, startPos)) + marginStr
+      val lineShrink  = cumShrink(items.length) - cumShrink(math.max(0, startPos)) + marginShr
+      val delta       = measure(a.line) - lineWidth
       val badness     = computeBadness(delta, lineStretch, lineShrink)
 
       // Last line is more tolerant (uses parfillskip)
