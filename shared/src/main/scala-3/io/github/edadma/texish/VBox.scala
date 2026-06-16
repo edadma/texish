@@ -33,7 +33,10 @@ abstract class VerticalBox(val boxes: Seq[Box]) extends ContentBox:
   */
 class VBox(boxes: Seq[Box]) extends VerticalBox(boxes):
 
-  val descent: Double = if boxes.isEmpty then 0 else boxes.last.descent
+  // TeX's rule for a vbox's depth: it is the depth of the last box, but zero when the list ends in glue or a
+  // kern — the reference point is then the very bottom of the box. So a vbox ending in \vss (the lifted "A" of
+  // the LaTeX logo, say) rides entirely above the baseline instead of hanging below it.
+  val descent: Double = if boxes.nonEmpty && !boxes.last.isSpace then boxes.last.descent else 0.0
   val ascent: Double  = height - descent
 
   override def toString: String = s"VBox(width=$width, height=$height, boxes=$boxes)"

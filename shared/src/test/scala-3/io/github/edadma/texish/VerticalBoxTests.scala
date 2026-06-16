@@ -27,6 +27,18 @@ class VerticalBoxTests extends AnyFreeSpec with Matchers:
     vtop.descent shouldBe 12.0 // everything below the first line's baseline
   }
 
+  "a \\vbox ending in glue has zero depth, so its content rides above the baseline" in {
+    val t = new StubTypesetter
+    // What `\vbox to:N {\hbox{..} \vss}` produces: a line at the top, then a vertical fill. The trailing glue
+    // means the reference point is the very bottom, so the whole box sits above the baseline — this is what
+    // lifts the small "A" of the LaTeX logo up to the cap height instead of leaving it on the baseline.
+    val vbox = new VBox(Seq(line(t, "A"), new VSpaceBox(12.0)))
+
+    vbox.height shouldBe 22.0  // line height 10 + 12 of fill
+    vbox.descent shouldBe 0.0  // trailing glue ⇒ depth zero
+    vbox.ascent shouldBe 22.0  // the entire box is above the baseline
+  }
+
   "an empty vertical box has zero metrics" in {
     new VBox(Seq.empty).height shouldBe 0.0
     new VBox(Seq.empty).ascent shouldBe 0.0
