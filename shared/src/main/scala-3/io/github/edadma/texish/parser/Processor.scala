@@ -178,8 +178,8 @@ class Processor(val handler: Handler):
 
   private def handleControlSeq(name: String, pos: CharReader): Unit =
     // A user-defined macro (\def) overrides a built-in primitive of the same name, as in TeX — so e.g. a
-    // document can redefine \TeX even though it ships as a primitive. Only an explicit macro overrides;
-    // ordinary variables of the same name do not, so they can't accidentally shadow a primitive.
+    // document can redefine \hbox or any other built-in. Only an explicit macro overrides; ordinary
+    // variables of the same name do not, so they can't accidentally shadow a primitive.
     val defined = handler.get(name)
 
     defined match

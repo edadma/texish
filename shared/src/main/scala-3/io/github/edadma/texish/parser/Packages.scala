@@ -1,8 +1,8 @@
 package io.github.edadma.texish.parser
 
 /** The bundled package registry: standard libraries that ship with texish but are **not** loaded unless a
-  * document asks for them with `\use{name}`. Unlike the always-on [[io.github.edadma.texish.standardPrelude]],
-  * a bundled package costs nothing until used — a math paper never pays for the chemistry vocabulary.
+  * document asks for them with `\use{name}`. A bundled package costs nothing until used — a math paper never
+  * pays for the chemistry vocabulary.
   *
   * Each package is its own document-language source (macros over the engine primitives), embedded as a string so
   * it loads identically on every platform, including Scala.js where there is no filesystem. User-written package

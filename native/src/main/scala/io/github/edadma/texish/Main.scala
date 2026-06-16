@@ -97,13 +97,13 @@ private def render(config: Config): Unit =
     case "pdf" => renderPdf(source, ensureExtension(base, "pdf"), config.paper)
     case "png" => renderPng(source, base, config.paper, config.resolution)
 
-/** Build a typesetter, feed it the standard prelude and the document, and flush it. */
+/** Build a typesetter, feed it the document, and flush it. The engine ships only primitives; higher-level
+  * macros (logos, sectioning, lists, …) come from a format the document includes itself. */
 private def typeset(t: Typesetter, source: String): Unit =
   val handler = new TypesetterHandler(t)
   val proc    = new Processor(handler)
 
   registerTypesettingPrimitives(proc, handler)
-  proc.process(standardPrelude) // \TeX, \TeXish and the other built-in macros, before the document
   proc.process(source)
   t.end()
 

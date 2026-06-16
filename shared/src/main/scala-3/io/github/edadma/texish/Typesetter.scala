@@ -360,9 +360,9 @@ abstract class Typesetter:
   )
 
   // Latin Modern Roman — GUST's OpenType successor to Computer Modern and the text companion to Latin Modern
-  // Math, so a document can set body text in the same family the math is set in (and the \TeX/\TeXish logo
-  // kerns land as designed). The 10-point optical size is the body face; its four core styles are registered
-  // by file, since the .otf names don't follow loadTypeface's "-Style.ttf" convention.
+  // Math, so a document can set body text in the same family the math is set in (and a logo's hand-tuned kerns
+  // land as designed). The 10-point optical size is the body face; its four core styles are registered by
+  // file, since the .otf names don't follow loadTypeface's "-Style.ttf" convention.
   private val lmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-regular.otf", lmLigatures, Set.empty)
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bold.otf", lmLigatures, Set("bold"))
