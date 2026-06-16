@@ -87,6 +87,9 @@ class Processor(val handler: Handler):
   registerPrimitive("mapget", MapGetPrimitive)
   registerPrimitive("maphas", MapHasPrimitive)
 
+  // Token-stream control
+  registerPrimitive("ignorespaces", IgnoreSpacesPrimitive)
+
   // Hooks: register deferred code under a name, run it later
   registerPrimitive("addtohook", AddToHookPrimitive)
   registerPrimitive("usehook", UseHookPrimitive)
@@ -1482,6 +1485,13 @@ private def envCode(proc: Processor, name: String): Option[(Vector[MacroParam], 
           Some((params, begin, end))
         case _ => None
     case _ => None
+
+/** `\ignorespaces` — swallow the run of `Space` tokens that immediately follows, as in LaTeX. A macro meant to
+  * be followed directly by running text ends with `\ignorespaces`, so the space the author leaves for
+  * readability (e.g. `\item the text`) does not survive as an interword space in the output. Newlines are left
+  * alone, so a blank line still ends a paragraph. */
+object IgnoreSpacesPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit = proc.skipSpaces()
 
 /** `\newenvironment name [param…] {begin-code} {end-code}` — define an environment. Parameters are named
   * identifiers (as in `\def`) and are bound only in the begin-code, where `\begin{name}` supplies them as

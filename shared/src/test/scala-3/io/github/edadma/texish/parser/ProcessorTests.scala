@@ -33,6 +33,14 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       process("\\def x {X}a\\x b") shouldBe "aX b"
     }
 
+    "\\ignorespaces swallows the spaces that follow it" in {
+      process("a\\ignorespaces   b") shouldBe "ab"
+    }
+
+    "a macro ending in \\ignorespaces eats the gap before its trailing text" in {
+      process("\\def item {*\\ignorespaces}\\item the rest") shouldBe "*the rest"
+    }
+
     "should handle \\set and \\get with braces" in {
       process("\\set x {hello}\\get\\x") shouldBe "hello"
     }
