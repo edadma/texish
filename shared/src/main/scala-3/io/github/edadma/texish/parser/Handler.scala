@@ -35,6 +35,11 @@ trait Handler:
   /** Exit the current scope */
   def exitScope(): Unit
 
+  /** Finish the current block of text, if the host has a notion of one. A typesetting host breaks the open
+    * paragraph here (so its scoped paragraph shape is read before an enclosing scope closes); a plain text host has
+    * no paragraphs and does nothing. */
+  def endParagraph(): Unit = ()
+
   /** Called when a command is executed that the handler should process.
     *
     * Returns the result value, or Value.Nil if the command produces no value.

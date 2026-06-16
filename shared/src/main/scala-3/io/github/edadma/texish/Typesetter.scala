@@ -425,9 +425,6 @@ abstract class Typesetter:
   def set(pairs: Seq[(String, Any)]): Unit =
     scopes(0) ++= pairs.map((k, v) => (k, Value.from(v)))
 
-  // Variables that should be scoped with font changes (not leaked back on scope exit)
-  private val formattingVars = Set("baselineskip", "spaceskip", "xspaceskip", "lineskip")
-
   def enter(): Unit =
     scopes push scopes.top
     set("saved_font", currentFont)
@@ -443,12 +440,6 @@ abstract class Typesetter:
     prev.get("saved_color") match
       case Some(Value.Native(color: Color)) => currentColor = color
       case _                                =>
-
-    if scopes.length == 1 then
-      val nonFormattingVars = prev.filterNot { case (k, _) =>
-        k.startsWith("saved_") || formattingVars.contains(k)
-      }
-      scopes(0) ++= nonFormattingVars
 
   def italic(): Unit = addStyle("italic")
 

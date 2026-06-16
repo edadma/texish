@@ -78,6 +78,8 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
         if box ne null then typesetter add box // enters the parent math list as an Ord atom
       case _ => typesetter.exit()
 
+  override def endParagraph(): Unit = typesetter.paragraph()
+
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
 
   override def fontUnit(unit: String): Option[Double] =

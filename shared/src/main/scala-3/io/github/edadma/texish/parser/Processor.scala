@@ -1518,9 +1518,12 @@ object BeginPrimitive extends Primitive:
         proc.pushBack(Token.BeginGroup(pos) +: expanded)
       case None => proc.handler.error(s"Unknown environment '$name'", pos)
 
-/** `\end{name}` — run the environment's end-code (still inside the body's scope) and then close the scope. The
-  * trailing synthetic `EndGroup` runs after the end-code, so the end-code can see anything the begin-code or the
-  * body set locally. The name must match the innermost open `\begin`. */
+/** `\end{name}` — finish any paragraph the body left open, run the environment's end-code, and then close the
+  * scope. Breaking the paragraph here, before the scope closes, lets the line builder read the environment's scoped
+  * paragraph shape (`\leftskip`, `\hangindent`, …) while it is still in effect — without it the paragraph would be
+  * laid out only at the next break, after the values had been restored (LaTeX's `\end` issues `\par` for the same
+  * reason). The trailing synthetic `EndGroup` runs after the end-code, so the end-code can see anything the
+  * begin-code or the body set locally. The name must match the innermost open `\begin`. */
 object EndPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = readEnvName(proc, pos)
@@ -1529,6 +1532,7 @@ object EndPrimitive extends Primitive:
         if proc.envStack.isEmpty then proc.handler.error(s"\\end{$name} with no open environment", pos)
         val open = proc.envStack.pop()
         if open != name then proc.handler.error(s"\\end{$name} does not match \\begin{$open}", pos)
+        proc.handler.endParagraph()
         proc.pushBack(end :+ Token.EndGroup(pos))
       case None => proc.handler.error(s"Unknown environment '$name'", pos)
 

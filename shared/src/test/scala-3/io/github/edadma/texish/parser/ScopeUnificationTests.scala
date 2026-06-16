@@ -65,13 +65,20 @@ class ScopeUnificationTests extends AnyFreeSpec with Matchers:
     an[Exception] should be thrownBy t.getVar("nonexistent")
   }
 
-  "language-level set survives engine scope enter/exit" in {
+  "a local set does not survive its scope's exit, but a global one does" in {
     val (t, _, proc) = fixture()
 
     t.enter()
     proc.process("\\set inner {1}")
     t.exit()
 
-    // at outermost scope, non-formatting vars merge back (engine semantics)
-    t.getNumber("inner") shouldBe 1.0
+    // a plain \set is local to the group it ran in, so it is gone once that scope closes
+    t.get("inner") shouldBe None
+
+    t.enter()
+    proc.process("\\global\\set persists {2}")
+    t.exit()
+
+    // \global escapes the scope, so its value remains at the outermost scope
+    t.getNumber("persists") shouldBe 2.0
   }
