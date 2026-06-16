@@ -7,21 +7,27 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   def result: Box = ???
 
   override def done(): Unit =
-    val hsize = t.getNumber("hsize")
+    // An empty paragraph contributes nothing and leaves the surrounding state untouched: it sets no lines and,
+    // crucially, does not reset \indent / \hangindent. This is what makes \noindent stick across a paragraph
+    // break — a heading macro ends with \noindent (opening an empty paragraph), the blank line after the
+    // heading closes that empty paragraph, and the real paragraph that follows is still flush left.
+    if boxes.nonEmpty then
+      val hsize = t.getNumber("hsize")
 
-    // Try Knuth-Plass optimal line breaking first
-    KnuthPlass.breakParagraph(boxes.toSeq, hsize, t) match
-      case Some(lines) if lines.nonEmpty =>
-        buildLinesFromOptimal(lines, hsize)
-      case _ =>
-        // Fall back to greedy algorithm
-        buildLinesGreedy(hsize)
+      // Try Knuth-Plass optimal line breaking first
+      KnuthPlass.breakParagraph(boxes.toSeq, hsize, t) match
+        case Some(lines) if lines.nonEmpty =>
+          buildLinesFromOptimal(lines, hsize)
+        case _ =>
+          // Fall back to greedy algorithm
+          buildLinesGreedy(hsize)
 
-    t.indentParagraph = true
-    // \hangindent / \hangafter apply to a single paragraph and revert afterwards, as in TeX;
-    // \leftskip / \rightskip persist until the document changes them.
-    t.set("hangindent", 0.0)
-    t.set("hangafter", 1.0)
+      t.indentParagraph = true
+      // \hangindent / \hangafter apply to a single paragraph and revert afterwards, as in TeX;
+      // \leftskip / \rightskip persist until the document changes them.
+      t.set("hangindent", 0.0)
+      t.set("hangafter", 1.0)
+
     pop
 
   /** The left and right margin glue for the line whose 0-based number is `n`, from `\leftskip` /
