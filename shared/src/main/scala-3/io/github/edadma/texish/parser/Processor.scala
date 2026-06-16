@@ -228,21 +228,62 @@ class Processor(val handler: Handler):
             if c == '~' then handler.text("\u00A0")
             else handler.text(c.toString)
 
-  private def expandMacro(name: String, params: Vector[String], body: Vector[Token], pos: CharReader): Unit =
-    // Read arguments
-    val args = readMacroArgs(params.size, pos)
+  private def expandMacro(name: String, params: Vector[MacroParam], body: Vector[Token], pos: CharReader): Unit =
+    // Read arguments by name, then substitute control sequences matching param names in the body, and push the
+    // expanded tokens as a new source.
+    val expandedBody = substituteNamedParams(body, readMacroArgs(params, pos))
 
-    // Create parameter map (param name -> argument tokens)
-    val paramMap = params.zip(args).toMap
-
-    // Substitute parameters in body (control sequences matching param names)
-    val expandedBody = substituteNamedParams(body, paramMap)
-
-    // Push expanded tokens as new source
     tokenSources.push(TokenListSource(expandedBody))
 
-  private def readMacroArgs(count: Int, pos: CharReader): Vector[Vector[Token]] =
-    (0 until count).map(_ => readArgument(pos)).toVector
+  /** Read a macro or environment's arguments in declaration order, returning a name → tokens map ready for
+    * [[substituteNamedParams]]. A mandatory parameter reads the next braced group or token; an optional parameter
+    * reads a following `[…]` if one is present and otherwise expands to its declared default — so a missing optional
+    * never consumes input.
+    */
+  def readMacroArgs(params: Vector[MacroParam], pos: CharReader): Map[String, Vector[Token]] =
+    params.map { p =>
+      val tokens = p.kind match
+        case ParamKind.Mandatory       => readArgument(pos)
+        case ParamKind.Optional(deflt) => readOptionalArg(pos).getOrElse(deflt)
+      p.name -> tokens
+    }.toMap
+
+  /** Read an optional `[…]` argument if one follows, returning its tokens (the content between the brackets) or
+    * None when the next token is not an opening `[`. Brackets are ordinary text, so `[` may begin a text run and the
+    * closing `]` may sit mid-token; this scans across tokens, splitting text at the brackets and pushing back any
+    * tail after `]`. A `]` inside a braced group does not close the argument, so `[{a]b}]` reads `{a]b}`.
+    */
+  def readOptionalArg(pos: CharReader): Option[Vector[Token]] =
+    skipSpaces()
+    peekToken() match
+      case Token.Text(s, sp) if s.startsWith("[") =>
+        nextToken()
+        val out    = Vector.newBuilder[Token]
+        var depth  = 0
+        var closed = false
+
+        def takeText(str: String, p: CharReader): Unit =
+          if depth > 0 then out += Token.Text(str, p)
+          else
+            val idx = str.indexOf(']')
+            if idx < 0 then { if str.nonEmpty then out += Token.Text(str, p) }
+            else
+              val before = str.substring(0, idx)
+              val after  = str.substring(idx + 1)
+              if before.nonEmpty then out += Token.Text(before, p)
+              if after.nonEmpty then pushBack(Vector(Token.Text(after, p)))
+              closed = true
+
+        takeText(s.substring(1), sp)
+        while !closed && hasMoreTokens do
+          nextToken() match
+            case Token.Text(str, p)      => takeText(str, p)
+            case t @ Token.BeginGroup(_) => depth += 1; out += t
+            case t @ Token.EndGroup(_)   => depth -= 1; out += t
+            case Token.EOF(_)            => closed = true
+            case other                   => out += other
+        Some(out.result())
+      case _ => None
 
   /** Read a single macro argument (brace-delimited or single token) */
   def readArgument(pos: CharReader): Vector[Token] =
@@ -580,12 +621,12 @@ class Processor(val handler: Handler):
   /** Expand a macro in expression position: push the remaining tokens so the macro can read its arguments, read
     * them, substitute into the body, then evaluate the expanded body as an expression. The pushed source is
     * tracked by identity and only popped if argument reading left it on top (see the primitive case). */
-  private def evalMacroExpr(params: Vector[String], body: Vector[Token], rest: Vector[Token], pos: CharReader): Value =
+  private def evalMacroExpr(params: Vector[MacroParam], body: Vector[Token], rest: Vector[Token], pos: CharReader): Value =
     val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
     restSource.foreach(tokenSources.push)
-    val args = readMacroArgs(params.size, pos)
+    val args = readMacroArgs(params, pos)
     restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
-    evalTokensExpr(substituteNamedParams(body, params.zip(args).toMap), pos)
+    evalTokensExpr(substituteNamedParams(body, args), pos)
 
   /** Read a control sequence name (for \let, etc.) */
   def readControlSeqName(pos: CharReader): String =
@@ -667,6 +708,57 @@ trait Active:
     */
   def execute(proc: Processor, c: Char, pos: CharReader): Unit
 
+/** Read a macro/environment parameter list up to the body's opening brace: space-separated entries where a bare
+  * identifier is a mandatory parameter and a bracketed `[name:default]` (or `[name]` for an empty default) is an
+  * optional one. The brackets are ordinary text, so an optional spec is scanned across tokens up to its `]`, exactly
+  * as an optional argument is at the call site. Reading stops at the first token that is neither — in practice the
+  * body's `{`. */
+private[parser] def readMacroParams(proc: Processor, pos: CharReader): Vector[MacroParam] =
+  val out = Vector.newBuilder[MacroParam]
+  proc.skipSpaces()
+  var done = false
+
+  while !done && proc.hasMoreTokens do
+    proc.peekToken() match
+      case Token.Text(s, sp) if s.startsWith("[") =>
+        proc.nextToken()
+        val spec   = new StringBuilder
+        var closed = false
+
+        def takeText(str: String): Unit =
+          val idx = str.indexOf(']')
+          if idx < 0 then spec ++= str
+          else
+            spec ++= str.substring(0, idx)
+            val after = str.substring(idx + 1)
+            if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, sp)))
+            closed = true
+
+        takeText(s.substring(1))
+        while !closed && proc.hasMoreTokens do
+          proc.nextToken() match
+            case Token.Text(str, _) => takeText(str)
+            case Token.EOF(_)       => closed = true
+            case _                  => ()
+
+        // [name:default] declares an optional parameter; [name] gives it an empty default
+        val text       = spec.toString
+        val colon      = text.indexOf(':')
+        val name       = (if colon < 0 then text else text.substring(0, colon)).trim
+        val default    = if colon < 0 then "" else text.substring(colon + 1)
+        val defTokens  = if default.nonEmpty then Vector(Token.Text(default, sp)) else Vector.empty
+        out += MacroParam(name, ParamKind.Optional(defTokens))
+        proc.skipSpaces()
+
+      case Token.Text(s, _) if s.nonEmpty && s.head.isLetter =>
+        proc.nextToken()
+        out += MacroParam(s, ParamKind.Mandatory)
+        proc.skipSpaces()
+
+      case _ => done = true
+
+  out.result()
+
 object DefPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = proc.readIdentifier(pos)
@@ -674,25 +766,14 @@ object DefPrimitive extends Primitive:
     val global = proc.handler.globalAssign
     proc.handler.globalAssign = false
 
-    // Read named parameters (identifiers) until we hit the body brace
-    val params = Vector.newBuilder[String]
-    proc.skipSpaces()
-    while proc.hasMoreTokens && (proc.peekToken() match
-        case Token.BeginGroup(_) => false
-        case Token.Text(s, _) if s.nonEmpty && s.head.isLetter => true
-        case _ => false
-      )
-    do
-      proc.nextToken() match
-        case Token.Text(s, _) => params += s
-        case _ => // shouldn't happen
-      proc.skipSpaces()
+    // Read the parameter list (mandatory names and optional [name:default] specs) up to the body brace.
+    val params = readMacroParams(proc, pos)
 
     // Strip the braces that delimit the body in the \def syntax: a macro is pure token substitution and must not
     // open a scope of its own, so a \set or \coordinate in its body lands in the caller's scope, as in TeX.
     // Grouping inside a macro is whatever explicit { } the body itself contains.
     val body = stripOuterBraces(proc.readArgument(pos))
-    val mac  = Value.Macro(params.result(), body, pos)
+    val mac  = Value.Macro(params, body, pos)
 
     if global then proc.handler.setGlobal(name, mac) else proc.handler.set(name, mac)
 
@@ -1392,8 +1473,8 @@ private def readEnvName(proc: Processor, pos: CharReader): String =
     case _                      => ""
   }.mkString.trim
 
-/** Look up an environment: its begin-code's parameter names, the begin-code tokens, and the end-code tokens. */
-private def envCode(proc: Processor, name: String): Option[(Vector[String], Vector[Token], Vector[Token])] =
+/** Look up an environment: its begin-code's parameters, the begin-code tokens, and the end-code tokens. */
+private def envCode(proc: Processor, name: String): Option[(Vector[MacroParam], Vector[Token], Vector[Token])] =
   proc.handler.get(EnvStoreName) match
     case Value.Map(m) =>
       m.get(name) match
@@ -1411,22 +1492,13 @@ object NewEnvironmentPrimitive extends Primitive:
     proc.handler.globalAssign = false // environment definitions are always global; ignore any stray prefix
     val name = readEnvName(proc, pos)
 
-    // Read named parameters (identifiers) until the begin-code brace, exactly as \def does.
-    val params = Vector.newBuilder[String]
-    proc.skipSpaces()
-    while proc.hasMoreTokens && (proc.peekToken() match
-        case Token.Text(s, _) if s.nonEmpty && s.head.isLetter => true
-        case _                                                  => false
-      )
-    do
-      proc.nextToken() match
-        case Token.Text(s, _) => params += s
-        case _                => // unreachable
-      proc.skipSpaces()
+    // Read the parameter list (mandatory names and optional [name:default] specs) up to the begin-code brace,
+    // exactly as \def does.
+    val params = readMacroParams(proc, pos)
 
     val beginCode = stripOuterBraces(proc.readArgument(pos))
     val endCode   = stripOuterBraces(proc.readArgument(pos))
-    val pair = Value.Seq(Vector(Value.Macro(params.result(), beginCode, pos), Value.Macro(Vector.empty, endCode, pos)))
+    val pair = Value.Seq(Vector(Value.Macro(params, beginCode, pos), Value.Macro(Vector.empty, endCode, pos)))
     val updated = proc.handler.get(EnvStoreName) match
       case Value.Map(m) => Value.Map(m + (name -> pair))
       case _            => Value.Map(Map(name -> pair))
@@ -1441,8 +1513,7 @@ object BeginPrimitive extends Primitive:
     val name = readEnvName(proc, pos)
     envCode(proc, name) match
       case Some((params, begin, _)) =>
-        val args     = (0 until params.size).map(_ => proc.readArgument(pos)).toVector
-        val expanded = proc.substituteNamedParams(begin, params.zip(args).toMap)
+        val expanded = proc.substituteNamedParams(begin, proc.readMacroArgs(params, pos))
         proc.envStack.push(name)
         proc.pushBack(Token.BeginGroup(pos) +: expanded)
       case None => proc.handler.error(s"Unknown environment '$name'", pos)

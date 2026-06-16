@@ -23,7 +23,7 @@ enum Value:
   case Map(entries: scala.collection.immutable.Map[String, Value])
 
   /** A macro definition - parameters and unexpanded body tokens */
-  case Macro(params: Vector[String], body: Vector[Token], pos: CharReader)
+  case Macro(params: Vector[MacroParam], body: Vector[Token], pos: CharReader)
 
   /** A dimension with unit (internally stored as points) */
   case Dimen(points: Double)

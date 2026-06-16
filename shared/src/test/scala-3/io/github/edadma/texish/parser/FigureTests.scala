@@ -79,6 +79,18 @@ class FigureTests extends AnyFreeSpec with Matchers:
     third.exists(_.contains("2")) shouldBe true       // second figure, so the figure counter has reached 2
   }
 
+  "\\figure[b] sinks the figure to the bottom of its page" in {
+    val (t, proc) = fixture()
+
+    proc.process("\\use{floats}\\figure[b]{\\caption{Lower}}")
+    t.paragraph()
+
+    val floats = t.mode.asInstanceOf[Builder].list.collect { case f: FloatBox => f }
+    floats should have length 1
+    floats.head.edgeTop shouldBe false                 // [b] overrode the default top placement
+    texts(floats.head.content) should contain("Figure")
+  }
+
   "a caption rides at the top of the floated block, ahead of body content" in {
     val (t, proc) = fixture()
 

@@ -34,17 +34,18 @@ object Packages:
 \use{counters}//
 \newcounter{figure}//
 \newcounter{table}//
-// \figure{body} — float body to the top of its page; a \caption inside numbers as a figure.
-\def figure body {{//
+// \figure[placement]{body} — float body to a page edge (default top); a \caption inside numbers as a figure.
+// placement is an [htb] spec (h=here, t=top, b=bottom), forwarded to the float primitive.
+\def figure [placement:t] body {{//
 \set captionkind {Figure}//
 \set captioncounter {figure}//
-\topinsert{\body}//
+\topinsert[\placement]{\body}//
 }}//
-// \table{body} — like \figure, but a \caption inside numbers as a table (an independent counter).
-\def table body {{//
+// \table[placement]{body} — like \figure, but a \caption inside numbers as a table (an independent counter).
+\def table [placement:t] body {{//
 \set captionkind {Table}//
 \set captioncounter {table}//
-\topinsert{\body}//
+\topinsert[\placement]{\body}//
 }}//
 // \caption{text} — step the enclosing float's counter and typeset a numbered caption line, e.g. "Figure 1: text".
 // Reads captionkind/captioncounter, which the surrounding \figure or \table set before entering the float.
