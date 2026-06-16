@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{Box, HorizontalMode, MathMode, MathStyle, PictureMode, Typesetter, VerticalMode}
+import io.github.edadma.texish.{Box, HorizontalMode, MathMode, MathStyle, Mode, PictureMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -11,6 +11,13 @@ import io.github.edadma.texish.{Box, HorizontalMode, MathMode, MathStyle, Pictur
 class TypesetterHandler(val typesetter: Typesetter) extends Handler:
   private var newlineCount: Int   = 0
   private var suppressed: Boolean = false
+
+  // The paragraph a pending single newline belongs to. A lone newline is a deferred interword space, added
+  // when the next text arrives — but only if it is the *same* paragraph. If that paragraph has since closed
+  // (a vertical command, or a group/environment ending), the deferred space is stale and must be dropped, or
+  // it opens the next paragraph one space too far in. Identity, not "still horizontal", is the test: the new
+  // paragraph after the close is horizontal too, so a class check would wrongly keep the stale space.
+  private var pendingNewlineMode: Mode | Null = null
 
   def text(s: String): Unit =
     if !suppressed then
@@ -23,13 +30,13 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
           // a picture body is drawing commands, not prose; stray text between them is insignificant
           ()
         case _ =>
-          // A single pending newline is an interword space — but only while we are still in the
-          // paragraph. If a vertical command (\vskip, \vfill, …) closed the paragraph since the
-          // newline, the pending space is stale and must be dropped, or it leaks a stray box into
-          // the vertical list before the next paragraph starts.
-          if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
+          // A single pending newline is an interword space, but only while we are still in the paragraph it
+          // was seen in (see pendingNewlineMode). A vertical command or a closing group/environment that ended
+          // that paragraph makes the space stale; the new paragraph is horizontal too, so identity is the test.
+          if newlineCount == 1 && (typesetter.mode eq pendingNewlineMode) then typesetter add " "
           typesetter.start add s
           newlineCount = 0
+          pendingNewlineMode = null
 
   def space(): Unit =
     if !suppressed then
@@ -44,6 +51,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       typesetter.mode match
         case _: HorizontalMode if newlineCount == 0 =>
           newlineCount += 1
+          pendingNewlineMode = typesetter.mode
         case _: HorizontalMode if newlineCount == 1 =>
           newlineCount += 1
           typesetter.paragraph()
