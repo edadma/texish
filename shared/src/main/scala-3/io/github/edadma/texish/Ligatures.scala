@@ -48,6 +48,17 @@ object Ligatures:
 
   val ALL: Set[String] = (Map() ++ LIGATURES ++ REPRESENTATIONS).values.toSet
 
+  /** The representations that belong in ordinary body text — smart quotes, en/em dashes and the ellipsis — and
+    * that a text typeface has glyphs for. A text font enables these (alongside its f-ligatures) so that `---`,
+    * `--`, the paired `` `` ``/`''` and `...` set as the proper typographic characters. The arrow
+    * representations are deliberately excluded: they are math glyphs an ordinary text font usually lacks, and
+    * enabling them would only yield missing-glyph boxes. */
+  val TEXT_REPRESENTATIONS: Set[String] = Set(
+    `LEFT SINGLE QUOTATION MARK`, `RIGHT SINGLE QUOTATION MARK`,
+    `LEFT DOUBLE QUOTATION MARK`, `RIGHT DOUBLE QUOTATION MARK`,
+    `EN DASH`, `EM DASH`, `HORIZONTAL ELLIPSIS`,
+  )
+
   private val EXCEPTIONS = List(
     "fful",
     "fing",
