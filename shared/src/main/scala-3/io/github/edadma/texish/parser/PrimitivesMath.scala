@@ -171,6 +171,45 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
       },
     )
 
+  // text - 1 body arg: a run of ordinary text set inside a formula. Math-mode only; the argument is typeset
+  // through the normal text path (the string seam, in the surrounding body font) into a horizontal box, which
+  // enters the math list as an Ord atom. This is how words appear in a formula upright — \text{E}[X], the
+  // "for" in a piecewise definition — without the letters being mistaken for italic variables.
+  proc.registerPrimitive(
+    "text",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            buildBox(proc, t, vertical = false, top = false, pos) match
+              case b: Box => parent.add(b)
+              case null   =>
+          case _ => handler.error("\\text is only allowed in math mode", pos)
+    },
+  )
+
+  // mathcal - 1 body arg: its letters set in the calligraphic (script) alphabet, as \mathcal{N} sets a script
+  // N. Math-mode only; each letter is remapped to its Mathematical Script codepoint and added as an Ord atom,
+  // so the whole run gets ordinary inter-atom spacing. A non-letter in the argument falls back to its usual
+  // math classification.
+  proc.registerPrimitive(
+    "mathcal",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            for tok <- stripOuterBraces(proc.readArgument(pos)) do
+              tok match
+                case Token.Text(s, _) =>
+                  for ch <- s do
+                    MathSymbols.mathcalNode(parent.mathFont, ch.toInt) match
+                      case Some(node) => parent.addNode(node)
+                      case None       => parent.addChar(ch.toInt)
+                case _ =>
+          case _ => handler.error("\\mathcal is only allowed in math mode", pos)
+    },
+  )
+
   // matrix and its bracketed forms - 1 body arg: a grid of math cells, & between columns and \cr (or \\)
   // between rows. Math-mode only; each cell is typeset by a nested math mode in the array's cell style (text
   // style, so a matrix in a display does not enlarge its entries), the cells are aligned into columns and

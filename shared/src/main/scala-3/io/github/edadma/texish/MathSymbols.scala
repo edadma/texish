@@ -20,6 +20,29 @@ object MathSymbols:
     else if c >= 'a' && c <= 'z' then 0x1D44E + (c - 'a')
     else 0x1D434 + (c - 'A')
 
+  /** Script (calligraphic) letters live in their own contiguous Mathematical Alphanumeric blocks, except for
+    * the dozen that Unicode had already encoded in the Letterlike Symbols block and unified there rather than
+    * duplicate. This table carries those exceptions; everything else is offset arithmetic. */
+  private val scriptExceptions: Map[Char, Int] = Map(
+    'B' -> 0x212C, 'E' -> 0x2130, 'F' -> 0x2131, 'H' -> 0x210B, 'I' -> 0x2110,
+    'L' -> 0x2112, 'M' -> 0x2133, 'R' -> 0x211B,
+    'e' -> 0x212F, 'g' -> 0x210A, 'o' -> 0x2134,
+  )
+
+  /** The Mathematical Script codepoint for an ASCII letter — the alphabet `\mathcal` selects — or None for a
+    * character that has no script form (digits, punctuation). */
+  def scriptLetter(c: Char): Option[Int] =
+    scriptExceptions.get(c).orElse(
+      if c >= 'A' && c <= 'Z' then Some(0x1D49C + (c - 'A'))
+      else if c >= 'a' && c <= 'z' then Some(0x1D4B6 + (c - 'a'))
+      else None,
+    )
+
+  /** A calligraphic atom for one `\mathcal` letter, or None for a character with no script form (so the caller
+    * can fall back to ordinary classification for a stray digit or symbol in the argument). */
+  def mathcalNode(mf: MathFont, codepoint: Int): Option[MathNode] =
+    scriptLetter(codepoint.toChar).map(cp => glyphAtom(mf, Ord, cp))
+
   // Single non-alphanumeric characters: the codepoint to set (often a dedicated math character rather than
   // the ASCII one) and the atom class.
   private val chars: Map[Char, (Int, MathClass)] = Map(
