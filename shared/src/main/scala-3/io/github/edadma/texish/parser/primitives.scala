@@ -593,6 +593,29 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // textsub / textsup - 1 body arg: a text subscript or superscript. The body is set in a smaller version of
+  // the current font — scriptScale of its size — and its box is shifted below (sub) or above (sup) the baseline.
+  // The size is derived from the current font, so a script adapts to the body size rather than a fixed point
+  // size: H\textsub{2}O, the 1\textsup{st}, a chemical formula's atom counts. A box, so it stays attached to the
+  // preceding character with no interword space.
+  def scriptPrimitive(drop: Boolean): Primitive =
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        val base = t.currentFont
+        t.enter()
+        t.currentFont = t.makeFont(base.typeface, base.size * scriptScale, base.style)
+        t.hbox(null)
+        proc.processTokenList(body)
+        val box = t.mode.exit
+        t.exit()
+        if box ne null then
+          val shift = if drop then base.size * subDrop else -(base.size * supRise)
+          handler.addBox(new ShiftBox(box, shift))
+    }
+  proc.registerPrimitive("textsub", scriptPrimitive(drop = true))
+  proc.registerPrimitive("textsup", scriptPrimitive(drop = false))
+
   // underline - 1 body arg (wraps content in underline)
   proc.registerPrimitive(
     "underline",
@@ -698,6 +721,12 @@ private[parser] def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
+
+// Text script geometry (\textsub / \textsup): the body is set at scriptScale of the current font size and
+// its box shifted by a fraction of that size below (sub) or above (sup) the baseline.
+private val scriptScale = 0.7
+private val subDrop     = 0.18
+private val supRise     = 0.42
 
 // Resolve an image path the way \use resolves a module: an absolute path is used as given, a relative one is
 // taken relative to the directory of the document being processed, so \includegraphics{frog.jpg} finds the

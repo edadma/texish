@@ -1,0 +1,29 @@
+\use{document}
+\use{chem}
+
+\title{Reactions with \texttt{chem}}
+\author{The texish project}
+\maketitle
+
+\section{Reaction equations}
+
+A reaction is a row of species joined by \texttt{\\plus} and the reaction arrow
+\texttt{\\rxnarrow}, with atom counts written as subscripts (\texttt{\\dn}) and
+ionic charges as superscripts (\texttt{\\up}). The leading number of a species is
+its stoichiometric coefficient, set at full size. The combustion of methane:
+
+\bigskip
+\centerline{\font lmroman 14 regular CH\dn{4} \plus 2O\dn{2} \rxnarrow CO\dn{2} \plus 2H\dn{2}O}
+\bigskip
+
+\noindent A dissociation, showing ionic charges with \texttt{\\up}:
+
+\bigskip
+\centerline{\font lmroman 14 regular NaCl \rxnarrow Na\up{+} \plus Cl\up{-}}
+\bigskip
+
+\noindent Because each species is just an inline box, a drawn \texttt{\\picture}
+structure can stand in place of a formula and the same \texttt{\\plus} and
+\texttt{\\rxnarrow} lay out the equation.
+
+\vfill\eject
