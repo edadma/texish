@@ -75,6 +75,16 @@
 \def leftline t {\hbox to:\hsize {\t\hfil}}
 \def rightline t {\hbox to:\hsize {\hfil\t}}
 
+// \centering switches the rest of the current group to centred lines: the surrounding
+// glue stretches equally on both sides and the last line is not filled to the right,
+// so every line of a wrapped paragraph centres. Use it inside a group or a figure body
+// so the setting reverts when the group closes.
+\def centering {
+  \set leftskip {0 plus 1fil}
+  \set rightskip {0 plus 1fil}
+  \set parfillskip {0}
+}
+
 // Zero-width overlap boxes (the plain-TeX definitions): \rlap draws its content to
 // the right of the current point, \llap to the left, neither advancing the pen.
 // A list marker placed with one of these hangs beside the text without pushing it.

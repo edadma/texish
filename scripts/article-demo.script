@@ -1,0 +1,69 @@
+\use{document}
+
+\title {A Tour of the texish Article Format}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+\begin{abstract}
+This document exercises the article-style features of \texttt{document.texish}:
+sectioning, figures with captions, lists, mathematics, monospaced code, coloured
+text, clickable links, and the typographic niceties --- smart quotes, dashes, and
+ellipses --- that come for free with the body font. It draws inspiration from a
+plain \LaTeX{} article without trying to reproduce all of \LaTeX.
+\end{abstract}
+
+\section {Figures and images}
+
+An image is placed with \texttt{includegraphics}, which accepts a width given
+directly or as a fraction of the line width. Wrapping it in a figure adds an
+automatically numbered caption.
+
+\figure[h]{
+\centerline{\includegraphics[width=0.35\linewidth]{frog.jpg}}
+\vskip 6pt
+\centerline{\caption{A frog, scaled to a third of the text width.}}
+}
+
+The frog above is a JPEG, decoded directly into the page. The same command reads
+PNG images too, and a bare \texttt{scale} or an explicit height work as well.
+
+\section {Mathematics}
+
+Inline mathematics sits in the run of text, like the bound $0 \le x \le 1$ or the
+sum $\sum_{i=1}^{n} i = \frac{n(n+1)}{2}$. A displayed equation is centred on its
+own line:
+
+$$ \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} $$
+
+Roman words inside a formula use \texttt{text}, as in $V = \text{volume}$, and a
+calligraphic letter comes from \texttt{mathcal}, as in the category $\mathcal{C}$
+or the power set $\mathcal{P}(S)$.
+
+\section {Lists}
+
+Numbered and bulleted lists nest cleanly:
+
+\begin{enumerate}
+\item first point,
+\item second point, long enough to wrap onto a second line so the continuation
+aligns under the text rather than the number,
+\item third point.
+\end{enumerate}
+
+\begin{itemize}
+\item a bullet,
+\item another bullet.
+\end{itemize}
+
+\section {Code, colour, and links}
+
+Set a file name or a snippet in a monospaced face with \texttt{texttt}, e.g.
+\texttt{document.texish} or \texttt{\\includegraphics\{frog.jpg\}}. Colour a word
+with \textcolor{red}{textcolor}, or switch the pen for the rest of a group.
+
+Links are real and clickable in the PDF. Visit the
+\href{https://www.overleaf.com/learn}{help library} for tutorials, or write a
+bare address such as \url{https://example.org} that links to itself.
+
+\vfill\eject
