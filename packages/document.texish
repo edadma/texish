@@ -1,0 +1,219 @@
+// document — a very basic document format, layered over the texish engine.
+//
+// Import it at the top of a document:
+//
+//     \use{document}
+//
+// It provides a title block, numbered sections, spacing and alignment helpers,
+// emphasis, an abstract, quotation blocks, and bulleted / numbered lists. The
+// look follows a 10-point LaTeX `article`: a serif body (Latin Modern Roman),
+// roman title, bold headings on a tight type scale, and a centred page number at
+// the foot of every page.
+
+// ---- Counters (LaTeX-style, in the document language) -------------------------
+// Named document counters over the engine's global keyed store. Two global maps
+// hold the state — counterStore (name → value) and counterParent (child → parent)
+// — so counters survive groups. Stepping a counter zeroes every counter declared
+// \counterwithin it, recursively (LaTeX reset lists). Display a counter by
+// formatting its value, e.g. \arabic{\value section}. Each line ends with // so its
+// newline is stripped and the macros emit no stray whitespace in running text.
+\def newcounter n {{//
+\global\mapset counterStore {\n} {0}//
+}}//
+\def setcounter n v {{//
+\global\mapset counterStore {\n} {\v}//
+}}//
+\def addtocounter n amt {{//
+\set counterCur {\mapget counterStore {\n}}//
+\global\mapset counterStore {\n} {\calc{counterCur + \amt}}//
+}}//
+\def value n {\mapget counterStore {\n}}//
+\def counterwithin child parent {{//
+\global\mapset counterParent {\child} {\parent}//
+}}//
+\def stepcounter n {{//
+\addtocounter {\n} {1}//
+\resetwithin {\n}//
+}}//
+\def resetwithin parent {{//
+\for\counterLink {\counterParent} {//
+\if {\= {\counterLink.value} {\parent}}//
+\set resetChild {\counterLink.key}//
+\setcounter \resetChild {0}//
+\resetwithin \resetChild//
+\fi//
+}//
+}}//
+
+// ---- Body font and leading ----------------------------------------------------
+// A 10pt body on a 12pt baseline, as in a default `article`. The heading and
+// title sizes below follow the LaTeX magnification steps from this base:
+// \large = 12, \Large = 14, \LARGE = 17.
+\font lmroman 10 regular
+\set baselineskip {12}
+\set topskip {10}
+
+// ---- Page and paragraph defaults ----------------------------------------------
+// Paragraphs are marked by a first-line indent, with no extra gap between them
+// and a ragged (un-stretched) page bottom.
+\set parindent {15}
+\set parskip {0}
+\set raggedbottom {1}
+
+// A plain page style: just the page number, centred at the foot of the page. A
+// document can override \footline, or \def a \headline, to put a running head or
+// footer in its place.
+\def footline {\hss\font lmroman 10 regular \the\pageno\hss}
+
+// ---- Vertical spacing ----------------------------------------------------------
+\def smallskip {\vskip 3pt plus 1pt minus 1pt}
+\def medskip {\vskip 6pt plus 2pt minus 2pt}
+\def bigskip {\vskip 12pt plus 4pt minus 4pt}
+
+// ---- Horizontal alignment of a single line ------------------------------------
+\def centerline t {\hbox to:\hsize {\hss\t\hss}}
+\def leftline t {\hbox to:\hsize {\t\hfil}}
+\def rightline t {\hbox to:\hsize {\hfil\t}}
+
+// Zero-width overlap boxes (the plain-TeX definitions): \rlap draws its content to
+// the right of the current point, \llap to the left, neither advancing the pen.
+// A list marker placed with one of these hangs beside the text without pushing it.
+\def rlap m {\hbox to:0 {\m\hss}}
+\def llap m {\hbox to:0 {\hss\m}}
+
+// ---- Inline markup -------------------------------------------------------------
+\def emph t {\italic{\t}}
+\def textit t {\italic{\t}}
+\def textbf t {\bold{\t}}
+\def dots {…}
+
+// ---- TeX-family logos ----------------------------------------------------------
+// The classic logos come from the logos package.
+\use{logos}
+
+// ---- Title block ---------------------------------------------------------------
+// \title / \author / \date record their argument (markup preserved) in a macro;
+// \maketitle typesets whichever of them were given, centred. The title is roman,
+// not bold, as in `article`.
+\def doctitle {}
+\def docauthor {}
+\def docdate {}
+\def title t {\def doctitle {\t}}
+\def author a {\def docauthor {\a}}
+\def date d {\def docdate {\d}}
+
+\def maketitle {
+  \bigskip
+  \centerline{\font lmroman 17 regular \doctitle}
+  \medskip
+  \centerline{\font lmroman 12 regular \docauthor}
+  \smallskip
+  \centerline{\font lmroman 12 regular \docdate}
+  \bigskip
+}
+
+// ---- Abstract ------------------------------------------------------------------
+// A centred bold "Abstract" heading over a smaller, narrower block, as in
+// `article`. The font and margins are set inside the environment's own group, so
+// they revert at \end{abstract}.
+\newenvironment abstract {
+  \medskip
+  \centerline{\font lmroman 10 bold Abstract}
+  \smallskip
+  \font lmroman 9 regular
+  \set baselineskip {11}
+  \set leftskip {28}
+  \set rightskip {28}
+  \noindent
+} {}
+
+// ---- Sections ------------------------------------------------------------------
+// Two levels, auto-numbered. A subsection's number resets with each new section.
+// The paragraph that follows a heading is set flush left (no first-line indent),
+// as in LaTeX.
+\newcounter{section}
+\newcounter{subsection}
+\counterwithin{subsection}{section}
+
+\def section t {
+  \stepcounter{section}
+  \vskip 14pt plus 3pt minus 1pt
+  \leftline{\font lmroman 14 bold \arabic{\value{section}}\hskip 10 \t}
+  \vskip 8pt plus 2pt
+  \noindent
+}
+
+\def subsection t {
+  \stepcounter{subsection}
+  \vskip 12pt plus 3pt minus 1pt
+  \leftline{\font lmroman 12 bold \arabic{\value{section}}.\arabic{\value{subsection}}\hskip 10 \t}
+  \vskip 6pt plus 1pt
+  \noindent
+}
+
+// ---- Quotation block -----------------------------------------------------------
+// Indents the block on both sides. leftskip / rightskip are set inside the
+// environment's own group, so they revert automatically at \end{quote}.
+\newenvironment quote {
+  \set leftskip {25}
+  \set rightskip {25}
+} {}
+
+// \quotation is the same, with a wider indent.
+\newenvironment quotation {
+  \set leftskip {40}
+  \set rightskip {40}
+} {}
+
+// ---- Lists ---------------------------------------------------------------------
+// Lists nest: listdepth is a scoped variable, so each environment sees one more
+// than its parent and the value restores when the environment closes. Each level
+// indents the whole block by listindent (so even a first-level list sits in from
+// the margin, as in LaTeX); the marker hangs to the left of the text.
+\set listdepth {0}
+\set listindent {22}
+\set labelsep {5}
+
+\newenvironment itemize {
+  \set listdepth {\calc{listdepth + 1}}
+  \set leftskip {\calc{listdepth * listindent}}
+  \def itemmark {•}
+} {}
+
+\newenvironment enumerate {
+  \set listdepth {\calc{listdepth + 1}}
+  \set leftskip {\calc{listdepth * listindent}}
+  \setcounter{enumi}{0}
+  \def itemmark {\stepcounter{enumi}\arabic{\value{enumi}}.}
+} {}
+\newcounter{enumi}
+
+// \item starts one list item. The item text begins at the list's left margin
+// (leftskip), so wrapped continuation lines align under it automatically. The
+// marker is set in a zero-width \llap box that hangs to the left, a labelsep gap
+// before the text, exactly as a LaTeX list label does. The closing \ignorespaces
+// drops the space before the item's text.
+\def item {
+  \noindent\llap{\itemmark\hskip\labelsep}\ignorespaces}
+
+// ---- Floats (figures and tables) ----------------------------------------------
+// \figure / \table detach their body to a page edge (default top) over the engine's
+// \topinsert primitive; a \caption written inside numbers it as a figure or table
+// — each on its own counter — e.g. "Figure 1: …". An optional [htb] placement is
+// forwarded to \topinsert. Each line ends with // so its newline is stripped.
+\newcounter{figure}//
+\newcounter{table}//
+\def figure [placement:t] body {{//
+\set captionkind {Figure}//
+\set captioncounter {figure}//
+\topinsert[\placement]{\body}//
+}}//
+\def table [placement:t] body {{//
+\set captionkind {Table}//
+\set captioncounter {table}//
+\topinsert[\placement]{\body}//
+}}//
+\def caption text {{//
+\stepcounter \captioncounter//
+\the\captionkind \arabic{\value \captioncounter}: \text//
+}}//

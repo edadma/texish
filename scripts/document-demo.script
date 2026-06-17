@@ -1,0 +1,80 @@
+\use{document}
+
+\title {Your Paper}
+\author {You}
+\date {June 2026}
+\maketitle
+
+\begin{abstract}
+Your abstract.
+\end{abstract}
+
+\section {Introduction}
+
+Your introduction goes here! Simply start writing your document and use the
+preview to see the result. Examples of commonly used commands and features are
+listed below, to help you get started.
+
+Notice that the first paragraph after a heading is set flush to the left margin,
+with no first-line indent, exactly as in a LaTeX \emph{article}. The paragraphs
+that follow it, like this one, open with the usual first-line indent and there is
+no extra vertical space between them — the indent alone marks the boundary.
+
+\section {Some examples to get started}
+
+\subsection {How to create Sections and Subsections}
+
+Simply use the section and subsection commands, as in this example document! All
+the formatting and numbering is handled automatically: a subsection's number is
+reset to one at the start of each new section.
+
+\subsection {How to add Lists}
+
+You can make lists with automatic numbering \dots
+
+\begin{enumerate}
+\item Like this,
+\item and like this.
+\end{enumerate}
+
+\noindent\dots or bullet points \dots
+
+\begin{itemize}
+\item Like this,
+
+\item and like this, with an item long enough to wrap onto a second line so that
+the continuation lines align neatly under the text rather than under the marker,
+
+\item including a nested list inside an item:
+
+\begin{itemize}
+\item a nested bullet,
+
+\item and another nested bullet, also long enough to wrap, so the deeper hanging
+indent stands out against the outer level.
+\end{itemize}
+
+\item and back out at the first level for the final item.
+\end{itemize}
+
+\subsection {How to add Quotations}
+
+A quotation is indented on both sides and remains fully justified:
+
+\begin{quote}
+The art of writing is the art of discovering what you believe. Good prose is like
+a windowpane, clear enough that the reader forgets it is there at all and sees
+only what lies beyond it.
+\end{quote}
+
+The text returns to the full measure after the block closes.
+
+\subsection {How to change the margins and paper size}
+
+Usually the format you are using will have the page margins and paper size set
+correctly for that use-case. In these cases, it is best not to alter the margins
+directly. This format follows the proportions of a 10-point \LaTeX article: a
+serif body on a tight type scale, with roman titles and \textbf{bold} headings.
+The same engine that sets the \TeX, \LaTeX and \TeXish logos sets this document.
+
+\vfill\eject
