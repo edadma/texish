@@ -226,26 +226,6 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // \[ and \] - LaTeX's display-math delimiters, exactly equivalent to the engine's $$…$$: \[ opens a display
-  // formula and \] closes it. They are distinct tokens (not one toggling delimiter like $$), so each checks the
-  // mode and errors on misuse — \[ inside math, or \] with no open display — rather than toggling the wrong way.
-  proc.registerPrimitive(
-    "[",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        if t.mode.isInstanceOf[MathMode] then handler.error("\\[ is not allowed inside math mode", pos)
-        else handler.toggleMath(display = true)
-    },
-  )
-  proc.registerPrimitive(
-    "]",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        if t.mode.isInstanceOf[MathMode] then handler.toggleMath(display = false) // in math: this exits
-        else handler.error("\\] without a matching \\[", pos)
-    },
-  )
-
   // color name - set the pen colour for the text, rules and glyphs that follow in the current group; the colour
   // reverts at the group's close, exactly as \font does (both are saved on enter and restored on exit). The name
   // is a CSS colour word (blue, darkred, …) or a #RRGGBB hex code.
