@@ -91,8 +91,9 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
     libraryDependencies += "com.github.scopt"  %%% "scopt"           % "4.1.0",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "libcairo" % "0.0.7",
-      "io.github.edadma" %%% "freetype" % "0.0.7",
+      "io.github.edadma" %%% "libcairo"  % "0.0.7",
+      "io.github.edadma" %%% "freetype"  % "0.0.7",
+      "io.github.edadma" %%% "turbojpeg" % "0.0.1",
     ),
   )
   .jsSettings(

@@ -139,7 +139,8 @@ abstract class Typesetter:
 
   def loadImage(path: String): (ImageHandle, Int, Int)
 
-  def drawImage(image: ImageHandle, x: Double, y: Double): Unit
+  // Paint the image with its top-left at (x, y), scaled from its source pixels to fill w × h points.
+  def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit
 
   // Picture-graphics seam — the path/transform/clip vocabulary a PictureBox replays to draw vector graphics
   // (paths, shapes, fills and strokes, placed labels) in a y-up coordinate system. It is separate from the
@@ -654,8 +655,13 @@ abstract class Typesetter:
     push(new VBoxBuilder(this, toSize, spread, top = true))
     this
 
-  def image(path: String): Typesetter =
-    add(new ImageBox(this, path))
+  def image(
+      path: String,
+      width: Option[Double] = None,
+      height: Option[Double] = None,
+      scale: Option[Double] = None,
+  ): Typesetter =
+    add(new ImageBox(this, path, width, height, scale))
     this
 
   def done(): Unit = mode.done()

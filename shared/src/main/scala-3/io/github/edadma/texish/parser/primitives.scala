@@ -226,6 +226,21 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // includegraphics [width=…,height=…,scale=…] {path} — place a raster image, sized by an optional LaTeX-style
+  // key=value list. width and height are lengths (a dimension like 200pt, or a factor times \linewidth /
+  // \textwidth, the current line width); giving only one scales the other to keep the aspect ratio. scale
+  // multiplies the natural size. With no options the image is placed at its natural pixel size.
+  proc.registerPrimitive(
+    "includegraphics",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val (width, height, scale) = parseGraphicsOptions(proc, t, proc.readOptionalArg(pos), pos)
+        evalArg(proc, pos) match
+          case Value.Text(path) => t.image(path, width, height, scale)
+          case _                => handler.error("\\includegraphics expects a path", pos)
+    },
+  )
+
   // color name - set the pen colour for the text, rules and glyphs that follow in the current group; the colour
   // reverts at the group's close, exactly as \font does (both are saved on enter and restored on exit). The name
   // is a CSS colour word (blue, darkred, …) or a #RRGGBB hex code.
@@ -621,6 +636,58 @@ private[parser] def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
+
+// Parse \includegraphics's optional [width=…,height=…,scale=…] list. The bracket tokens are flattened back to
+// their source text (a captured \linewidth survives as the literal "\linewidth"), split on commas into
+// key=value entries, and each value resolved as a length or a scale factor. An absent list yields all-None.
+private[parser] def parseGraphicsOptions(
+    proc: Processor,
+    t: Typesetter,
+    opts: Option[Vector[Token]],
+    pos: CharReader,
+): (Option[Double], Option[Double], Option[Double]) =
+  opts match
+    case None => (None, None, None)
+    case Some(tokens) =>
+      val raw = tokens.map {
+        case Token.Text(s, _)       => s
+        case Token.ControlSeq(n, _) => "\\" + n
+        case Token.Space(_, _)      => " "
+        case Token.Newline(_)       => " "
+        case _                      => ""
+      }.mkString
+      var width: Option[Double]  = None
+      var height: Option[Double] = None
+      var scale: Option[Double]  = None
+      for entry <- raw.split(",") if entry.trim.nonEmpty do
+        val eq = entry.indexOf('=')
+        if eq < 0 then proc.handler.error(s"\\includegraphics option '${entry.trim}' must be key=value", pos)
+        val key   = entry.substring(0, eq).trim
+        val value = entry.substring(eq + 1).trim
+        key match
+          case "width"  => width = Some(resolveGraphicsLength(proc, t, value, pos))
+          case "height" => height = Some(resolveGraphicsLength(proc, t, value, pos))
+          case "scale" =>
+            scale = Some(value.toDoubleOption.getOrElse(proc.handler.error(s"\\includegraphics: scale '$value' is not a number", pos)))
+          case other => proc.handler.error(s"\\includegraphics: unknown option '$other'", pos)
+      (width, height, scale)
+
+// Resolve an \includegraphics length: a factor times \linewidth or \textwidth (both the current line width,
+// the bare command meaning factor 1), or an ordinary dimension like 200pt / 5cm / 0.5in.
+private[parser] def resolveGraphicsLength(proc: Processor, t: Typesetter, s: String, pos: CharReader): Double =
+  def factorTimesLineWidth(suffix: String): Double =
+    val f = s.dropRight(suffix.length).trim
+    val factor =
+      if f.isEmpty then 1.0
+      else f.toDoubleOption.getOrElse(proc.handler.error(s"\\includegraphics: '$f' is not a number", pos))
+    factor * t.getNumber("hsize")
+
+  if s.endsWith("\\linewidth") then factorTimesLineWidth("\\linewidth")
+  else if s.endsWith("\\textwidth") then factorTimesLineWidth("\\textwidth")
+  else
+    parseDimension(s, proc.handler.fontUnit) match
+      case Some(Value.Dimen(p)) => p
+      case _                    => proc.handler.error(s"\\includegraphics: '$s' is not a length", pos)
 
 // Build an \hbox or \vbox whose command token has already been consumed: read its optional `to:` target
 // and braced body, typeset the body into a fresh builder, and return the finished box *without* adding it

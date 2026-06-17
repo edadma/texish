@@ -4,14 +4,19 @@ import io.github.edadma.freetype.{Face as FTFace, Library, initFreeType}
 import io.github.edadma.libcairo.{
   Context,
   FontFace as CairoFontFace,
+  Format,
   Glyph,
   LineCap as CairoLineCap,
   LineJoin as CairoLineJoin,
   Surface,
   fontFaceCreateForFTFace,
+  imageSurfaceCreate,
   imageSurfaceCreateFromPNG,
   TextExtents as CairoTextExtents,
 }
+import io.github.edadma.turbojpeg
+
+import java.io.{File, FileInputStream}
 
 import scala.compiletime.uninitialized
 
@@ -102,13 +107,36 @@ abstract class CairoTypesetter extends Typesetter:
   def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]] = font.ft.loadSfntTable(tag)
 
   def loadImage(path: String): (ImageHandle, Int, Int) =
-    val loaded = imageSurfaceCreateFromPNG(path).reference
+    val loaded =
+      if path.toLowerCase.endsWith(".jpg") || path.toLowerCase.endsWith(".jpeg") then loadJpeg(path)
+      else imageSurfaceCreateFromPNG(path).reference
 
     (loaded, loaded.getWidth, loaded.getHeight)
 
-  def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
+  // Cairo reads PNG itself but knows nothing about JPEG, so decode the JPEG with TurboJPEG straight into a
+  // freshly created ARGB32 surface's own pixel buffer (zero-copy). TurboJPEG's BGRA output sets every alpha
+  // byte opaque, and on a little-endian host that byte order is exactly Cairo's premultiplied ARGB32 layout.
+  private def loadJpeg(path: String): Surface =
+    val file  = new File(path)
+    val bytes = new Array[Byte](file.length().toInt)
+    val in    = new FileInputStream(file)
+    try in.read(bytes)
+    finally in.close()
+
+    val header  = turbojpeg.info(bytes)
+    val surface = imageSurfaceCreate(Format.ARGB32, header.width, header.height)
+    surface.flush()
+    val decoder = turbojpeg.Decoder()
+    try decoder.decompress(bytes, surface.getData, surface.getStride, turbojpeg.PixelFormat.BGRA)
+    finally decoder.close()
+    surface.markDirty()
+    surface.reference
+
+  def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit =
     ctx.save()
-    ctx.setSourceSurface(image, x, y)
+    ctx.translate(x, y)
+    if image.getWidth > 0 && image.getHeight > 0 then ctx.scale(w / image.getWidth, h / image.getHeight)
+    ctx.setSourceSurface(image, 0, 0)
     ctx.paint()
     ctx.restore()
 

@@ -153,8 +153,10 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
     // image pixels are treated as big points (1px = 1pt), matching the PDF backend
     (image, image.getWidth, image.getHeight)
 
-  def drawImage(image: ImageHandle, x: Double, y: Double): Unit =
-    g.drawImage(image, x.toInt, y.toInt, null)
+  def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit =
+    val tx = java.awt.geom.AffineTransform.getTranslateInstance(x, y)
+    if image.getWidth > 0 && image.getHeight > 0 then tx.scale(w / image.getWidth, h / image.getHeight)
+    g.drawImage(image, tx, null)
 
   // Picture-graphics seam. java.awt has no implicit current-path or device stroke state, so this layer keeps
   // its own: a GeneralPath accumulator built up by the path ops and painted by fill/stroke, and the stroke

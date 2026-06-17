@@ -52,6 +52,6 @@ class HeadlessTypesetter extends Typesetter:
 
   def loadImage(path: String): (ImageHandle, Int, Int) = ((), 1, 1)
 
-  def drawImage(image: ImageHandle, x: Double, y: Double): Unit = ()
+  def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit = ()
 
   def destroy(): Unit = ()
