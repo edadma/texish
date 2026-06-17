@@ -22,3 +22,7 @@ project/plugins/project/
 .bsp/
 
 *.pdf
+
+# juicer docs build output
+docs/_site/
+docs/public/
