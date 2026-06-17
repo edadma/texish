@@ -60,11 +60,3 @@ Visit the \href{https://example.org/docs}{documentation} for details, or go stra
 
 `\href{url}{text}` links the display *text*; `\url{url}` typesets the address itself, in
 the monospaced face, as a link to itself.
-
-## The logos
-
-```
-\TeX     \LaTeX     \TeXish
-```
-
-are set as the hand-kerned logos, in the document's own font.
