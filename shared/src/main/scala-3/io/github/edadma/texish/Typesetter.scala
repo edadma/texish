@@ -293,28 +293,14 @@ abstract class Typesetter:
   )
   overrideBaseline("gentium", 0.8)
   loadTypeface("pt", "fonts/PTSansNarrow/PTSansNarrow", "ﬁﬂ", Set(), "Regular", "Bold")
-  loadTypeface(
-    "mono",
-    "fonts/JetBrainsMono/static/JetBrainsMono",
-    "",
-    Set(),
-    "Bold",
-    ("Bold", "Italic"),
-    "ExtraBold",
-    ("ExtraBold", "Italic"),
-    "ExtraLight",
-    ("ExtraLight", "Italic"),
-    "Italic",
-    "Light",
-    ("Light", "Italic"),
-    "Medium",
-    ("Medium", "Italic"),
-    "Regular",
-    "SemiBold",
-    ("SemiBold", "Italic"),
-    "Thin",
-    ("Thin", "Italic"),
-  )
+  // The monospaced face (\texttt, \url): Latin Modern Mono, the Computer Modern typewriter's OpenType
+  // successor, so code is set in the same family as the roman body and the math. The four core styles are
+  // loaded by file (the .otf names don't follow loadTypeface's "-Style.ttf" convention); bold comes from the
+  // companion lmmonolt weight, the only one with a bold cut. No ligatures: code text is set literally.
+  loadFont("mono", "fonts/LatinModernMono/lmmono10-regular.otf", Set.empty, Set.empty)
+  loadFont("mono", "fonts/LatinModernMono/lmmonolt10-bold.otf", Set.empty, Set("bold"))
+  loadFont("mono", "fonts/LatinModernMono/lmmono10-italic.otf", Set.empty, Set("italic"))
+  loadFont("mono", "fonts/LatinModernMono/lmmonolt10-boldoblique.otf", Set.empty, Set("bold", "italic"))
 
   private val alegreyaMissing = Set(
     `LATIN SMALL LIGATURE FFI`,

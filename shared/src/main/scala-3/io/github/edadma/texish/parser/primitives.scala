@@ -575,7 +575,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // texttt - 1 body arg: set its content in the monospaced face (JetBrains Mono), for inline code, file names,
+  // texttt - 1 body arg: set its content in the monospaced face (Latin Modern Mono), for inline code, file names,
   // URLs and the like. The mono size is matched to the surrounding font by x-height (see selectMatchedMono), so
   // the code does not loom larger than the body text. The switch is scoped, so the surrounding text resumes in
   // the body font afterwards; the interword space is widened to the mono font's fixed space for the duration.
