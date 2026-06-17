@@ -246,6 +246,36 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // color name - set the pen colour for the text, rules and glyphs that follow in the current group; the colour
+  // reverts at the group's close, exactly as \font does (both are saved on enter and restored on exit). The name
+  // is a CSS colour word (blue, darkred, …) or a #RRGGBB hex code.
+  proc.registerPrimitive(
+    "color",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        evalArg(proc, pos) match
+          case Value.Text(name) => t.currentColor = Color(name)
+          case _                => handler.error("\\color expects a colour name or #RRGGBB code", pos)
+    },
+  )
+
+  // textcolor name body - set the pen colour for just its body, which is typeset in its own group so the colour
+  // reverts immediately after. \textcolor{blue}{link} is the local form of \color.
+  proc.registerPrimitive(
+    "textcolor",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        evalArg(proc, pos) match
+          case Value.Text(name) =>
+            val body = proc.readArgument(pos)
+            t.enter()
+            t.currentColor = Color(name)
+            proc.processTokenList(body)
+            t.exit()
+          case _ => handler.error("\\textcolor expects a colour name or #RRGGBB code", pos)
+    },
+  )
+
   // vskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable; like the
   // other vertical glue commands it ends an open paragraph first
   proc.registerPrimitive(
