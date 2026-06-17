@@ -1093,11 +1093,15 @@ object UsePrimitive extends Primitive:
 
     val fileName = if name.endsWith(".texish") then name else s"$name.texish"
 
+    // Read TEXISHHOME from the live environment (see PlatformEnv — `System.getenv`/`sys.env` snapshot
+    // the environment on Native, so a host that sets the variable after start would not be seen).
+    val texishHome = PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty)
+
     val roots: List[Path] =
       List(
         Some(Path(proc.currentDir)),
         Some(Path(".")),
-        sys.env.get("TEXISHHOME").filter(_.nonEmpty).map(h => Path(h) / "packages"),
+        texishHome.map(h => Path(h) / "packages"),
         Some(Path(".") / "packages"),
       ).flatten
 
