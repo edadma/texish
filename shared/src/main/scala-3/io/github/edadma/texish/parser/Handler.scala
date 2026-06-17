@@ -49,6 +49,10 @@ trait Handler:
   /** Enable/disable output suppression (for expression evaluation) */
   def suppressOutput(suppress: Boolean): Unit
 
+  /** The current output-suppression state, so a caller can save it, suppress, and restore the prior value — as
+    * loading a module does, since a `\use` may be nested inside an already-suppressed expression. */
+  def outputSuppressed: Boolean = false
+
   /** Resolve a font-relative unit (em, ex) to points. Hosts with a notion of a current font override this; the
     * default knows no such units, so dimensions using them stay unparsed.
     */
@@ -79,6 +83,8 @@ class StringHandler extends Handler:
   def newline(): Unit = if !suppressed then output.append("\n")
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
+
+  override def outputSuppressed: Boolean = suppressed
 
   def get(name: String): Value =
     scopes.find(_.contains(name)).map(_(name)).getOrElse(Value.Undefined)

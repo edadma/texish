@@ -1,6 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
+import io.github.edadma.path.Path
 import scala.collection.mutable
 
 /** The streaming processor/expander for parser.
@@ -26,6 +27,15 @@ class Processor(val handler: Handler):
   // Names of the environments currently open, innermost last, so \end can verify it matches \begin
   private[parser] val envStack = mutable.Stack[String]()
 
+  // The directory of the file currently being processed, innermost last. The bottom is the top-level document's
+  // directory (set by the host via setBaseDir); each \use pushes the loaded module's directory while it runs, so a
+  // module that itself does a relative \use resolves it against the module's own location, not the document's.
+  private val dirStack = mutable.Stack[String]()
+
+  // Canonical (absolute, normalized) paths of every module already loaded by \use, so a second \use of the same
+  // file is a no-op — dependency diamonds load once.
+  private val loadedModules = mutable.Set[String]()
+
   // Register default primitives
   registerPrimitive("def", DefPrimitive)
   registerPrimitive("gdef", GdefPrimitive)
@@ -42,8 +52,9 @@ class Processor(val handler: Handler):
   registerPrimitive("for", ForPrimitive)
   registerPrimitive("done", DonePrimitive)
 
-  // File inclusion
+  // File inclusion (raw input) and module import (load-once, no typesetting)
   registerPrimitive("include", IncludePrimitive)
+  registerPrimitive("use", UsePrimitive)
 
   // Arithmetic primitives
   registerPrimitive("+", AddPrimitive)
@@ -495,6 +506,36 @@ class Processor(val handler: Handler):
   def pushTokenizer(tokenizer: Tokenizer): Unit =
     tokenSources.push(TokenizerSource(tokenizer))
 
+  /** The directory of the file currently being processed — the innermost active `\use` module, or the top-level
+    * document's directory, or "." if the host set no base. Relative `\use` resolution starts here. */
+  def currentDir: String = if dirStack.nonEmpty then dirStack.top else "."
+
+  /** Set the top-level document's directory, so `\use` can resolve packages relative to the document being run.
+    * The host (a CLI or GUI) calls this once before processing; default with no call is the current directory. */
+  def setBaseDir(dir: String): Unit =
+    dirStack.clear()
+    dirStack.push(dir)
+
+  /** Record that the module at this canonical (absolute, normalized) path is being loaded. Returns true the first
+    * time the path is seen and false afterwards, so `\use` loads each module exactly once. */
+  def claimModule(canonical: String): Boolean = loadedModules.add(canonical)
+
+  /** Load a module's source as part of the current document without typesetting it: output is suppressed for the
+    * duration, so the file's prose, blank lines and comments emit nothing and only its definitions take effect.
+    * The module's own directory is pushed while it runs (for nested relative `\use`), and only the module's tokens
+    * are drained — control returns to the enclosing document at the same stack depth. Suppression and the directory
+    * stack are restored even if loading raises. */
+  def loadModule(content: String, dir: String): Unit =
+    val saved    = handler.outputSuppressed
+    val minDepth = tokenSources.size
+    dirStack.push(dir)
+    tokenSources.push(TokenizerSource(Tokenizer(content, activeChars)))
+    handler.suppressOutput(true)
+    try processTokensUntilDepth(minDepth)
+    finally
+      handler.suppressOutput(saved)
+      dirStack.pop()
+
   /** Process tokens until stack depth reaches minDepth */
   private def processTokensUntilDepth(minDepth: Int): Unit =
     while tokenSources.size > minDepth && hasMoreTokensAtDepth(minDepth) do dispatch(nextToken())
@@ -563,9 +604,10 @@ class Processor(val handler: Handler):
             primitives.get(name) match
               case Some(prim) =>
                 lastResult = Value.Nil
+                val savedSuppress = handler.outputSuppressed
                 handler.suppressOutput(true)
                 prim.execute(this, csPos)
-                handler.suppressOutput(false)
+                handler.suppressOutput(savedSuppress)
                 val r = getResult
                 if r == Value.Nil then Value.Undefined else r
               case None => Value.Undefined
@@ -598,9 +640,10 @@ class Processor(val handler: Handler):
                 val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
                 restSource.foreach(tokenSources.push)
                 lastResult = Value.Nil
+                val savedSuppress = handler.outputSuppressed
                 handler.suppressOutput(true)
                 prim.execute(this, csPos)
-                handler.suppressOutput(false)
+                handler.suppressOutput(savedSuppress)
                 restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
                 val r = getResult
                 if r == Value.Nil then evalTokens(tokens, handler) else r
@@ -1027,6 +1070,52 @@ object IncludePrimitive extends Primitive:
     catch
       case e: Exception =>
         proc.handler.error(s"Cannot include file '$path': ${e.getMessage}", pos)
+
+/** `\use{name}` — import a texish module: locate `name.texish`, load it once with output suppressed (so the file's
+  * prose and blank lines emit nothing — only its definitions take effect), and skip a repeat `\use` of the same
+  * file. This is the module loader; `\include` remains the raw input that re-reads and typesets a literal path.
+  *
+  * Resolution searches, in order: the directory of the file doing the `\use`, the current directory, the `packages`
+  * folder under `$TEXISHHOME` if that environment variable is set, and a `./packages/` folder under the current
+  * directory. The first existing file wins, so a local module shadows a standard one. The search roots are an
+  * ordered list, so more roots can be added later without changing the ones already in effect.
+  */
+object UsePrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val nameTokens = proc.readArgument(pos)
+    val name = nameTokens.map {
+      case Token.Text(s, _)  => s
+      case Token.Space(s, _) => s
+      case _                 => ""
+    }.mkString.trim
+
+    if name.isEmpty then proc.handler.error("\\use requires a module name", pos)
+
+    val fileName = if name.endsWith(".texish") then name else s"$name.texish"
+
+    val roots: List[Path] =
+      List(
+        Some(Path(proc.currentDir)),
+        Some(Path(".")),
+        sys.env.get("TEXISHHOME").filter(_.nonEmpty).map(h => Path(h) / "packages"),
+        Some(Path(".") / "packages"),
+      ).flatten
+
+    roots.map(_ / fileName).find(p => p.exists && p.isFile) match
+      case None =>
+        proc.handler.error(
+          s"\\use: module '$name' not found (searched: ${roots.map(r => (r / fileName).toString).mkString(", ")})",
+          pos,
+        )
+      case Some(file) =>
+        val resolved  = file.toAbsolutePath.normalize
+        val canonical = resolved.toPlatformString
+        if proc.claimModule(canonical) then
+          val dir = resolved.parent.map(_.toPlatformString).getOrElse(".")
+          try proc.loadModule(file.readText(), dir)
+          catch
+            case e: ParserException => throw e
+            case e: Exception       => proc.handler.error(s"\\use: cannot load module '$name': ${e.getMessage}", pos)
 
 // ============ ARITHMETIC ============
 

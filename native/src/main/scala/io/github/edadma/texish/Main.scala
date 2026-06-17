@@ -93,31 +93,36 @@ private def render(config: Config): Unit =
 
   val base = defaultOutputBase(config.input, config.output)
 
+  // Resolve \use packages relative to the document's own directory (and the directories of modules it loads).
+  val baseDir =
+    config.input.flatMap(p => Option(new java.io.File(p).getAbsoluteFile.getParent)).getOrElse(".")
+
   config.typ match
-    case "pdf" => renderPdf(source, ensureExtension(base, "pdf"), config.paper)
-    case "png" => renderPng(source, base, config.paper, config.resolution)
+    case "pdf" => renderPdf(source, ensureExtension(base, "pdf"), config.paper, baseDir)
+    case "png" => renderPng(source, base, config.paper, config.resolution, baseDir)
 
 /** Build a typesetter, feed it the document, and flush it. The engine ships only primitives; higher-level
   * macros (logos, sectioning, lists, …) come from a format the document includes itself. */
-private def typeset(t: Typesetter, source: String): Unit =
+private def typeset(t: Typesetter, source: String, baseDir: String = "."): Unit =
   val handler = new TypesetterHandler(t)
   val proc    = new Processor(handler)
 
   registerTypesettingPrimitives(proc, handler)
+  proc.setBaseDir(baseDir)
   proc.process(source)
   t.end()
 
-private[texish] def renderPdf(source: String, output: String, paper: String): Unit =
+private[texish] def renderPdf(source: String, output: String, paper: String, baseDir: String = "."): Unit =
   val t      = new CairoPDFTypesetter(output)
   val (w, h) = paperDimensions(paper, t)
 
   t.set("paperwidth", w)
   t.set("paperheight", h)
-  typeset(t, source)
+  typeset(t, source, baseDir)
   t.destroy()
   println(s"wrote $output")
 
-private[texish] def renderPng(source: String, base: String, paper: String, resolution: String): Unit =
+private[texish] def renderPng(source: String, base: String, paper: String, resolution: String, baseDir: String = "."): Unit =
   val dpi =
     resolution match
       case "sd"  => 96.0
@@ -129,7 +134,7 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
 
   t.set("paperwidth", w)
   t.set("paperheight", h)
-  typeset(t, source)
+  typeset(t, source, baseDir)
 
   // each shipped page is its own ARGB32 surface; write one PNG per page
   val pages = t.getDocument.printedPages

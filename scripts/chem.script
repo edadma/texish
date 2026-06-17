@@ -59,7 +59,7 @@
   \at anchor:center {\c}{\l}
 }
 
-\include scripts/logos.script
+\use{logos}
 
 \def headline {\italic{chem} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}

@@ -7,7 +7,7 @@
 // Coordinates may be computed — a bare variable \x is its value, and arithmetic
 // like \*{\x}{14} or \forloop.index works, so plots are built in a \for loop.
 
-\include scripts/logos.script
+\use{logos}
 
 \def headline {\italic{Picture demo} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}

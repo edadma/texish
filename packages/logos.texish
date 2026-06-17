@@ -1,7 +1,7 @@
 // logos — the TeX-family logos as macros over the engine's box primitives, for any
-// document that wants them. \include this file:
+// document that wants them. Import this module with:
 //
-//     \include scripts/logos.script
+//     \use{logos}
 //
 // The engine ships only primitives; logos are document-language, like any other
 // format-level macro. \LaTeX sets the small A in a \vbox whose height is a measured

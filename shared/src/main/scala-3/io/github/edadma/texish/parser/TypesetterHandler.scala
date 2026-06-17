@@ -90,6 +90,8 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
 
+  override def outputSuppressed: Boolean = suppressed
+
   override def fontUnit(unit: String): Option[Double] =
     val font = typesetter.currentFont
 
