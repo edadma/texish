@@ -532,6 +532,23 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // texttt - 1 body arg: set its content in the monospaced face (JetBrains Mono) at the current size, for
+  // inline code, file names, URLs and the like. The switch is scoped, so the surrounding text resumes in the
+  // body font afterwards; the interword space is widened to the mono font's fixed space for the duration.
+  proc.registerPrimitive(
+    "texttt",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.enter()
+        val font = t.typeface("mono")
+        t.set("spaceskip", Glue(font.space, 1))
+        t.set("xspaceskip", Glue(font.space * 1.5, 1))
+        proc.processTokenList(body)
+        t.exit()
+    },
+  )
+
   // underline - 1 body arg (wraps content in underline)
   proc.registerPrimitive(
     "underline",
