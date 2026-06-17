@@ -241,6 +241,46 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // href {uri} {text} - a hyperlink: typeset the display text (blue, like hyperref's coloured links) and wrap
+  // it so that, in PDF output, the drawn region becomes a clickable annotation pointing at uri. The uri is read
+  // verbatim — it may contain // (otherwise a comment), ~, % and other specials — while the text is ordinary
+  // markup. On a backend without annotations the text just draws blue.
+  proc.registerPrimitive(
+    "href",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val uri  = proc.readRawArgument(pos)
+        val body = proc.readArgument(pos)
+        t.hbox(null)
+        t.enter()
+        t.currentColor = Color("blue")
+        proc.processTokenList(body)
+        t.exit()
+        val box = t.mode.exit
+        if box ne null then handler.addBox(new LinkBox(box, uri))
+    },
+  )
+
+  // url {uri} - typeset the URL itself, in the monospaced face and blue, as a link to itself. The argument is
+  // read verbatim and set literally (no ligatures, no re-tokenizing), so the address appears exactly as written.
+  proc.registerPrimitive(
+    "url",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val uri = proc.readRawArgument(pos)
+        t.hbox(null)
+        t.enter()
+        val font = t.typeface("mono")
+        t.set("spaceskip", Glue(font.space, 1))
+        t.set("xspaceskip", Glue(font.space * 1.5, 1))
+        t.currentColor = Color("blue")
+        t.add(t.charBox(uri))
+        t.exit()
+        val box = t.mode.exit
+        if box ne null then handler.addBox(new LinkBox(box, uri))
+    },
+  )
+
   // color name - set the pen colour for the text, rules and glyphs that follow in the current group; the colour
   // reverts at the group's close, exactly as \font does (both are saved on enter and restored on exit). The name
   // is a CSS colour word (blue, darkred, …) or a #RRGGBB hex code.

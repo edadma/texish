@@ -142,6 +142,12 @@ abstract class Typesetter:
   // Paint the image with its top-left at (x, y), scaled from its source pixels to fill w × h points.
   def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit
 
+  // Hyperlink seam: a LinkBox brackets the drawing of its content with these so a backend that supports
+  // annotations (the PDF output) can mark the drawn region as a link to `uri`. The default is a no-op, so
+  // raster and headless backends simply draw the content with no annotation.
+  def beginLink(uri: String): Unit = ()
+  def endLink(): Unit              = ()
+
   // Picture-graphics seam — the path/transform/clip vocabulary a PictureBox replays to draw vector graphics
   // (paths, shapes, fills and strokes, placed labels) in a y-up coordinate system. It is separate from the
   // immediate drawLine/fillRect calls above: those draw one primitive in device space, whereas these build a

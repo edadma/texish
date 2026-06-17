@@ -292,6 +292,18 @@ class Processor(val handler: Handler):
         Some(out.result())
       case _ => None
 
+  /** Read a brace-delimited argument verbatim — the literal characters, with no comment, escape, active-char or
+    * macro processing. For URL-like arguments that must survive `//` (otherwise a comment) and other specials.
+    * Works only over live top-level input; inside a macro expansion the text was already tokenized, so this
+    * errors rather than returning a corrupted string. */
+  def readRawArgument(pos: CharReader): String =
+    skipSpaces()
+    if !hasMoreTokens then handler.error("Unexpected end of input while reading a verbatim argument", pos)
+    tokenSources.top.readRawGroup() match
+      case Some(s) => s
+      case None =>
+        handler.error("expected a verbatim {…} argument (a URL must be given directly, not through a macro)", pos)
+
   /** Read a single macro argument (brace-delimited or single token) */
   def readArgument(pos: CharReader): Vector[Token] =
     skipSpaces()
@@ -712,11 +724,15 @@ trait TokenSource:
   def peek: Token
   def next(): Token
   def atEnd: Boolean
+  // Verbatim read of a brace group, available only over live (untokenized) input — see Tokenizer.readRawGroup.
+  // A pre-tokenized list cannot offer it: its text was already tokenized, so any // is long gone.
+  def readRawGroup(): Option[String] = None
 
 class TokenizerSource(tokenizer: Tokenizer) extends TokenSource:
   def peek: Token = tokenizer.peek
   def next(): Token = tokenizer.next()
   def atEnd: Boolean = tokenizer.atEnd
+  override def readRawGroup(): Option[String] = tokenizer.readRawGroup()
 
 class TokenListSource(tokens: Vector[Token]) extends TokenSource:
   private var index = 0

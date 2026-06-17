@@ -36,6 +36,30 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
     case Token.EOF(_) => true
     case _            => false
 
+  /** Read a brace-delimited group verbatim, with no tokenization: comments, escapes and active characters are
+    * all taken literally, nested braces are balanced, and the raw characters between the outer braces are
+    * returned. The next thing must be a `{` — a peeked `{` is honoured, otherwise the next input character must
+    * be one. Returns None if there is no opening brace, or if the input ends before the group closes. This is
+    * how a URL (which contains `//`, otherwise a comment) is read intact. */
+  def readRawGroup(): Option[String] =
+    pendingToken match
+      case Some(Token.BeginGroup(_)) => pendingToken = None
+      case Some(_)                   => return None
+      case None =>
+        if reader.eoi || reader.ch != '{' then return None
+        reader = reader.next
+
+    val sb    = new StringBuilder
+    var depth = 1
+    while depth > 0 && !reader.eoi do
+      reader.ch match
+        case '{' => depth += 1; sb.append('{')
+        case '}' => depth -= 1; if depth > 0 then sb.append('}')
+        case c   => sb.append(c)
+      reader = reader.next
+
+    if depth == 0 then Some(sb.toString) else None
+
   private def readToken(): Token =
     skipComments()
     if reader.eoi then Token.EOF(reader)
