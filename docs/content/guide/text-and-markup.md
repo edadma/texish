@@ -10,7 +10,7 @@ so they fire in ordinary running text:
 
 | You type | You get |
 |----------|---------|
-| `` ``…'' `` | "curly double quotes" |
+| ``` ``…'' ``` | "curly double quotes" |
 | `` `…' `` | 'curly single quotes' |
 | `--` | en&#8211;dash |
 | `---` | em&#8212;dash |
