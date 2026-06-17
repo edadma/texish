@@ -1,6 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
+import io.github.edadma.path.Path
 import io.github.edadma.texish.*
 
 /** Register the standard typesetting primitives (\newpage, \hbox, \font, \bold, ...) with a processor.
@@ -221,7 +222,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val arg = evalArg(proc, pos)
         arg match
-          case Value.Text(path) => t.image(path)
+          case Value.Text(path) => t.image(resolveImagePath(proc, path))
           case _                => handler.error("\\image expects a path", pos)
     },
   )
@@ -236,7 +237,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val (width, height, scale) = parseGraphicsOptions(proc, t, proc.readOptionalArg(pos), pos)
         evalArg(proc, pos) match
-          case Value.Text(path) => t.image(path, width, height, scale)
+          case Value.Text(path) => t.image(resolveImagePath(proc, path), width, height, scale)
           case _                => handler.error("\\includegraphics expects a path", pos)
     },
   )
@@ -251,6 +252,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val uri  = proc.readRawArgument(pos)
         val body = proc.readArgument(pos)
+        handler.flushPendingSpace()
         t.hbox(null)
         t.enter()
         t.currentColor = Color("blue")
@@ -268,6 +270,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val uri = proc.readRawArgument(pos)
+        handler.flushPendingSpace()
         t.hbox(null)
         t.enter()
         val font = t.typeface("mono")
@@ -596,6 +599,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val body = proc.readArgument(pos)
         // Create an hbox to capture the content
+        handler.flushPendingSpace()
         t.hbox(null)
         proc.processTokenList(body) // scoping happens automatically from { } tokens
         val box = t.mode.exit
@@ -693,6 +697,13 @@ private[parser] def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
+
+// Resolve an image path the way \use resolves a module: an absolute path is used as given, a relative one is
+// taken relative to the directory of the document being processed, so \includegraphics{frog.jpg} finds the
+// image beside the source file rather than relative to the working directory.
+private[parser] def resolveImagePath(proc: Processor, path: String): String =
+  val p = Path(path)
+  if p.isAbsolute then path else (Path(proc.currentDir) / p).toString
 
 // Parse \includegraphics's optional [width=…,height=…,scale=…] list. The bracket tokens are flattened back to
 // their source text (a captured \linewidth survives as the literal "\linewidth"), split on commas into

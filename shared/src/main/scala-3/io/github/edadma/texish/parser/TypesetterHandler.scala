@@ -158,6 +158,17 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       typesetter add box
       newlineCount = 0
 
+  /** Emit a pending interword space (from a source newline before this point) into the current paragraph now.
+    * A primitive that builds a sub-box — \href, \url, \underline — pushes a fresh hbox mode and typesets its
+    * body into it; the body text would otherwise clear the pending-newline state in the wrong mode, so the
+    * space before the box is dropped. Calling this while still in the paragraph (before the hbox is pushed)
+    * flushes that space first. With no space pending it is a no-op. */
+  def flushPendingSpace(): Unit =
+    if !suppressed then
+      if newlineCount == 1 && (typesetter.mode eq pendingNewlineMode) then typesetter add " "
+      newlineCount = 0
+      pendingNewlineMode = null
+
   /** Output a numeric value as text */
   def outputNumber(d: Double): Unit =
     val s = if d % 1 == 0 then d.toInt.toString else d.toString

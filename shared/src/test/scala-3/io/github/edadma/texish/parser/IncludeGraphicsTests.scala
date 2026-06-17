@@ -81,6 +81,20 @@ class IncludeGraphicsTests extends AnyFreeSpec with Matchers:
     img.width shouldBe 468.0
   }
 
+  "a relative image path resolves against the document's directory" in {
+    val t       = new HeadlessTypesetter
+    val proc    = new Processor(new TypesetterHandler(t))
+    proc.setBaseDir("docs/paper")
+    resolveImagePath(proc, "frog.jpg") shouldBe "docs/paper/frog.jpg"
+  }
+
+  "an absolute image path is used unchanged" in {
+    val t    = new HeadlessTypesetter
+    val proc = new Processor(new TypesetterHandler(t))
+    proc.setBaseDir("docs/paper")
+    resolveImagePath(proc, "/assets/frog.jpg") shouldBe "/assets/frog.jpg"
+  }
+
   "an unknown option is an error" in {
     val (_, _, proc) = fixture()
     intercept[ParserException](proc.process("\\includegraphics[depth=2pt]{frog.png}"))

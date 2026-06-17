@@ -48,6 +48,12 @@ class LinkTests extends AnyFreeSpec with Matchers:
     case v: VBox    => v.boxes.toList.flatMap(chars)
     case _          => Nil
 
+  /** Flatten a box to its leaf sequence, descending HBoxes and VBoxes but treating a LinkBox as one leaf. */
+  private def flatten(b: Box): List[Box] = b match
+    case h: HBox => h.boxes.toList.flatMap(flatten)
+    case v: VBox => v.boxes.toList.flatMap(flatten)
+    case other   => List(other)
+
   private def firstLink(src: String): LinkBox = render(new RecordingTypesetter, src).flatMap(links).head
 
   "\\href wraps its display text in a LinkBox carrying the URL, with the // intact" in {
@@ -78,6 +84,16 @@ class LinkTests extends AnyFreeSpec with Matchers:
     link.width shouldBe link.box.width
     link.ascent shouldBe link.box.ascent
     link.descent shouldBe link.box.descent
+  }
+
+  "a source newline before a link keeps the interword space before it" in {
+    // the word and the \href sit on consecutive source lines; the deferred newline-space must survive the
+    // hbox the link builds, so the box just before the LinkBox in the line is an interword space
+    val line = render(new RecordingTypesetter, "word\n\\href{https://example.org}{link} end")
+      .flatMap(flatten)
+    val li = line.indexWhere(_.isInstanceOf[LinkBox])
+    li should be > 0
+    line(li - 1).isSpace shouldBe true
   }
 
   "drawing a LinkBox brackets the body's drawing with the link markers" in {
