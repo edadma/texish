@@ -273,7 +273,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         handler.flushPendingSpace()
         t.hbox(null)
         t.enter()
-        val font = t.typeface("mono")
+        val font = selectMatchedMono(t)
         t.set("spaceskip", Glue(font.space, 1))
         t.set("xspaceskip", Glue(font.space * 1.5, 1))
         t.currentColor = Color("blue")
@@ -575,16 +575,17 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // texttt - 1 body arg: set its content in the monospaced face (JetBrains Mono) at the current size, for
-  // inline code, file names, URLs and the like. The switch is scoped, so the surrounding text resumes in the
-  // body font afterwards; the interword space is widened to the mono font's fixed space for the duration.
+  // texttt - 1 body arg: set its content in the monospaced face (JetBrains Mono), for inline code, file names,
+  // URLs and the like. The mono size is matched to the surrounding font by x-height (see selectMatchedMono), so
+  // the code does not loom larger than the body text. The switch is scoped, so the surrounding text resumes in
+  // the body font afterwards; the interword space is widened to the mono font's fixed space for the duration.
   proc.registerPrimitive(
     "texttt",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val body = proc.readArgument(pos)
         t.enter()
-        val font = t.typeface("mono")
+        val font = selectMatchedMono(t)
         t.set("spaceskip", Glue(font.space, 1))
         t.set("xspaceskip", Glue(font.space * 1.5, 1))
         proc.processTokenList(body)
@@ -704,6 +705,15 @@ private[parser] def points(v: Value): Option[Double] = v match
 private[parser] def resolveImagePath(proc: Processor, path: String): String =
   val p = Path(path)
   if p.isAbsolute then path else (Path(proc.currentDir) / p).toString
+
+// Select the monospaced face at a size whose x-height matches the surrounding font, and return it as the new
+// current font. A mono font set at the body's nominal point size looks oversized because its x-height is larger
+// per em; scaling by the x-height ratio makes inline code sit at the visual size of the text around it.
+private[parser] def selectMatchedMono(t: Typesetter): Font =
+  val base       = t.currentFont
+  val monoAtBase = t.makeFont("mono", base.size, Set.empty)
+  val scale      = if monoAtBase.xHeight > 0 then base.xHeight / monoAtBase.xHeight else 1.0
+  t.selectFont("mono", base.size * scale, Set.empty)
 
 // Parse \includegraphics's optional [width=…,height=…,scale=…] list. The bracket tokens are flattened back to
 // their source text (a captured \linewidth survives as the literal "\linewidth"), split on commas into
