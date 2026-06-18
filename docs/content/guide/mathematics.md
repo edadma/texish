@@ -71,6 +71,31 @@ $\bmatrix{ a & b \cr c & d }$      % brackets
 $\cases{ x & if positive \cr -x & otherwise }$
 ```
 
+## Arrows and relations
+
+Alongside `\to` / `\rightarrow` and the basic arrows, the long arrows and the equilibrium
+harpoon are available as relations:
+
+```
+$\longrightarrow$   $\longleftarrow$   $\longleftrightarrow$   $\longmapsto$
+$\rightharpoonup$   $\rightleftharpoons$
+```
+
+## Spacing
+
+The TeX math-space commands insert a rigid space scaled to the font (a mu is 1/18 em):
+
+| Command | Width |
+|---------|-------|
+| `\,` | thin (3 mu) |
+| `\:` | medium (4 mu) |
+| `\;` | thick (5 mu) |
+| `\!` | negative thin (−3 mu) |
+
+```
+$f(x)\,dx$        $a\;b$        $\int\!f$
+```
+
 ## Displayed equations with numbers
 
 `\eqno` sets an equation number flush right on a display line.

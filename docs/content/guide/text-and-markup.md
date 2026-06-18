@@ -37,6 +37,17 @@ The file \texttt{document.texish} defines \texttt{\\maketitle}.
 Because the mono face is cut to sit with the roman body, the code matches the text around
 it rather than looming over it.
 
+## Subscripts and superscripts
+
+`\textsub` and `\textsup` set a subscript or superscript in running text, sized from the
+current font (so they scale with the body):
+
+```
+H\textsub{2}O          the 1\textsup{st}          x\textsup{2}
+```
+
+(The `chem` package's `\dn` / `\up` are these under chemistry-friendly names.)
+
 ## Colour
 
 `\color` sets the pen for the rest of the current group; `\textcolor` colours just its

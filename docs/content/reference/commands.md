@@ -25,10 +25,12 @@ are engine primitives available in any document.
 |---------|--------|
 | `\emph{…}` `\textit{…}` `\textbf{…}` | italic, italic, bold |
 | `\texttt{…}` | monospaced (Latin Modern Mono) |
+| `\textsub{…}` `\textsup{…}` | text subscript / superscript |
 | `\color{name}` `\textcolor{name}{…}` | pen colour (CSS name or `#RRGGBB`) |
 | `\href{url}{text}` `\url{url}` | clickable links (real PDF annotations) |
 | `\TeX` `\LaTeX` `\TeXish` | the logos |
 | `` ``…'' `` `--` `---` `...` `~` | quotes, dashes, ellipsis, tie |
+| `\$` | a literal dollar sign |
 
 ## Mathematics
 
@@ -42,6 +44,8 @@ are engine primitives available in any document.
 | `\left( … \right)` | stretchy delimiters |
 | `\hat` `\vec` `\widehat` | accents |
 | `\text{…}` `\mathcal{…}` | upright / calligraphic |
+| `\longrightarrow` `\rightleftharpoons` | long / equilibrium arrows |
+| `\,` `\:` `\;` `\!` | thin / medium / thick / negative-thin space |
 | `\matrix` `\pmatrix` `\bmatrix` `\cases` | matrices |
 | `\eqno(…)` | display equation number |
 
@@ -64,6 +68,15 @@ are engine primitives available in any document.
 |---------|--------|
 | `\includegraphics[width=,height=,scale=]{path}` | place a PNG or JPEG |
 | `\picture width:… height:… {…}` | open a vector-graphics drawing |
+
+## Chemistry *(`\use{chem}`)*
+
+| Command | Effect |
+|---------|--------|
+| `\ce{CH4 + 2 O2 -> CO2 + 2 H2O}` | a reaction equation (mhchem-style) |
+| `\dn{n}` `\up{n}` | formula subscript / superscript |
+| `\atom{name}{x y}{label}` | place and label an atom |
+| `\bond` `\dbond` `\tbond` | single / double / triple bond |
 
 ## Macros and programming
 

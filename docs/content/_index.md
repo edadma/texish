@@ -33,7 +33,7 @@ coherent family across prose, equations, and code.
 
 - **[Getting Started](/getting-started/)** — install texish and render your first document.
 - **[Guide](/guide/)** — the document format, text and markup, mathematics, figures and
-  images, and the inline vector-graphics mode.
+  images, the inline vector-graphics mode, and chemistry.
 - **[Reference](/reference/)** — the command-line tool and a command cheat sheet.
 
 ## What it does
