@@ -7,20 +7,20 @@
 
 \section{Reaction equations}
 
-Written in compact, mhchem-style notation with \texttt{\\ce}, a reaction is parsed
-and set in math mode — element symbols upright, atom counts as subscripts,
-coefficients at full size, and the operators and arrows as math symbols. The
-combustion of methane is \texttt{\\ce\{CH4 + 2 O2 -> CO2 + 2 H2O\}}:
+Like mhchem, \texttt{\\ce} sets a reaction inline, flowing in the running text:
+asdf \ce{CO2 + 2H2O -> CH4 + 2O2} qwer. The notation is compact and mhchem-style
+— element symbols come out upright, atom counts as subscripts, a leading number as
+a stoichiometric coefficient (with a thin space before its species), \texttt{+} as
+a binary operator, and \texttt{->} / \texttt{<=>} as the math arrows.
+
+Methane burns: \ce{CH4 + 2 O2 -> CO2 + 2 H2O}. The Haber process is reversible,
+\ce{N2 + 3 H2 <=> 2 NH3}, and it all sits in the sentence at the text size.
+
+To show a reaction on its own centred line, put it in \texttt{\\centerline} at a
+larger size:
 
 \bigskip
 \centerline{\font lmroman 14 regular \ce{CH4 + 2 O2 -> CO2 + 2 H2O}}
-\bigskip
-
-\noindent The Haber process is reversible, with the equilibrium arrow
-\texttt{<=>}:
-
-\bigskip
-\centerline{\font lmroman 14 regular \ce{N2 + 3 H2 <=> 2 NH3}}
 \bigskip
 
 \vfill\eject

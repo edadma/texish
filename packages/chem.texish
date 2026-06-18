@@ -121,7 +121,7 @@
     \if {\maphas cedigits {\cwc}}
       \global\set cedr {}
       \ceDigits{\s}
-      \if {\= {\start} {1}} \cedr \else _{\cedr} \fi
+      \if {\= {\start} {1}} \cedr\, \else _{\cedr} \fi
       \ceWalk{\cerest}{0}
     \else
       \text{\cwc}

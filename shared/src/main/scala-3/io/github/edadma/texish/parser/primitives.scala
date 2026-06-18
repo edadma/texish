@@ -508,6 +508,19 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // The TeX math-spacing commands: \, thin (3mu), \: medium (4mu), \; thick (5mu), \! negative thin (-3mu).
+  // A mu is 1/18 em and em is the current font size, so these scale with the font. Rigid horizontal spaces that
+  // work in math or text — the manual spaces you reach for between a coefficient and a species, around an
+  // operator, and so on.
+  def mathSpace(mu: Double): Primitive =
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit = t.add(HSpaceBox(t.currentFont.size * mu / 18))
+    }
+  proc.registerPrimitive(",", mathSpace(3))
+  proc.registerPrimitive(":", mathSpace(4))
+  proc.registerPrimitive(";", mathSpace(5))
+  proc.registerPrimitive("!", mathSpace(-3))
+
   // lower / raise - shift the following box (an \hbox or \vbox) down / up by a dimension, e.g.
   // \lower.5ex\hbox{E}. The box keeps its own width and height; only where it draws moves.
   proc.registerPrimitive(
