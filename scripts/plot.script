@@ -150,5 +150,45 @@ holds each value until the next x, for piecewise-constant or cumulative data.
 }
 \set plotvalues {0}
 
+\eject
+
+\bold{Error bars and a trend line}
+
+\italic{\\errorbars} draws a capped whisker of $y \pm$ error at each point, and
+\italic{\\trendline} fits the least-squares line through the data and draws it dashed.
+
+\xrange{0}{10}
+\yrange{0}{60}
+\xlabel{dose}
+\ylabel{response}
+\plottitle{Measured response}
+\plot{
+  \scatter[steelblue][mean]{1 8  3 17  5 24  7 39  9 47}
+  \errorbars[steelblue]{1 8 3  3 17 5  5 24 4  7 39 6  9 47 5}
+  \trendline[firebrick][fit]{1 8  3 17  5 24  7 39  9 47}
+  \legend[se]
+}
+
+\bold{Minor ticks and tick-label formatting}
+
+\italic{plotxminor} / \italic{plotyminor} add minor ticks and grid lines between the
+majors, and \italic{\\xtickformat} / \italic{\\ytickformat} wrap the tick numbers — here
+a \italic{\\\$} prefix on y and a \italic{\\\%} suffix on x.
+
+\xrange{0}{100}
+\yrange{0}{50}
+\xlabel{utilisation}
+\ylabel{cost}
+\plottitle{Formatted axes}
+\set plotxminor {2}
+\set plotyminor {5}
+\xtickformat{}{\%}
+\ytickformat{\$}{}
+\plot{
+  \lineplot[seagreen]{0 5  20 9  40 16  60 25  80 38  100 47}
+}
+\set plotxminor {0}
+\set plotyminor {0}
+
 Each figure above is a single box that flows in the text like any other, so a plot can
 sit inline with prose, in a figure float, or beside a table.

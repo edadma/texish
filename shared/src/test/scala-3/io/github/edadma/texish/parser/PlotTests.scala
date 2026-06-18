@@ -142,3 +142,32 @@ class PlotTests extends AnyFreeSpec with Matchers:
   "bar value labels render without error when enabled" in {
     noException should be thrownBy run(s"$preamble \\set plotvalues {1} \\plot{ \\bars[teal]{1 50  2 80} }")
   }
+
+  "error bars draw a capped whisker at each point" in {
+    val ops    = run(s"$preamble \\plot{ \\errorbars[black]{5 50 10} }")
+    val moveXs = ops.collect { case PictureOp.MoveTo(x, _) => x }
+    moveXs should contain(163.0) // whisker at x=5 -> device 163
+    moveXs should contain(160.0) // a cap starts at 163 - ploterrcap(3)
+  }
+
+  "a trend line fits the least-squares slope and intercept" in {
+    // y = 5x exactly: slope 5, intercept 0; the fit line (0,0)->(10,50) maps to (46,42)-(280,123)
+    val ops = run(s"$preamble \\plot{ \\trendline[black]{0 0  1 5  2 10  3 15} }")
+    ops should contain(PictureOp.MoveTo(46, 42))
+    ops should contain(PictureOp.LineTo(280, 123))
+  }
+
+  "minor ticks add shorter marks between the majors" in {
+    // minor y tick length = plotticklen*0.6 = 2.4, so a minor y tick ends at x = 46 - 2.4 = 43.6
+    val ops = run(s"$preamble \\set plotyminor {2} \\plot{ \\lineplot[black]{0 0  10 100} }")
+    ops.collect { case PictureOp.LineTo(x, _) => x } should contain(43.6)
+  }
+
+  "without minor subdivisions there are no minor ticks" in {
+    val ops = run(s"$preamble \\plot{ \\lineplot[black]{0 0  10 100} }")
+    ops.collect { case PictureOp.LineTo(x, _) => x } should not contain 43.6
+  }
+
+  "tick-label formatting renders without error" in {
+    noException should be thrownBy run(s"$preamble \\ytickformat{}{k} \\plot{ \\lineplot[black]{0 0  10 100} }")
+  }

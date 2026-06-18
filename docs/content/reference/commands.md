@@ -87,6 +87,7 @@ are engine primitives available in any document.
 | `\xcategories{A B C …}` | name the x ticks instead of numbering them |
 | `\xlabel{…}` `\ylabel{…}` `\plottitle{…}` | axis labels and title |
 | `\xstep{s}` `\ystep{s}` | force a tick step (default: a *nice* step) |
+| `\xtickformat{pre}{suf}` `\ytickformat{pre}{suf}` | wrap numeric tick labels (e.g. `\$`, `\%`) |
 | `\plot{ … }` | draw the axes, ticks, grid, and labels, then the body's series |
 | `\lineplot[colour][label]{x y x y …}` | a polyline through the data points |
 | `\scatter[colour][label]{x y x y …}` | a marker at each point (shape from `plotmarkshape`) |
@@ -94,6 +95,8 @@ are engine primitives available in any document.
 | `\areaplot[colour][label]{x y x y …}` | the band under the curve, filled to the baseline |
 | `\stepplot[colour][label]{x y x y …}` | a staircase holding each value to the next x |
 | `\fnplot[colour][label]{expr in x}` | a sampled curve of a function |
+| `\errorbars[colour][label]{x y err …}` | a capped y ± err whisker at each point |
+| `\trendline[colour][label]{x y x y …}` | the least-squares line of best fit |
 | `\hline[colour]{y}` `\vline[colour]{x}` | a dashed reference line at a data value |
 | `\legend[ne\|nw\|se\|sw]` | draw a key for the labelled series |
 

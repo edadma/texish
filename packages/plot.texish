@@ -57,6 +57,7 @@
 
 \set plotaxiscolor {dimgray}
 \set plotgridcolor {gainsboro}
+\set plotgridcolorminor {whitesmoke}   // minor grid lines, lighter than the major grid
 \set plotreflcolor {gray}   // default colour for \hline / \vline reference lines
 \set plottickfontsize {8}
 \set plotlabelfontsize {9}
@@ -69,6 +70,11 @@
 \set plotclip {1}           // clip series drawing to the data area
 \set plotvalues {0}         // print each bar's value above it (\bars)
 \set plotXcat {0}           // 1 when \xcategories has set a categorical x axis
+
+\set ploterrcap {3}         // half-width of an error-bar cap, in points
+\set plotxminor {0}         // minor x subdivisions per major interval (0 = none)
+\set plotyminor {0}         // minor y subdivisions per major interval (0 = none)
+\set plotminorgrid {1}      // draw minor grid lines when minor subdivisions are on
 
 // ---- Colour palette ------------------------------------------------------------
 // Series with colour `auto` draw their colour from this palette in turn, cycling if
@@ -99,6 +105,16 @@
 \def xlabel t {\def plotxlabtext {\t}}
 \def ylabel t {\def plotylabtext {\t}}
 \def plottitle t {\def plottitletext {\t}}
+
+// Tick-label affixes: \xtickformat{prefix}{suffix} wraps every numeric x tick label, so
+// $ before or % / k after a value reads naturally (e.g. $1.5M, 50%). The y axis has its
+// own \ytickformat. Stored as macros so they typeset inline where a label is built.
+\def plotxpre {}
+\def plotxsuf {}
+\def plotypre {}
+\def plotysuf {}
+\def xtickformat pre suf {\def plotxpre {\pre}\def plotxsuf {\suf}}
+\def ytickformat pre suf {\def plotypre {\pre}\def plotysuf {\suf}}
 
 // \xcategories{Jan Feb Mar …} — label the x axis with names instead of numbers. The
 // categories sit at x = 1, 2, 3, …, and the x range is set to enclose them, so a series
@@ -231,6 +247,7 @@
     \plotDrawZeroAxis
     \if {\= {\plotXcat} {1}} \plotDrawXCatTicks \else \plotDrawXTicks \fi
     \plotDrawYTicks
+    \plotDrawMinorTicks
     \plotDrawLabels
     // The series body is clipped to the data area (unless plotclip is 0) so a curve or
     // marker that runs past the range does not spill into the margins.
@@ -254,11 +271,16 @@
   \gdef plotxlabtext {}
   \gdef plotylabtext {}
   \gdef plottitletext {}
+  \gdef plotxpre {}
+  \gdef plotxsuf {}
+  \gdef plotypre {}
+  \gdef plotysuf {}
 }}
 
 // The grid: faint lines at every tick position, drawn first so the data sits over
 // them. plotNX / plotNY are the number of whole steps that fit in each range.
 \def plotDrawGrid {
+  \plotMinorGrid
   \nofill \stroke{\plotgridcolor} \linewidth{0.5pt}
   // Vertical grid lines align with the numeric x ticks; a categorical axis has no even
   // step, so it gets horizontal grid lines only.
@@ -275,6 +297,60 @@
     \line{\plotOx \gy  \calc{plotOx + plotW} \gy}
   }
 }
+
+// Minor grid lines: between the major ticks, at every plotxminor / plotyminor-th of a
+// major step, skipping the positions that coincide with a major (a multiple of the
+// subdivision count). Drawn before the major grid so the lighter lines sit behind it.
+\def plotMinorGrid {
+  \if {\= {\plotminorgrid} {1}}
+    \nofill \stroke{\plotgridcolorminor} \linewidth{0.4pt}
+    \if {\= {\plotXcat} {0}} \if {\> {\plotxminor} {0}}
+      \set xmStep {\calc{plotXstep / plotxminor}}
+      \set xmN {\calc{floor((plotXmax - plotXmin) / xmStep + 0.0001)}}
+      \for\mm{\range{0}{\xmN}}{
+        \if {\> {\calc{\mm % plotxminor}} {0}}
+          \set xmx {\calc{plotOx + (\mm * xmStep) * plotSx}}
+          \line{\xmx \plotOy  \xmx \calc{plotOy + plotH}}
+        \fi
+      }
+    \fi \fi
+    \if {\> {\plotyminor} {0}}
+      \set ymStep {\calc{plotYstep / plotyminor}}
+      \set ymN {\calc{floor((plotYmax - plotYmin) / ymStep + 0.0001)}}
+      \for\mm{\range{0}{\ymN}}{
+        \if {\> {\calc{\mm % plotyminor}} {0}}
+          \set ymy {\calc{plotOy + (\mm * ymStep) * plotSy}}
+          \line{\plotOx \ymy  \calc{plotOx + plotW} \ymy}
+        \fi
+      }
+    \fi
+  \fi}
+
+// Minor tick marks: short ticks at the same positions as the minor grid, drawn after the
+// major ticks. Independent of the grid, so they appear even with plotgrid 0.
+\def plotDrawMinorTicks {
+  \nofill \stroke{\plotaxiscolor} \linewidth{0.6pt}
+  \set mtLen {\calc{plotticklen * 0.6}}
+  \if {\= {\plotXcat} {0}} \if {\> {\plotxminor} {0}}
+    \set xmStep {\calc{plotXstep / plotxminor}}
+    \set xmN {\calc{floor((plotXmax - plotXmin) / xmStep + 0.0001)}}
+    \for\mm{\range{0}{\xmN}}{
+      \if {\> {\calc{\mm % plotxminor}} {0}}
+        \set xmx {\calc{plotOx + (\mm * xmStep) * plotSx}}
+        \line{\xmx \plotOy  \xmx \calc{plotOy - mtLen}}
+      \fi
+    }
+  \fi \fi
+  \if {\> {\plotyminor} {0}}
+    \set ymStep {\calc{plotYstep / plotyminor}}
+    \set ymN {\calc{floor((plotYmax - plotYmin) / ymStep + 0.0001)}}
+    \for\mm{\range{0}{\ymN}}{
+      \if {\> {\calc{\mm % plotyminor}} {0}}
+        \set ymy {\calc{plotOy + (\mm * ymStep) * plotSy}}
+        \line{\plotOx \ymy  \calc{plotOx - mtLen} \ymy}
+      \fi
+    }
+  \fi}
 
 // The two axes: the x axis along the bottom of the area, the y axis up its left.
 \def plotDrawAxes {
@@ -307,7 +383,7 @@
     \set tickv {\calc{plotXmin + \i * plotXstep}}
     \set tickx {\calc{plotOx + (tickv - plotXmin) * plotSx}}
     \line{\tickx \plotOy  \tickx \calc{plotOy - plotticklen}}
-    \at anchor:north {\tickx \calc{plotOy - plotticklen - 2}}{{\font {lmroman} {\plottickfontsize} {regular}\round{\tickv}{\plottickdec}}}
+    \at anchor:north {\tickx \calc{plotOy - plotticklen - 2}}{{\font {lmroman} {\plottickfontsize} {regular}\plotxpre\round{\tickv}{\plottickdec}\plotxsuf}}
   }
 }
 
@@ -331,7 +407,7 @@
     \set tickv {\calc{plotYmin + \j * plotYstep}}
     \set ticky {\calc{plotOy + (tickv - plotYmin) * plotSy}}
     \line{\plotOx \ticky  \calc{plotOx - plotticklen} \ticky}
-    \at anchor:east {\calc{plotOx - plotticklen - 3} \ticky}{{\font {lmroman} {\plottickfontsize} {regular}\round{\tickv}{\plottickdec}}}
+    \at anchor:east {\calc{plotOx - plotticklen - 3} \ticky}{{\font {lmroman} {\plottickfontsize} {regular}\plotypre\round{\tickv}{\plottickdec}\plotysuf}}
   }
 }
 
@@ -501,6 +577,58 @@
     }
   }
 }}
+
+// \errorbars[colour][label]{x y err  x y err  …} — a vertical whisker at each point
+// spanning y±err, with a short cap at each end. Usually drawn over a \scatter or
+// \lineplot of the same x y values.
+\def errorbars [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{line}{\plotCurColor}{\label}
+  \nofill \stroke{\plotCurColor} \linewidth{1pt} \linecap{butt}
+  \plotErr{\seq{\data}}
+}}
+\def plotErr items {
+  \if {\size{\items}}
+    \set ebx {\head{\items}}
+    \set eby {\head{\tail{\items}}}
+    \set eberr {\head{\tail{\tail{\items}}}}
+    \set ebcx {\calc{plotOx + (ebx - plotXmin) * plotSx}}
+    \set ebLo {\calc{plotOy + ((eby - eberr) - plotYmin) * plotSy}}
+    \set ebHi {\calc{plotOy + ((eby + eberr) - plotYmin) * plotSy}}
+    \line{\ebcx \ebLo  \ebcx \ebHi}
+    \line{\calc{ebcx - ploterrcap} \ebLo  \calc{ebcx + ploterrcap} \ebLo}
+    \line{\calc{ebcx - ploterrcap} \ebHi  \calc{ebcx + ploterrcap} \ebHi}
+    \plotErr{\tail{\tail{\tail{\items}}}}
+  \fi}
+
+// \trendline[colour][label]{x y x y …} — the least-squares line of best fit through the
+// data, drawn dashed across the x range. The fit accumulates n, Σx, Σy, Σxy, Σx² over the
+// points (a fold), then slope = (nΣxy − ΣxΣy) / (nΣx² − (Σx)²) and intercept = (Σy −
+// slope·Σx) / n. The clip keeps the line inside the data area.
+\def trendline [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{line}{\plotCurColor}{\label}
+  \global\set tlN {0} \global\set tlSx {0} \global\set tlSy {0} \global\set tlSxy {0} \global\set tlSxx {0}
+  \plotTrendFold{\seq{\data}}
+  \set tlSlope {\calc{(tlN * tlSxy - tlSx * tlSy) / (tlN * tlSxx - tlSx * tlSx)}}
+  \set tlInt {\calc{(tlSy - tlSlope * tlSx) / tlN}}
+  \set tlY0 {\calc{tlSlope * plotXmin + tlInt}}
+  \set tlY1 {\calc{tlSlope * plotXmax + tlInt}}
+  \nofill \stroke{\plotCurColor} \linewidth{1.4pt} \linetype{dashed}
+  \line{\px{plotXmin} \py{tlY0}  \px{plotXmax} \py{tlY1}}
+  \linetype{solid}
+}}
+\def plotTrendFold items {
+  \if {\size{\items}}
+    \set tfx {\head{\items}}
+    \set tfy {\head{\tail{\items}}}
+    \global\set tlN {\calc{tlN + 1}}
+    \global\set tlSx {\calc{tlSx + tfx}}
+    \global\set tlSy {\calc{tlSy + tfy}}
+    \global\set tlSxy {\calc{tlSxy + tfx * tfy}}
+    \global\set tlSxx {\calc{tlSxx + tfx * tfx}}
+    \plotTrendFold{\tail{\tail{\items}}}
+  \fi}
 
 // ---- Reference lines -----------------------------------------------------------
 // \hline[colour]{y} / \vline[colour]{x} draw a dashed line across the plot at a data

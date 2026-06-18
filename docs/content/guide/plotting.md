@@ -91,6 +91,8 @@ Every series takes two optional bracket arguments before its data — a **colour
 | `\areaplot[colour][label]{data}` | the band under the curve, filled to the baseline |
 | `\stepplot[colour][label]{data}` | a staircase that holds each value to the next x |
 | `\fnplot[colour][label]{expression}` | a sampled curve of a function of `x` |
+| `\errorbars[colour][label]{x y err …}` | a capped whisker of y ± err at each point |
+| `\trendline[colour][label]{data}` | the least-squares line of best fit, drawn dashed |
 
 Both brackets are optional. With no colour (or an empty `[]`), a series takes its colour
 from a palette in turn, so several series are automatically distinct:
@@ -119,6 +121,21 @@ value above it.
 By default the series body is clipped to the data area, so a curve or marker that runs
 past the range does not spill into the margins; set `plotclip` to `0` to allow overflow.
 
+## Error bars and trend lines
+
+`\errorbars` reads `x y err` triples and draws a capped vertical whisker spanning `y ± err`
+at each point — usually over a `\scatter` of the same points. `\trendline` fits the
+least-squares line through `x y` data and draws it dashed across the range:
+
+```
+\plot{
+  \scatter[steelblue][mean]{1 8  3 17  5 24  7 39  9 47}
+  \errorbars[steelblue]{1 8 3  3 17 5  5 24 4  7 39 6  9 47 5}
+  \trendline[firebrick][fit]{1 8  3 17  5 24  7 39  9 47}
+  \legend[se]
+}
+```
+
 ## The legend
 
 A series given a label records a legend entry. `\legend[pos]` draws the key — a colour
@@ -146,6 +163,23 @@ value — a threshold, a target, a mean. With no colour they use `plotreflcolor`
 }
 ```
 
+## Minor ticks and tick formatting
+
+`plotxminor` / `plotyminor` set the number of subdivisions per major interval; when
+positive, minor tick marks (and, with `plotminorgrid`, lighter grid lines) appear between
+the majors. `\xtickformat{prefix}{suffix}` and `\ytickformat{prefix}{suffix}` wrap each
+numeric tick label, so currency or units read naturally (a literal `$` is `\$`, a literal
+`%` is `\%`):
+
+```
+\set plotyminor {5}
+\xtickformat{}{\%}
+\ytickformat{\$}{}
+\plot{ \lineplot[seagreen]{0 5  20 9  40 16  60 25  80 38  100 47} }
+```
+
+Like the labels, the tick format resets after each `\plot`.
+
 ## Appearance
 
 The look is controlled by variables you can `\set` after `\use{plot}` and before `\plot`:
@@ -161,6 +195,8 @@ The look is controlled by variables you can `\set` after `\use{plot}` and before
 | `plotmarkr` | `2.6` | marker radius for `\scatter` |
 | `plotsamples` | `80` | samples across the domain for `\fnplot` |
 | `plotbarfrac` | `0.6` | bar width as a fraction of the x step |
+| `plotxminor` / `plotyminor` | `0` | minor subdivisions per major interval (0 = none) |
+| `ploterrcap` | `3` | half-width of an error-bar cap, in points |
 | `plotaxiscolor` / `plotgridcolor` | `dimgray` / `gainsboro` | axis and grid colours |
 | `plottickdec` | `3` | most decimals shown in a tick label |
 
