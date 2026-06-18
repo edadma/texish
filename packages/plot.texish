@@ -3,29 +3,33 @@
 //
 //     \use{plot}
 //
-// A plot is set up by declaring the data ranges, then drawn by \plot, whose body
-// holds one or more data series:
+// A plot is set up by declaring the data ranges (or letting \autorange derive them),
+// then drawn by \plot, whose body holds one or more data series:
 //
 //     \xrange{0}{6}  \yrange{0}{130}
 //     \xlabel{time (s)}  \ylabel{height (m)}  \plottitle{Projectile}
 //     \plot{
-//       \lineplot{royalblue}{0 0  1 45  2 80  3 105  4 120  5 125  6 120}
-//       \scatter{crimson}{2 80  4 120  6 120}
+//       \lineplot[royalblue][observed]{0 0  1 45  2 80  3 105  4 120  5 125  6 118}
+//       \scatter[crimson][sampled]{2 80  4 120  6 120}
+//       \legend
 //     }
 //
-// \plot opens a \picture sized to hold the data area plus margins for the axes
-// and labels, draws the frame (grid, axes, tick marks with numeric labels, axis
-// labels and title), then runs its body to draw the series on top. Everything is
-// the document language: \calc does the data-to-device arithmetic, \seq/\head/\tail
-// walk the data points, \for steps the ticks, and the series are \picture paths and
-// shapes. There is no plot-specific engine primitive — the only general helpers it
-// leans on are \round (clean tick labels) and the picture commands.
+// \plot opens a \picture sized to hold the data area plus margins for the axes and
+// labels, draws the frame (grid, axes, tick marks with numeric labels, axis labels
+// and title), then runs its body to draw the series on top. Everything is the
+// document language: \calc does the data-to-device arithmetic, \seq/\head/\tail walk
+// the data points, \for steps the ticks, and the series are \picture paths and shapes.
+// There is no plot-specific engine primitive.
+//
+// Series take two optional bracket arguments before their data: a colour (default
+// auto, drawn from a palette in turn) and a legend label (default none). So
+// \lineplot{…} auto-colours and adds no legend entry, \lineplot[teal]{…} fixes the
+// colour, and \lineplot[teal][Sales]{…} also records a legend entry.
 //
 // Data-to-device mapping. A series point in *data* coordinates (x, y) maps to a
 // *device* point inside the picture by an affine transform that \plot stores in the
 // variables plotOx/plotOy (the data area's bottom-left corner) and plotSx/plotSy
-// (device points per data unit). \px and \py apply it, so a coordinate group can mix
-// mapped data points with raw picture points freely.
+// (device points per data unit). \px and \py apply it.
 
 \use{logos}
 
@@ -39,32 +43,48 @@
 \set plotmt {12}            // top margin (a title adds to this)
 \set plotmb {42}            // bottom margin — x tick labels and the x axis label
 
-// Tick steps default to 0, meaning "choose a nice step automatically"; set a
-// positive value to force a fixed step.
-\set plotxstepcfg {0}
+\set plotxstepcfg {0}       // 0 = choose a nice tick step automatically
 \set plotystepcfg {0}
-
-// Tick labels are rounded to at most this many decimals, then displayed minimally
-// (trailing zeros drop), so an accumulated tick value never shows floating-point
-// noise. Three places suit any human-scale range.
-\set plottickdec {3}
+\set plottickdec {3}        // round tick labels to at most this many decimals
 
 \set plotgrid {1}           // draw a light grid behind the data
+\set plotzeroaxis {1}       // draw an axis line at zero when a range straddles it
 \set plotticklen {4}        // length of a tick mark, in points
 \set plotsamples {80}       // samples across the domain for \fnplot
-\set plotmarkr {2.4}        // marker radius for \scatter
+\set plotmarkr {2.6}        // marker radius for \scatter
+\set plotmarkshape {circle} // circle | square | triangle | diamond
 \set plotbarfrac {0.6}      // bar width as a fraction of the x step, for \bars
 
 \set plotaxiscolor {dimgray}
 \set plotgridcolor {gainsboro}
+\set plotreflcolor {gray}   // default colour for \hline / \vline reference lines
 \set plottickfontsize {8}
 \set plotlabelfontsize {9}
 \set plottitlefontsize {11}
 
-// ---- Range and label declarations ---------------------------------------------
-// Ranges are forced through \calc so the stored bounds are numbers, ready for the
-// transform arithmetic. Labels and the title are stored as macros (like a document
-// title), so they typeset when referenced and read as empty until set.
+\set plotleginset {8}       // legend inset from the data-area corner
+\set plotlegrow {12}        // legend row height
+\set plotlegswatch {16}     // legend swatch width
+\set plotlegwidth {64}      // width reserved for a legend label, in points
+
+// ---- Colour palette ------------------------------------------------------------
+// Series with colour `auto` draw their colour from this palette in turn, cycling if
+// there are more series than entries. \set a new entry or change plotPaletteLen to
+// recolour the cycle.
+\global\mapset plotPalette {0} {royalblue}
+\global\mapset plotPalette {1} {crimson}
+\global\mapset plotPalette {2} {seagreen}
+\global\mapset plotPalette {3} {darkorange}
+\global\mapset plotPalette {4} {mediumvioletred}
+\global\mapset plotPalette {5} {teal}
+\global\mapset plotPalette {6} {goldenrod}
+\global\mapset plotPalette {7} {slateblue}
+\set plotPaletteLen {8}
+
+// ---- Range and label declarations ----------------------------------------------
+// Ranges are forced through \calc so the stored bounds are numbers. Labels and the
+// title are stored as macros (like a document title), so they typeset when referenced
+// and read as empty until set.
 \def xrange a b {\set plotXmin {\calc{\a}}\set plotXmax {\calc{\b}}}
 \def yrange a b {\set plotYmin {\calc{\a}}\set plotYmax {\calc{\b}}}
 \def xstep s {\set plotxstepcfg {\calc{\s}}}
@@ -77,19 +97,50 @@
 \def ylabel t {\def plotylabtext {\t}}
 \def plottitle t {\def plottitletext {\t}}
 
+// ---- Auto-ranging --------------------------------------------------------------
+// \autorange{x1 y1 x2 y2 …} derives the ranges from the data: x spans the data
+// exactly, y is padded by 5% of its span (and pinned to a 0 baseline when the data is
+// all non-negative, so bars and lines rest on the axis). Call it before \plot; an
+// explicit \xrange / \yrange afterwards still overrides.
+\def autorange data {
+  \set plotARitems {\seq{\data}}
+  \global\set plotARxmin {\calc{1000000000}}
+  \global\set plotARxmax {\calc{-1000000000}}
+  \global\set plotARymin {\calc{1000000000}}
+  \global\set plotARymax {\calc{-1000000000}}
+  \plotARfold{\plotARitems}
+  \xrange{\plotARxmin}{\plotARxmax}
+  \set plotARyspan {\calc{plotARymax - plotARymin}}
+  \if {\< {\plotARyspan} {0.000001}} \set plotARyspan {1} \fi
+  \set plotARylo {\calc{plotARymin - plotARyspan * 0.05}}
+  \if {\>= {\plotARymin} {0}} \set plotARylo {0} \fi
+  \set plotARyhi {\calc{plotARymax + plotARyspan * 0.05}}
+  \yrange{\plotARylo}{\plotARyhi}
+}
+
+// Walk the data two values at a time, tracking the running min/max of each axis.
+\def plotARfold items {
+  \if {\size{\items}}
+    \set arx {\head{\items}}
+    \set ary {\head{\tail{\items}}}
+    \if {\< {\arx} {\plotARxmin}} \global\set plotARxmin {\arx} \fi
+    \if {\> {\arx} {\plotARxmax}} \global\set plotARxmax {\arx} \fi
+    \if {\< {\ary} {\plotARymin}} \global\set plotARymin {\ary} \fi
+    \if {\> {\ary} {\plotARymax}} \global\set plotARymax {\ary} \fi
+    \plotARfold{\tail{\tail{\items}}}
+  \fi}
+
 // ---- Device-coordinate mapping -------------------------------------------------
 // \px{v} / \py{v} map a data coordinate to a device coordinate. The argument is a
-// variable name: it is dropped into a \calc expression, where a bare identifier
-// resolves to the document variable of that name, so the recursion below sets a
-// point's x and y into variables and passes their names here.
+// variable name (or a literal number): it is dropped into a \calc expression, where a
+// bare identifier resolves to the document variable of that name.
 \def px v {\calc{plotOx + ((\v) - plotXmin) * plotSx}}
 \def py v {\calc{plotOy + ((\v) - plotYmin) * plotSy}}
 
 // ---- Nice tick step ------------------------------------------------------------
 // Round a rough target step (the range over the desired number of intervals) up to
-// the nearest 1, 2, or 5 times a power of ten — the steps that read well on an axis.
-// The argument is the name of a variable holding the rough step, so \calc can
-// resolve it. The chosen step lands in plotStepResult.
+// the nearest 1, 2, or 5 times a power of ten. The argument is the name of a variable
+// holding the rough step. The chosen step lands in plotStepResult.
 \def plotNiceStep raw {
   \set pnsMag {\calc{10 ^ floor(log(\raw))}}
   \set pnsNorm {\calc{(\raw) / pnsMag}}
@@ -100,12 +151,41 @@
   \fi \fi \fi
 }
 
+// ---- Series colour and legend bookkeeping --------------------------------------
+// Resolve a series colour: an explicit colour is used as given; `auto` takes the next
+// palette entry and advances the cycle. The result lands in plotCurColor.
+// A colour of `auto` — or an empty [] bracket, so a label can be given without naming
+// a colour — takes the next palette entry; anything else is used as given.
+\def plotResolveColor c {
+  \set prcAuto {0}
+  \if {\= {\c} {auto}} \set prcAuto {1} \fi
+  \if {\< {\size{\c}} {1}} \set prcAuto {1} \fi
+  \if {\= {\prcAuto} {1}}
+    \set plotCurColor {\mapget plotPalette {\calc{plotSeriesIdx % plotPaletteLen}}}
+    \global\set plotSeriesIdx {\calc{plotSeriesIdx + 1}}
+  \else
+    \set plotCurColor {\c}
+  \fi}
+
+// Record a legend entry (kind, colour, label) when a series was given a label. The
+// entries accumulate in three index-keyed maps; \legend draws them.
+\def plotRecord kind color label {
+  \if {\> {\size{\label}} {0}}
+    \global\mapset plotLegKind {\plotLegendN} {\kind}
+    \global\mapset plotLegColor {\plotLegendN} {\color}
+    \global\mapset plotLegLabel {\plotLegendN} {\label}
+    \global\mapset plotLegShape {\plotLegendN} {\plotmarkshape}
+    \global\set plotLegendN {\calc{plotLegendN + 1}}
+  \fi}
+
 // ---- The plot frame ------------------------------------------------------------
-// \plot computes the transform and the tick steps, opens a picture of the right
-// size, draws the frame, and runs the series body on top. The whole thing sits in a
-// group so the transform variables and the label macros do not leak into the
-// surrounding document.
+// \plot computes the transform and tick steps, resets the per-plot colour cycle and
+// legend, opens a picture of the right size, draws the frame, and runs the series body
+// on top. The group keeps the transform variables and label macros from leaking out.
 \def plot body {{
+  \global\set plotSeriesIdx {0}
+  \global\set plotLegendN {0}
+
   \if {\> {\plotxstepcfg} {0}}
     \set plotXstep {\plotxstepcfg}
   \else
@@ -134,11 +214,20 @@
   \picture width:{\calc{plotml + plotW + plotmr}} height:{\calc{plotmb + plotH + plotMT}} {
     \if {\= {\plotgrid} {1}} \plotDrawGrid \fi
     \plotDrawAxes
+    \plotDrawZeroAxis
     \plotDrawXTicks
     \plotDrawYTicks
     \plotDrawLabels
     \body
   }
+
+  // Each plot is self-contained: clear the per-plot labels, title, and any forced tick
+  // steps so the next \plot starts clean and nothing leaks from this one.
+  \global\set plotxstepcfg {0}
+  \global\set plotystepcfg {0}
+  \gdef plotxlabtext {}
+  \gdef plotylabtext {}
+  \gdef plottitletext {}
 }}
 
 // The grid: faint lines at every tick position, drawn first so the data sits over
@@ -164,6 +253,22 @@
   \line{\plotOx \plotOy  \plotOx \calc{plotOy + plotH}}
 }
 
+// A light axis line at y = 0 (and x = 0) when the data range straddles zero, so a plot
+// with negative values shows where the sign changes.
+\def plotDrawZeroAxis {
+  \if {\= {\plotzeroaxis} {1}}
+    \if {\< {\plotYmin} {0}} \if {\> {\plotYmax} {0}}
+      \nofill \stroke{\plotaxiscolor} \linewidth{0.6pt}
+      \set zy {\calc{plotOy + (0 - plotYmin) * plotSy}}
+      \line{\plotOx \zy  \calc{plotOx + plotW} \zy}
+    \fi \fi
+    \if {\< {\plotXmin} {0}} \if {\> {\plotXmax} {0}}
+      \nofill \stroke{\plotaxiscolor} \linewidth{0.6pt}
+      \set zx {\calc{plotOx + (0 - plotXmin) * plotSx}}
+      \line{\zx \plotOy  \zx \calc{plotOy + plotH}}
+    \fi \fi
+  \fi}
+
 // X tick marks and their numeric labels, set just below the axis.
 \def plotDrawXTicks {
   \set plotNX {\calc{floor((plotXmax - plotXmin) / plotXstep + 0.0001)}}
@@ -188,9 +293,8 @@
   }
 }
 
-// The x axis label (centred under the ticks) and the y axis label (centred to the
-// left, set vertically by rotating the coordinate system before placing it), and
-// the title (centred over the top of the area).
+// The x axis label (centred under the ticks), the y axis label (set vertically by
+// rotating the coordinate system before placing it), and the title (over the top).
 \def plotDrawLabels {
   \if {\> {\size{\plotxlabtext}} {0}}
     \at anchor:north {\calc{plotOx + plotW / 2} \calc{plotOy - plotticklen - plottickfontsize - 8}}{{\font {lmroman} {\plotlabelfontsize} {regular}\plotxlabtext}}
@@ -210,12 +314,14 @@
 // ---- Data series ---------------------------------------------------------------
 // Each series reads a flat "x1 y1 x2 y2 …" list and walks it two values at a time,
 // setting the current point's x and y into the variables ptx / pty so \px / \py can
-// map them. Recursion (not \for) keeps the walk simple and avoids opening a scope
-// per point.
+// map them. Recursion (not \for) keeps the walk simple and avoids opening a scope per
+// point.
 
-// \lineplot{colour}{data} — a polyline through the data points.
-\def lineplot color data {{
-  \nofill \stroke{\color} \linewidth{1.4pt} \linejoin{round} \linecap{round}
+// \lineplot[colour][label]{data} — a polyline through the data points.
+\def lineplot [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{line}{\plotCurColor}{\label}
+  \nofill \stroke{\plotCurColor} \linewidth{1.4pt} \linejoin{round} \linecap{round}
   \path{\plotPolyFirst{\seq{\data}}}
 }}
 \def plotPolyFirst items {
@@ -233,23 +339,44 @@
     \plotPolyRest{\tail{\tail{\items}}}
   \fi}
 
-// \scatter{colour}{data} — a filled marker at each data point.
-\def scatter color data {{
-  \fill{\color} \nostroke
+// \scatter[colour][label]{data} — a marker at each data point, shaped by plotmarkshape.
+\def scatter [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{marker}{\plotCurColor}{\label}
+  \fill{\plotCurColor} \nostroke
   \plotMarks{\seq{\data}}
 }}
 \def plotMarks items {
   \if {\size{\items}}
     \set ptx {\head{\items}}
     \set pty {\head{\tail{\items}}}
-    \circle{\px{ptx} \py{pty} \plotmarkr}
+    \set mcx {\calc{plotOx + (ptx - plotXmin) * plotSx}}
+    \set mcy {\calc{plotOy + (pty - plotYmin) * plotSy}}
+    \plotMarker{mcx}{mcy}
     \plotMarks{\tail{\tail{\items}}}
   \fi}
 
-// \bars{colour}{data} — a vertical bar from the x axis up to each data point, the
-// bars centred on their x value and a fixed fraction of the x step wide.
-\def bars color data {{
-  \fill{\color} \nostroke
+// Draw one marker of the current shape, centred on the device point named by cx / cy.
+\def plotMarker cx cy {
+  \if {\= {\plotmarkshape} {square}}
+    \rect{\calc{\cx - plotmarkr} \calc{\cy - plotmarkr} \calc{2 * plotmarkr} \calc{2 * plotmarkr}}
+  \else \if {\= {\plotmarkshape} {triangle}}
+    \polygon{\calc{\cx} \calc{\cy + plotmarkr * 1.2}
+             \calc{\cx - plotmarkr * 1.1} \calc{\cy - plotmarkr * 0.9}
+             \calc{\cx + plotmarkr * 1.1} \calc{\cy - plotmarkr * 0.9}}
+  \else \if {\= {\plotmarkshape} {diamond}}
+    \polygon{\calc{\cx} \calc{\cy + plotmarkr * 1.3}  \calc{\cx + plotmarkr * 1.3} \calc{\cy}
+             \calc{\cx} \calc{\cy - plotmarkr * 1.3}  \calc{\cx - plotmarkr * 1.3} \calc{\cy}}
+  \else
+    \circle{\calc{\cx} \calc{\cy} \plotmarkr}
+  \fi \fi \fi}
+
+// \bars[colour][label]{data} — a vertical bar from the axis up to each data point,
+// centred on its x value and a fixed fraction of the x step wide.
+\def bars [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{bar}{\plotCurColor}{\label}
+  \fill{\plotCurColor} \nostroke
   \set plotBarHW {\calc{plotbarfrac * plotXstep * plotSx / 2}}
   \plotBars{\seq{\data}}
 }}
@@ -263,11 +390,12 @@
     \plotBars{\tail{\tail{\items}}}
   \fi}
 
-// \fnplot{colour}{expression} — sample a function of x across the domain and stroke
-// it as a curve. The expression is written in terms of the variable x (e.g. x*x - 2*x);
-// the sampler sets x at each step and evaluates the expression with \calc.
-\def fnplot color expr {{
-  \nofill \stroke{\color} \linewidth{1.6pt} \linejoin{round}
+// \fnplot[colour][label]{expression} — sample a function of x across the domain and
+// stroke it. The expression is ordinary \calc arithmetic written in terms of x.
+\def fnplot [color:auto] [label:] expr {{
+  \plotResolveColor{\color}
+  \plotRecord{line}{\plotCurColor}{\label}
+  \nofill \stroke{\plotCurColor} \linewidth{1.6pt} \linejoin{round}
   \path{
     \for\k{\range{0}{\plotsamples}}{
       \set x {\calc{plotXmin + \k * (plotXmax - plotXmin) / plotsamples}}
@@ -276,3 +404,64 @@
     }
   }
 }}
+
+// ---- Reference lines -----------------------------------------------------------
+// \hline[colour]{y} / \vline[colour]{x} draw a dashed line across the plot at a data
+// value — a threshold, a target, a mean — mapped through the same transform. With no
+// colour they use plotreflcolor.
+\def hline [color:?] y {
+  \plotReflColor{\color}
+  \nofill \stroke{\plotCurColor} \linewidth{0.8pt} \linetype{dashed}
+  \line{\plotOx \calc{plotOy + ((\y) - plotYmin) * plotSy}  \calc{plotOx + plotW} \calc{plotOy + ((\y) - plotYmin) * plotSy}}
+  \linetype{solid}}
+\def vline [color:?] x {
+  \plotReflColor{\color}
+  \nofill \stroke{\plotCurColor} \linewidth{0.8pt} \linetype{dashed}
+  \line{\calc{plotOx + ((\x) - plotXmin) * plotSx} \plotOy  \calc{plotOx + ((\x) - plotXmin) * plotSx} \calc{plotOy + plotH}}
+  \linetype{solid}}
+\def plotReflColor c {
+  \if {\= {\c} {?}} \set plotCurColor {\plotreflcolor} \else \set plotCurColor {\c} \fi}
+
+// ---- Legend --------------------------------------------------------------------
+// \legend[pos] draws the entries recorded by series given a label, stacked in a corner
+// of the data area: ne (default), nw, se, sw. Each row is a colour swatch — a line, a
+// marker, or a filled square according to the series kind — beside the label.
+\def legend [pos:ne] {
+  \if {\> {\plotLegendN} {0}}
+    \if {\= {\pos} {nw}} \set legLeft {\calc{plotOx + plotleginset}}
+    \else \if {\= {\pos} {sw}} \set legLeft {\calc{plotOx + plotleginset}}
+    \else \set legLeft {\calc{plotOx + plotW - plotleginset - plotlegwidth}}
+    \fi \fi
+    \if {\= {\pos} {sw}} \set legTop {\calc{plotOy + plotleginset + plotLegendN * plotlegrow}}
+    \else \if {\= {\pos} {se}} \set legTop {\calc{plotOy + plotleginset + plotLegendN * plotlegrow}}
+    \else \set legTop {\calc{plotOy + plotH - plotleginset}}
+    \fi \fi
+    \set legBoxH {\calc{plotLegendN * plotlegrow}}
+    \fill{white} \stroke{gainsboro} \linewidth{0.5pt}
+    \rect{\calc{legLeft - 5} \calc{legTop - legBoxH}  \calc{plotlegswatch + plotlegwidth + 11} \legBoxH}
+    \set legLast {\calc{plotLegendN - 1}}
+    \for\li{\range{0}{\legLast}}{
+      \set legRowY {\calc{legTop - \li * plotlegrow - plotlegrow / 2}}
+      \set legK {\mapget plotLegKind {\li}}
+      \set legC {\mapget plotLegColor {\li}}
+      \set legLbl {\mapget plotLegLabel {\li}}
+      \set plotmarkshape {\mapget plotLegShape {\li}}
+      \plotLegendSwatch{\legK}{\legC}{legLeft}{legRowY}
+      \at anchor:west {\calc{legLeft + plotlegswatch + 5} \legRowY}{{\font {lmroman} {\plottickfontsize} {regular}\the\legLbl}}
+    }
+  \fi}
+
+// One legend swatch at the device point named by lx / ry: a short line for line and
+// function series, the current marker for scatter series, a small filled square for bars.
+\def plotLegendSwatch kind color lx ry {
+  \if {\= {\kind} {bar}}
+    \fill{\color} \nostroke
+    \rect{\calc{\lx} \calc{\ry - 4} \plotlegswatch 8}
+  \else \if {\= {\kind} {marker}}
+    \fill{\color} \nostroke
+    \set legSwCx {\calc{\lx + plotlegswatch / 2}}
+    \plotMarker{legSwCx}{\ry}
+  \else
+    \nofill \stroke{\color} \linewidth{2pt} \linecap{round}
+    \line{\calc{\lx} \calc{\ry}  \calc{\lx + plotlegswatch} \calc{\ry}}
+  \fi \fi}

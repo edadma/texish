@@ -1240,6 +1240,15 @@ private def exprText(tokens: Vector[Token]): String =
 
 // ============ COMPARISON ============
 
+/** Order two values when they are not the same kind: if both interpret as numbers (a `Num`, a `Dimen`, or a
+  * numeric-string `Text`) compare them numerically, otherwise it is a genuine type mismatch and an error. The
+  * ordering comparisons fall back to this so a number compares cleanly against a numeric string — the common case
+  * when one operand came from a sequence element (which can be text-typed) and the other is a computed number. */
+private def orderMismatch(a: Value, b: Value, num: (Double, Double) => Boolean, proc: Processor, pos: CharReader): Boolean =
+  (Value.number(a), Value.number(b)) match
+    case (Some(x), Some(y)) => num(x, y)
+    case _                  => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+
 object EqPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val a = proc.evalArgumentExpr(pos)
@@ -1259,7 +1268,7 @@ object LtPrimitive extends Primitive:
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x < y
       case (Value.Text(x), Value.Text(y)) => x < y
-      case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+      case _ => orderMismatch(a, b, _ < _, proc, pos)
     proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
@@ -1270,7 +1279,7 @@ object GtPrimitive extends Primitive:
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x > y
       case (Value.Text(x), Value.Text(y)) => x > y
-      case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+      case _ => orderMismatch(a, b, _ > _, proc, pos)
     proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
@@ -1281,7 +1290,7 @@ object LePrimitive extends Primitive:
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x <= y
       case (Value.Text(x), Value.Text(y)) => x <= y
-      case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+      case _ => orderMismatch(a, b, _ <= _, proc, pos)
     proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
@@ -1292,7 +1301,7 @@ object GePrimitive extends Primitive:
     val result = (a, b) match
       case (Value.Num(x), Value.Num(y)) => x >= y
       case (Value.Text(x), Value.Text(y)) => x >= y
-      case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+      case _ => orderMismatch(a, b, _ >= _, proc, pos)
     proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 

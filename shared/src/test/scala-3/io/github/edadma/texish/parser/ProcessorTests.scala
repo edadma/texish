@@ -210,6 +210,17 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       handler.get("e") shouldBe Value.Bool(false)
     }
 
+    // An ordering comparison between a number and a numeric string compares them numerically rather than failing
+    // — the operand types differ when one came from a sequence element (text-typed) and the other is computed.
+    // (Text vs text stays lexical: "3" > "20".)
+    "ordering compares a number against a numeric string numerically" in {
+      // \cat forces a Text operand, \calc a Num operand: the mixed pair orders numerically.
+      process("\\set t {\\cat{3}{}}\\<{\\t}{\\calc{20}}") shouldBe "true"
+      process("\\set t {\\cat{3}{}}\\>{\\t}{\\calc{20}}") shouldBe "false"
+      // Two text operands still compare lexically: "3" > "20".
+      process("\\<{\\cat{3}{}}{\\cat{20}{}}") shouldBe "false"
+    }
+
     "\\round trims floating-point noise to a clean decimal label" in {
       process("\\round{\\calc{0.1 + 0.2}}{2}") shouldBe "0.3"
     }

@@ -2,14 +2,15 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, Color, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** The `plot` package (packages/plot.texish) drawn through the full parser onto the picture layer. These check
   * that the data-to-device transform maps series points to the expected picture coordinates and that the frame
-  * (axes) is drawn, so a regression in the package — or in the engine pieces it leans on (\round, the comparison
-  * primitives, calc resolution inside coordinate groups) — is caught here rather than only in a rendered PDF.
+  * (axes, zero line) and the auto colour cycle / auto-ranging behave, so a regression in the package — or in the
+  * engine pieces it leans on (\round, the comparison primitives, numeric coercion, calc resolution inside
+  * coordinate groups) — is caught here rather than only in a rendered PDF.
   */
 class PlotTests extends AnyFreeSpec with Matchers:
 
@@ -35,13 +36,13 @@ class PlotTests extends AnyFreeSpec with Matchers:
   private val preamble = "\\use{plot}\\xrange{0}{10}\\yrange{0}{100}\\set plotgrid {0}"
 
   "a line series maps its data points through the transform" in {
-    val ops = run(s"$preamble \\plot{ \\lineplot{royalblue}{0 0  10 100} }")
+    val ops = run(s"$preamble \\plot{ \\lineplot[royalblue]{0 0  10 100} }")
     ops should contain(PictureOp.MoveTo(46, 42))
     ops should contain(PictureOp.LineTo(280, 204))
   }
 
   "the frame draws the two axes at the area edges" in {
-    val ops = run(s"$preamble \\plot{ \\lineplot{black}{0 0  10 100} }")
+    val ops = run(s"$preamble \\plot{ \\lineplot[black]{0 0  10 100} }")
     // x axis: (46,42) -> (280,42);  y axis: (46,42) -> (46,204)
     ops should contain(PictureOp.MoveTo(46, 42))
     ops should contain(PictureOp.LineTo(280, 42))
@@ -49,14 +50,62 @@ class PlotTests extends AnyFreeSpec with Matchers:
   }
 
   "scatter places a filled marker circle at each data point" in {
-    val ops = run(s"$preamble \\plot{ \\scatter{crimson}{5 50} }")
-    // (5,50) -> (46 + 5*23.4, 42 + 50*1.62) = (163, 123), marker radius 2.4
-    ops should contain(PictureOp.Arc(163, 123, 2.4, 0, 2 * math.Pi, false))
+    val ops = run(s"$preamble \\plot{ \\scatter[crimson]{5 50} }")
+    // (5,50) -> (46 + 5*23.4, 42 + 50*1.62) = (163, 123), marker radius 2.6
+    ops should contain(PictureOp.Arc(163, 123, 2.6, 0, 2 * math.Pi, false))
   }
 
   "a forced tick step is honoured" in {
     // xstep 5 over 0..10 -> ticks at x = 0,5,10 -> device x = 46,163,280 each drawn as a tick mark
-    val ops = run(s"$preamble \\xstep{5} \\plot{ \\lineplot{black}{0 0  10 100} }")
+    val ops = run(s"$preamble \\xstep{5} \\plot{ \\lineplot[black]{0 0  10 100} }")
     val tickXs = ops.collect { case PictureOp.MoveTo(x, y) if y == 42 => x }
     tickXs should contain(163.0)
+  }
+
+  "auto colour cycles through the palette across series" in {
+    // No explicit colour: first series takes palette[0] = royalblue, second palette[1] = crimson.
+    val ops    = run(s"$preamble \\plot{ \\lineplot{0 0  10 100}  \\lineplot{0 50  10 50} }")
+    val strokes = ops.collect { case PictureOp.Paint(None, Some(c)) => c }
+    strokes should contain(Color("royalblue"))
+    strokes should contain(Color("crimson"))
+  }
+
+  "an explicit colour overrides the cycle" in {
+    val ops     = run(s"$preamble \\plot{ \\lineplot[seagreen]{0 0  10 100} }")
+    val strokes = ops.collect { case PictureOp.Paint(None, Some(c)) => c }
+    strokes should contain(Color("seagreen"))
+  }
+
+  "a square marker shape lowers to a rectangle, not an arc" in {
+    val ops = run(s"$preamble \\set plotmarkshape {square} \\plot{ \\scatter[crimson]{5 50} }")
+    ops.collect { case a: PictureOp.Arc => a } shouldBe empty
+    // square of side 2*2.6 centred on (163,123): corner (160.4, 120.4)
+    ops should contain(PictureOp.MoveTo(160.4, 120.4))
+  }
+
+  "autorange derives the ranges from the data" in {
+    // data x in [0,10], y all >= 0 so the y baseline is pinned to 0; (10,0) -> (280,42).
+    val ops = run("\\use{plot}\\set plotgrid {0}\\autorange{0 0  10 0}\\plot{ \\lineplot[black]{0 0  10 0} }")
+    ops should contain(PictureOp.MoveTo(46, 42))
+    ops should contain(PictureOp.LineTo(280, 42))
+  }
+
+  "a zero axis is drawn when the y range straddles zero" in {
+    // yrange -50..50: y=0 maps to 42 + 50/100*162 = 123, a full-width line distinct from the data.
+    val ops = run("\\use{plot}\\xrange{0}{10}\\yrange{-50}{50}\\set plotgrid {0}\\plot{ \\lineplot[black]{0 -50  10 50} }")
+    ops should contain(PictureOp.MoveTo(46, 123))
+    ops should contain(PictureOp.LineTo(280, 123))
+  }
+
+  "a labelled series and \\legend render without error" in {
+    val ops = run(s"$preamble \\plot{ \\lineplot[royalblue][Observed]{0 0  10 100} \\scatter[crimson][Sampled]{5 50} \\legend }")
+    // the legend marker swatch adds a second arc beyond the one data marker
+    ops.collect { case a: PictureOp.Arc => a }.size should be >= 2
+  }
+
+  "reference lines map through the transform" in {
+    // \hline{50} -> device y = 42 + 50*1.62 = 123, full width
+    val ops = run(s"$preamble \\plot{ \\hline{50} }")
+    ops should contain(PictureOp.MoveTo(46, 123))
+    ops should contain(PictureOp.LineTo(280, 123))
   }

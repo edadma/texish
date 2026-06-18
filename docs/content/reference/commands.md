@@ -83,13 +83,19 @@ are engine primitives available in any document.
 | Command | Effect |
 |---------|--------|
 | `\xrange{min}{max}` `\yrange{min}{max}` | the plot's data ranges |
+| `\autorange{x y x y …}` | derive both ranges from the data |
 | `\xlabel{…}` `\ylabel{…}` `\plottitle{…}` | axis labels and title |
 | `\xstep{s}` `\ystep{s}` | force a tick step (default: a *nice* step) |
 | `\plot{ … }` | draw the axes, ticks, grid, and labels, then the body's series |
-| `\lineplot{colour}{x y x y …}` | a polyline through the data points |
-| `\scatter{colour}{x y x y …}` | a filled marker at each point |
-| `\bars{colour}{x y x y …}` | a vertical bar to each point |
-| `\fnplot{colour}{expr in x}` | a sampled curve of a function |
+| `\lineplot[colour][label]{x y x y …}` | a polyline through the data points |
+| `\scatter[colour][label]{x y x y …}` | a marker at each point (shape from `plotmarkshape`) |
+| `\bars[colour][label]{x y x y …}` | a vertical bar to each point |
+| `\fnplot[colour][label]{expr in x}` | a sampled curve of a function |
+| `\hline[colour]{y}` `\vline[colour]{x}` | a dashed reference line at a data value |
+| `\legend[ne\|nw\|se\|sw]` | draw a key for the labelled series |
+
+Both bracket arguments are optional: with no colour (or `[]`) a series takes the next
+palette colour, and a label adds a legend entry.
 
 ## Macros and programming
 
