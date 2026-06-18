@@ -118,5 +118,37 @@ resting it on a zero baseline — no \italic{\\xrange} / \italic{\\yrange} neede
   \legend[se]
 }
 
+\eject
+
+\bold{Area and step series}
+
+\italic{\\areaplot} fills the band under a curve to the baseline; \italic{\\stepplot}
+holds each value until the next x, for piecewise-constant or cumulative data.
+
+\xrange{0}{8}
+\yrange{0}{50}
+\xlabel{day}
+\plottitle{Cumulative}
+\plot{
+  \areaplot[lightsteelblue]{0 0  1 8  2 14  3 23  4 30  5 38  6 44  7 48  8 50}
+  \stepplot[crimson][rate]{0 8  1 6  2 9  3 7  4 8  5 6  6 4  7 2}
+  \legend[nw]
+}
+
+\bold{A categorical axis with value labels}
+
+\italic{\\xcategories} names the x ticks instead of numbering them, and
+\italic{plotvalues} prints each bar's value above it.
+
+\yrange{0}{160}
+\ylabel{revenue}
+\plottitle{By quarter}
+\xcategories{Q1 Q2 Q3 Q4}
+\set plotvalues {1}
+\plot{
+  \bars[teal]{1 95  2 130  3 80  4 150}
+}
+\set plotvalues {0}
+
 Each figure above is a single box that flows in the text like any other, so a plot can
 sit inline with prose, in a figure float, or beside a table.

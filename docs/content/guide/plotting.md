@@ -45,6 +45,7 @@ series are `\picture` paths and shapes. There is no plot-specific engine primiti
 | `\xrange{min}{max}` | the x data range |
 | `\yrange{min}{max}` | the y data range |
 | `\autorange{x y x y …}` | derive both ranges from the data |
+| `\xcategories{A B C …}` | name the x ticks instead of numbering them |
 | `\xlabel{text}` / `\ylabel{text}` | axis labels (the y label is set vertically) |
 | `\plottitle{text}` | a title centred over the plot |
 | `\xstep{s}` / `\ystep{s}` | force a tick step (otherwise a *nice* step is chosen) |
@@ -68,6 +69,15 @@ non-negative:
 When a range straddles zero, the package draws a light axis line at zero (set
 `plotzeroaxis` to `0` to omit it).
 
+For non-numeric categories, `\xcategories` names the ticks instead of numbering them. The
+categories sit at `x = 1, 2, 3, …`, so a series (bars especially) plotted at those integer
+positions lines up under the labels:
+
+```
+\xcategories{Q1 Q2 Q3 Q4}
+\plot{ \bars[teal]{1 95  2 130  3 80  4 150} }
+```
+
 ## Data series
 
 Every series takes two optional bracket arguments before its data — a **colour** and a
@@ -78,6 +88,8 @@ Every series takes two optional bracket arguments before its data — a **colour
 | `\lineplot[colour][label]{data}` | a polyline through the data points |
 | `\scatter[colour][label]{data}` | a marker at each data point |
 | `\bars[colour][label]{data}` | a vertical bar from the axis up to each point |
+| `\areaplot[colour][label]{data}` | the band under the curve, filled to the baseline |
+| `\stepplot[colour][label]{data}` | a staircase that holds each value to the next x |
 | `\fnplot[colour][label]{expression}` | a sampled curve of a function of `x` |
 
 Both brackets are optional. With no colour (or an empty `[]`), a series takes its colour
@@ -101,14 +113,18 @@ drawn:
 ```
 
 Scatter markers are circles by default; set `plotmarkshape` to `square`, `triangle`, or
-`diamond` (it can change between series).
+`diamond` (it can change between series). Set `plotvalues` to `1` to print each bar's
+value above it.
+
+By default the series body is clipped to the data area, so a curve or marker that runs
+past the range does not spill into the margins; set `plotclip` to `0` to allow overflow.
 
 ## The legend
 
 A series given a label records a legend entry. `\legend[pos]` draws the key — a colour
 swatch (a line, the series' marker, or a filled square according to the series kind)
-beside each label, on a light background — in a corner of the data area: `ne` (default),
-`nw`, `se`, or `sw`.
+beside each label, on a light background sized to the labels — in a corner of the data
+area: `ne` (default), `nw`, `se`, or `sw`.
 
 ```
 \plot{
@@ -138,7 +154,9 @@ The look is controlled by variables you can `\set` after `\use{plot}` and before
 |---|---|---|
 | `plotareaw` / `plotareah` | `234` / `162` | the data area's width and height, in points |
 | `plotgrid` | `1` | draw a light grid behind the data (`0` to omit) |
+| `plotclip` | `1` | clip the series to the data area (`0` to allow overflow) |
 | `plotzeroaxis` | `1` | draw an axis line at zero when a range straddles it |
+| `plotvalues` | `0` | print each bar's value above it (`\bars`) |
 | `plotmarkshape` | `circle` | scatter marker: `circle`, `square`, `triangle`, `diamond` |
 | `plotmarkr` | `2.6` | marker radius for `\scatter` |
 | `plotsamples` | `80` | samples across the domain for `\fnplot` |

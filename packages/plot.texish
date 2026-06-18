@@ -65,7 +65,10 @@
 \set plotleginset {8}       // legend inset from the data-area corner
 \set plotlegrow {12}        // legend row height
 \set plotlegswatch {16}     // legend swatch width
-\set plotlegwidth {64}      // width reserved for a legend label, in points
+
+\set plotclip {1}           // clip series drawing to the data area
+\set plotvalues {0}         // print each bar's value above it (\bars)
+\set plotXcat {0}           // 1 when \xcategories has set a categorical x axis
 
 // ---- Colour palette ------------------------------------------------------------
 // Series with colour `auto` draw their colour from this palette in turn, cycling if
@@ -96,6 +99,17 @@
 \def xlabel t {\def plotxlabtext {\t}}
 \def ylabel t {\def plotylabtext {\t}}
 \def plottitle t {\def plottitletext {\t}}
+
+// \xcategories{Jan Feb Mar …} — label the x axis with names instead of numbers. The
+// categories sit at x = 1, 2, 3, …, and the x range is set to enclose them, so a series
+// plotted at those integer x positions (bars especially) lines up under the labels.
+\def xcategories list {
+  \global\set plotXcatList {\seq{\list}}
+  \global\set plotXcat {1}
+  \global\set plotXcatN {\size{\plotXcatList}}
+  \set xcatHi {\calc{plotXcatN + 0.5}}
+  \xrange{0.5}{\xcatHi}
+}
 
 // ---- Auto-ranging --------------------------------------------------------------
 // \autorange{x1 y1 x2 y2 …} derives the ranges from the data: x spans the data
@@ -215,16 +229,28 @@
     \if {\= {\plotgrid} {1}} \plotDrawGrid \fi
     \plotDrawAxes
     \plotDrawZeroAxis
-    \plotDrawXTicks
+    \if {\= {\plotXcat} {1}} \plotDrawXCatTicks \else \plotDrawXTicks \fi
     \plotDrawYTicks
     \plotDrawLabels
-    \body
+    // The series body is clipped to the data area (unless plotclip is 0) so a curve or
+    // marker that runs past the range does not spill into the margins.
+    \if {\= {\plotclip} {1}}
+      \group{
+        \clip{ \moveto{\plotOx \plotOy}  \lineto{\calc{plotOx + plotW} \plotOy}
+               \lineto{\calc{plotOx + plotW} \calc{plotOy + plotH}}
+               \lineto{\plotOx \calc{plotOy + plotH}}  \close }
+        \body
+      }
+    \else
+      \body
+    \fi
   }
 
-  // Each plot is self-contained: clear the per-plot labels, title, and any forced tick
-  // steps so the next \plot starts clean and nothing leaks from this one.
+  // Each plot is self-contained: clear the per-plot labels, title, categorical axis, and
+  // any forced tick steps so the next \plot starts clean and nothing leaks from this one.
   \global\set plotxstepcfg {0}
   \global\set plotystepcfg {0}
+  \global\set plotXcat {0}
   \gdef plotxlabtext {}
   \gdef plotylabtext {}
   \gdef plottitletext {}
@@ -234,11 +260,15 @@
 // them. plotNX / plotNY are the number of whole steps that fit in each range.
 \def plotDrawGrid {
   \nofill \stroke{\plotgridcolor} \linewidth{0.5pt}
-  \set plotNX {\calc{floor((plotXmax - plotXmin) / plotXstep + 0.0001)}}
-  \for\i{\range{0}{\plotNX}}{
-    \set gx {\calc{plotOx + (\i * plotXstep) * plotSx}}
-    \line{\gx \plotOy  \gx \calc{plotOy + plotH}}
-  }
+  // Vertical grid lines align with the numeric x ticks; a categorical axis has no even
+  // step, so it gets horizontal grid lines only.
+  \if {\= {\plotXcat} {0}}
+    \set plotNX {\calc{floor((plotXmax - plotXmin) / plotXstep + 0.0001)}}
+    \for\i{\range{0}{\plotNX}}{
+      \set gx {\calc{plotOx + (\i * plotXstep) * plotSx}}
+      \line{\gx \plotOy  \gx \calc{plotOy + plotH}}
+    }
+  \fi
   \set plotNY {\calc{floor((plotYmax - plotYmin) / plotYstep + 0.0001)}}
   \for\j{\range{0}{\plotNY}}{
     \set gy {\calc{plotOy + (\j * plotYstep) * plotSy}}
@@ -278,6 +308,18 @@
     \set tickx {\calc{plotOx + (tickv - plotXmin) * plotSx}}
     \line{\tickx \plotOy  \tickx \calc{plotOy - plotticklen}}
     \at anchor:north {\tickx \calc{plotOy - plotticklen - 2}}{{\font {lmroman} {\plottickfontsize} {regular}\round{\tickv}{\plottickdec}}}
+  }
+}
+
+// Categorical x ticks: one tick per category name (from \xcategories), placed at the
+// integer positions 1, 2, 3, … The 1-based \forloop.index is the category's x value.
+\def plotDrawXCatTicks {
+  \nofill \stroke{\plotaxiscolor} \linewidth{0.8pt}
+  \for\catname{\plotXcatList}{
+    \set ci {\forloop.index}
+    \set ctx {\calc{plotOx + (ci - plotXmin) * plotSx}}
+    \line{\ctx \plotOy  \ctx \calc{plotOy - plotticklen}}
+    \at anchor:north {\ctx \calc{plotOy - plotticklen - 2}}{{\font {lmroman} {\plottickfontsize} {regular}\the\catname}}
   }
 }
 
@@ -339,6 +381,58 @@
     \plotPolyRest{\tail{\tail{\items}}}
   \fi}
 
+// \areaplot[colour][label]{data} — the band between the polyline and a baseline, filled.
+// The baseline is zero when the y range includes it, otherwise the bottom of the area.
+\def areaplot [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{bar}{\plotCurColor}{\label}
+  \set plotBaseY {\plotYmin}
+  \if {\< {\plotYmin} {0}} \if {\> {\plotYmax} {0}} \set plotBaseY {0} \fi \fi
+  \fill{\plotCurColor} \nostroke
+  \path{\plotAreaPath{\seq{\data}}}
+}}
+\def plotAreaPath items {
+  \set areaX0 {\head{\items}}
+  \moveto{\px{areaX0} \py{plotBaseY}}
+  \plotAreaWalk{\items}
+  \lineto{\px{plotAreaLastX} \py{plotBaseY}}
+  \close}
+\def plotAreaWalk items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \lineto{\px{ptx} \py{pty}}
+    \set plotAreaLastX {\ptx}
+    \plotAreaWalk{\tail{\tail{\items}}}
+  \fi}
+
+// \stepplot[colour][label]{data} — a staircase line that holds each value until the next
+// x, for piecewise-constant or cumulative data. From a point it goes horizontally to the
+// next x, then vertically to the next value.
+\def stepplot [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{line}{\plotCurColor}{\label}
+  \nofill \stroke{\plotCurColor} \linewidth{1.4pt} \linejoin{miter} \linecap{butt}
+  \path{\plotStepFirst{\seq{\data}}}
+}}
+\def plotStepFirst items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \moveto{\px{ptx} \py{pty}}
+    \set stepPrevY {\pty}
+    \plotStepRest{\tail{\tail{\items}}}
+  \fi}
+\def plotStepRest items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \lineto{\px{ptx} \py{stepPrevY}}
+    \lineto{\px{ptx} \py{pty}}
+    \set stepPrevY {\pty}
+    \plotStepRest{\tail{\tail{\items}}}
+  \fi}
+
 // \scatter[colour][label]{data} — a marker at each data point, shaped by plotmarkshape.
 \def scatter [color:auto] [label:] data {{
   \plotResolveColor{\color}
@@ -385,8 +479,11 @@
     \set ptx {\head{\items}}
     \set pty {\head{\tail{\items}}}
     \set barx {\calc{plotOx + (ptx - plotXmin) * plotSx}}
-    \rect{\calc{barx - plotBarHW} \plotOy
-          \calc{2 * plotBarHW} \calc{(pty - plotYmin) * plotSy}}
+    \set bartop {\calc{plotOy + (pty - plotYmin) * plotSy}}
+    \rect{\calc{barx - plotBarHW} \plotOy  \calc{2 * plotBarHW} \calc{bartop - plotOy}}
+    \if {\= {\plotvalues} {1}}
+      \at anchor:south {\barx \calc{bartop + 2}}{{\font {lmroman} {\plottickfontsize} {regular}\round{\pty}{\plottickdec}}}
+    \fi
     \plotBars{\tail{\tail{\items}}}
   \fi}
 
@@ -428,9 +525,23 @@
 // marker, or a filled square according to the series kind — beside the label.
 \def legend [pos:ne] {
   \if {\> {\plotLegendN} {0}}
+    \set legLast {\calc{plotLegendN - 1}}
+
+    // Measure the widest label (\setbox into a box register, then \wd) so the legend box
+    // is sized to its contents rather than a guessed fixed width. \for opens a scope per
+    // iteration, so the running maximum must be \global to survive the loop.
+    \global\set legMaxW {0}
+    \for\lm{\range{0}{\legLast}}{
+      \set lmLbl {\mapget plotLegLabel {\lm}}
+      \setbox plotLegBox \hbox{\font {lmroman} {\plottickfontsize} {regular}\the\lmLbl}
+      \set lmW {\wd plotLegBox}
+      \if {\> {\lmW} {\legMaxW}} \global\set legMaxW {\lmW} \fi
+    }
+    \set legContentW {\calc{plotlegswatch + 6 + legMaxW}}
+
     \if {\= {\pos} {nw}} \set legLeft {\calc{plotOx + plotleginset}}
     \else \if {\= {\pos} {sw}} \set legLeft {\calc{plotOx + plotleginset}}
-    \else \set legLeft {\calc{plotOx + plotW - plotleginset - plotlegwidth}}
+    \else \set legLeft {\calc{plotOx + plotW - plotleginset - legContentW}}
     \fi \fi
     \if {\= {\pos} {sw}} \set legTop {\calc{plotOy + plotleginset + plotLegendN * plotlegrow}}
     \else \if {\= {\pos} {se}} \set legTop {\calc{plotOy + plotleginset + plotLegendN * plotlegrow}}
@@ -438,8 +549,7 @@
     \fi \fi
     \set legBoxH {\calc{plotLegendN * plotlegrow}}
     \fill{white} \stroke{gainsboro} \linewidth{0.5pt}
-    \rect{\calc{legLeft - 5} \calc{legTop - legBoxH}  \calc{plotlegswatch + plotlegwidth + 11} \legBoxH}
-    \set legLast {\calc{plotLegendN - 1}}
+    \rect{\calc{legLeft - 5} \calc{legTop - legBoxH}  \calc{legContentW + 10} \legBoxH}
     \for\li{\range{0}{\legLast}}{
       \set legRowY {\calc{legTop - \li * plotlegrow - plotlegrow / 2}}
       \set legK {\mapget plotLegKind {\li}}

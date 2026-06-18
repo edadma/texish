@@ -109,3 +109,36 @@ class PlotTests extends AnyFreeSpec with Matchers:
     ops should contain(PictureOp.MoveTo(46, 123))
     ops should contain(PictureOp.LineTo(280, 123))
   }
+
+  "the series body is clipped to the data area by default" in {
+    run(s"$preamble \\plot{ \\lineplot[black]{0 0  10 100} }") should contain(PictureOp.Clip)
+  }
+
+  "clipping can be turned off" in {
+    run(s"$preamble \\set plotclip {0} \\plot{ \\lineplot[black]{0 0  10 100} }") should not contain PictureOp.Clip
+  }
+
+  "areaplot fills a region closed to the baseline" in {
+    val ops = run(s"$preamble \\plot{ \\areaplot[royalblue]{0 0  10 100} }")
+    ops should contain(PictureOp.MoveTo(46, 42))          // start at (xmin, baseline 0)
+    ops should contain(PictureOp.Close)
+    ops.collect { case PictureOp.Paint(Some(c), None) => c } should contain(Color("royalblue"))
+  }
+
+  "stepplot draws a staircase: horizontal then vertical" in {
+    val ops = run(s"$preamble \\plot{ \\stepplot[black]{0 0  10 100} }")
+    ops should contain(PictureOp.MoveTo(46, 42))
+    ops should contain(PictureOp.LineTo(280, 42))   // horizontal to new x at the old y
+    ops should contain(PictureOp.LineTo(280, 204))  // then vertical to the new y
+  }
+
+  "a categorical x axis places one tick per named category" in {
+    // \xcategories sets xrange 0.5..3.5; Sx = 234/3 = 78; categories at x=1,2,3 -> 85,163,241
+    val ops = run("\\use{plot}\\set plotgrid {0}\\yrange{0}{160}\\xcategories{A B C}\\plot{ \\bars[teal]{1 95  2 110  3 80} }")
+    val catTickXs = ops.collect { case PictureOp.MoveTo(x, y) if y == 42 => x }
+    catTickXs should contain allOf (85.0, 163.0, 241.0)
+  }
+
+  "bar value labels render without error when enabled" in {
+    noException should be thrownBy run(s"$preamble \\set plotvalues {1} \\plot{ \\bars[teal]{1 50  2 80} }")
+  }
