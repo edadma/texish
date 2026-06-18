@@ -22,7 +22,8 @@ freeform paths, transforms, and placed type — built on the same rendering pipe
 A document format (`\use{document}`) supplies the article furniture — title blocks, numbered
 sections, lists, quotations, figures and tables with captions, and footnotes — and bundled packages
 add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), text
-sub/superscripts, and chemistry (`\ce` reaction equations and skeletal structures).
+sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), and data
+plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes).
 
 **Documentation: [texish.edadma.dev](https://texish.edadma.dev/).**
 

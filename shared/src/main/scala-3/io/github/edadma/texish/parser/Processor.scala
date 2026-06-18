@@ -62,6 +62,7 @@ class Processor(val handler: Handler):
   registerPrimitive("*", MulPrimitive)
   registerPrimitive("/", DivPrimitive)
   registerPrimitive("calc", CalcPrimitive)
+  registerPrimitive("round", RoundPrimitive)
 
   // Comparison primitives
   registerPrimitive("=", EqPrimitive)
@@ -1197,16 +1198,32 @@ object CalcPrimitive extends Primitive:
       try
         MathExpr.eval(
           text,
-          name =>
-            proc.handler.get(name) match
-              case Value.Num(n)   => Some(n)
-              case Value.Dimen(p) => Some(p)
-              case _              => None,
+          name => Value.number(proc.handler.get(name)),
           proc.handler.fontUnit,
         )
       catch case e: MathExpr.MathExprException => proc.handler.error(e.getMessage, pos)
     proc.setResult(Value.Num(result))
     proc.handler.text(Value.display(Value.Num(result)))
+
+/** `\round{value}{places}` — round a number to a fixed number of decimal places and emit it minimally. The
+  * value and the place count are each evaluated as expressions, so `\round{\calc{x/3}}{2}` works. Unlike a
+  * printf "%.2f", the result is displayed the same way every other number is (whole values lose their `.0`,
+  * trailing zeros drop): rounding `0.1 + 0.2` to 2 places gives `0.3`, not `0.30`. This is what turns a tick
+  * value computed by accumulation — which carries floating-point noise like `0.30000000000000004` — into a
+  * clean axis label, but it is a general numeric helper, not specific to plots. The rounded number is also set
+  * as the capturable result, so `\set v {\round{\x}{3}}` stores a number. */
+object RoundPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val value  = numberArg(proc, pos)
+    val places = numberArg(proc, pos).toInt
+    val factor = math.pow(10, places)
+    val result = math.round(value * factor) / factor
+    proc.setResult(Value.Num(result))
+    proc.handler.text(Value.display(Value.Num(result)))
+
+  private def numberArg(proc: Processor, pos: CharReader): Double =
+    val v = proc.evalArgumentExpr(pos)
+    Value.number(v).getOrElse(proc.handler.error(s"\\round expects a number, got ${Value.display(v)}", pos))
 
 /** Flatten an argument's tokens back into the raw expression string [[MathExpr]] parses. A control sequence
   * contributes its bare name (so `\x` and `\pi` read as the identifiers `x` and `pi`), and an active character
@@ -1243,6 +1260,7 @@ object LtPrimitive extends Primitive:
       case (Value.Num(x), Value.Num(y)) => x < y
       case (Value.Text(x), Value.Text(y)) => x < y
       case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+    proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
 object GtPrimitive extends Primitive:
@@ -1253,6 +1271,7 @@ object GtPrimitive extends Primitive:
       case (Value.Num(x), Value.Num(y)) => x > y
       case (Value.Text(x), Value.Text(y)) => x > y
       case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+    proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
 object LePrimitive extends Primitive:
@@ -1263,6 +1282,7 @@ object LePrimitive extends Primitive:
       case (Value.Num(x), Value.Num(y)) => x <= y
       case (Value.Text(x), Value.Text(y)) => x <= y
       case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+    proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
 object GePrimitive extends Primitive:
@@ -1273,6 +1293,7 @@ object GePrimitive extends Primitive:
       case (Value.Num(x), Value.Num(y)) => x >= y
       case (Value.Text(x), Value.Text(y)) => x >= y
       case _ => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
+    proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
 object NePrimitive extends Primitive:
@@ -1284,6 +1305,7 @@ object NePrimitive extends Primitive:
       case (Value.Text(x), Value.Text(y)) => x != y
       case (Value.Bool(x), Value.Bool(y)) => x != y
       case _ => true
+    proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
 // ============ STRING FUNCTIONS ============

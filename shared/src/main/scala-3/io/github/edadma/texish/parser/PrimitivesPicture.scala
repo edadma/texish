@@ -262,10 +262,7 @@ private[parser] def coordText(tokens: Vector[Token]): String =
 
 // Resolve a bare identifier in a coordinate component expression to a document variable's number.
 private[parser] def varResolver(proc: Processor): String => Option[Double] = name =>
-  proc.handler.get(name) match
-    case Value.Num(n)   => Some(n)
-    case Value.Dimen(p) => Some(p)
-    case _              => None
+  Value.number(proc.handler.get(name))
 
 // Resolve a `(name)` reference to a point stored by \coordinate (a two-element numeric sequence).
 private[parser] def namedResolver(proc: Processor): String => Option[(Double, Double)] = name =>

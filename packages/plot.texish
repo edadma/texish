@@ -1,0 +1,278 @@
+// plot — 2-D data plots, written entirely in the document language over the
+// \picture vector-graphics layer. Import it with:
+//
+//     \use{plot}
+//
+// A plot is set up by declaring the data ranges, then drawn by \plot, whose body
+// holds one or more data series:
+//
+//     \xrange{0}{6}  \yrange{0}{130}
+//     \xlabel{time (s)}  \ylabel{height (m)}  \plottitle{Projectile}
+//     \plot{
+//       \lineplot{royalblue}{0 0  1 45  2 80  3 105  4 120  5 125  6 120}
+//       \scatter{crimson}{2 80  4 120  6 120}
+//     }
+//
+// \plot opens a \picture sized to hold the data area plus margins for the axes
+// and labels, draws the frame (grid, axes, tick marks with numeric labels, axis
+// labels and title), then runs its body to draw the series on top. Everything is
+// the document language: \calc does the data-to-device arithmetic, \seq/\head/\tail
+// walk the data points, \for steps the ticks, and the series are \picture paths and
+// shapes. There is no plot-specific engine primitive — the only general helpers it
+// leans on are \round (clean tick labels) and the picture commands.
+//
+// Data-to-device mapping. A series point in *data* coordinates (x, y) maps to a
+// *device* point inside the picture by an affine transform that \plot stores in the
+// variables plotOx/plotOy (the data area's bottom-left corner) and plotSx/plotSy
+// (device points per data unit). \px and \py apply it, so a coordinate group can mix
+// mapped data points with raw picture points freely.
+
+\use{logos}
+
+// ---- Configuration (override with \set after \use, before \plot) --------------
+// Sizes are in points (72 per inch). The data *area* is plotareaw × plotareah; the
+// picture grows by the margins around it.
+\set plotareaw {234}
+\set plotareah {162}
+\set plotml {46}            // left margin — y tick labels and the y axis label
+\set plotmr {14}            // right margin
+\set plotmt {12}            // top margin (a title adds to this)
+\set plotmb {42}            // bottom margin — x tick labels and the x axis label
+
+// Tick steps default to 0, meaning "choose a nice step automatically"; set a
+// positive value to force a fixed step.
+\set plotxstepcfg {0}
+\set plotystepcfg {0}
+
+// Tick labels are rounded to at most this many decimals, then displayed minimally
+// (trailing zeros drop), so an accumulated tick value never shows floating-point
+// noise. Three places suit any human-scale range.
+\set plottickdec {3}
+
+\set plotgrid {1}           // draw a light grid behind the data
+\set plotticklen {4}        // length of a tick mark, in points
+\set plotsamples {80}       // samples across the domain for \fnplot
+\set plotmarkr {2.4}        // marker radius for \scatter
+\set plotbarfrac {0.6}      // bar width as a fraction of the x step, for \bars
+
+\set plotaxiscolor {dimgray}
+\set plotgridcolor {gainsboro}
+\set plottickfontsize {8}
+\set plotlabelfontsize {9}
+\set plottitlefontsize {11}
+
+// ---- Range and label declarations ---------------------------------------------
+// Ranges are forced through \calc so the stored bounds are numbers, ready for the
+// transform arithmetic. Labels and the title are stored as macros (like a document
+// title), so they typeset when referenced and read as empty until set.
+\def xrange a b {\set plotXmin {\calc{\a}}\set plotXmax {\calc{\b}}}
+\def yrange a b {\set plotYmin {\calc{\a}}\set plotYmax {\calc{\b}}}
+\def xstep s {\set plotxstepcfg {\calc{\s}}}
+\def ystep s {\set plotystepcfg {\calc{\s}}}
+
+\def plotxlabtext {}
+\def plotylabtext {}
+\def plottitletext {}
+\def xlabel t {\def plotxlabtext {\t}}
+\def ylabel t {\def plotylabtext {\t}}
+\def plottitle t {\def plottitletext {\t}}
+
+// ---- Device-coordinate mapping -------------------------------------------------
+// \px{v} / \py{v} map a data coordinate to a device coordinate. The argument is a
+// variable name: it is dropped into a \calc expression, where a bare identifier
+// resolves to the document variable of that name, so the recursion below sets a
+// point's x and y into variables and passes their names here.
+\def px v {\calc{plotOx + ((\v) - plotXmin) * plotSx}}
+\def py v {\calc{plotOy + ((\v) - plotYmin) * plotSy}}
+
+// ---- Nice tick step ------------------------------------------------------------
+// Round a rough target step (the range over the desired number of intervals) up to
+// the nearest 1, 2, or 5 times a power of ten — the steps that read well on an axis.
+// The argument is the name of a variable holding the rough step, so \calc can
+// resolve it. The chosen step lands in plotStepResult.
+\def plotNiceStep raw {
+  \set pnsMag {\calc{10 ^ floor(log(\raw))}}
+  \set pnsNorm {\calc{(\raw) / pnsMag}}
+  \if {\< {\pnsNorm} {1.5}} \global\set plotStepResult {\calc{pnsMag}}
+  \else \if {\< {\pnsNorm} {3}} \global\set plotStepResult {\calc{2 * pnsMag}}
+  \else \if {\< {\pnsNorm} {7}} \global\set plotStepResult {\calc{5 * pnsMag}}
+  \else \global\set plotStepResult {\calc{10 * pnsMag}}
+  \fi \fi \fi
+}
+
+// ---- The plot frame ------------------------------------------------------------
+// \plot computes the transform and the tick steps, opens a picture of the right
+// size, draws the frame, and runs the series body on top. The whole thing sits in a
+// group so the transform variables and the label macros do not leak into the
+// surrounding document.
+\def plot body {{
+  \if {\> {\plotxstepcfg} {0}}
+    \set plotXstep {\plotxstepcfg}
+  \else
+    \set plotXrough {\calc{(plotXmax - plotXmin) / 5}}
+    \plotNiceStep{plotXrough}
+    \set plotXstep {\plotStepResult}
+  \fi
+  \if {\> {\plotystepcfg} {0}}
+    \set plotYstep {\plotystepcfg}
+  \else
+    \set plotYrough {\calc{(plotYmax - plotYmin) / 5}}
+    \plotNiceStep{plotYrough}
+    \set plotYstep {\plotStepResult}
+  \fi
+
+  \set plotMT {\plotmt}
+  \if {\> {\size{\plottitletext}} {0}} \set plotMT {\calc{plotmt + 18}} \fi
+
+  \set plotW {\plotareaw}
+  \set plotH {\plotareah}
+  \set plotOx {\plotml}
+  \set plotOy {\plotmb}
+  \set plotSx {\calc{plotW / (plotXmax - plotXmin)}}
+  \set plotSy {\calc{plotH / (plotYmax - plotYmin)}}
+
+  \picture width:{\calc{plotml + plotW + plotmr}} height:{\calc{plotmb + plotH + plotMT}} {
+    \if {\= {\plotgrid} {1}} \plotDrawGrid \fi
+    \plotDrawAxes
+    \plotDrawXTicks
+    \plotDrawYTicks
+    \plotDrawLabels
+    \body
+  }
+}}
+
+// The grid: faint lines at every tick position, drawn first so the data sits over
+// them. plotNX / plotNY are the number of whole steps that fit in each range.
+\def plotDrawGrid {
+  \nofill \stroke{\plotgridcolor} \linewidth{0.5pt}
+  \set plotNX {\calc{floor((plotXmax - plotXmin) / plotXstep + 0.0001)}}
+  \for\i{\range{0}{\plotNX}}{
+    \set gx {\calc{plotOx + (\i * plotXstep) * plotSx}}
+    \line{\gx \plotOy  \gx \calc{plotOy + plotH}}
+  }
+  \set plotNY {\calc{floor((plotYmax - plotYmin) / plotYstep + 0.0001)}}
+  \for\j{\range{0}{\plotNY}}{
+    \set gy {\calc{plotOy + (\j * plotYstep) * plotSy}}
+    \line{\plotOx \gy  \calc{plotOx + plotW} \gy}
+  }
+}
+
+// The two axes: the x axis along the bottom of the area, the y axis up its left.
+\def plotDrawAxes {
+  \nofill \stroke{\plotaxiscolor} \linewidth{0.8pt} \linecap{square}
+  \line{\plotOx \plotOy  \calc{plotOx + plotW} \plotOy}
+  \line{\plotOx \plotOy  \plotOx \calc{plotOy + plotH}}
+}
+
+// X tick marks and their numeric labels, set just below the axis.
+\def plotDrawXTicks {
+  \set plotNX {\calc{floor((plotXmax - plotXmin) / plotXstep + 0.0001)}}
+  \nofill \stroke{\plotaxiscolor} \linewidth{0.8pt}
+  \for\i{\range{0}{\plotNX}}{
+    \set tickv {\calc{plotXmin + \i * plotXstep}}
+    \set tickx {\calc{plotOx + (tickv - plotXmin) * plotSx}}
+    \line{\tickx \plotOy  \tickx \calc{plotOy - plotticklen}}
+    \at anchor:north {\tickx \calc{plotOy - plotticklen - 2}}{{\font {lmroman} {\plottickfontsize} {regular}\round{\tickv}{\plottickdec}}}
+  }
+}
+
+// Y tick marks and their numeric labels, set just left of the axis.
+\def plotDrawYTicks {
+  \set plotNY {\calc{floor((plotYmax - plotYmin) / plotYstep + 0.0001)}}
+  \nofill \stroke{\plotaxiscolor} \linewidth{0.8pt}
+  \for\j{\range{0}{\plotNY}}{
+    \set tickv {\calc{plotYmin + \j * plotYstep}}
+    \set ticky {\calc{plotOy + (tickv - plotYmin) * plotSy}}
+    \line{\plotOx \ticky  \calc{plotOx - plotticklen} \ticky}
+    \at anchor:east {\calc{plotOx - plotticklen - 3} \ticky}{{\font {lmroman} {\plottickfontsize} {regular}\round{\tickv}{\plottickdec}}}
+  }
+}
+
+// The x axis label (centred under the ticks) and the y axis label (centred to the
+// left, set vertically by rotating the coordinate system before placing it), and
+// the title (centred over the top of the area).
+\def plotDrawLabels {
+  \if {\> {\size{\plotxlabtext}} {0}}
+    \at anchor:north {\calc{plotOx + plotW / 2} \calc{plotOy - plotticklen - plottickfontsize - 8}}{{\font {lmroman} {\plotlabelfontsize} {regular}\plotxlabtext}}
+  \fi
+  \if {\> {\size{\plotylabtext}} {0}}
+    \group{
+      \translate{\calc{plotOx - plotml + 12} \calc{plotOy + plotH / 2}}
+      \rotate{90}
+      \at anchor:south {0 0}{{\font {lmroman} {\plotlabelfontsize} {regular}\plotylabtext}}
+    }
+  \fi
+  \if {\> {\size{\plottitletext}} {0}}
+    \at anchor:north {\calc{plotOx + plotW / 2} \calc{plotOy + plotH + plotMT - 4}}{{\font {lmroman} {\plottitlefontsize} {bold}\plottitletext}}
+  \fi
+}
+
+// ---- Data series ---------------------------------------------------------------
+// Each series reads a flat "x1 y1 x2 y2 …" list and walks it two values at a time,
+// setting the current point's x and y into the variables ptx / pty so \px / \py can
+// map them. Recursion (not \for) keeps the walk simple and avoids opening a scope
+// per point.
+
+// \lineplot{colour}{data} — a polyline through the data points.
+\def lineplot color data {{
+  \nofill \stroke{\color} \linewidth{1.4pt} \linejoin{round} \linecap{round}
+  \path{\plotPolyFirst{\seq{\data}}}
+}}
+\def plotPolyFirst items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \moveto{\px{ptx} \py{pty}}
+    \plotPolyRest{\tail{\tail{\items}}}
+  \fi}
+\def plotPolyRest items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \lineto{\px{ptx} \py{pty}}
+    \plotPolyRest{\tail{\tail{\items}}}
+  \fi}
+
+// \scatter{colour}{data} — a filled marker at each data point.
+\def scatter color data {{
+  \fill{\color} \nostroke
+  \plotMarks{\seq{\data}}
+}}
+\def plotMarks items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \circle{\px{ptx} \py{pty} \plotmarkr}
+    \plotMarks{\tail{\tail{\items}}}
+  \fi}
+
+// \bars{colour}{data} — a vertical bar from the x axis up to each data point, the
+// bars centred on their x value and a fixed fraction of the x step wide.
+\def bars color data {{
+  \fill{\color} \nostroke
+  \set plotBarHW {\calc{plotbarfrac * plotXstep * plotSx / 2}}
+  \plotBars{\seq{\data}}
+}}
+\def plotBars items {
+  \if {\size{\items}}
+    \set ptx {\head{\items}}
+    \set pty {\head{\tail{\items}}}
+    \set barx {\calc{plotOx + (ptx - plotXmin) * plotSx}}
+    \rect{\calc{barx - plotBarHW} \plotOy
+          \calc{2 * plotBarHW} \calc{(pty - plotYmin) * plotSy}}
+    \plotBars{\tail{\tail{\items}}}
+  \fi}
+
+// \fnplot{colour}{expression} — sample a function of x across the domain and stroke
+// it as a curve. The expression is written in terms of the variable x (e.g. x*x - 2*x);
+// the sampler sets x at each step and evaluates the expression with \calc.
+\def fnplot color expr {{
+  \nofill \stroke{\color} \linewidth{1.6pt} \linejoin{round}
+  \path{
+    \for\k{\range{0}{\plotsamples}}{
+      \set x {\calc{plotXmin + \k * (plotXmax - plotXmin) / plotsamples}}
+      \set fy {\calc{\expr}}
+      \if {\= {\k} {0}} \moveto{\px{x} \py{fy}} \else \lineto{\px{x} \py{fy}} \fi
+    }
+  }
+}}

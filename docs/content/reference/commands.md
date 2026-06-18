@@ -78,6 +78,19 @@ are engine primitives available in any document.
 | `\atom{name}{x y}{label}` | place and label an atom |
 | `\bond` `\dbond` `\tbond` | single / double / triple bond |
 
+## Plotting *(`\use{plot}`)*
+
+| Command | Effect |
+|---------|--------|
+| `\xrange{min}{max}` `\yrange{min}{max}` | the plot's data ranges |
+| `\xlabel{…}` `\ylabel{…}` `\plottitle{…}` | axis labels and title |
+| `\xstep{s}` `\ystep{s}` | force a tick step (default: a *nice* step) |
+| `\plot{ … }` | draw the axes, ticks, grid, and labels, then the body's series |
+| `\lineplot{colour}{x y x y …}` | a polyline through the data points |
+| `\scatter{colour}{x y x y …}` | a filled marker at each point |
+| `\bars{colour}{x y x y …}` | a vertical bar to each point |
+| `\fnplot{colour}{expr in x}` | a sampled curve of a function |
+
 ## Macros and programming
 
 | Command | Effect |
@@ -87,6 +100,8 @@ are engine primitives available in any document.
 | `\let` `\global` `\gdef` | aliasing and global definitions |
 | `\if` `\ifx` `\else` `\fi` | conditionals |
 | `\calc{…}` `\+ \- \* \/` | arithmetic |
+| `\round{value}{places}` | round a number to a fixed number of decimals |
+| `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |
 | `\for … \done` | iteration |
 | `\newcounter` `\stepcounter` `\value` `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph` | counters and number formatting |
 | `\use{name}` `\include{path}` | load a format / include raw input |

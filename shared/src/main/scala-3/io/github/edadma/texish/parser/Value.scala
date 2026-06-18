@@ -64,6 +64,16 @@ object Value:
   /** Check if a value is "falsy" */
   def falsy(v: Value): Boolean = !truthy(v)
 
+  /** Interpret a value as a number where arithmetic expects one. A `Num` is itself, a `Dimen` is its size in
+    * points, and a `Text` that is wholly a numeric literal (e.g. `"5"`, `"-2.5"`) coerces to that number — so a
+    * variable holding a numeric string is usable in `\calc`, `\round`, and picture coordinates rather than being
+    * rejected as an unknown name. Anything else is not a number. */
+  def number(v: Value): Option[Double] = v match
+    case Num(n)   => Some(n)
+    case Dimen(p) => Some(p)
+    case Text(s)  => s.trim.toDoubleOption
+    case _        => None
+
   /** Convert a value to its display string */
   def display(v: Value): String = v match
     case Text(s)       => s

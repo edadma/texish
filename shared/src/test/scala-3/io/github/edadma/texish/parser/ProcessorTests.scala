@@ -197,6 +197,49 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       process("\\!={5}{5}") shouldBe "false"
     }
 
+    // Every comparison sets a capturable Bool result, like \=, so a comparison can be stored in a variable and
+    // composed in further expressions — not just typeset as the text "true"/"false".
+    "comparisons set a capturable Bool result" in {
+      val handler = new StringHandler
+      val proc    = new Processor(handler)
+      proc.process("\\set a {\\<{3}{5}}\\set b {\\>{3}{5}}\\set c {\\<={5}{5}}\\set d {\\>={3}{5}}\\set e {\\!={1}{1}}")
+      handler.get("a") shouldBe Value.Bool(true)
+      handler.get("b") shouldBe Value.Bool(false)
+      handler.get("c") shouldBe Value.Bool(true)
+      handler.get("d") shouldBe Value.Bool(false)
+      handler.get("e") shouldBe Value.Bool(false)
+    }
+
+    "\\round trims floating-point noise to a clean decimal label" in {
+      process("\\round{\\calc{0.1 + 0.2}}{2}") shouldBe "0.3"
+    }
+
+    "\\round to zero places gives a whole number with no decimal point" in {
+      process("\\round{2.7}{0}") shouldBe "3"
+    }
+
+    "\\round keeps the significant decimals and drops trailing zeros" in {
+      process("\\round{3.14159}{3}") shouldBe "3.142"
+      process("\\round{10}{2}") shouldBe "10"
+    }
+
+    "\\round sets a capturable number result" in {
+      val handler = new StringHandler
+      val proc    = new Processor(handler)
+      proc.process("\\set v {\\round{\\calc{7/3}}{2}}")
+      handler.get("v") shouldBe Value.Num(2.33)
+    }
+
+    // A variable holding a numeric string coerces to a number where arithmetic expects one — \calc and \round
+    // both resolve it rather than failing with "unknown name". \seq can yield text-typed numeric elements (its
+    // boundary items, after macro-parameter substitution), so this coercion is what lets a data series built from
+    // such a sequence be used in coordinate arithmetic.
+    "a numeric string variable is usable as a number in \\calc and \\round" in {
+      // \cat yields a Text value, so s holds the numeric string "5", not a Num.
+      process("\\set s {\\cat{5}{}}\\calc{s * 2}") shouldBe "10"
+      process("\\set s {\\cat{2.4}{}}\\round{\\s}{0}") shouldBe "2"
+    }
+
     // ============ STRING FUNCTION TESTS ============
 
     "should handle \\upcase" in {

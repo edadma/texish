@@ -1,0 +1,88 @@
+// Plotting demonstration for the \use{plot} package.
+//
+// Render with:  texish scripts/plot.script -o plot -p letter
+//
+// The plot package is built entirely in the document language over the \picture
+// vector-graphics layer: \plot sets up a data-to-device transform, draws the axes,
+// tick marks, numeric labels, grid and title, then runs its body to draw the data
+// series on top. Series come in four kinds — \lineplot, \scatter, \bars and \fnplot.
+
+\use{plot}
+
+\def headline {\italic{Plot demo} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+
+\font lmroman 12 regular
+
+\bold{\TeXish{} plots — data graphics in the document}
+
+A \italic{plot} is a \picture with a coordinate system: you give the data ranges
+and a few series, and the package maps data values to the page, draws the axes and
+labelled ticks, and strokes the series. Because it is all the document language,
+the prose, the axes and the curve share one rendering pipeline.
+
+\bold{A line series}
+
+\xrange{0}{6}
+\yrange{0}{130}
+\xlabel{time (s)}
+\ylabel{height (m)}
+\plottitle{Projectile}
+\plot{
+  \lineplot{royalblue}{0 0  1 50  2 88  3 112  4 124  5 126  6 118}
+  \scatter{crimson}{1 50  3 112  5 126}
+}
+
+A \italic{\\lineplot} strokes a polyline through its data points; a \italic{\\scatter}
+drops a filled marker at each point. Both read the same flat \italic{x y x y …} list.
+
+\bold{A bar chart}
+
+A \italic{\\bars} series draws a vertical bar from the axis up to each value, centred
+on its x position. Here the y range is set so the bars have headroom.
+
+\xrange{0}{7}
+\yrange{0}{160}
+\xlabel{quarter}
+\ylabel{revenue}
+\plottitle{Quarterly revenue}
+\set plotgrid {1}
+\plot{
+  \bars{teal}{1 95  2 110  3 80  4 140  5 120  6 150}
+}
+
+\eject
+
+\bold{A function plot}
+
+\italic{\\fnplot} samples a function of \italic{x} across the domain and strokes the
+result. The expression is ordinary \italic{\\calc} arithmetic, written in terms of
+\italic{x}, so any function the expression evaluator knows can be drawn.
+
+\xrange{-3}{3}
+\yrange{0}{9}
+\xlabel{$x$}
+\ylabel{$y$}
+\plottitle{$y = x^2$}
+\plot{
+  \fnplot{seagreen}{x*x}
+}
+
+\bold{Two curves and a fine grid}
+
+A plot body can hold several series, and the tick step can be forced with
+\italic{\\xstep} / \italic{\\ystep} when the automatic choice is not what you want.
+
+\xrange{0}{6.283}
+\yrange{-1.2}{1.2}
+\xstep{1}
+\ystep{0.5}
+\xlabel{angle (rad)}
+\plottitle{Sine and cosine}
+\plot{
+  \fnplot{darkorange}{sin(x)}
+  \fnplot{mediumvioletred}{cos(x)}
+}
+
+Each figure above is a single box that flows in the text like any other, so a plot
+can sit inline with prose, in a figure float, or beside a table.

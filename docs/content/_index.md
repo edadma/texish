@@ -33,7 +33,7 @@ coherent family across prose, equations, and code.
 
 - **[Getting Started](/getting-started/)** — install texish and render your first document.
 - **[Guide](/guide/)** — the document format, text and markup, mathematics, figures and
-  images, the inline vector-graphics mode, and chemistry.
+  images, the inline vector-graphics mode, chemistry, and data plotting.
 - **[Reference](/reference/)** — the command-line tool and a command cheat sheet.
 
 ## What it does
@@ -48,5 +48,7 @@ coherent family across prose, equations, and code.
   `\includegraphics` places PNG and JPEG images.
 - **Vector graphics** — `\picture` draws shapes, paths, and placed type inline, through the
   same pipeline as the text.
+- **Chemistry and plotting** — `\use{chem}` sets reaction equations and structures;
+  `\use{plot}` draws line, scatter, bar, and function plots with labelled axes.
 - **Three platforms** — the JVM (Graphics2D raster), Scala Native (Cairo PDF + image), and
   Scala.js.
