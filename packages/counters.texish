@@ -1,0 +1,42 @@
+// counters — LaTeX-style named counters in the document language.
+//
+//     \use{counters}
+//     \newcounter{section}
+//     \newcounter{subsection}
+//     \counterwithin{subsection}{section}   // reset subsection whenever section steps
+//     ... \stepcounter{section} ... \arabic{\value{section}}
+//
+// State lives in two global maps over the engine's keyed store, so counters survive
+// groups: counterStore (name → value) and counterParent (child → parent). Stepping a
+// counter zeroes every counter declared \counterwithin it, recursively — LaTeX's reset
+// lists. Display a counter by formatting its value, e.g. \arabic{\value section} (or
+// \roman, \Roman, \alph, \Alph, \fnsymbol). Each line ends with // so its newline is
+// stripped and the macros emit no stray whitespace in running text.
+
+\def newcounter n {{//
+\global\mapset counterStore {\n} {0}//
+}}//
+\def setcounter n v {{//
+\global\mapset counterStore {\n} {\v}//
+}}//
+\def addtocounter n amt {{//
+\set counterCur {\mapget counterStore {\n}}//
+\global\mapset counterStore {\n} {\calc{counterCur + \amt}}//
+}}//
+\def value n {\mapget counterStore {\n}}//
+\def counterwithin child parent {{//
+\global\mapset counterParent {\child} {\parent}//
+}}//
+\def stepcounter n {{//
+\addtocounter {\n} {1}//
+\resetwithin {\n}//
+}}//
+\def resetwithin parent {{//
+\for\counterLink {\counterParent} {//
+\if {\= {\counterLink.value} {\parent}}//
+\set resetChild {\counterLink.key}//
+\setcounter \resetChild {0}//
+\resetwithin \resetChild//
+\fi//
+}//
+}}//

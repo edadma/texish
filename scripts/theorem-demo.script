@@ -1,0 +1,57 @@
+\use{document}
+\use{theorem}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{remark}{Remark}
+
+\title{The \texttt{theorem} Package}
+\author{A demonstration of amsthm-style environments in texish}
+\maketitle
+
+\section{Numbered theorems}
+
+The plain style sets a bold run-in head and an italic body. A note in brackets after
+\texttt{\\begin} appears in parentheses.
+
+\begin{theorem}[Pythagoras]
+For a right triangle with legs $a$, $b$ and hypotenuse $c$, the squares of the legs
+sum to the square of the hypotenuse: $a^2 + b^2 = c^2$.
+\end{theorem}
+
+\begin{lemma}
+A lemma defined with a shared counter numbers in the same sequence as the theorems,
+so this is Lemma 2 rather than Lemma 1.
+\end{lemma}
+
+\begin{theorem}
+A second theorem advances that shared counter again, becoming Theorem 3.
+\end{theorem}
+
+\begin{corollary}
+A corollary runs on its own independent counter, so it starts again at 1.
+\end{corollary}
+
+\begin{proof}
+The statement follows immediately from the definitions, and the end-of-proof box is
+set flush right on the last line by \texttt{\\qed}. \qed
+\end{proof}
+
+\section{Numbering within a section}
+
+\begin{definition}[Continuity]
+A function $f$ is continuous at a point $x_0$ when small changes in $x$ near $x_0$
+produce arbitrarily small changes in $f(x)$. Definitions are numbered within the
+section, so this is 2.1.
+\end{definition}
+
+\begin{definition}
+The second definition in this section numbers as 2.2, its counter having been reset
+when the section counter advanced.
+\end{definition}
+
+\begin{remark}
+Remarks keep their own counter, independent of the theorems and definitions above.
+\end{remark}
