@@ -61,16 +61,85 @@
 }
 
 // ---- Reactions ----------------------------------------------------------------
-// A reaction is a row of species joined by + and a reaction arrow. Each species is
-// an inline box: a formula (atom counts as subscripts with \dn, a leading number
-// for the stoichiometric coefficient) or a drawn \picture structure. The reaction
-// arrow → and the equilibrium arrow ⇌ are math symbols — write $\longrightarrow$
-// and $\rightleftharpoons$ — so they are real glyphs from the math font, centred on
-// the text's axis. The pieces sit in the running text, so a whole equation is one
-// line, typically inside \centerline to centre it.
+// A reaction is a row of species joined by an operator and an arrow. Each species
+// is an inline box: a formula (atom counts as subscripts with \dn, a leading number
+// for the stoichiometric coefficient) or a drawn \picture structure. The operator
+// $+$, the reaction arrow $\longrightarrow$ and the equilibrium arrow
+// $\rightleftharpoons$ are all math symbols — written between dollars — so they are
+// real glyphs from the math font: a true plus, a true minus sign (not a hyphen) for
+// a charge, and arrows centred on the text's axis. Charges use $+$ / $-$ inside \up
+// (Na\up{$+$}, SO\dn{4}\up{$2-$}). The pieces sit in the running text, so a whole
+// equation is one line, typically inside \centerline to centre it.
 
 // \dn{n} / \up{n} — an atom-count subscript and an ionic-charge superscript, sized
 // from the current font by the engine's \textsub / \textsup: \dn turns H\dn2 O into
 // H2O with the 2 dropped and shrunk, and \up gives Na\up+ or SO\dn4\up{2-}.
 \def dn n {\textsub{\n}}
 \def up n {\textsup{\n}}
+
+// ---- \ce: a reaction equation from compact notation ---------------------------
+// \ce{CH4 + 2 O2 -> CO2 + 2 H2O} typesets a reaction in math mode, the way mhchem's
+// \ce does. Species are separated by spaces; a + joins them and -> / <=> / <- / <->
+// are the reaction arrows. Inside a species a run of letters is an element symbol
+// (set upright with \text), a digit run after letters is a subscript count, and a
+// digit run at the start is a stoichiometric coefficient. There is no special-purpose
+// engine primitive: \ce assembles math markup and the surrounding $...$ renders it in
+// math mode, so + is a binary operator and the arrows are math glyphs. The parsing is
+// done with the general string primitives \seq, \head, \tail, \size, \cat and \maphas.
+//
+// (Neutral species only for now: a ^ charge cannot survive a macro argument, so write
+// ions with \up — e.g. Na\up{$+$} — outside \ce.)
+\set cedigits {\map{0 1 1 1 2 1 3 1 4 1 5 1 6 1 7 1 8 1 9 1}}
+
+// Split on whitespace, then recurse over the tokens. Recursion (not \for) matters: a
+// macro expands inline, so every atom lands in one flat math list and gets the normal
+// inter-atom spacing — \for opens a scope per iteration, which in math mode would wrap
+// each token in its own sub-formula and lose the spacing around + and the arrows.
+\def ce f {$\ceSeq{\seq{\f}}$}
+
+\def ceSeq items {
+  \if {\size{\items}}
+    \ceTok{\head{\items}}
+    \ceSeq{\tail{\items}}
+  \fi}
+
+// One whitespace-separated token: an operator/arrow, or otherwise a species formula.
+\def ceTok t {
+  \if {\= {\t} {+}} +
+  \else \if {\= {\t} {->}} \longrightarrow
+  \else \if {\= {\t} {<=>}} \rightleftharpoons
+  \else \if {\= {\t} {<->}} \leftrightarrow
+  \else \if {\= {\t} {<-}} \leftarrow
+  \else \ceWalk{\cat{\t}{}}{1}
+  \fi \fi \fi \fi \fi}
+
+// Walk a species string: letters become upright \text, a digit run is a coefficient
+// at the start of the species (start = 1) or a subscript otherwise.
+\def ceWalk s start {
+  \if {\size{\s}}
+    \set cwc {\head{\s}}
+    \if {\maphas cedigits {\cwc}}
+      \global\set cedr {}
+      \ceDigits{\s}
+      \if {\= {\start} {1}} \cedr \else _{\cedr} \fi
+      \ceWalk{\cerest}{0}
+    \else
+      \text{\cwc}
+      \ceWalk{\tail{\s}}{0}
+    \fi
+  \fi}
+
+// Consume the leading digit run of \s into the global cedr, leaving the remainder in
+// the global cerest.
+\def ceDigits s {
+  \if {\size{\s}}
+    \set cdc {\head{\s}}
+    \if {\maphas cedigits {\cdc}}
+      \global\set cedr {\cat{\cedr}{\cdc}}
+      \ceDigits{\tail{\s}}
+    \else
+      \global\set cerest {\s}
+    \fi
+  \else
+    \global\set cerest {}
+  \fi}

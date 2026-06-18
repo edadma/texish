@@ -7,31 +7,20 @@
 
 \section{Reaction equations}
 
-A reaction is a row of species joined by \texttt{+} and a reaction arrow. Atom
-counts are subscripts (\texttt{\\dn}) and ionic charges superscripts
-(\texttt{\\up}); a leading number is the stoichiometric coefficient, at full size.
-The reaction arrow is the math symbol \texttt{\$\\longrightarrow\$}, a real glyph
-from the math font. The combustion of methane:
+Written in compact, mhchem-style notation with \texttt{\\ce}, a reaction is parsed
+and set in math mode — element symbols upright, atom counts as subscripts,
+coefficients at full size, and the operators and arrows as math symbols. The
+combustion of methane is \texttt{\\ce\{CH4 + 2 O2 -> CO2 + 2 H2O\}}:
 
 \bigskip
-\centerline{\font lmroman 14 regular CH\dn{4} + 2O\dn{2} $\longrightarrow$ CO\dn{2} + 2H\dn{2}O}
+\centerline{\font lmroman 14 regular \ce{CH4 + 2 O2 -> CO2 + 2 H2O}}
 \bigskip
 
-\noindent A reversible reaction uses the equilibrium arrow
-\texttt{\$\\rightleftharpoons\$} — the Haber process:
+\noindent The Haber process is reversible, with the equilibrium arrow
+\texttt{<=>}:
 
 \bigskip
-\centerline{\font lmroman 14 regular N\dn{2} + 3H\dn{2} $\rightleftharpoons$ 2NH\dn{3}}
+\centerline{\font lmroman 14 regular \ce{N2 + 3 H2 <=> 2 NH3}}
 \bigskip
-
-\noindent And a dissociation, showing ionic charges with \texttt{\\up}:
-
-\bigskip
-\centerline{\font lmroman 14 regular NaCl $\longrightarrow$ Na\up{+} + Cl\up{-}}
-\bigskip
-
-\noindent Because each species is just an inline box, a drawn \texttt{\\picture}
-structure can stand in place of a formula and the same \texttt{+} and arrow lay
-out the equation.
 
 \vfill\eject

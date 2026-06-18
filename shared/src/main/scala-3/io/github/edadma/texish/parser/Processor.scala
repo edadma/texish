@@ -81,6 +81,7 @@ class Processor(val handler: Handler):
   // Sequence primitives
   registerPrimitive("seq", SeqPrimitive)
   registerPrimitive("range", RangePrimitive)
+  registerPrimitive("cat", CatPrimitive)
   registerPrimitive("head", HeadPrimitive)
   registerPrimitive("tail", TailPrimitive)
   registerPrimitive("last", LastPrimitive)
@@ -1365,6 +1366,8 @@ object SizePrimitive extends Primitive:
       case Value.Seq(items) => items.size
       case Value.Map(entries) => entries.size
       case _ => 0
+    // value (for \if/\set, where output is suppressed) and typeset output (in direct position)
+    proc.setResult(Value.Num(size))
     proc.handler.text(size.toString)
 
 // ============ SEQUENCE FUNCTIONS ============
@@ -1409,6 +1412,7 @@ object HeadPrimitive extends Primitive:
       case Value.Seq(items) if items.nonEmpty => items.head
       case Value.Text(s) if s.nonEmpty => Value.Text(s.head.toString)
       case _ => Value.Nil
+    proc.setResult(result)
     proc.handler.text(Value.display(result))
 
 object TailPrimitive extends Primitive:
@@ -1418,6 +1422,8 @@ object TailPrimitive extends Primitive:
       case Value.Seq(items) if items.nonEmpty => Value.Seq(items.tail)
       case Value.Text(s) if s.nonEmpty => Value.Text(s.tail)
       case _ => Value.Nil
+    // value (usable as \tail in an expression) and the legacy `seq` variable it has always set
+    proc.setResult(result)
     proc.handler.set("seq", result)
 
 object LastPrimitive extends Primitive:
@@ -1427,7 +1433,16 @@ object LastPrimitive extends Primitive:
       case Value.Seq(items) if items.nonEmpty => items.last
       case Value.Text(s) if s.nonEmpty => Value.Text(s.last.toString)
       case _ => Value.Nil
+    proc.setResult(result)
     proc.handler.text(Value.display(result))
+
+/** \cat{a}{b} — concatenate two values as text and return the result, for building up strings in the document
+  * language (e.g. accumulating an element run while parsing a formula). A general string operation. */
+object CatPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val a = Value.display(proc.evalArgumentExpr(pos))
+    val b = Value.display(proc.evalArgumentExpr(pos))
+    proc.setResult(Value.Text(a + b))
 
 // ============ MAP/OBJECT CREATION ============
 
