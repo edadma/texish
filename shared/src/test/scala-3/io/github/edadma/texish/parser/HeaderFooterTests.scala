@@ -78,6 +78,31 @@ class HeaderFooterTests extends AnyFreeSpec with Matchers:
     texts.count(_.startsWith(" ")) shouldBe 0
   }
 
+  "pageno can be reassigned mid-document to restart folios, as in plain TeX" in quietly {
+    val (t, proc) = fixture()
+
+    // ship three pages, but reset the folio to 1 before the third: the running footer must read 1, 2, then 1
+    // again — pageno is a logical counter the document owns, not the physical sheet index
+    proc.process(
+      "\\def footline {\\hfil \\the\\pageno}\npage one\n\n\\vfill\\eject page two\n\n\\vfill\\eject \\set pageno {1} page three",
+    )
+    t.end()
+
+    t.drawn.map(_._1).filter(s => s == "1" || s == "2") shouldBe ArrayBuffer("1", "2", "1")
+  }
+
+  "a reassigned pageno feeds the number formatters for roman front-matter folios" in quietly {
+    val (t, proc) = fixture()
+
+    // front matter numbers its pages with lowercase roman numerals off the same pageno counter
+    proc.process("\\def footline {\\hfil \\roman{\\calc{pageno}}}\nfront one\n\n\\vfill\\eject front two")
+    t.end()
+
+    val texts = t.drawn.map(_._1)
+    texts should contain("i")
+    texts should contain("ii")
+  }
+
   "shipout during a paragraph contribution evaluates the header without disturbing the body" in quietly {
     val (t, proc) = fixture()
     t.set("vsize", 60.0)
