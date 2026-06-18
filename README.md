@@ -19,7 +19,12 @@ a Cairo image-and-PDF backend on Native.
 It also has a vector-graphics mode (see below) for figures drawn inline in the document — shapes,
 freeform paths, transforms, and placed type — built on the same rendering pipeline as the text.
 
-Full documentation is coming — a dedicated docs site will be linked here once it's published.
+A document format (`\use{document}`) supplies the article furniture — title blocks, numbered
+sections, lists, quotations, figures and tables with captions, and footnotes — and bundled packages
+add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), text
+sub/superscripts, and chemistry (`\ce` reaction equations and skeletal structures).
+
+**Documentation: [texish.edadma.dev](https://texish.edadma.dev/).**
 
 ## Vector graphics
 
@@ -88,7 +93,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.3.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.4.0"
 ```
 
 ## License

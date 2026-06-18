@@ -11,7 +11,7 @@ use it: as the standalone command-line renderer, or as a library in an sbt build
 Add texish with the `%%%` operator so sbt selects the right platform artifact:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.3.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.4.0"
 ```
 
 The library gives you the engine and the `parser` layer — construct a typesetter for your
