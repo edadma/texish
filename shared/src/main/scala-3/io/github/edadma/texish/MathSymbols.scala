@@ -114,6 +114,9 @@ object MathSymbols:
     "to" -> (0x2192, Rel), "leftrightarrow" -> (0x2194, Rel), "mapsto" -> (0x21A6, Rel),
     "Leftarrow" -> (0x21D0, Rel), "Rightarrow" -> (0x21D2, Rel), "Leftrightarrow" -> (0x21D4, Rel),
     "uparrow" -> (0x2191, Rel), "downarrow" -> (0x2193, Rel),
+    "longleftarrow" -> (0x27F5, Rel), "longrightarrow" -> (0x27F6, Rel),
+    "longleftrightarrow" -> (0x27F7, Rel), "longmapsto" -> (0x27FC, Rel),
+    "rightharpoonup" -> (0x21C0, Rel), "rightleftharpoons" -> (0x21CC, Rel),
 
     // Ordinary symbols.
     "infty" -> (0x221E, Ord), "partial" -> (0x2202, Ord), "nabla" -> (0x2207, Ord),

@@ -120,6 +120,8 @@ class Processor(val handler: Handler):
   // & and # are alignment-active only inside \halign; \& and \# are their literals everywhere
   registerPrimitive("&", LiteralPrimitive("&"))
   registerPrimitive("#", LiteralPrimitive("#"))
+  // $ is the active math toggle; \$ is a literal dollar sign (for prose, prices, code samples)
+  registerPrimitive("$", LiteralPrimitive("$"))
 
   def registerPrimitive(name: String, prim: Primitive): Unit =
     primitives(name) = prim

@@ -61,24 +61,16 @@
 }
 
 // ---- Reactions ----------------------------------------------------------------
-// A reaction is a row of species joined by \plus and a reaction \rxnarrow. Each
-// species is an inline box: a formula (atom counts as subscripts with \dn, a
-// leading number for the stoichiometric coefficient) or a drawn \picture
-// structure. The pieces sit in the running text, so a whole equation is one line
-// — typically inside \centerline to centre it.
+// A reaction is a row of species joined by + and a reaction arrow. Each species is
+// an inline box: a formula (atom counts as subscripts with \dn, a leading number
+// for the stoichiometric coefficient) or a drawn \picture structure. The reaction
+// arrow → and the equilibrium arrow ⇌ are math symbols — write $\longrightarrow$
+// and $\rightleftharpoons$ — so they are real glyphs from the math font, centred on
+// the text's axis. The pieces sit in the running text, so a whole equation is one
+// line, typically inside \centerline to centre it.
 
 // \dn{n} / \up{n} — an atom-count subscript and an ionic-charge superscript, sized
 // from the current font by the engine's \textsub / \textsup: \dn turns H\dn2 O into
 // H2O with the 2 dropped and shrunk, and \up gives Na\up+ or SO\dn4\up{2-}.
 \def dn n {\textsub{\n}}
 \def up n {\textsup{\n}}
-
-// \plus — the "+" that separates species, with a thin space on each side.
-\def plus {\hskip 5 +\hskip 5}
-
-// \rxnarrow — the reaction arrow, drawn as a small inline picture: a shaft with a
-// filled triangular head pointing right, sitting near the text's centre line.
-\def rxnarrow {\hskip 3\picture width:46 height:11 {
-  \stroke{black} \linewidth{1.1pt} \line{2 5  36 5}
-  \nostroke \fill{black} \polygon{34 1  34 9  44 5}
-}\hskip 3}

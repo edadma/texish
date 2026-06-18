@@ -7,23 +7,31 @@
 
 \section{Reaction equations}
 
-A reaction is a row of species joined by \texttt{\\plus} and the reaction arrow
-\texttt{\\rxnarrow}, with atom counts written as subscripts (\texttt{\\dn}) and
-ionic charges as superscripts (\texttt{\\up}). The leading number of a species is
-its stoichiometric coefficient, set at full size. The combustion of methane:
+A reaction is a row of species joined by \texttt{+} and a reaction arrow. Atom
+counts are subscripts (\texttt{\\dn}) and ionic charges superscripts
+(\texttt{\\up}); a leading number is the stoichiometric coefficient, at full size.
+The reaction arrow is the math symbol \texttt{\$\\longrightarrow\$}, a real glyph
+from the math font. The combustion of methane:
 
 \bigskip
-\centerline{\font lmroman 14 regular CH\dn{4} \plus 2O\dn{2} \rxnarrow CO\dn{2} \plus 2H\dn{2}O}
+\centerline{\font lmroman 14 regular CH\dn{4} + 2O\dn{2} $\longrightarrow$ CO\dn{2} + 2H\dn{2}O}
 \bigskip
 
-\noindent A dissociation, showing ionic charges with \texttt{\\up}:
+\noindent A reversible reaction uses the equilibrium arrow
+\texttt{\$\\rightleftharpoons\$} — the Haber process:
 
 \bigskip
-\centerline{\font lmroman 14 regular NaCl \rxnarrow Na\up{+} \plus Cl\up{-}}
+\centerline{\font lmroman 14 regular N\dn{2} + 3H\dn{2} $\rightleftharpoons$ 2NH\dn{3}}
+\bigskip
+
+\noindent And a dissociation, showing ionic charges with \texttt{\\up}:
+
+\bigskip
+\centerline{\font lmroman 14 regular NaCl $\longrightarrow$ Na\up{+} + Cl\up{-}}
 \bigskip
 
 \noindent Because each species is just an inline box, a drawn \texttt{\\picture}
-structure can stand in place of a formula and the same \texttt{\\plus} and
-\texttt{\\rxnarrow} lay out the equation.
+structure can stand in place of a formula and the same \texttt{+} and arrow lay
+out the equation.
 
 \vfill\eject
