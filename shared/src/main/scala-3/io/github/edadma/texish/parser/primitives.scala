@@ -588,6 +588,28 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // Font-shape and -series declarations (LaTeX \itshape / \bfseries / …). Unlike \italic{…} and \bold{…}, which
+  // wrap an argument, these flip the current font for the *rest of the enclosing group* and take no argument. Font
+  // state is saved on every group open and restored on close (Typesetter.enter/exit), so a declaration reverts at
+  // the closing brace — or at an environment's \end, which closes a group too. That is what lets an environment set
+  // its whole body in one shape: `\newenvironment thm {\bfseries Theorem.\ \itshape}{}` leaves the body italic and
+  // the heading bold, both reverting at \end. The on-switches add a style; the resets remove one (\upshape clears the
+  // shape axis — italic and small caps — and \mdseries clears the bold weight); \normalfont returns to the plain face.
+  def declarePrimitive(name: String, switch: Typesetter => Unit): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit = switch(t)
+      },
+    )
+
+  declarePrimitive("itshape", _.italic())
+  declarePrimitive("bfseries", _.bold())
+  declarePrimitive("scshape", _.smallcaps())
+  declarePrimitive("upshape", _.removeStyle("italic", "smallcaps"))
+  declarePrimitive("mdseries", _.nobold())
+  declarePrimitive("normalfont", _.removeStyle("italic", "bold", "smallcaps"))
+
   // texttt - 1 body arg: set its content in the monospaced face (Latin Modern Mono) at the current size, for
   // inline code, file names, URLs and the like. Latin Modern Mono is cut to sit alongside the roman body, so a
   // plain switch at the same size matches the surrounding text. The switch is scoped, so the surrounding text

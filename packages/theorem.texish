@@ -1,0 +1,46 @@
+// theorem — amsthm-style theorem environments, layered over the counters package.
+//
+//     \use{theorem}
+//     \newtheorem{theorem}{Theorem}            // its own counter
+//     \newtheorem{lemma}[theorem]{Lemma}       // shares the theorem counter
+//     \newtheorem{definition}{Definition}[section]   // numbered within each section
+//
+//     \begin{theorem}[Pythagoras]
+//     For a right triangle with legs $a$, $b$ and hypotenuse $c$, $a^2 + b^2 = c^2$.
+//     \end{theorem}
+//
+// sets, in the plain style:  *Theorem 1 (Pythagoras).* with the run-in head in bold
+// and the body in italic. \newtheorem{name}{Head} defines an environment `name`; the
+// optional argument before the head shares another environment's counter, and the
+// optional argument after it numbers the theorem within a section (or any counter),
+// printing the parent's value as a prefix ("1.1"). A note in brackets after \begin
+// is shown in parentheses in the head. The body text should start on the line after
+// \begin so a normal interword space follows the head.
+
+\use{counters}
+
+// The run-in head is bold; the body is set in italic (the plain theorem style). The
+// body shape reverts at \end, which closes the environment's group. The counter is
+// the environment's own (created here) unless another is shared in; when a parent
+// counter is given, its value prefixes the number.
+\def newtheorem env [shared:] heading [within:] {{//
+\if {\= {\size {\shared}} {0}}//
+\newcounter{\env}//
+\if {\= {\size {\within}} {0}}\else\counterwithin{\env}{\within}\fi//
+\fi//
+\newenvironment \env [note:] {//
+\vskip 3pt plus 1pt minus 1pt//
+\if {\= {\size {\shared}} {0}}\set thmcnt {\env}\else\set thmcnt {\shared}\fi//
+\stepcounter{\thmcnt}//
+\noindent\bfseries\heading \if {\= {\size {\within}} {0}}\arabic{\value{\thmcnt}}\else\arabic{\value{\within}}.\arabic{\value{\thmcnt}}\fi\if {\= {\size {\note}} {0}}\else{ (\note)}\fi.\mdseries\itshape//
+} {\upshape\vskip 3pt plus 1pt minus 1pt}//
+}}//
+
+// A proof environment with an italic run-in "Proof." head and an upright body. Place
+// \qed at the end of the proof to set the end-of-proof box flush right on the last line.
+\newenvironment proof {//
+\vskip 3pt plus 1pt minus 1pt//
+\noindent\itshape Proof.\upshape//
+} {\vskip 3pt plus 1pt minus 1pt}//
+
+\def qed {\hfill□}//

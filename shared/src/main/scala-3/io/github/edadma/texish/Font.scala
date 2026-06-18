@@ -13,7 +13,9 @@ class Font(
 ):
   override def equals(obj: Any): Boolean =
     obj match
-      case that: Font => this.typeface == that.typeface && this.size == that.size && this.style == this.style
+      case that: Font => this.typeface == that.typeface && this.size == that.size && this.style == that.style
       case _          => false
+
+  override def hashCode: Int = (typeface, size, style).hashCode
 
   override def toString: String = s"Font(typeface=$typeface)"
