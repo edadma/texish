@@ -8,14 +8,17 @@
 //     \score{c d e f g a b c'}
 //     \score{e4 d4 c4 d4 | e4 e4 e2}
 //
-// A note is a letter a–g, optional octave marks, then an optional duration digit:
+// A note is an optional accidental, a letter a–g, optional octave marks, then an optional duration digit:
+//   - + - n    an accidental — sharp, flat, or natural — drawn just left of the head (it changes how the
+//              note reads, not where it sits, so +c and c share a line)
 //   - letter   the pitch class; lowercase c is middle C (one ledger line below the staff)
 //   - ' or ,   raise / lower by an octave, repeatable (c' is the C above, c, the C below)
 //   - 1 2 4 8  the duration — whole, half, quarter (the default), or eighth note
-// `r` is a rest and `|` a barline. So `g,2` is the G below middle C held for a half
-// note, `c'8` the C an octave up as an eighth. Note heads, stems (their direction set
-// by the staff rule), eighth-note flags and ledger lines are all drawn from the picture
-// primitives — there is no music-specific engine code.
+// `r` is a rest and `|` a barline. `[` and `]` bracket a run of notes joined by one beam instead of flags.
+// So `g,2` is the G below middle C held for a half note, `+c'8` the C-sharp an octave up as an eighth, and
+// `[ c d e f ]` four beamed notes. A time signature is drawn from \musictimenum / \musictimeden (see below).
+// Note heads, stems (their direction set by the staff rule), flags, beams, accidentals and ledger lines are
+// all drawn from the picture primitives — there is no music-specific engine code.
 
 // ---- Configuration (override with \set after \use, before \score) ---------------
 // Sizes are in points (72 per inch).
@@ -28,6 +31,8 @@
 \set musicpad {30}         // vertical room above and below the staff for ledger lines and stems
 \set musiccolor {black}
 \set musicclef {treble}    // treble or bass; chooses the clef and how pitches sit on the staff
+\set musictimenum {}       // time-signature numerator, drawn after the clef (e.g. {3}); empty for no signature
+\set musictimeden {}       // time-signature denominator (e.g. {4})
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
 \set musicLetters {\map{c 0 d 1 e 2 f 3 g 4 a 5 b 6}}
 
@@ -246,10 +251,19 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 \def score notes {{
   \set msList {\seq{\notes}}
   \set msN {\size{\msList}}
-  \set msW {\calc{musicleft + msN * musicnote + 12}}
+
+  // A time signature, if any, takes a column of its own after the clef; shift the music right to clear it.
+  \set msShift {0}
+  \if {\size{\cat{\musictimenum}{}}} \set msShift {18} \fi
+
+  \set msW {\calc{musicleft + msShift + msN * musicnote + 12}}
   \set msBottom {\musicpad}
   \set msTop {\calc{msBottom + 4 * musicgap}}
   \set msH {\calc{msBottom + 4 * musicgap + musicpad}}
+
+  // The common height of a beam: a flat bar a little above the staff, the same for every note in a run.
+  \set msBeamY {\calc{msTop + musicgap + 6}}
+  \set msBeam {0}
 
   // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff,
   // G2 (index -10) on the bass. A note's index is msOct*7 + its pitch class; its step above the bottom
@@ -260,7 +274,8 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
   \picture width:{\msW} height:{\msH} {
     \musicStaffLines
     \musicClef
-    \set msX {\musicleft}
+    \musicTimeSig
+    \set msX {\calc{musicleft + msShift}}
     \musicWalk{\msList}
   }
 }}
@@ -273,17 +288,23 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     \line{8 \ly  \calc{msW - 10} \ly}
   }}
 
-// Walk the note list, advancing msX. A barline is drawn thin and advances less than a note.
+// Walk the note list, advancing msX. A barline is drawn thin and advances less than a note. `[` and `]`
+// open and close a beamed run: the notes between them share one flat beam instead of carrying flags.
 \def musicWalk items {
   \if {\size{\items}}
     \set tok {\head{\items}}
-    \if {\= {\tok} {|}}
+    \if {\= {\tok} {[}}
+      \global\set msBeam {1}
+      \global\set msBeamPrev {0}
+    \else \if {\= {\tok} {]}}
+      \global\set msBeam {0}
+    \else \if {\= {\tok} {|}}
       \musicBarline
       \set msX {\calc{msX + musicnote * 0.6}}
     \else
       \musicNote{\tok}
       \set msX {\calc{msX + musicnote}}
-    \fi
+    \fi \fi \fi
     \musicWalk{\tail{\items}}
   \fi}
 
@@ -304,6 +325,7 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     \set step {\calc{msOct * 7 + li - msBase}}
     \set ny {\calc{msBottom + step * musicgap / 2}}
     \musicLedgers{\step}
+    \musicAccidental
     // The head: filled for a quarter note or shorter, open for a half or whole. Tilted
     // a little, as an engraved head is, by rotating the coordinate system around it.
     \group{
@@ -313,9 +335,12 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
       \else \nofill \stroke{\musiccolor} \linewidth{1.1pt} \fi
       \ellipse{0 0 \musicheadrx \musicheadry}
     }
-    // The stem (everything but a whole note) rises on the right of low notes and falls on
-    // the left of high ones, flipping at the middle line. An eighth note gets a flag.
-    \if {\>= {\msDur} {2}}
+    // The stem and any flag. In a beamed run every note shares one flat beam; otherwise the stem rises
+    // on the right of low notes and falls on the left of high ones, flipping at the middle line, and an
+    // eighth note gets its own flag. A whole note has no stem at all.
+    \if {\= {\msBeam} {1}}
+      \musicBeamedStem
+    \else \if {\>= {\msDur} {2}}
       \nofill \stroke{\musiccolor} \linewidth{1.1pt}
       \if {\< {\step} {4}}
         \set sx {\calc{msX + musicheadrx - 0.4}}
@@ -328,8 +353,21 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
         \line{\sx \ny  \sx \stemEnd}
         \if {\>= {\msDur} {8}} \musicFlagDown \fi
       \fi
-    \fi
+    \fi \fi
   \fi}
+
+// A note inside a beamed run: an up-stem reaching the common beam height, joined to the previous note in
+// the run by a thick flat bar. The first note of a run only records its stem foot for the next to beam to.
+\def musicBeamedStem {
+  \nofill \stroke{\musiccolor} \linewidth{1.1pt}
+  \set sx {\calc{msX + musicheadrx - 0.4}}
+  \line{\sx \ny  \sx \msBeamY}
+  \if {\= {\msBeamPrev} {1}}
+    \linewidth{2.6pt}
+    \line{\msBeamPrevX \msBeamY  \sx \msBeamY}
+  \fi
+  \global\set msBeamPrev {1}
+  \global\set msBeamPrevX {\sx}}
 
 // An up-stem flag: a filled hook off the top of the stem (sx, stemEnd).
 \def musicFlagUp {
@@ -377,11 +415,67 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
   \set ry {\calc{msBottom + 2 * musicgap}}
   \rect{\calc{msX - 4} \calc{ry - 1.5} 8 3}}
 
+// ---- Accidentals ---------------------------------------------------------------
+// A sharp, flat or natural sign drawn just left of the note head, centred on its line (ax, ny). They are
+// small stroked figures rather than font glyphs, so they match the engraved look of the rest of the staff.
+\def musicAccidental {
+  \if {\= {\msAcc} {none}} \else
+    \set ax {\calc{msX - musicheadrx - 6}}
+    \nofill \stroke{\musiccolor} \linewidth{0.9pt} \linecap{round} \linejoin{round}
+    \if {\= {\msAcc} {sharp}}
+      // two uprights crossed by two bars that rise to the right
+      \line{\calc{ax - 1.6} \calc{ny - 5.5}  \calc{ax - 1.6} \calc{ny + 5.5}}
+      \line{\calc{ax + 1.6} \calc{ny - 5.5}  \calc{ax + 1.6} \calc{ny + 5.5}}
+      \line{\calc{ax - 3.4} \calc{ny - 2.6}  \calc{ax + 3.4} \calc{ny - 1.4}}
+      \line{\calc{ax - 3.4} \calc{ny + 1.4}  \calc{ax + 3.4} \calc{ny + 2.6}}
+    \else \if {\= {\msAcc} {flat}}
+      // a tall stem with a bowl on its lower right, like a small b
+      \line{\calc{ax - 1.8} \calc{ny - 3.5}  \calc{ax - 1.8} \calc{ny + 8}}
+      \path{
+        \moveto{\calc{ax - 1.8} \calc{ny + 2}}
+        \curveto{\calc{ax + 3.2} \calc{ny + 1.5}  \calc{ax + 3.2} \calc{ny - 4}  \calc{ax - 1.8} \calc{ny - 3.5}}
+      }
+    \else
+      // a natural: two offset uprights joined by two bars, a parallelogram
+      \line{\calc{ax - 1.8} \calc{ny - 3}  \calc{ax - 1.8} \calc{ny + 6}}
+      \line{\calc{ax + 1.8} \calc{ny - 6}  \calc{ax + 1.8} \calc{ny + 3}}
+      \line{\calc{ax - 1.8} \calc{ny + 2}  \calc{ax + 1.8} \calc{ny + 3}}
+      \line{\calc{ax - 1.8} \calc{ny - 3}  \calc{ax + 1.8} \calc{ny - 2}}
+    \fi \fi
+  \fi}
+
+// ---- Time signature ------------------------------------------------------------
+// The numerator over the denominator, just after the clef, from the \musictimenum / \musictimeden config.
+// They are real typeset numerals placed with \at and enlarged a little so the pair spans the staff height:
+// the numerator centred between the middle and top lines, the denominator between the middle and bottom.
+\def musicTimeSig {
+  \if {\size{\cat{\musictimenum}{}}}
+    \set tsX {\calc{musicleft + 4}}
+    \group{
+      \translate{\tsX \calc{msBottom + 3 * musicgap}}
+      \scale{1.7 1.7}
+      \at anchor:center {0 0}{\musictimenum}
+    }
+    \group{
+      \translate{\tsX \calc{msBottom + musicgap}}
+      \scale{1.7 1.7}
+      \at anchor:center {0 0}{\musictimeden}
+    }
+  \fi}
+
 // ---- Note parsing --------------------------------------------------------------
-// Set msLetter (pitch class), msOct (octave offset from middle C's octave), msDur
-// (1/2/4/8). The letter is the first character; the rest are octave marks and a digit.
+// Set msAcc (accidental: sharp/flat/nat/none), msLetter (pitch class), msOct (octave offset from middle
+// C's octave), msDur (1/2/4/8). An optional accidental (+ sharp, - flat, n natural) leads the token; then
+// the letter, then octave marks and a duration digit. An accidental shifts the look, not the staff line —
+// a sharpened C and a plain C sit on the same line — so it only chooses which sign is drawn.
 \def musicParse tok {
-  \set ps {\cat{\tok}{}}
+  \global\set ps {\cat{\tok}{}}
+  \global\set msAcc {none}
+  \set accCh {\head{\ps}}
+  \if {\= {\accCh} {+}} \global\set msAcc {sharp} \global\set ps {\tail{\ps}}
+  \else \if {\= {\accCh} {-}} \global\set msAcc {flat} \global\set ps {\tail{\ps}}
+  \else \if {\= {\accCh} {n}} \global\set msAcc {nat} \global\set ps {\tail{\ps}}
+  \fi \fi \fi
   \global\set msLetter {\head{\ps}}
   \global\set msOct {0}
   \global\set msDur {4}

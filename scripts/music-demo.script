@@ -52,6 +52,41 @@ note reaches.
 \bigskip
 \centerline{\score{c, e, g, c g c' e' g'}}
 
+\section{Accidentals}
+
+An accidental leads a note: \texttt{+} for a sharp, \texttt{-} for a flat, \texttt{n} for
+a natural. The sign is drawn just left of the head; it changes how the note is read, not
+where it sits, so \texttt{+f} and \texttt{f} share a line. Here a chromatic climb, then a
+sharpened note cancelled by a natural.
+
+\bigskip
+\centerline{\score{c +c d -e e f +f g | +f nf f2}}
+
+\section{Beams}
+
+Eighth notes in a run are usually joined by a beam rather than each carrying its own flag.
+Bracket a group with \texttt{[} and \texttt{]} and the notes between share one beam.
+
+\bigskip
+\centerline{\score{[ c d e f ] [ g a b c' ]}}
+
+\bigskip
+A beamed phrase mixed with a longer note — the opening of \emph{Ode to Joy}.
+
+\bigskip
+\centerline{\score{e e f g | g f e d | c c d e | [ e d ] d2}}
+
+\section{Time signatures}
+
+Setting \texttt{\\set musictimenum} and \texttt{\\set musictimeden} draws a time signature
+after the clef. Three-four time, a waltz, with the beats grouped into bars.
+
+\bigskip
+\set musictimenum {3}
+\set musictimeden {4}
+\centerline{\score{c e g | c' g e | d f a | g2 e}}
+\set musictimenum {}
+
 \section{The bass clef}
 
 Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where middle

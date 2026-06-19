@@ -22,14 +22,18 @@ class MusicTests extends AnyFreeSpec with Matchers:
         case _              =>
       super.add(box)
 
-  private def ops(score: String): Vector[PictureOp] =
+  // Process arbitrary music source (so a test can \set config before the score) and return the first picture.
+  private def opsRaw(src: String): Vector[PictureOp] =
     val t       = new Capture
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
-    Console.withOut(new java.io.ByteArrayOutputStream)(proc.process(s"\\use{music}\\score{$score}"))
-    t.pictures should have size 1
+    Console.withOut(new java.io.ByteArrayOutputStream)(proc.process(s"\\use{music}$src"))
+    t.pictures should not be empty
     t.pictures.head.displayList
+
+  private def ops(score: String): Vector[PictureOp] =
+    opsRaw(s"\\score{$score}")
 
   // straight segments: a MoveTo immediately followed by a LineTo (note heads are curves, so they don't appear)
   private def hlines(o: Vector[PictureOp]): Vector[Double] =
@@ -46,7 +50,7 @@ class MusicTests extends AnyFreeSpec with Matchers:
   }
 
   "a pitch's height follows its diatonic step" in {
-    heads(ops("e")).head shouldBe (40.0, 30.0)        // E is the bottom line
+    heads(ops("e")).head shouldBe (48.0, 30.0)        // E is the bottom line (at the first-note x, musicleft)
     heads(ops("f")).head._2 shouldBe 34.0             // one step up is half a line gap
     heads(ops("g")).head._2 shouldBe 38.0             // the second line
   }
@@ -67,4 +71,23 @@ class MusicTests extends AnyFreeSpec with Matchers:
   "a note off the staff gets ledger lines" in {
     // middle C is one step below the bottom line, so it gets one ledger line at y=22, below the staff at y=30
     hlines(ops("c")).filter(_ < 30.0) shouldBe Vector(22.0)
+  }
+
+  "an accidental adds strokes to the left of the head" in {
+    // a plain low C has only its stem as a straight vertical segment; the sharp adds its two uprights
+    vlines(ops("c")) should have size 1
+    vlines(ops("+c")).size should be > 1
+  }
+
+  "a beamed run draws a flat beam above the staff" in {
+    // the beam is one horizontal segment at the common beam height (msTop + gap + 6 = 62 + 8 + 6 = 76),
+    // well above the top staff line, and the run carries no eighth-note flags of its own
+    hlines(ops("[ c d e ]")) should contain(76.0)
+  }
+
+  "a time signature places two numerals after the clef" in {
+    // \at lowers each numeral to a placed box; nothing else in the score uses Place
+    val placed = opsRaw("\\set musictimenum {3}\\set musictimeden {4}\\score{c d}")
+      .collect { case p: PictureOp.Place => p }
+    placed should have size 2
   }
