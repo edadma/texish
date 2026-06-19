@@ -94,7 +94,7 @@
     // a little, as an engraved head is, by rotating the coordinate system around it.
     \group{
       \translate{\msX \ny}
-      \rotate{-20}
+      \rotate{20}
       \if {\>= {\msDur} {4}} \fill{\musiccolor} \nostroke
       \else \nofill \stroke{\musiccolor} \linewidth{1.1pt} \fi
       \ellipse{0 0 \musicheadrx \musicheadry}
@@ -187,24 +187,27 @@
 // from the bottom — the G line the clef names. Authored in local units at the default
 // gap and scaled to musicgap, in a group translated to the G line.
 \def musicClef {
-  \nofill \stroke{\musiccolor} \linewidth{2.2pt} \linecap{round} \linejoin{round}
+  \nofill \stroke{\musiccolor} \linewidth{2.4pt} \linecap{round} \linejoin{round}
   \group{
     \translate{20 \calc{msBottom + musicgap}}
     \set u {\calc{musicgap / 8}}
     \scale{\u \u}
-    // the tall stem with a small top hook and a hooked tail below the staff
+    // one continuous pen stroke, the way a treble clef is written: up the stem from the
+    // ball, a crook over the top, then the body swooping down through the upper loop into
+    // the big lower belly and spiralling in to an eye centred on the G line (y = 0). The
+    // body crosses the stem twice, as a real clef does.
     \path{
-      \moveto{2 30}
-      \curveto{-5 30   -6 24   0 22}
-      \curveto{6 20    3 2     0 -12}
-      \curveto{-2 -18  -8 -17  -7 -11}
+      \moveto{-1 -14}
+      \curveto{1 -2     2 18    1 30}
+      \curveto{-3 31    -7 29   -6 25}
+      \curveto{-9 21    -9 16   -7 13}
+      \curveto{-2 10    3 11    6 9}
+      \curveto{8 3      4 -9    -2 -11}
+      \curveto{-8 -12   -11 -8  -10 -2}
+      \curveto{-9 5     -1 5    3 2}
+      \curveto{5 3      2 -3    -1 -1}
     }
-    // the spiral wrapping the G line
-    \path{
-      \moveto{2 21}
-      \curveto{-11 16  -11 1   -1 0}
-      \curveto{9 1     8 12    -2 9}
-      \curveto{-10 6   -9 -5   1 -6}
-      \curveto{10 -7   12 7    2 12}
-    }
+    // the filled ball at the foot of the stem, below the staff
+    \fill{\musiccolor} \nostroke
+    \circle{-1 -16 2.6}
   }}
