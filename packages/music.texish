@@ -192,7 +192,7 @@
 // image: one pen-like stroke curled around the second line from the bottom (the G line).
 \def musicClef {
   \if {\> {\size{\musicclefpng}} {0}}
-    \at anchor:center {22 \calc{msBottom + musicgap + 4}}{\includegraphics[height=64pt]{\musicclefpng}}
+    \at anchor:center {22 \calc{msBottom + musicgap + 8}}{\includegraphics[height=60pt]{\musicclefpng}}
   \else
   \nofill \stroke{\musiccolor} \linewidth{2.4pt} \linecap{round} \linejoin{round}
   \group{
