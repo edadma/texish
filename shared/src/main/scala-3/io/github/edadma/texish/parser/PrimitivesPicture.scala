@@ -206,15 +206,32 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
   )
 
   // Freeform path: \path{ \moveto \lineto \curveto \close } builds a path with these segment commands and paints
-  // it with the current state. The segment commands are themselves picture-only.
+  // it with the current state. The segment commands are themselves picture-only. An optional arrow: end|start|both
+  // (with the same head:/size: options as \arrow) caps the path with an arrowhead oriented to its true end tangent —
+  // for a Bézier the last control point → endpoint, for an arc perpendicular to the end radius — not the straight
+  // start→end chord, so a curved arrow points the way the curve actually leaves the page.
   picturePrimitive(
     proc,
     handler,
     "path",
-    (pm, p) =>
+    (pm, p) => {
+      val opts   = proc.readOptionalParams(p)
+      val arrows = opts.get("arrow").map(Value.display).getOrElse("")
+      pm.beginTrackedPath()
       pm.newPath()
       proc.processTokenList(proc.readArgument(p))
-      pm.paint(),
+      pm.paint()
+      pm.endTrackedPath()
+      if arrows.nonEmpty then
+        if arrows != "end" && arrows != "start" && arrows != "both" then
+          handler.error(s"unknown \\path arrow '$arrows' (end, start, both)", p)
+        val style = arrowStyleOpt(handler, opts, p)
+        val len   = opts.get("size").flatMap(points).getOrElse(7.0)
+        if arrows == "end" || arrows == "both" then
+          pm.pathEndAnchor.foreach((end, dir) => emitArrowhead(pm, end._1 - dir._1, end._2 - dir._2, end._1, end._2, style, len))
+        if arrows == "start" || arrows == "both" then
+          pm.pathStartAnchor.foreach((st, dir) => emitArrowhead(pm, st._1 + dir._1, st._2 + dir._2, st._1, st._2, style, len))
+    },
   )
   picturePrimitive(proc, handler, "moveto", (pm, p) => { val c = readNumbers(proc, p); pm.moveTo(c(0), c(1)) })
   picturePrimitive(proc, handler, "lineto", (pm, p) => { val c = readNumbers(proc, p); pm.lineTo(c(0), c(1)) })

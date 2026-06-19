@@ -151,3 +151,38 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     a[ParserException] should be thrownBy proc.process("\\arrow{0 0 1 1}")
   }
+
+  // \path arrow:… caps the path with a head oriented to its TRUE end tangent, not the start→end chord. The curve
+  // below starts at (0,40) and ends at (72,0) with its last control point at (36,0), so its end tangent is purely
+  // horizontal even though the chord is diagonal. A head pointing horizontally has both its base corners at the
+  // same x (tip-x minus head-length); a head pointing along the chord would not. So the base x's distinguish them.
+  "\\path arrow:end orients the head to the end tangent, not the chord" in {
+    val ops = run(
+      "\\picture width:2in height:1in { \\stroke{black} " +
+        "\\path arrow:end head:triangle size:7 { \\moveto{0 40} \\curveto{0 0  36 0  72 0} } }",
+    )
+    ops should contain(PictureOp.MoveTo(72, 0))                       // the head's tip sits on the path end
+    ops.collect { case PictureOp.LineTo(x, _) => x }.count(_ == 65.0) shouldBe 2 // both base corners at 72−7, horizontal
+    ops.last shouldBe PictureOp.Paint(Some(Color("black")), None)     // the head is drawn last, over the path end
+  }
+
+  "\\path arrow:both caps both ends of the path" in {
+    val ops = run(
+      "\\picture width:2in height:1in { \\stroke{black} " +
+        "\\path arrow:both head:triangle size:6 { \\moveto{0 0} \\lineto{50 0} } }",
+    )
+    ops.count { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe 2
+    ops should contain(PictureOp.MoveTo(50, 0)) // end head tip
+    ops should contain(PictureOp.MoveTo(0, 0))  // start head tip
+  }
+
+  "\\path with no arrow option draws no head" in {
+    val ops = run("\\picture width:2in height:1in { \\stroke{black} \\path{ \\moveto{0 0} \\lineto{50 0} } }")
+    ops.exists { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe false
+  }
+
+  "an unknown \\path arrow value is an error" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy
+      proc.process("\\picture width:1in height:1in { \\stroke{black} \\path arrow:middle { \\moveto{0 0} \\lineto{1 0} } }")
+  }
