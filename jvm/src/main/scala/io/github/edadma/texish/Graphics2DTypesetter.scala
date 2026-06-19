@@ -158,6 +158,14 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
     if image.getWidth > 0 && image.getHeight > 0 then tx.scale(w / image.getWidth, h / image.getHeight)
     g.drawImage(image, tx, null)
 
+  override def imagesSupported: Boolean = true
+
+  // Build an ARGB image from straight (non-premultiplied) ARGB pixels — exactly TYPE_INT_ARGB's layout.
+  override def createImage(width: Int, height: Int, argb: Array[Int]): ImageHandle =
+    val image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+    image.setRGB(0, 0, width, height, argb, 0, width)
+    image
+
   // Picture-graphics seam. java.awt has no implicit current-path or device stroke state, so this layer keeps
   // its own: a GeneralPath accumulator built up by the path ops and painted by fill/stroke, and the stroke
   // parameters (width, dash, caps, joins) tracked as fields so each can be set independently and combined into

@@ -27,12 +27,68 @@
 \set musicstem {26}        // stem length
 \set musicpad {30}         // vertical room above and below the staff for ledger lines and stems
 \set musiccolor {black}
-\set musicclefpng {}       // path to a treble-clef PNG; when set, it is used in place of the
-                           // drawn clef (a transparent image composites over the staff lines).
-                           // Tuned for the default gap; resolved beside the document like any image.
-
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
 \set musicLetters {\map{c 0 d 1 e 2 f 3 g 4 a 5 b 6}}
+
+// ---- The treble clef, embedded -------------------------------------------------
+// The clef is a 74x200 alpha bitmap at 2 bits per pixel (4 grey levels — enough to keep the curves
+// smooth at this resolution), packed and base64-encoded right here so the package carries its own clef
+// with no external file. It is drawn over the staff by \usebitmap (see musicClef). On a backend without
+// image support \defbitmap is a no-op and the clef falls back to the stroked path.
+// Source: a public-domain treble clef.
+\defbitmap{musicTrebleClef}{74}{200}{2}{AAAAAAAAAAAAAAAAAbgAAAAAAAAAAAAAAAAAAAAAAf_QAAAAAAAAAAAAAAAAAAAAAf__AAAAAAAAAAAAAAAAAAAAAH__-AAAAAAA
+AAAAAAAAAAAAAC___9AAAAAAAAAAAAAAAAAAAAv___4AAAAAAAAAAAAAAAAAAAL____0AAAAAAAAAAAAAAAAAAB_____gAAAAAAA
+AAAAAAAAAAAf___7_AAAAAAAAAAAAAAAAAAD___-
+H9AAAAAAAAAAAAAAAAAAv___QL8AAAAAAAAAAAAAAAAAL___0APwAAAAAAAAAAAAAAAAB___9AAvQAAAAAAAAAAAAAAAAP___gAA
+-AAAAAAAAAAAAAAAAC___4AAD8AAAAAAAAAAAAAAAAf___AAAL0AAAAAAAAAAAAAAAD___0AAAfQAAAAAAAAAAAAAAAv__9AAAB-
+AAAAAAAAAAAAAAAD___gAAAH4AAAAAAAAAAAAAAAv__8AAAAPwAAAAAAAAAAAAAAD___QAAAA_AAAAAAAAAAAAAAAf__4AAAAH8A
+AAAAAAAAAAAAAC___QAAAAf0AAAAAAAAAAAAAAP__4AAAAB_QAAAAAAAAAAAAAB___AAAAAL9AAAAAAAAAAAAAAL__0AAAAAv0AA
+AAAAAAAAAAAA___AAAAAD_gAAAAAAAAAAAAAD__0AAAAAP-
+AAAAAAAAAAAAAAf__AAAAAB_4AAAAAAAAAAAAAC__0AAAAAL_gAAAAAAAAAAAAAL__AAAAAA_-AAAAAAAAAAAAAA__4AAAAAH_4A
+AAAAAAAAAAAAD__AAAAAA__QAAAAAAAAAAAAAP_4AAAAAH_9AAAAAAAAAAAAAA__QAAAAA__0AAAAAAAAAAAAAH_8AAAAAH__AAA
+AAAAAAAAAAAf_gAAAAA__8AAAAAAAAAAAAAB_9AAAAAL__wAAAAAAAAAAAAAH_wAAAAA__-AAAAAAAAAAAAAAf-AAAAAL__0AAAA
+AAAAAAAAAB_0AAAAB___AAAAAAAAAAAAAAH_QAAAAf__8AAAAAAAAAAAAAAf8AAAAD___gAAAAAAAAAAAAAA_wAAAAv__9AAAAAA
+AAAAAAAAD-AAAAH___gAAAAAAAAAAAAAAP4AAAB___9AAAAAAAAAAAAAAA_QAAAf___wAAAAAAAAAAAAAAD9AAAD___-
+AAAAAAAAAAAAAAAL0AAA____wAAAAAAAAAAAAAAAvQAAL___-AAAAAAAAAAAAAAAC-AAC____wAAAAAAAAAAAAAAAH4AAv___9AA
+AAAAAAAAAAAAAAfgAL____gAAAAAAAAAAAAAAAA_AC____9AAAAAAAAAAAAAAAAD8Av____gAAAAAAAAAAAAAAAAL0L____4AAAA
+AAAAAAAAAAAAAvS_____AAAAAAAAAAAAAAAAAB-v____0AAAAAAAAAAAAAAAAAH_____-AAAAAAAAAAAAAAAAAAP_____wAAAAAA
+AAAAAAAAAAAC_____8AAAAAAAAAAAAAAAAAAf_____QAAAAAAAAAAAAAAAAAH_____0AAAAAAAAAAAAAAAAAB_____-
+AAAAAAAAAAAAAAAAAAv_____gAAAAAAAAAAAAAAAAAL_____4AAAAAAAAAAAAAAAAAC_____-AAAAAAAAAAAAAAAAAAv_____wAA
+AAAAAAAAAAAAAAAL_____8AAAAAAAAAAAAAAAAAC______AAAAAAAAAAAAAAAAAAv_____wAAAAAAAAAAAAAAAAAL_____8AAAAA
+AAAAAAAAAAAAC______AAAAAAAAAAAAAAAAAAv_____0AAAAAAAAAAAAAAAAAH______AAAAAAAAAAAAAAAAAB______9AAAAAAA
+AAAAAAAAAAf_____70AAAAAAAAAAAAAAAAH_____9PgAAAAAAAAAAAAAAAB______Q-AAAAAAAAAAAAAAAAP_____0C8AAAAAAAA
+AAAAAAAD_____9ALwAAAAAAAAAAAAAAAv_____QAfAAAAAAAAAAAAAAAH_____0AB9AAAAAAAAAAAAAAB_____9AAD0AAAAAAAAA
+AAAAAP_____QAAPgAAAAAAAAAAAAAC_____0AAAuAAAAAAAAAAAAAAf____9AAAC8AAAAAAAAAAAAAD_____QAAAHwAAAAAAAAAA
+AAAv____4AAAAfQAAAAAAAAAAAAH____-
+AAAAA9AAAAAAAAAAAAAv____gAAAAD4AAAAAAAAAAAAH____8AAAAALhVVQAAAAAAAAA_____QAAAAB____-
+kAAAAAAAH____0AAAAC______-AAAAAAAv___-AAAAC________gAAAAAH____wAAAB_________4AAAAAv___9AAAAv________
+_9AAAAD____gAAAL__________9AAAAf___8AAAD___________9AAAC____QAAA____________9AAAP___4AAAP___________
+_9AAB____AAAC_____________9AAL___0AAAf_____________8AA____AAAH______________4AH___4AAAv_____________
+_wAf___QAAH_____vwAG______gC___8AAA_____gvAAAL_____QL___gAAH____gB9AAAC____-
+A___9AAAv___0AH0AAAAv___8D___wAAD___9AAPgAAAAv___4P__-AAAf___QAA-
+AAAAAv___w___4AAC___0AAC8AAAAAv___D___QAAP__-AAALwAAAAA___9P__9AAA___wAAAfAAAAAB___4___wAAH__9AAAB9A
+AAAAD___z___AAAf__gAAAD0AAAAAL___f__8AAC__9AAAAPQAAAAAf__-___wAAL__wAAAA-AAAAAA___6___AAAv_-AAAAC4AA
+AAAC___7__8AAB__0AAAALwAAAAAH___f__wAAH__QAAAAfAAAAAAP__9___QAAf_9AAAAB8AAAAAA___z__9AAA__0AAAAD0AAA
+AAC___L__0AAC__QAAAAPQAAAAAL__8f__gAAH_9AAAAAuAAAAAAf__x___AAAP_0AAAAC4AAAAAB___D__8AAAv_gAAAAHwAAAA
+AH__4L__0AAA__AAAAAfAAAAAAf__gf__gAAC_9AAAAA8AAAAAB__9Av__AAAD_8AAAAD0AAAAAH__wB__9AAAD_4AAAAPQAAAAA
+v_-AD__0AAAH_0AAAAuAAAAAC__0AH__wAAAH_wAAAC4AAAAAP__AAP__QAAAH_gAAAHwAAAAB__4AAf_-AAAAH_gAAAfAAAAAL_
+_QAAv_8AAAAC_0AAA9AAAAA__4AAA__4AAAAB_0AAD0AAAAH__QAAB__0AAAAAaQAALgAAAA__4AAAC__wAAAAAAAAAuAAAAH__A
+AAAC__gAAAAAAAAB8AAAA__0AAAAD__gAAAAAAAAHwAAAL_-AAAAAD__QAAAAAAAAPQAAB__gAAAAAD__QAAAAAAAA9AAAf_8AAA
+AAAD__gAAAAAAAD4AAD__AAAAAAAC__gAAAAAAALwAA__wAAAAAAAC__0AAAAAAAvAAf_4AAAAAAAAB__4AAAAAAB9AL_-
+AAAAAAAAAAv_-AAAAAAH0H__QAAAAAAAAAAf__kAAAAAPn__QAAAAAAAAAAAH__-kAAAW___QAAAAAAAAAAAABv________-
+QAAAAAAAAAAAAAAG_______5AAAAAAAAAAAAAAAAAa____-_AAAAAAAAAAAAAAAAAAABVVUB8AAAAAAAAAAAAAAAAAAAAAAAHwAA
+AAAAAAAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAAAAA9AAAAAAAAAAAAAAAAAAAAAAAD0AAAAAAAAAAAAAAAAAAAAAAALgAAA
+AAAAAAAAAAAAAAAAAAAAuAAAAAAAAAAAAAAAAAAAAAAAB8AAAAAAAAAAAAAAAAAAAAAAAHwAAAAAAAAAAAAAAAAAAAAAAAPAAAAA
+AAAAAAAAAAAAAAAAAAA9AAAAAAAAAAAAAAAAAAAAAAAD0AAAAAAAAAAAAAAAAAAAAAAALgAAAAAAAAAAAAAAAAAAAAAAAuAAAAAA
+AAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAAAAAAAAAAHwAAAAAAAAAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAAAAA8AAAAAAA
+AAAAAAAFqlAAAAAADwAAAAAAAAAAAAAL__-QAAAAAPQAAAAAAAAAAAAH____QAAAAA9AAAAAAAAAAAAB_____gAAAAD0AAAAAAAA
+AAAAf_____QAAAAPQAAAAAAAAAAAH______AAAAA8AAAAAAAAAAAAv_____-
+AAAADwAAAAAAAAAAAH______8AAAAPAAAAAAAAAAAAv______0AAAB8AAAAAAAAAAAD_______gAAAHwAAAAAAAAAAAf______-
+AAAAuAAAAAAAAAAAC_______4AAAD0AAAAAAAAAAAL_______gAAAPQAAAAAAAAAAA_______-AAAB8AAAAAAAAAAAD_______0A
+AAPgAAAAAAAAAAAL_______AAAB9AAAAAAAAAAAAv______4AAALwAAAAAAAAAAAB_______AAAB9AAAAAAAAAAAAH______0AAA
+PwAAAAAAAAAAAAP_____9AAAC9AAAAAAAAAAAAAf_____QAAAvgAAAAAAAAAAAAA_____gAAAL4AAAAAAAAAAAAAB____0AAAC_A
+AAAAAAAAAAAAAB___0AAAB_gAAAAAAAAAAAAAAB__0AAAAv4AAAAAAAAAAAAAAAB__0AAAf5AAAAAAAAAAAAAAAAAv_-
+QFv5AAAAAAAAAAAAAAAAAAG____kAAAAAAAAAAAAAAAAAAAAa_pQAAAAAAAAAAAAA==}
 
 // ---- The score -----------------------------------------------------------------
 // \score sizes a picture to hold the notes, draws the five staff lines and the clef,
@@ -186,13 +242,13 @@
   \fi}
 
 // ---- The treble clef -----------------------------------------------------------
-// A G (treble) clef. With musicclefpng set, the clef is a transparent image placed on
-// the G line — engraving quality, since a drawn one can only approximate the calligraphic
-// glyph. Otherwise it falls back to a stroked path, so the package still works with no
-// image: one pen-like stroke curled around the second line from the bottom (the G line).
+// A G (treble) clef. On a backend with image support the embedded bitmap is placed on the G line —
+// engraving quality, since a drawn clef can only approximate the calligraphic glyph. Where images are
+// unavailable (the imagessupported flag is 0, e.g. the JS layer) it falls back to a stroked path, so
+// the package still works: one pen-like stroke curled around the second line from the bottom (the G line).
 \def musicClef {
-  \if {\> {\size{\musicclefpng}} {0}}
-    \at anchor:center {22 \calc{msBottom + musicgap + 8}}{\includegraphics[height=60pt]{\musicclefpng}}
+  \if {\= {\imagessupported} {1}}
+    \at anchor:center {22 \calc{msBottom + musicgap + 8}}{\usebitmap height:{60} {musicTrebleClef}}
   \else
   \nofill \stroke{\musiccolor} \linewidth{2.4pt} \linecap{round} \linejoin{round}
   \group{

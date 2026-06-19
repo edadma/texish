@@ -140,6 +140,36 @@ abstract class CairoTypesetter extends Typesetter:
     ctx.paint()
     ctx.restore()
 
+  override def imagesSupported: Boolean = true
+
+  // Build an ARGB32 surface from straight ARGB pixels, writing into the surface's own buffer. Cairo's ARGB32 is
+  // premultiplied and, on a little-endian host, byte-ordered B, G, R, A — so each pixel's colour is scaled by its
+  // own alpha before storing.
+  override def createImage(width: Int, height: Int, argb: Array[Int]): ImageHandle =
+    val surface = imageSurfaceCreate(Format.ARGB32, width, height)
+    surface.flush()
+    val data   = surface.getData
+    val stride = surface.getStride
+    var y      = 0
+    while y < height do
+      val row = y * stride
+      var x   = 0
+      while x < width do
+        val p   = argb(y * width + x)
+        val a   = (p >>> 24) & 0xff
+        val r   = (p >>> 16) & 0xff
+        val g   = (p >>> 8) & 0xff
+        val b   = p & 0xff
+        val off = row + x * 4
+        data(off) = (b * a / 255).toByte
+        data(off + 1) = (g * a / 255).toByte
+        data(off + 2) = (r * a / 255).toByte
+        data(off + 3) = a.toByte
+        x += 1
+      y += 1
+    surface.markDirty()
+    surface.reference
+
   // Picture-graphics seam — thin pass-throughs onto the Cairo context, which models exactly this vocabulary.
 
   override def gsave(): Unit    = ctx.save()

@@ -32,3 +32,32 @@ class ImageBox(
   // sitting on it, so its top-left is (x, y - ascent). The backend scales the source pixels to that point size.
   def draw(t: Typesetter, x: Double, y: Double): Unit =
     t.drawImage(image.asInstanceOf[t.ImageHandle], x, y - ascent, width, ascent)
+
+/** Like [[ImageBox]], but for an image already built in memory (e.g. an inline `\defbitmap`) rather than loaded
+  * from a file: it is handed the backend image handle and its pixel size directly, and sizes itself the same way. */
+class HandleImageBox(
+    t: Typesetter,
+    image: Any,
+    imageWidth: Int,
+    imageHeight: Int,
+    reqWidth: Option[Double] = None,
+    reqHeight: Option[Double] = None,
+    scale: Option[Double] = None,
+) extends NoGlueBox:
+  private val imageScaling = t.getNumber("imageScaling")
+  private val naturalWidth  = imageWidth * imageScaling
+  private val naturalHeight = imageHeight * imageScaling
+
+  val (width: Double, ascent: Double) = (reqWidth, reqHeight) match
+    case (Some(w), Some(h)) => (w, h)
+    case (Some(w), None)    => (w, if naturalWidth == 0 then 0.0 else w * naturalHeight / naturalWidth)
+    case (None, Some(h))    => (if naturalHeight == 0 then 0.0 else h * naturalWidth / naturalHeight, h)
+    case (None, None) =>
+      val s = scale.getOrElse(1.0)
+      (naturalWidth * s, naturalHeight * s)
+
+  val descent: Double  = 0
+  val xAdvance: Double = width
+
+  def draw(t: Typesetter, x: Double, y: Double): Unit =
+    t.drawImage(image.asInstanceOf[t.ImageHandle], x, y - ascent, width, ascent)

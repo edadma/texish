@@ -12,6 +12,10 @@ import io.github.edadma.texish.*
 def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): Unit =
   val t = handler.typesetter
 
+  // Expose whether this backend can render images, so a document can choose an inline bitmap (\defbitmap) when it
+  // can and a drawn fallback when it cannot (e.g. the JS layer).
+  t.set("imagessupported", if t.imagesSupported then 1.0 else 0.0)
+
   // Simple commands (0 args)
   proc.registerPrimitive("newpage", SimplePrimitive(() => t.newpage()))
   proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
@@ -239,6 +243,47 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         evalArg(proc, pos) match
           case Value.Text(path) => t.image(resolveImagePath(proc, path), width, height, scale)
           case _                => handler.error("\\includegraphics expects a path", pos)
+    },
+  )
+
+  // defbitmap {name} {width} {height} {depth} {base64} — define an inline raster image from data embedded in the
+  // source, so a package can carry a glyph (a clef, a logo) with no external file. The pixels are alpha only,
+  // black where opaque: `depth` bits per pixel (1 for crisp line art, 2/4/8 for antialiased grey levels), packed
+  // MSB-first row-major and base64-encoded. The image is built once and stored under name for \usebitmap. On a
+  // backend without image support it is silently skipped (the name stays undefined), so a document can fall back.
+  proc.registerPrimitive(
+    "defbitmap",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name  = Value.display(evalArg(proc, pos))
+        val width  = argInt(proc, pos)
+        val height = argInt(proc, pos)
+        val depth  = argInt(proc, pos)
+        // the data is read verbatim — base64 is not markup, and an expression read would drop characters and
+        // could trip over // (a comment) or other specials, as a URL does in \href
+        val data = proc.readRawArgument(pos)
+        if t.imagesSupported then
+          val argb   = unpackBitmapAlpha(base64Decode(data), width, height, depth)
+          val handle = t.createImage(width, height, argb)
+          proc.handler.set(name, Value.Native(InlineBitmap(handle, width, height)))
+    },
+  )
+
+  // usebitmap [width:… height:…] {name} — place a bitmap defined by \defbitmap, sized like \includegraphics
+  // (one of width/height keeps the aspect ratio). An undefined name places nothing, so an image-less backend
+  // simply shows whatever the document drew instead.
+  proc.registerPrimitive(
+    "usebitmap",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts = proc.readOptionalParams(pos)
+        val reqW = opts.get("width").flatMap(points)
+        val reqH = opts.get("height").flatMap(points)
+        val name = Value.display(evalArg(proc, pos))
+        proc.handler.get(name) match
+          case Value.Native(b: InlineBitmap) =>
+            t.add(new HandleImageBox(t, b.handle, b.width, b.height, reqW, reqH, None))
+          case _ =>
     },
   )
 
@@ -749,6 +794,59 @@ class SimplePrimitive(action: () => Any) extends Primitive:
 // Helper to evaluate an argument and get its value
 private[parser] def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
+
+// An inline bitmap built by \defbitmap: the backend image handle (opaque) plus its pixel size, stored as a
+// Value.Native so \usebitmap can place it.
+private[parser] case class InlineBitmap(handle: Any, width: Int, height: Int)
+
+// Read an argument and coerce it to an integer (for \defbitmap's width / height / depth).
+private[parser] def argInt(proc: Processor, pos: CharReader): Int =
+  Value.number(evalArg(proc, pos)).map(_.toInt).getOrElse(0)
+
+// Decode base64 to bytes, ignoring any whitespace and padding. A small self-contained decoder (no java.util),
+// so it compiles on every backend. Both the standard (`+/`) and URL-safe (`-_`) alphabets are accepted; embedded
+// data uses the URL-safe form so it never contains `//`, which would otherwise be read as a comment.
+private[parser] def base64Decode(s: String): Array[Byte] =
+  val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  val lookup   = Array.fill(128)(-1)
+  for i <- alphabet.indices do lookup(alphabet(i).toInt) = i
+  lookup('-'.toInt) = 62
+  lookup('_'.toInt) = 63
+  val out    = scala.collection.mutable.ArrayBuffer[Byte]()
+  var buffer = 0
+  var bits   = 0
+  for c <- s do
+    val v = if c.toInt < 128 then lookup(c.toInt) else -1
+    if v >= 0 then
+      buffer = (buffer << 6) | v
+      bits += 6
+      if bits >= 8 then
+        bits -= 8
+        out += ((buffer >> bits) & 0xff).toByte
+  out.toArray
+
+// Unpack a packed alpha bitmap into straight ARGB pixels. Each pixel is `depth` bits (MSB-first, row-major),
+// giving an alpha level from 0 (transparent) to full (opaque); the colour is black, so the value is the glyph's
+// coverage. 1-bit is on/off; 2/4/8-bit carry antialiased grey levels.
+private[parser] def unpackBitmapAlpha(bytes: Array[Byte], width: Int, height: Int, depth: Int): Array[Int] =
+  val n    = width * height
+  val argb = new Array[Int](n)
+  val maxv = (1 << depth) - 1
+  var bitpos = 0
+  var i      = 0
+  while i < n do
+    var v = 0
+    var d = 0
+    while d < depth do
+      val byteIdx = bitpos >> 3
+      val bit     = if byteIdx < bytes.length then (bytes(byteIdx) >> (7 - (bitpos & 7))) & 1 else 0
+      v = (v << 1) | bit
+      bitpos += 1
+      d += 1
+    val alpha = if maxv == 0 then 0 else v * 255 / maxv
+    argb(i) = alpha << 24
+    i += 1
+  argb
 
 // Build the TeX (or TeXish) logo in the current text font: a T, an E lowered half an x-height and kerned
 // A dimension value in big points: Dimen carries its own unit; a bare number means points

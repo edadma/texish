@@ -142,6 +142,17 @@ abstract class Typesetter:
   // Paint the image with its top-left at (x, y), scaled from its source pixels to fill w × h points.
   def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit
 
+  /** Whether this backend can build and paint raster images. The raster backends (Cairo, Graphics2D) override this
+    * to true; a non-rendering backend (headless, the JS layer) leaves it false, so a document can fall back to a
+    * drawn alternative — `\defbitmap` no-ops and the `imagessupported` variable reads 0. */
+  def imagesSupported: Boolean = false
+
+  /** Build an image from straight (non-premultiplied) ARGB pixels in row-major order, top row first, for an
+    * inline bitmap. Backends that support images override this; the default refuses, so callers must gate on
+    * [[imagesSupported]] first. */
+  def createImage(width: Int, height: Int, argb: Array[Int]): ImageHandle =
+    throw new UnsupportedOperationException("this backend cannot create images")
+
   // Hyperlink seam: a LinkBox brackets the drawing of its content with these so a backend that supports
   // annotations (the PDF output) can mark the drawn region as a link to `uri`. The default is a no-op, so
   // raster and headless backends simply draw the content with no annotation.
