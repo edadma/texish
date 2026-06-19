@@ -190,5 +190,24 @@ a \italic{\\\$} prefix on y and a \italic{\\\%} suffix on x.
 \set plotxminor {0}
 \set plotyminor {0}
 
+\eject
+
+\bold{A bubble chart}
+
+\italic{\\bubble} reads \italic{x y size} triples and draws a disc at each point whose
+\italic{area} encodes the third value. The discs are translucent, so overlapping bubbles
+show through one another and two series in one plot stay legible.
+
+\xrange{0}{10}
+\yrange{0}{10}
+\xlabel{price}
+\ylabel{rating}
+\plottitle{Products by market share}
+\plot{
+  \bubble[royalblue][premium]{2 8 12  4 7 30  6 9 8  8 6 22  3 5 16}
+  \bubble[darkorange][budget]{3 4 18  5 3 9  7 5 25  9 2 14  6 6 28}
+  \legend[sw]
+}
+
 Each figure above is a single box that flows in the text like any other, so a plot can
 sit inline with prose, in a figure float, or beside a table.

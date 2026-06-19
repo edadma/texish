@@ -24,12 +24,22 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   private var fillColour:   Option[Color] = None
   private var strokeColour: Option[Color] = None
 
+  private var fillOpacity:   Double = 1.0
+  private var strokeOpacity: Double = 1.0
+
   private var curX: Double = 0
   private var curY: Double = 0
 
-  /** Collection-time state a `\group` saves and restores: the active colours and the current point. The
-    * transform and stroke parameters are restored by the backend's own gstate, so they are not kept here. */
-  private case class GState(fill: Option[Color], stroke: Option[Color], x: Double, y: Double)
+  /** Collection-time state a `\group` saves and restores: the active colours, opacities, and the current point.
+    * The transform and stroke parameters are restored by the backend's own gstate, so they are not kept here. */
+  private case class GState(
+      fill: Option[Color],
+      stroke: Option[Color],
+      fillOp: Double,
+      strokeOp: Double,
+      x: Double,
+      y: Double,
+  )
   private val gstack = ArrayBuffer[GState]()
 
   def init(): Unit = ()
@@ -54,9 +64,18 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   def setFill(c: Color): Unit   = fillColour = Some(c)
   def noFill(): Unit            = fillColour = None
 
-  /** The active fill / stroke colour, for a `\glyph` that wants to draw in the picture's current ink. */
-  def fillColor: Option[Color]   = fillColour
-  def strokeColor: Option[Color] = strokeColour
+  /** Fill / stroke opacity, a multiplier on the colour's own alpha applied when a shape is painted. `\opacity`
+    * sets both; `\fillopacity` / `\strokeopacity` set one. Translucent fills let overlapping shapes — bubbles,
+    * confidence bands — show through one another. Clamped to [0, 1]. */
+  def setFillOpacity(v: Double): Unit   = fillOpacity = v.max(0.0).min(1.0)
+  def setStrokeOpacity(v: Double): Unit = strokeOpacity = v.max(0.0).min(1.0)
+
+  private def withOpacity(c: Color, op: Double): Color = c.copy(alpha = c.alpha * op)
+
+  /** The active fill / stroke colour, with the current opacity folded in, for a `\glyph` drawing in the
+    * picture's current ink. */
+  def fillColor: Option[Color]   = fillColour.map(withOpacity(_, fillOpacity))
+  def strokeColor: Option[Color] = strokeColour.map(withOpacity(_, strokeOpacity))
 
   def setLineWidth(w: Double): Unit               = emit(PictureOp.SetLineWidth(w))
   def setDash(pattern: Vector[Double], offset: Double): Unit = emit(PictureOp.SetDash(pattern, offset))
@@ -73,7 +92,7 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
 
   /** Open a `\group`: snapshot the collection-time state and save the backend graphics state. */
   def groupBegin(): Unit =
-    gstack += GState(fillColour, strokeColour, curX, curY)
+    gstack += GState(fillColour, strokeColour, fillOpacity, strokeOpacity, curX, curY)
     emit(PictureOp.GSave)
 
   /** Close a `\group`: restore the backend graphics state and the snapshotted collection-time state. */
@@ -82,6 +101,8 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
     val s = gstack.remove(gstack.length - 1)
     fillColour = s.fill
     strokeColour = s.stroke
+    fillOpacity = s.fillOp
+    strokeOpacity = s.strokeOp
     curX = s.x
     curY = s.y
 
@@ -109,8 +130,10 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
 
   def close(): Unit = emit(PictureOp.Close)
 
-  /** Paint the path built so far with the active fill and/or stroke colours — the end of a `\path` or a shape. */
-  def paint(): Unit = emit(PictureOp.Paint(fillColour, strokeColour))
+  /** Paint the path built so far with the active fill and/or stroke colours, each scaled by its opacity — the
+    * end of a `\path` or a shape. */
+  def paint(): Unit =
+    emit(PictureOp.Paint(fillColour.map(withOpacity(_, fillOpacity)), strokeColour.map(withOpacity(_, strokeOpacity))))
 
   // ─── shapes (lower to a fresh path plus one paint) ───────────────────────────────
 

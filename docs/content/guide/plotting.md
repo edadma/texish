@@ -91,6 +91,7 @@ Every series takes two optional bracket arguments before its data — a **colour
 | `\areaplot[colour][label]{data}` | the band under the curve, filled to the baseline |
 | `\stepplot[colour][label]{data}` | a staircase that holds each value to the next x |
 | `\fnplot[colour][label]{expression}` | a sampled curve of a function of `x` |
+| `\bubble[colour][label]{x y size …}` | a translucent disc at each point, sized by a third value |
 | `\errorbars[colour][label]{x y err …}` | a capped whisker of y ± err at each point |
 | `\trendline[colour][label]{data}` | the least-squares line of best fit, drawn dashed |
 
@@ -135,6 +136,26 @@ least-squares line through `x y` data and draws it dashed across the range:
   \legend[se]
 }
 ```
+
+## Bubble charts
+
+`\bubble` is a scatter with a third dimension: each point is an `x y size` triple, and the
+*area* of the disc drawn at the point encodes the size (area, not radius, so the eye reads
+the value honestly). The discs are translucent, so overlapping points and a second bubble
+series stay legible:
+
+```
+\plot{
+  \bubble[royalblue][premium]{2 8 12  4 7 30  6 9 8  8 6 22}
+  \bubble[darkorange][budget]{3 4 18  5 3 9  7 5 25  9 2 14}
+  \legend[sw]
+}
+```
+
+The size values are mapped onto a radius between `plotbubblemin` and `plotbubblemax`, so
+the largest point in the series gets the largest disc; set `plotbubbleopacity` to control
+how much overlapping bubbles show through. Translucency comes from the picture layer's new
+`\opacity` (and `\fillopacity` / `\strokeopacity`) state, available to any drawing.
 
 ## The legend
 
@@ -193,6 +214,8 @@ The look is controlled by variables you can `\set` after `\use{plot}` and before
 | `plotvalues` | `0` | print each bar's value above it (`\bars`) |
 | `plotmarkshape` | `circle` | scatter marker: `circle`, `square`, `triangle`, `diamond` |
 | `plotmarkr` | `2.6` | marker radius for `\scatter` |
+| `plotbubblemin` / `plotbubblemax` | `3` / `18` | smallest / largest bubble radius, in points (`\bubble`) |
+| `plotbubbleopacity` | `0.55` | bubble fill opacity, so overlaps show through |
 | `plotsamples` | `80` | samples across the domain for `\fnplot` |
 | `plotbarfrac` | `0.6` | bar width as a fraction of the x step |
 | `plotxminor` / `plotyminor` | `0` | minor subdivisions per major interval (0 = none) |

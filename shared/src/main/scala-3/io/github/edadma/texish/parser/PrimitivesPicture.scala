@@ -65,6 +65,18 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
   picturePrimitive(proc, handler, "fill", (pm, p) => pm.setFill(readColorArg(proc, p)))
   picturePrimitive(proc, handler, "nostroke", (pm, _) => pm.noStroke())
   picturePrimitive(proc, handler, "nofill", (pm, _) => pm.noFill())
+
+  // \opacity{v} sets fill and stroke opacity together; \fillopacity / \strokeopacity set one. The value is a
+  // multiplier (0 transparent, 1 opaque) on the paint's own alpha, applied when a shape is drawn.
+  picturePrimitive(
+    proc,
+    handler,
+    "opacity",
+    (pm, p) =>
+      val v = num1(proc, p); pm.setFillOpacity(v); pm.setStrokeOpacity(v),
+  )
+  picturePrimitive(proc, handler, "fillopacity", (pm, p) => pm.setFillOpacity(num1(proc, p)))
+  picturePrimitive(proc, handler, "strokeopacity", (pm, p) => pm.setStrokeOpacity(num1(proc, p)))
   picturePrimitive(proc, handler, "linewidth", (pm, p) => pm.setLineWidth(num1(proc, p)))
   picturePrimitive(
     proc,

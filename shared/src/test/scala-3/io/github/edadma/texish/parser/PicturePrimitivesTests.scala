@@ -60,6 +60,25 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     )
   }
 
+  "\\opacity scales the fill and stroke alpha baked into a paint" in {
+    val ops = run("\\picture width:1in height:1in { \\fill{red} \\stroke{blue} \\opacity{0.5} \\rect{0 0 72 72} }")
+    ops should contain(PictureOp.Paint(Some(Color("red", 0.5)), Some(Color("blue", 0.5))))
+  }
+
+  "\\fillopacity and \\strokeopacity set the two channels independently" in {
+    val ops = run("\\picture width:1in height:1in { \\fill{red} \\stroke{blue} \\fillopacity{0.25} \\strokeopacity{0.75} \\rect{0 0 72 72} }")
+    ops should contain(PictureOp.Paint(Some(Color("red", 0.25)), Some(Color("blue", 0.75))))
+  }
+
+  "a \\group restores the opacity it changed" in {
+    val ops = run(
+      "\\picture width:1in height:1in { \\fill{red} \\group{ \\opacity{0.3} \\rect{0 0 10 10} } \\rect{0 0 20 20} }",
+    )
+    // inside the group: alpha 0.3; after the group: back to opaque
+    ops should contain(PictureOp.Paint(Some(Color("red", 0.3)), None))
+    ops should contain(PictureOp.Paint(Some(Color("red")), None))
+  }
+
   "coordinates may be dimensions, and parse to points" in {
     val ops = run("\\picture width:1in height:1in { \\stroke{black} \\line{0.5in 0 1in 36pt} }")
     ops should contain(PictureOp.MoveTo(36, 0))   // 0.5in

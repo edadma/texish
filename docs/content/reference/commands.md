@@ -95,6 +95,7 @@ are engine primitives available in any document.
 | `\areaplot[colour][label]{x y x y …}` | the band under the curve, filled to the baseline |
 | `\stepplot[colour][label]{x y x y …}` | a staircase holding each value to the next x |
 | `\fnplot[colour][label]{expr in x}` | a sampled curve of a function |
+| `\bubble[colour][label]{x y size …}` | a translucent disc at each point, sized by a third value |
 | `\errorbars[colour][label]{x y err …}` | a capped y ± err whisker at each point |
 | `\trendline[colour][label]{x y x y …}` | the least-squares line of best fit |
 | `\hline[colour]{y}` `\vline[colour]{x}` | a dashed reference line at a data value |

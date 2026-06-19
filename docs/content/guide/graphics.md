@@ -24,7 +24,9 @@ restores.
 ## The vocabulary
 
 - **State** (saved by `\group`): `\stroke{color}` / `\nostroke`, `\fill{color}` /
-  `\nofill`, `\linewidth{d}`, `\linecap{butt|round|square}`,
+  `\nofill`, `\opacity{v}` (or `\fillopacity{v}` / `\strokeopacity{v}`, a `0`–`1`
+  multiplier on the paint's alpha, so translucent shapes show through one another),
+  `\linewidth{d}`, `\linecap{butt|round|square}`,
   `\linejoin{miter|round|bevel}`, `\dash{on off …}`, and
   `\linetype{solid|dashed|dotted|dashdot}`.
 - **Transforms**: `\translate{dx dy}`, `\scale{sx sy}`, `\rotate{degrees}`.

@@ -168,6 +168,20 @@ class PlotTests extends AnyFreeSpec with Matchers:
     ops.collect { case PictureOp.LineTo(x, _) => x } should not contain 43.6
   }
 
+  "bubbles scale their radius by area between the size limits" in {
+    // sizes 0 and 4 with plotbubblemin 3 / plotbubblemax 18: the smallest maps to r=3, the
+    // largest to r=18 (area-proportional: r = sqrt(9 + (324-9)*t)).
+    val ops = run(s"$preamble \\plot{ \\bubble[black]{0 0 0  10 100 4} }")
+    ops should contain(PictureOp.Arc(46, 42, 3, 0, 2 * math.Pi, false))
+    ops should contain(PictureOp.Arc(280, 204, 18, 0, 2 * math.Pi, false))
+  }
+
+  "a bubble series fills with reduced opacity so overlaps show through" in {
+    val ops        = run(s"$preamble \\plot{ \\bubble[black]{5 50 1} }")
+    val fillAlphas = ops.collect { case PictureOp.Paint(Some(f), _) => f.alpha }
+    fillAlphas.exists(a => a > 0.5 && a < 0.6) shouldBe true
+  }
+
   "tick-label formatting renders without error" in {
     noException should be thrownBy run(s"$preamble \\ytickformat{}{k} \\plot{ \\lineplot[black]{0 0  10 100} }")
   }

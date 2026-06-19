@@ -76,6 +76,10 @@
 \set plotyminor {0}         // minor y subdivisions per major interval (0 = none)
 \set plotminorgrid {1}      // draw minor grid lines when minor subdivisions are on
 
+\set plotbubblemin {3}        // smallest bubble radius, in points (\bubble)
+\set plotbubblemax {18}       // largest bubble radius, in points
+\set plotbubbleopacity {0.55} // bubble fill opacity, so overlapping bubbles show through
+
 // ---- Colour palette ------------------------------------------------------------
 // Series with colour `auto` draw their colour from this palette in turn, cycling if
 // there are more series than entries. \set a new entry or change plotPaletteLen to
@@ -541,6 +545,50 @@
     \circle{\calc{\cx} \calc{\cy} \plotmarkr}
   \fi \fi \fi}
 
+// \bubble[colour][label]{x y size  x y size  …} — a scatter whose third value at each
+// point sets the marker's size, drawn as a translucent disc so overlapping bubbles show
+// through one another. The size values map to a radius between plotbubblemin and
+// plotbubblemax with *area* (not radius) proportional to the value — the perceptually
+// honest scaling. The discs are drawn inside a \group so the fill opacity set here does
+// not leak to a later series.
+\def bubble [color:auto] [label:] data {{
+  \plotResolveColor{\color}
+  \plotRecord{bubble}{\plotCurColor}{\label}
+  \global\set bbSmin {\calc{1000000000}}
+  \global\set bbSmax {\calc{-1000000000}}
+  \plotBubbleRange{\seq{\data}}
+  \set bbSpan {\calc{bbSmax - bbSmin}}
+  \if {\< {\bbSpan} {0.000001}} \set bbSpan {1} \fi
+  \group{
+    \fill{\plotCurColor} \stroke{\plotCurColor} \linewidth{0.6pt}
+    \fillopacity{\plotbubbleopacity} \strokeopacity{0.9}
+    \plotBubbles{\seq{\data}}
+  }
+}}
+// Find the min and max of the size values (every third value) so they map onto the radius
+// range. A degenerate (all-equal) range is handled by the caller's bbSpan guard.
+\def plotBubbleRange items {
+  \if {\size{\items}}
+    \set bbs {\head{\tail{\tail{\items}}}}
+    \if {\< {\bbs} {\bbSmin}} \global\set bbSmin {\bbs} \fi
+    \if {\> {\bbs} {\bbSmax}} \global\set bbSmax {\bbs} \fi
+    \plotBubbleRange{\tail{\tail{\tail{\items}}}}
+  \fi}
+// Walk x y size triples; the radius is sqrt(rmin² + (rmax² − rmin²)·t) so the disc area
+// rises linearly with the size value between the two configured limits.
+\def plotBubbles items {
+  \if {\size{\items}}
+    \set bbx {\head{\items}}
+    \set bby {\head{\tail{\items}}}
+    \set bbsz {\head{\tail{\tail{\items}}}}
+    \set bbcx {\calc{plotOx + (bbx - plotXmin) * plotSx}}
+    \set bbcy {\calc{plotOy + (bby - plotYmin) * plotSy}}
+    \set bbt {\calc{(bbsz - bbSmin) / bbSpan}}
+    \set bbr {\calc{sqrt(plotbubblemin * plotbubblemin + (plotbubblemax * plotbubblemax - plotbubblemin * plotbubblemin) * bbt)}}
+    \circle{\bbcx \bbcy \bbr}
+    \plotBubbles{\tail{\tail{\tail{\items}}}}
+  \fi}
+
 // \bars[colour][label]{data} — a vertical bar from the axis up to each data point,
 // centred on its x value and a fixed fraction of the x step wide.
 \def bars [color:auto] [label:] data {{
@@ -695,6 +743,9 @@
   \if {\= {\kind} {bar}}
     \fill{\color} \nostroke
     \rect{\calc{\lx} \calc{\ry - 4} \plotlegswatch 8}
+  \else \if {\= {\kind} {bubble}}
+    \fill{\color} \nostroke
+    \circle{\calc{\lx + plotlegswatch / 2} \calc{\ry} 4}
   \else \if {\= {\kind} {marker}}
     \fill{\color} \nostroke
     \set legSwCx {\calc{\lx + plotlegswatch / 2}}
@@ -702,4 +753,4 @@
   \else
     \nofill \stroke{\color} \linewidth{2pt} \linecap{round}
     \line{\calc{\lx} \calc{\ry}  \calc{\lx + plotlegswatch} \calc{\ry}}
-  \fi \fi}
+  \fi \fi \fi}
