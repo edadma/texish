@@ -33,7 +33,7 @@
 \set musicpad {30}         // vertical room above and below the staff for ledger lines, stems and flags
 \set musiccolor {black}
 \set musicfont {bravura}   // the SMuFL music font to set the glyphs in — any loaded SMuFL face (bravura, petaluma, …)
-\set musicclef {treble}    // treble or bass; chooses the clef and how pitches sit on the staff
+\set musicclef {treble}    // treble, bass, alto, or tenor; chooses the clef and how pitches sit on the staff
 \set musictimenum {}       // time-signature numerator, drawn after the clef (e.g. {3}); empty for no signature
 \set musictimeden {}       // time-signature denominator (e.g. {4})
 \set musickey {0}          // key signature: a signed count — positive = that many sharps, negative = flats (0 none)
@@ -48,24 +48,33 @@
 \set musicFlatStepsTreble  {\seq{4 7 3 6 2 5 1}}
 \set musicSharpStepsBass   {\seq{6 3 7 4 1 5 2}}
 \set musicFlatStepsBass    {\seq{2 5 1 4 0 3 -1}}
+\set musicSharpStepsAlto   {\seq{7 4 8 5 2 6 3}}
+\set musicFlatStepsAlto    {\seq{3 6 2 5 1 4 0}}
 
 // ---- SMuFL codepoints ----------------------------------------------------------
 // The Private-Use codepoints of the glyphs this package stamps. Names follow the SMuFL glyph registry.
 \set cpGClef {57424}            // U+E050 gClef
 \set cpFClef {57442}            // U+E062 fClef
+\set cpCClef {57436}            // U+E05C cClef (alto / tenor)
 \set cpNoteWhole {57506}        // U+E0A2 noteheadWhole
 \set cpNoteHalf {57507}         // U+E0A3 noteheadHalf
 \set cpNoteBlack {57508}        // U+E0A4 noteheadBlack
-\set cpFlag8Up {57920}          // U+E240 flag8thUp
-\set cpFlag8Down {57921}        // U+E241 flag8thDown
+// Note these glyph names spell their durations out (Eighth, Sixteenth) rather than using 8/16: a control
+// sequence is letters only, so \cpFlag8Up would tokenize as \cpFlag followed by the text 8Up and silently
+// resolve to nothing. Letter-only names stay safe to reference with a backslash anywhere.
+\set cpEighthFlagUp {57920}     // U+E240 flag8thUp
+\set cpEighthFlagDown {57921}   // U+E241 flag8thDown
+\set cpSixteenthFlagUp {57922}  // U+E242 flag16thUp
+\set cpSixteenthFlagDown {57923} // U+E243 flag16thDown
+\set cpAugDot {57831}           // U+E1E7 augmentationDot
 \set cpRestWhole {58595}        // U+E4E3 restWhole
 \set cpRestHalf {58596}         // U+E4E4 restHalf
 \set cpRestQuarter {58597}      // U+E4E5 restQuarter
-\set cpRest8 {58598}            // U+E4E6 rest8th
+\set cpEighthRest {58598}       // U+E4E6 rest8th
 \set cpAccFlat {57952}          // U+E260 accidentalFlat
 \set cpAccNatural {57953}       // U+E261 accidentalNatural
 \set cpAccSharp {57954}         // U+E262 accidentalSharp
-\set cpTimeSig0 {57472}         // U+E080 timeSig0; a digit d is at cpTimeSig0 + d
+\set cpTimeDigitBase {57472}    // U+E080 timeSig0; a digit d is at cpTimeDigitBase + d
 
 // ---- The score -----------------------------------------------------------------
 // \score sizes a picture to hold the notes, draws the five staff lines and the clef, then walks the note
@@ -100,6 +109,9 @@
   \set msKeyX {\calc{4.8 * g}}
   \set msKeyN {\calc{musickey}}
   \if {\< {\msKeyN} {0}} \set msKeyN {\calc{0 - msKeyN}} \fi
+  // Key signatures are placed for treble, bass and alto; the tenor C-clef's layout is irregular, so it reserves
+  // no key-signature column (a key set with the tenor clef is simply not drawn).
+  \if {\= {\musicclef} {tenor}} \set msKeyN {0} \fi
   \set msKeyW {\calc{msKeyN * 0.9 * g}}
   \set msTimeX {\calc{msKeyX + msKeyW + 0.5 * g}}
   \set msTimeW {0}
@@ -117,11 +129,15 @@
   \set msBeamY {\calc{msTop + 1.6 * g}}
   \set msBeam {0}
 
-  // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff,
-  // G2 (index -10) on the bass. A note's index is msOct*7 + its pitch class; its step above the bottom
-  // line is that index minus this base, and half the staff space per step gives its height.
+  // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff, G2
+  // (index -10) on the bass, F3 (-4) on the alto, D3 (-6) on the tenor. A note's index is msOct*7 + its pitch
+  // class; its step above the bottom line is that index minus this base, and half the staff space per step
+  // gives its height. Middle C sits on the middle line in the alto clef, the fourth line in the tenor.
   \set msBase {2}
-  \if {\= {\musicclef} {bass}} \set msBase {-10} \fi
+  \if {\= {\musicclef} {bass}} \set msBase {-10}
+  \else \if {\= {\musicclef} {alto}} \set msBase {-4}
+  \else \if {\= {\musicclef} {tenor}} \set msBase {-6}
+  \fi \fi \fi
 
   \picture width:{\msW} height:{\msH} {
     \musicStaffLines
@@ -142,30 +158,75 @@
     \line{\calc{0.5 * g} \ly  \calc{msW - 10} \ly}
   }}
 
-// Walk the note list, advancing msX. A barline is drawn thin and advances less than a note. `[` and `]`
-// open and close a beamed run: the notes between them share one flat beam instead of carrying flags.
+// Walk the note list, advancing msX. A barline advances less than a note. `[` and `]` open and close a beamed
+// run: the notes between them share one flat beam instead of carrying flags. Several barline kinds are written
+// as their own tokens: `|` plain, `||` double, `|.` final, `|:` and `:|` the start and end of a repeat.
 \def musicWalk items {
   \if {\size{\items}}
     \set tok {\head{\items}}
-    \if {\= {\tok} {[}}
+    \if {\= {\size{\tok}} {0}}     // skip an empty token, so stray whitespace in the score is harmless
+    \else \if {\= {\tok} {[}}
       \global\set msBeam {1}
       \global\set msBeamPrev {0}
     \else \if {\= {\tok} {]}}
       \global\set msBeam {0}
     \else \if {\= {\tok} {|}}
-      \musicBarline
+      \musicBarThin{\msX}
       \set msX {\calc{msX + musicnote * 0.6}}
+    \else \if {\= {\tok} {||}}
+      \musicBarDouble
+      \set msX {\calc{msX + musicnote * 0.7}}
+    \else \if {\= {\tok} {|.}}
+      \musicBarFinal
+      \set msX {\calc{msX + musicnote * 0.8}}
+    \else \if {\= {\tok} {|:}}
+      \musicBarRepeatStart
+      \set msX {\calc{msX + musicnote}}
+    \else \if {\= {\tok} {:|}}
+      \musicBarRepeatEnd
+      \set msX {\calc{msX + musicnote * 0.9}}
     \else
       \musicNote{\tok}
       \set msX {\calc{msX + musicnote}}
-    \fi \fi \fi
+    \fi \fi \fi \fi \fi \fi \fi \fi
     \musicWalk{\tail{\items}}
   \fi}
 
-// A barline from the bottom to the top staff line, at the SMuFL thin-barline thickness.
-\def musicBarline {
+// ---- Barlines ------------------------------------------------------------------
+// The pieces every barline kind is built from: a thin rule, a thick rule, and the pair of repeat dots in the
+// two middle spaces. Each takes its x so a compound barline can place several side by side.
+\def musicBarThin x {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.16 * g}}
-  \line{\msX \msBottom  \msX \msTop}}
+  \line{\x \msBottom  \x \msTop}}
+
+\def musicBarThick x {
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.5 * g}}
+  \line{\x \msBottom  \x \msTop}}
+
+\def musicBarDots x {
+  \fill{\musiccolor} \nostroke
+  \circle{\x \calc{msBottom + 1.5 * g} \calc{0.22 * g}}
+  \circle{\x \calc{msBottom + 2.5 * g} \calc{0.22 * g}}}
+
+// A double barline (two thin rules), a final barline (a thin rule then a thick one), and the two repeat
+// barlines (a thick and thin rule with the dots on the inside of the repeated span).
+\def musicBarDouble {
+  \musicBarThin{\msX}
+  \musicBarThin{\calc{msX + 0.45 * g}}}
+
+\def musicBarFinal {
+  \musicBarThin{\msX}
+  \musicBarThick{\calc{msX + 0.55 * g}}}
+
+\def musicBarRepeatStart {
+  \musicBarThick{\msX}
+  \musicBarThin{\calc{msX + 0.55 * g}}
+  \musicBarDots{\calc{msX + 0.95 * g}}}
+
+\def musicBarRepeatEnd {
+  \musicBarDots{\msX}
+  \musicBarThin{\calc{msX + 0.4 * g}}
+  \musicBarThick{\calc{msX + 0.95 * g}}}
 
 // ---- One note ------------------------------------------------------------------
 // Parse the token into pitch class, octave offset, and duration; place the head; then the stem and flag
@@ -187,14 +248,25 @@
     \else \if {\= {\msDur} {2}} \set msHead {\cpNoteHalf}
     \else \set msHead {\cpNoteWhole} \fi \fi
     \fontglyph anchor:baseline {\msX \ny}{\musicfont}{\fs}{\msHead}
+    \musicDot
     // The stem and any flag. In a beamed run every note shares one flat beam; otherwise the stem rises on
-    // the right of low notes and falls on the left of high ones, flipping at the middle line, and an eighth
-    // note gets its own flag. A whole note has no stem at all.
+    // the right of low notes and falls on the left of high ones, flipping at the middle line, and a flagged
+    // note (eighth or shorter) gets its own flag. A whole note has no stem at all.
     \if {\= {\msBeam} {1}}
       \musicBeamedStem
     \else \if {\>= {\msDur} {2}}
       \musicStem
     \fi \fi
+  \fi}
+
+// An augmentation dot, drawn right of the head for a dotted note. A dot belongs in a space, so when the head
+// sits on a line (an even step) the dot is nudged up into the space above; in a space it stays on the line.
+\def musicDot {
+  \if {\= {\msDot} {1}}
+    \fill{\musiccolor} \nostroke
+    \set msDotY {\ny}
+    \if {\= {\calc{step - 2 * floor(step / 2)}} {0}} \set msDotY {\calc{ny + g / 2}} \fi
+    \fontglyph anchor:west {\calc{msX + msHeadW + 0.35 * g} \msDotY}{\musicfont}{\fs}{\cpAugDot}
   \fi}
 
 // The stem and, for an eighth note, its flag. A note below the middle line stems up on the head's right edge,
@@ -207,23 +279,29 @@
     \set msStemX {\calc{msX + msHeadW - msStemHalf}}
     \set msStemTop {\calc{ny + msStemLen}}
     \line{\msStemX \calc{ny + msStemAttach}  \msStemX \msStemTop}
-    \if {\>= {\msDur} {8}}
+    \if {\>= {\msDur} {16}}
       \fill{\musiccolor} \nostroke
-      \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpFlag8Up}
-    \fi
+      \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpSixteenthFlagUp}
+    \else \if {\>= {\msDur} {8}}
+      \fill{\musiccolor} \nostroke
+      \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpEighthFlagUp}
+    \fi \fi
   \else
     \set msStemX {\calc{msX + msStemHalf}}
     \set msStemTop {\calc{ny - msStemLen}}
     \line{\msStemX \calc{ny - msStemAttach}  \msStemX \msStemTop}
-    \if {\>= {\msDur} {8}}
+    \if {\>= {\msDur} {16}}
       \fill{\musiccolor} \nostroke
-      \fontglyph anchor:baseline {\msStemX \msStemTop}{\musicfont}{\fs}{\cpFlag8Down}
-    \fi
+      \fontglyph anchor:baseline {\msStemX \msStemTop}{\musicfont}{\fs}{\cpSixteenthFlagDown}
+    \else \if {\>= {\msDur} {8}}
+      \fill{\musiccolor} \nostroke
+      \fontglyph anchor:baseline {\msStemX \msStemTop}{\musicfont}{\fs}{\cpEighthFlagDown}
+    \fi \fi
   \fi}
 
-// A note inside a beamed run: an up-stem reaching the common beam height, joined to the previous note in
-// the run by a thick flat bar at that height. The first note of a run only records its stem foot for the
-// next to beam to.
+// A note inside a beamed run: an up-stem reaching the common beam height, joined to the previous note in the
+// run by a thick flat bar at that height. A run of sixteenths carries a second beam just below the first. The
+// first note of a run only records its stem foot for the next to beam to.
 \def musicBeamedStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemX {\calc{msX + msHeadW - msStemHalf}}
@@ -233,6 +311,10 @@
     // Run the beam half a stem-width past each stem centre so it ends flush with the outer edge of the stem
     // rather than leaving the stem's corner poking out; interior segments simply overlap at the shared stems.
     \line{\calc{msBeamPrevX - msStemHalf} \msBeamY  \calc{msStemX + msStemHalf} \msBeamY}
+    // A second beam, three-quarters of a staff space below the first, for a run of sixteenth notes.
+    \if {\>= {\msDur} {16}}
+      \line{\calc{msBeamPrevX - msStemHalf} \calc{msBeamY - 0.75 * g}  \calc{msStemX + msStemHalf} \calc{msBeamY - 0.75 * g}}
+    \fi
   \fi
   \global\set msBeamPrev {1}
   \global\set msBeamPrevX {\msStemX}}
@@ -265,7 +347,7 @@
   \else \if {\= {\msDur} {2}}
     \fontglyph anchor:baseline {\msX \msMiddle}{\musicfont}{\fs}{\cpRestHalf}
   \else \if {\>= {\msDur} {8}}
-    \fontglyph anchor:west {\msX \msMiddle}{\musicfont}{\fs}{\cpRest8}
+    \fontglyph anchor:west {\msX \msMiddle}{\musicfont}{\fs}{\cpEighthRest}
   \else
     \fontglyph anchor:west {\msX \msMiddle}{\musicfont}{\fs}{\cpRestQuarter}
   \fi \fi \fi}
@@ -292,16 +374,21 @@
 // baseline on the pitch's line, advancing 0.9 staff spaces from the previous one.
 \def musicKeySig {
   \set ksN {\calc{musickey}}
+  \if {\= {\musicclef} {tenor}} \set ksN {0} \fi   // tenor key-signature layout is irregular; not drawn
   \if {\= {\ksN} {0}} \else
     \fill{\musiccolor} \nostroke
     \if {\> {\ksN} {0}}
       \set ksGlyph {\cpAccSharp}
       \set ksCount {\ksN}
-      \if {\= {\musicclef} {bass}} \set ksSteps {\musicSharpStepsBass} \else \set ksSteps {\musicSharpStepsTreble} \fi
+      \set ksSteps {\musicSharpStepsTreble}
+      \if {\= {\musicclef} {bass}} \set ksSteps {\musicSharpStepsBass} \fi
+      \if {\= {\musicclef} {alto}} \set ksSteps {\musicSharpStepsAlto} \fi
     \else
       \set ksGlyph {\cpAccFlat}
       \set ksCount {\calc{0 - ksN}}
-      \if {\= {\musicclef} {bass}} \set ksSteps {\musicFlatStepsBass} \else \set ksSteps {\musicFlatStepsTreble} \fi
+      \set ksSteps {\musicFlatStepsTreble}
+      \if {\= {\musicclef} {bass}} \set ksSteps {\musicFlatStepsBass} \fi
+      \if {\= {\musicclef} {alto}} \set ksSteps {\musicFlatStepsAlto} \fi
     \fi
     \set ksX {\msKeyX}
     \set ksI {0}
@@ -347,16 +434,17 @@
   \if {\size{\s}}
     \set d {\head{\s}}
     \set cx {\calc{x0 + i * cell + cell / 2}}
-    \fontglyph anchor:center {\cx \y}{\musicfont}{\fs}{\calc{cpTimeSig0 + \d}}
+    \fontglyph anchor:center {\cx \y}{\musicfont}{\fs}{\calc{cpTimeDigitBase + \d}}
     \set i {\calc{i + 1}}
     \musicTimeDigits{\tail{\s}}{\y}
   \fi}
 
 // ---- Note parsing --------------------------------------------------------------
-// Set msAcc (accidental: sharp/flat/nat/none), msLetter (pitch class), msOct (octave offset from middle
-// C's octave), msDur (1/2/4/8). An optional accidental (+ sharp, - flat, n natural) leads the token; then
-// the letter, then octave marks and a duration digit. An accidental shifts the look, not the staff line —
-// a sharpened C and a plain C sit on the same line — so it only chooses which sign is drawn.
+// Set msAcc (accidental: sharp/flat/nat/none), msLetter (pitch class), msOct (octave offset from middle C's
+// octave), msDur (1/2/4/8/16/32), and msDot (1 if dotted). An optional accidental (+ sharp, - flat, n natural)
+// leads the token; then the letter, then any octave marks, a duration number, and a trailing dot. An accidental
+// shifts the look, not the staff line — a sharpened C and a plain C sit on the same line — so it only chooses
+// which sign is drawn. The duration's digits accumulate, so 16 and 32 read as one number, not two marks.
 \def musicParse tok {
   \global\set ps {\cat{\tok}{}}
   \global\set msAcc {none}
@@ -368,6 +456,8 @@
   \global\set msLetter {\head{\ps}}
   \global\set msOct {0}
   \global\set msDur {4}
+  \global\set msDot {0}
+  \global\set msDurSeen {0}
   \musicParseRest{\tail{\ps}}}
 
 \def musicParseRest s {
@@ -375,18 +465,28 @@
     \set pc {\head{\s}}
     \if {\= {\pc} {'}} \global\set msOct {\calc{msOct + 1}}
     \else \if {\= {\pc} {,}} \global\set msOct {\calc{msOct - 1}}
-    \else \global\set msDur {\calc{pc}} \fi \fi
+    \else \if {\= {\pc} {.}} \global\set msDot {1}
+    \else
+      \if {\= {\msDurSeen} {0}} \global\set msDur {\calc{pc}} \global\set msDurSeen {1}
+      \else \global\set msDur {\calc{msDur * 10 + pc}} \fi
+    \fi \fi \fi
     \musicParseRest{\tail{\s}}
   \fi}
 
 // ---- The clef ------------------------------------------------------------------
-// A G (treble) or F (bass) clef, stamped from the music font. Each clef's origin sits on the line it names — the G
-// clef on the second line from the bottom, the F clef on the second from the top — so a baseline anchor on
-// that line seats the glyph correctly. A small left margin keeps it clear of the staff's left edge.
+// The clef, stamped from the music font. Each clef's origin sits on the line it names, so a baseline anchor on
+// that line seats the glyph: the G (treble) clef on the second line from the bottom, the F (bass) clef on the
+// second from the top, and the C (alto/tenor) clef on the line that is middle C — the middle line for the alto,
+// the fourth line for the tenor. A small left margin keeps the clef clear of the staff's left edge.
 \def musicClef {
   \fill{\musiccolor} \nostroke
+  \set msClefX {\calc{1.4 * g}}
   \if {\= {\musicclef} {bass}}
-    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 3 * g}}{\musicfont}{\fs}{\cpFClef}
+    \fontglyph anchor:baseline {\msClefX \calc{msBottom + 3 * g}}{\musicfont}{\fs}{\cpFClef}
+  \else \if {\= {\musicclef} {alto}}
+    \fontglyph anchor:baseline {\msClefX \calc{msBottom + 2 * g}}{\musicfont}{\fs}{\cpCClef}
+  \else \if {\= {\musicclef} {tenor}}
+    \fontglyph anchor:baseline {\msClefX \calc{msBottom + 3 * g}}{\musicfont}{\fs}{\cpCClef}
   \else
-    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 1 * g}}{\musicfont}{\fs}{\cpGClef}
-  \fi}
+    \fontglyph anchor:baseline {\msClefX \calc{msBottom + 1 * g}}{\musicfont}{\fs}{\cpGClef}
+  \fi \fi \fi}

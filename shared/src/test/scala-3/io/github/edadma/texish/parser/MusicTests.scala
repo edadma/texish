@@ -23,9 +23,12 @@ class MusicTests extends AnyFreeSpec with Matchers:
   private val NoteHalf  = 0xe0a3
   private val NoteBlack = 0xe0a4
   private val GClef     = 0xe050
+  private val CClef     = 0xe05c
   private val AccFlat   = 0xe260
   private val AccSharp  = 0xe262
   private val TimeSig0  = 0xe080
+  private val Flag16Up  = 0xe242
+  private val AugDot    = 0xe1e7
 
   private class Capture extends HeadlessTypesetter:
     val pictures = ArrayBuffer[PictureBox]()
@@ -149,4 +152,40 @@ class MusicTests extends AnyFreeSpec with Matchers:
     val faces = opsRaw("\\set musicfont {petaluma}\\score{c d}")
       .collect { case PictureOp.Place(g: GlyphBox, _, _, _) => g.font.typeface }.distinct
     faces shouldBe Vector("petaluma")
+  }
+
+  "a dotted note places an augmentation dot to the right of the head" in {
+    val dot = glyphs(ops("c4.")).filter((cp, _, _) => cp == AugDot)
+    dot should have size 1
+    dot.head._2 should be > heads(ops("c4.")).head._2 // the dot sits right of the head
+    glyphs(ops("c4")).filter((cp, _, _) => cp == AugDot) shouldBe empty
+  }
+
+  "a multi-digit duration parses as one number, and a sixteenth gets its flag" in {
+    // c16 must read as a sixteenth (flag16th), not a 1 then a 6; an eighth carries no 16th flag
+    glyphs(ops("c16")).filter((cp, _, _) => cp == Flag16Up) should have size 1
+    glyphs(ops("c8")).filter((cp, _, _) => cp == Flag16Up) shouldBe empty
+  }
+
+  "a beamed run of sixteenths draws a second beam below the first" in {
+    // two horizontal beam heights above the staff (primary + secondary), versus one for eighths
+    hlines(ops("[ c16 d16 ]")).filter(_ > 62.5).distinct.size shouldBe 2
+    hlines(ops("[ c8 d8 ]")).filter(_ > 62.5).distinct.size shouldBe 1
+  }
+
+  "the repeat barlines draw their dots" in {
+    // the repeat dots lower to arcs; a plain barline draws none, and noteheads are glyphs not arcs
+    ops("c |: d").exists(_.isInstanceOf[PictureOp.Arc]) shouldBe true
+    ops("c | d").exists(_.isInstanceOf[PictureOp.Arc]) shouldBe false
+  }
+
+  "the alto clef puts middle C on the middle line" in {
+    val gs = glyphs(opsRaw("\\set musicclef {alto}\\score{c d}"))
+    gs.head._1 shouldBe CClef                 // a C-clef, not a G-clef
+    heads(opsRaw("\\set musicclef {alto}\\score{c}")).head._3 shouldBe 46.0 // middle C on the middle line
+  }
+
+  "a stray space in a score is harmless" in {
+    // the trailing space must not introduce a phantom note (regression for the empty-token guard)
+    heads(opsRaw("\\score{c d e }")) should have size 3
   }
