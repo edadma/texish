@@ -42,6 +42,12 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   /** The end of the last path segment, the origin for a relative coordinate. */
   def currentPoint: (Double, Double) = (curX, curY)
 
+  /** Move the running current point. The coordinate reader calls this as it resolves the coordinates of a single
+    * command, so a `++` relative coordinate later in the same group measures from the one before it (path segments
+    * set it too, via [[moveTo]] / [[lineTo]], for `++` chained across commands). */
+  def setCurrentPoint(x: Double, y: Double): Unit =
+    curX = x; curY = y
+
   /** Resolve a coordinate that may be relative: a relative `(dx, dy)` is measured from the current point, an
     * absolute one is taken as-is. The TikZ `++` form lands here once the parser has split off the marker. */
   def rel(x: Double, y: Double, relative: Boolean): (Double, Double) =
