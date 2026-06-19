@@ -83,6 +83,10 @@
   // notehead share a width, so one measurement covers every stemmed note.)
   \set msHeadW {\glyphwidth{\musicfont}{\fs}{\cpNoteBlack}}
   \set msStemHalf {\calc{0.06 * g}}
+  // The head is tilted, so its right tip (where an up-stem joins) sits a little above centre and its left tip a
+  // little below. Pull the stem foot this far toward that tip so the stem meets the head instead of starting at
+  // dead centre and overshooting past the tip — a small amount that reads well across SMuFL fonts.
+  \set msStemAttach {\calc{0.2 * g}}
 
   \set msBottom {\musicpad}
   \set msTop {\calc{msBottom + 4 * g}}
@@ -202,7 +206,7 @@
   \if {\< {\step} {4}}
     \set msStemX {\calc{msX + msHeadW - msStemHalf}}
     \set msStemTop {\calc{ny + msStemLen}}
-    \line{\msStemX \ny  \msStemX \msStemTop}
+    \line{\msStemX \calc{ny + msStemAttach}  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
       \fill{\musiccolor} \nostroke
       \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpFlag8Up}
@@ -210,7 +214,7 @@
   \else
     \set msStemX {\calc{msX + msStemHalf}}
     \set msStemTop {\calc{ny - msStemLen}}
-    \line{\msStemX \ny  \msStemX \msStemTop}
+    \line{\msStemX \calc{ny - msStemAttach}  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
       \fill{\musiccolor} \nostroke
       \fontglyph anchor:baseline {\msStemX \msStemTop}{\musicfont}{\fs}{\cpFlag8Down}
@@ -223,7 +227,7 @@
 \def musicBeamedStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemX {\calc{msX + msHeadW - msStemHalf}}
-  \line{\msStemX \ny  \msStemX \msBeamY}
+  \line{\msStemX \calc{ny + msStemAttach}  \msStemX \msBeamY}
   \if {\= {\msBeamPrev} {1}}
     \linewidth{\calc{0.5 * g}}
     // Run the beam half a stem-width past each stem centre so it ends flush with the outer edge of the stem
