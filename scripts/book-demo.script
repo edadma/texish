@@ -1,0 +1,79 @@
+\use{book}
+
+\title{A Short Book}
+\author{Typeset with the \texttt{book} package}
+\date{texish}
+
+\frontmatter
+\maketitle
+
+\chapter{Preface}
+
+This book is set with the \texttt{book} package, the \texttt{book}-class companion to
+the \texttt{document} package's article format. Front matter like this preface carries
+lowercase-roman folios and unnumbered chapters, just as in LaTeX.
+
+The page number at the foot of this page is a roman numeral, and the chapter title
+above carries no number. When the main matter begins, the folios restart at arabic~1
+and chapters take numbers, with sections numbered within their chapter.
+
+\mainmatter
+
+\part{Foundations}
+
+\chapter{Introduction}
+
+The main matter numbers its chapters and restarts the folio at one. This is
+Chapter~1, and the page at the foot now reads an arabic numeral. Sections beneath a
+chapter carry the chapter as a prefix, so the first section below is numbered 1.1.
+
+\section{Background}
+
+A section's number is the chapter number and the section number joined with a dot. A
+new chapter resets the section counter, so the first section of every chapter is
+always \emph{n}.1. The running head at the top of the page shows the chapter title,
+recorded as a page mark when the chapter opened.
+
+\subsection{A finer point}
+
+Subsections add a third level, numbered within the section: this one is 1.1.1. The
+document package's lists, quotations and emphasis are all inherited unchanged, so a
+book can use them without redeclaring anything.
+
+\begin{quote}
+A quotation block is indented on both sides and reverts to the body margins when it
+ends, because the environment sets its margins inside its own group.
+\end{quote}
+
+\section{A second section}
+
+This second section of the introduction numbers as 1.2. Because figures and tables are
+also numbered within the chapter, the figure below is Figure~1.1 — the first figure of
+Chapter~1 — and a figure in the next chapter would restart at 2.1.
+
+\begin{itemize}
+\item Chapters open a fresh page and set a running head.
+\item Sections, subsections, figures and tables number within the chapter.
+\item Front matter is roman and unnumbered; the main matter restarts at arabic one.
+\end{itemize}
+
+\chapter{A second chapter}
+
+This is Chapter~2. Its sections restart at 2.1, and the running head at the top of the
+page now names this chapter rather than the introduction. The folio at the foot keeps
+counting in arabic numerals from where the previous chapter left off.
+
+\section{Carrying on}
+
+Nothing here is new; this section exists only to push the document onto a further page
+so the running head and folio can be seen to follow the chapter across a page break.
+The body text wraps and justifies exactly as the document package sets it, since the
+book package changes only the sectioning, the title page, and the page numbering.
+
+\backmatter
+
+\chapter{Afterword}
+
+Back matter unnumbers chapters again but keeps the arabic folio running, so an
+afterword, bibliography or index reads as a titled chapter without a number while the
+page count continues unbroken from the main matter.

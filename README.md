@@ -59,8 +59,16 @@ The vocabulary:
   stays upright over the y-flip), and `\glyph[anchor:…]{x y}{codepoint}` places a single marker glyph.
   Anchors are `center`, `north`/`south`/`east`/`west`, the four corners, and `baseline`.
 
-Coordinates may be computed, not just literal — a bare variable `\x` is its value and arithmetic like
-`\*{\x}{14}` or `\forloop.index` works — so a plot, a chart, or a chemical diagram is just a path
+Coordinates can be parenthesised as well as bare: `(x, y)` is Cartesian, `(angle:radius)` is polar
+(degrees), and `(name)` is a point named earlier with `\coordinate{name}{(x, y)}`. Either form may be
+made **relative to the current point**: `++(dx, dy)` offsets from it and then *advances* it, so steps
+chain into a shape or path — `\polygon{(10,10) ++(40,0) ++(0,40) ++(-40,0)}` walks a square — while
+`+(dx, dy)` offsets without moving it, for several spokes from one hub. `\point{(x, y)}` makes a
+first-class point value (for `\set`, printed by `\the` as `(x, y)`), and `\xof{coord}` / `\yof{coord}`
+read a point's components back as numbers.
+
+Coordinates may also be computed, not just literal — a bare variable `\x` is its value and arithmetic
+like `\*{\x}{14}` or `\forloop.index` works — so a plot, a chart, or a chemical diagram is just a path
 built in a `\for` loop. See [`scripts/picture.script`](scripts/picture.script) for a worked demo
 (shapes, a Bézier wave, a rotate-fan, a y=x² line graph, a bar chart, and a benzene ring).
 

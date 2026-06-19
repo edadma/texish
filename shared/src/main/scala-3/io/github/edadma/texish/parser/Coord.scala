@@ -11,7 +11,9 @@ package io.github.edadma.texish.parser
   *   - `(name)` — a named coordinate, looked up from a point stored earlier by `\coordinate`.
   *
   * A bare scalar (no parentheses) is not a coordinate and is left to the existing scalar reader; [[looksLikeCoord]]
-  * makes that call. Relative coordinates (`++(dx,dy)`) layer on later and are not handled here yet.
+  * makes that call. The relative markers `++(dx,dy)` / `+(dx,dy)` are stripped by the coordinate reader before it
+  * calls here, which then parses the parenthesised remainder as one of the forms above and offsets it against the
+  * current point.
   */
 object Coord:
 

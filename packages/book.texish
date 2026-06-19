@@ -1,0 +1,156 @@
+// book — a LaTeX `book`-class document format, layered over the `document` package.
+//
+//     \use{book}
+//     \title{...} \author{...} \date{...}
+//
+//     \frontmatter            // lowercase-roman folios, unnumbered chapters
+//     \maketitle
+//     \chapter{Preface} ...
+//
+//     \mainmatter             // arabic folios restarting at 1, numbered chapters
+//     \chapter{Introduction}
+//     \section{...} \subsection{...} ...
+//
+//     \backmatter             // unnumbered chapters, folios continue
+//     \chapter{Bibliography} ...
+//
+// It adds a chapter level above the article sectioning, numbers sections within
+// chapters (1.1, 1.2, ...) and figures and tables within chapters (Figure 1.1),
+// starts every chapter and part on a fresh page, puts a running chapter head at the
+// top of each page, and switches folio style and chapter numbering between the three
+// matter divisions, exactly as the LaTeX book class does. Whatever the document
+// package already provides — emphasis, lists, quotations, floats, spacing helpers —
+// is inherited unchanged.
+
+\use{document}
+
+// ---- Chapter and part counters -------------------------------------------------
+// A chapter numbers the sections, figures and tables beneath it, so stepping it
+// resets all three (the document package already nests subsection within section).
+// Parts carry their own counter, shown as an uppercase roman numeral.
+\newcounter{part}
+\newcounter{chapter}
+\counterwithin{section}{chapter}
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+
+// ---- Matter divisions ----------------------------------------------------------
+// chapnumbered says whether \chapter prints a number: only the main matter does.
+// foliostyle is the macro that renders the page number in the footer; front matter
+// sets it to roman, the main matter to arabic. The default before any division is
+// main-matter style, so a book that skips \frontmatter still numbers sensibly.
+\set chapnumbered {1}
+\def foliostyle n {\arabic{\n}}
+
+\def footline {\hss\font lmroman 10 regular \foliostyle{\calc{pageno}}\hss}
+
+// Each division begins on a fresh page. \frontmatter restarts the folio at i and
+// leaves chapters unnumbered; \mainmatter restarts arabic folios at 1 and turns
+// chapter numbers on; \backmatter keeps the running folio but unnumbers chapters
+// again (appendix-style matter is set apart by its headings, not its numbers).
+\def frontmatter {
+  \eject
+  \set pageno {1}
+  \set chapnumbered {0}
+  \def foliostyle n {\roman{\n}}
+}
+\def mainmatter {
+  \eject
+  \set pageno {1}
+  \set chapnumbered {1}
+  \def foliostyle n {\arabic{\n}}
+}
+\def backmatter {
+  \eject
+  \set chapnumbered {0}
+}
+
+// ---- Title page ----------------------------------------------------------------
+// A whole page to itself: the title, author and date set large and centred over
+// vertical fill, then ejected so the next material starts fresh. (The document
+// package's \title / \author / \date and the doctitle / docauthor / docdate macros
+// they fill are reused as-is.)
+\def maketitle {
+  \vfil
+  \centerline{\font lmroman 24 bold \doctitle}
+  \vskip 36pt
+  \centerline{\font lmroman 14 regular \docauthor}
+  \vskip 14pt
+  \centerline{\font lmroman 12 regular \docdate}
+  \vfil
+  \eject
+}
+
+// ---- Parts ---------------------------------------------------------------------
+// A part is a page of its own: "Part <roman>" over the part title, both centred and
+// vertically centred between fills. It steps the part counter but resets nothing
+// below it — parts group chapters without renumbering them.
+\def part t {
+  \eject
+  \stepcounter{part}
+  \mark{}
+  \vfil
+  \centerline{\font lmroman 18 bold Part \Roman{\value{part}}}
+  \vskip 24pt
+  \centerline{\font lmroman 28 bold \t}
+  \vfil
+  \eject
+  \noindent
+}
+
+// ---- Chapters ------------------------------------------------------------------
+// Every chapter opens a new page. In the main matter it shows "Chapter <n>" above a
+// large title and steps the chapter counter (which resets the section, figure and
+// table counters under it); in front and back matter the number line is dropped and
+// the counter left alone. Either way the title is recorded as a page mark, so the
+// running head names whichever chapter a page belongs to.
+\def chapter t {
+  \eject
+  \vskip 36pt
+  \if {\= {\calc{chapnumbered}} {1}}
+    \stepcounter{chapter}
+    \leftline{\font lmroman 14 bold Chapter \arabic{\value{chapter}}}
+    \vskip 8pt
+  \fi
+  \leftline{\font lmroman 24 bold \t}
+  \mark{\t}
+  \vskip 20pt plus 4pt minus 2pt
+  \noindent
+}
+
+// ---- Running head --------------------------------------------------------------
+// The current chapter's title, set in italics and centred at the top of every page.
+// firstmark is the first mark reaching a page (or the previous page's last mark on a
+// page that sets none), so the head names whichever chapter the page belongs to.
+\def headline {\font lmroman 9 italic \hfil\the\firstmark\hfil}
+
+// ---- Sectioning within a chapter -----------------------------------------------
+// The document package numbers sections from the top of the document (1, 2, ...) and
+// subsections within a section. A book numbers both within the chapter, so the run-in
+// number gains a chapter prefix: section 1.1, subsection 1.1.1. The headings are
+// otherwise the document package's, redefined here only to widen the number.
+\def section t {
+  \stepcounter{section}
+  \vskip 14pt plus 3pt minus 1pt
+  \leftline{\font lmroman 14 bold \arabic{\value{chapter}}.\arabic{\value{section}}\hskip 10 \t}
+  \vskip 8pt plus 2pt
+  \noindent
+}
+
+\def subsection t {
+  \stepcounter{subsection}
+  \vskip 12pt plus 3pt minus 1pt
+  \leftline{\font lmroman 12 bold \arabic{\value{chapter}}.\arabic{\value{section}}.\arabic{\value{subsection}}\hskip 10 \t}
+  \vskip 6pt plus 1pt
+  \noindent
+}
+
+// ---- Float captions ------------------------------------------------------------
+// Figures and tables number within the chapter, so a caption shows the chapter as a
+// prefix — "Figure 1.2: ...". The captionkind / captioncounter scratch variables are
+// set by the document package's \figure / \table wrappers; this only widens the
+// number printed by \caption to match the per-chapter counters declared above.
+\def caption text {{//
+\stepcounter \captioncounter//
+\the\captionkind \arabic{\value{chapter}}.\arabic{\value \captioncounter}: \text//
+}}//

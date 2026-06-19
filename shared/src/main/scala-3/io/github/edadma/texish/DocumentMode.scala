@@ -15,16 +15,16 @@ class DocumentMode(val t: Typesetter) extends Mode:
   def layout(b: Box): Box = b
 
   infix def add(box: Box): Unit =
-    // pageno is the number of the page being shipped, so shipout-time material (running headers and footers)
-    // reads the right value; afterwards it advances, since anything typeset from here lands on the next page
-    t.set("pageno", page + 1)
-
+    // pageno is a logical folio, not the physical sheet index: it starts at 1 and is advanced by one after each
+    // page ships, so shipout-time material (running headers and footers) reads the shipping page's number here,
+    // before the advance. Because it is never reassigned from `page`, a document may renumber pages the way plain
+    // TeX lets you assign \pageno — e.g. lowercase-roman front matter, then \set pageno {1} to restart the body.
     t.get("layout") match
       case Some(Value.Text("zfold")) => handleZFoldLayout(box)
       case _                         => handleSimpleLayout(box)
 
     page += 1
-    t.set("pageno", page + 1)
+    t.set("pageno", t.getNumber("pageno").toInt + 1)
 
   // panels share a physical sheet, so running headers/footers (pageDecorator) don't apply to this layout
   def handleZFoldLayout(b: Box): Unit =

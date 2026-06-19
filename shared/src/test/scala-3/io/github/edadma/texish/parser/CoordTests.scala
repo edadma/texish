@@ -8,10 +8,16 @@ import org.scalatest.matchers.should.Matchers
 
 /** The parenthesised coordinate sublanguage: Cartesian `(x,y)`, polar `(a:r)`, and named `(name)` coordinates,
   * both as a pure parser and driven through `\picture` primitives — interoperating with the old bare-scalar form.
+  * Also the point value type (`\point` / `\coordinate` make a `Value.Point`) and the relative markers `++` / `+`.
   */
 class CoordTests extends AnyFreeSpec with Matchers:
 
   private def approx(a: Double, b: Double): Boolean = math.abs(a - b) < 1e-6
+
+  "a point value renders as (x, y)" in {
+    Value.display(Value.Point(2.0, 3.0)) shouldBe "(2, 3)"
+    Value.display(Value.Point(1.5, -4.0)) shouldBe "(1.5, -4)"
+  }
 
   "the Coord parser" - {
     val noVars  = (_: String) => Option.empty[Double]
@@ -85,6 +91,44 @@ class CoordTests extends AnyFreeSpec with Matchers:
       val ops = run("\\picture width:1in height:1in { \\stroke{black} \\line{0 0 10 20} }")
       ops should contain(PictureOp.MoveTo(0, 0))
       ops should contain(PictureOp.LineTo(10, 20))
+    }
+
+    def moves(ops: Vector[PictureOp]) = ops.collect { case PictureOp.MoveTo(x, y) => (x, y) }
+    def lines(ops: Vector[PictureOp]) = ops.collect { case PictureOp.LineTo(x, y) => (x, y) }
+
+    "++ advances the current point so relative steps walk a shape" in {
+      // a 40-unit square from (10,10), each side a ++ step from the previous corner
+      val ops = run("\\picture width:1in height:1in { \\stroke{black}\\nofill \\polygon{(10,10) ++(40,0) ++(0,40) ++(-40,0)} }")
+      moves(ops) shouldBe Vector((10.0, 10.0))
+      lines(ops) shouldBe Vector((50.0, 10.0), (50.0, 50.0), (10.0, 50.0))
+    }
+
+    "++ chains across the segment commands of a path" in {
+      val ops = run(
+        "\\picture width:1in height:1in { \\stroke{black}\\nofill \\path{ \\moveto{(80,10)} \\lineto{++(40,0)} \\lineto{++(0,40)} \\lineto{++(-40,0)} \\close } }",
+      )
+      moves(ops) shouldBe Vector((80.0, 10.0))
+      lines(ops) shouldBe Vector((120.0, 10.0), (120.0, 50.0), (80.0, 50.0))
+    }
+
+    "+ is relative to the current point but does not advance it" in {
+      // three spokes from one hub: each line starts at the hub, + measures an offset without moving it
+      val ops = run(
+        "\\picture width:1in height:1in { \\coordinate{hub}{(100,50)} \\stroke{black}\\nofill \\line{(hub) +(0,40)} \\line{(hub) +(30,0)} \\line{(hub) +(-30,-20)} }",
+      )
+      moves(ops) shouldBe Vector((100.0, 50.0), (100.0, 50.0), (100.0, 50.0))
+      lines(ops) shouldBe Vector((100.0, 90.0), (130.0, 50.0), (70.0, 30.0))
+    }
+
+    "an absolute coordinate sets the current point for a following ++" in {
+      val ops = run("\\picture width:1in height:1in { \\stroke{black}\\nofill \\line{(10,10) ++(5,0)} }")
+      moves(ops) shouldBe Vector((10.0, 10.0))
+      lines(ops) shouldBe Vector((15.0, 10.0))
+    }
+
+    "\\point makes a first-class point value a (name) reference can read" in {
+      val ops = run("\\picture width:1in height:1in { \\set p {\\point{(7,8)}} \\stroke{black}\\nofill \\circle{(p) 3} }")
+      ops should contain(PictureOp.Arc(7, 8, 3, 0, 2 * math.Pi, false))
     }
   }
 

@@ -28,8 +28,8 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
     },
   )
 
-  // \coordinate{name}{coord} - name a point for later reference as (name). Stored as a two-element numeric
-  // sequence in the document scope, so it reads back through the same variable machinery everything else uses.
+  // \coordinate{name}{coord} - name a point for later reference as (name). Stored as a Value.Point in the document
+  // scope, so it reads back through the same variable machinery everything else uses and \the prints it as "(x, y)".
   picturePrimitive(
     proc,
     handler,
@@ -38,7 +38,19 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
       val name = Value.display(proc.evalArgumentExpr(p))
       val c    = readNumbers(proc, p)
       if c.length < 2 then handler.error(s"\\coordinate '$name' expects a point", p)
-      t.set(name, Value.Seq(Vector(Value.Num(c(0)), Value.Num(c(1))))),
+      t.set(name, Value.Point(c(0), c(1))),
+  )
+
+  // \point{coord} - evaluate a coordinate to a first-class point value (for \set, and for \xof / \yof). Unlike
+  // \coordinate it does not name or store anything and is not picture-only: \set m {\point{(2,3)}} keeps a point in
+  // an ordinary variable, which \the renders as "(2, 3)".
+  proc.registerPrimitive(
+    "point",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val c = readNumbers(proc, pos)
+        proc.setResult(Value.Point(if c.nonEmpty then c(0) else 0.0, if c.length > 1 then c(1) else 0.0))
+    },
   )
 
   // \xof{coord} / \yof{coord} - the x or y of a coordinate, as a number for use in expressions. These let a
@@ -251,11 +263,37 @@ private[parser] def requirePicture(t: Typesetter, handler: TypesetterHandler, na
 // contributing two numbers (see `Coord`) — or a bare scalar expression contributing one (a literal `2in`, a
 // variable `\the\x`, a computed `\*{a}{b}` or `\calc{…}`). So `\line{(0,0) (60:1in)}` and `\line{0 0 36 62}`
 // produce the same flat stream the shape primitives consume, and the two notations interoperate.
+//
+// A parenthesised coordinate may be made relative to the running current point with the TikZ markers: `++(dx,dy)`
+// resolves against the current point and then advances it, so `\polygon{(0,0) ++(2,0) ++(0,2) ++(-2,0)}` walks a
+// square; `+(dx,dy)` resolves against it without moving it, for several spokes from one hub. An absolute coordinate
+// sets the current point too, so a `++` after it chains naturally. The current point lives in the PictureMode (and
+// is also advanced by path segments), so `++` works across commands inside a `\path` as well as within one group.
 private[parser] def readNumbers(proc: Processor, pos: CharReader): Vector[Double] =
+  val pm = proc.handler match
+    case th: TypesetterHandler =>
+      th.typesetter.mode match
+        case pm: PictureMode => pm
+        case _               => null
+    case _ => null
+  def current: (Double, Double)        = if pm != null then pm.currentPoint else (0.0, 0.0)
+  def advance(x: Double, y: Double): Unit = if pm != null then pm.setCurrentPoint(x, y)
+
   splitTopLevel(stripOuterBraces(proc.readArgument(pos))).flatMap { chunk =>
-    val text = coordText(chunk)
-    if Coord.looksLikeCoord(text) then
+    val text   = coordText(chunk).trim
+    val update = text.startsWith("++")
+    // `+` is relative only when a coordinate follows it (`+(…)`); a bare `+5` is just a signed scalar.
+    val keep   = !update && text.startsWith("+") && text.drop(1).trim.startsWith("(")
+    if update || keep then
+      val body     = (if update then text.drop(2) else text.drop(1)).trim
+      val (dx, dy) = Coord.parse(body, varResolver(proc), proc.handler.fontUnit, namedResolver(proc))
+      val (cx, cy) = current
+      val (x, y)   = (cx + dx, cy + dy)
+      if update then advance(x, y)
+      Vector(x, y)
+    else if Coord.looksLikeCoord(text) then
       val (x, y) = Coord.parse(text, varResolver(proc), proc.handler.fontUnit, namedResolver(proc))
+      advance(x, y)
       Vector(x, y)
     else Vector(points(proc.evalExpr(chunk, pos)).getOrElse(0.0))
   }
@@ -276,9 +314,11 @@ private[parser] def coordText(tokens: Vector[Token]): String =
 private[parser] def varResolver(proc: Processor): String => Option[Double] = name =>
   Value.number(proc.handler.get(name))
 
-// Resolve a `(name)` reference to a point stored by \coordinate (a two-element numeric sequence).
+// Resolve a `(name)` reference to a point stored by \coordinate or \point. A two-element numeric sequence is still
+// accepted so points stored the old way keep resolving.
 private[parser] def namedResolver(proc: Processor): String => Option[(Double, Double)] = name =>
   proc.handler.get(name) match
+    case Value.Point(x, y)                             => Some((x, y))
     case Value.Seq(Vector(Value.Num(x), Value.Num(y))) => Some((x, y))
     case _                                             => None
 

@@ -28,6 +28,10 @@ enum Value:
   /** A dimension with unit (internally stored as points) */
   case Dimen(points: Double)
 
+  /** A 2-D point `(x, y)` in the engine's point space — the value form of a picture coordinate. Produced by
+    * `\point` and stored by `\coordinate`, read back by `(name)` references and by `\xof` / `\yof`. */
+  case Point(x: Double, y: Double)
+
   /** Glue (flexible space) for typesetting. Stretch and shrink each have their own infinity order (0 = finite, 1 =
     * fil, 2 = fill), so `12pt plus 2pt minus 1fil` — finite stretch, infinite shrink — is representable.
     */
@@ -83,6 +87,9 @@ object Value:
     case Map(entries)  => entries.map((k, v) => s"$k: ${display(v)}").mkString("{", ", ", "}")
     case Macro(_, _, _) => "<macro>"
     case Dimen(pts)    => (if pts.isWhole then pts.toLong.toString else pts.toString) + "pt"
+    case Point(x, y)   =>
+      def n(d: Double) = if d.isWhole then d.toLong.toString else d.toString
+      s"(${n(x)}, ${n(y)})"
     case Glue(n, st, sh, sto, sho) =>
       // renders back into the glue syntax the parser accepts, so \the output is re-readable
       def num(d: Double)  = if d.isWhole then d.toLong.toString else d.toString
