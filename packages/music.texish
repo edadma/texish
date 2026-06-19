@@ -27,6 +27,9 @@
 \set musicstem {26}        // stem length
 \set musicpad {30}         // vertical room above and below the staff for ledger lines and stems
 \set musiccolor {black}
+\set musicclefpng {}       // path to a treble-clef PNG; when set, it is used in place of the
+                           // drawn clef (a transparent image composites over the staff lines).
+                           // Tuned for the default gap; resolved beside the document like any image.
 
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
 \set musicLetters {\map{c 0 d 1 e 2 f 3 g 4 a 5 b 6}}
@@ -183,10 +186,14 @@
   \fi}
 
 // ---- The treble clef -----------------------------------------------------------
-// A G (treble) clef, stroked in one pen-like path and curled around the second line
-// from the bottom — the G line the clef names. Authored in local units at the default
-// gap and scaled to musicgap, in a group translated to the G line.
+// A G (treble) clef. With musicclefpng set, the clef is a transparent image placed on
+// the G line — engraving quality, since a drawn one can only approximate the calligraphic
+// glyph. Otherwise it falls back to a stroked path, so the package still works with no
+// image: one pen-like stroke curled around the second line from the bottom (the G line).
 \def musicClef {
+  \if {\> {\size{\musicclefpng}} {0}}
+    \at anchor:center {22 \calc{msBottom + musicgap + 4}}{\includegraphics[height=64pt]{\musicclefpng}}
+  \else
   \nofill \stroke{\musiccolor} \linewidth{2.4pt} \linecap{round} \linejoin{round}
   \group{
     \translate{20 \calc{msBottom + musicgap}}
@@ -210,4 +217,5 @@
     // the filled ball at the foot of the stem, below the staff
     \fill{\musiccolor} \nostroke
     \circle{-1 -16 2.6}
-  }}
+  }
+  \fi}

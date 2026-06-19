@@ -1,6 +1,9 @@
 \use{document}
 \use{music}
 
+// use the engraving-quality treble-clef image (public domain) in place of the drawn clef
+\set musicclefpng {treble-clef.png}
+
 \title{The \texttt{music} Package}
 \author{Simple staff notation, drawn from the document language}
 \maketitle
