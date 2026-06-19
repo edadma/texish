@@ -21,7 +21,7 @@
 // Sizes are in points (72 per inch).
 \set musicgap {8}          // space between adjacent staff lines
 \set musicnote {22}        // horizontal advance from one note to the next
-\set musicleft {40}        // x of the first note, after the clef
+\set musicleft {48}        // x of the first note — leaves a small space after the clef
 \set musicheadrx {5}       // note-head radii (it is an ellipse, tilted like an engraved head)
 \set musicheadry {3.4}
 \set musicstem {26}        // stem length
