@@ -1,5 +1,5 @@
-// music — simple staff notation on a treble clef, drawn entirely in the document
-// language over the \picture vector layer. Import it with:
+// music — staff notation drawn with Bravura, the reference font for SMuFL (Standard Music Font Layout),
+// over the \picture vector layer. Import it with:
 //
 //     \use{music}
 //
@@ -17,18 +17,18 @@
 // `r` is a rest and `|` a barline. `[` and `]` bracket a run of notes joined by one beam instead of flags.
 // So `g,2` is the G below middle C held for a half note, `+c'8` the C-sharp an octave up as an eighth, and
 // `[ c d e f ]` four beamed notes. A time signature is drawn from \musictimenum / \musictimeden (see below).
-// Note heads, stems (their direction set by the staff rule), flags, beams, accidentals and ledger lines are
-// all drawn from the picture primitives — there is no music-specific engine code.
+//
+// Heads, clefs, flags, rests, accidentals and time-signature figures are real engraved glyphs from Bravura,
+// stamped with \fontglyph; stems, beams, staff lines, ledger lines and barlines are ruled. SMuFL draws every
+// glyph to the convention that one staff space is a quarter of the em, so the font is set at a size of four
+// staff spaces (\set fs inside \score) and its own coordinates fall straight onto the staff.
 
 // ---- Configuration (override with \set after \use, before \score) ---------------
 // Sizes are in points (72 per inch).
-\set musicgap {8}          // space between adjacent staff lines
+\set musicgap {8}          // space between adjacent staff lines — the staff space, the unit everything scales from
 \set musicnote {22}        // horizontal advance from one note to the next
-\set musicleft {48}        // x of the first note — leaves a small space after the clef
-\set musicheadrx {5}       // note-head radii (it is an ellipse, tilted like an engraved head)
-\set musicheadry {3.4}
-\set musicstem {26}        // stem length
-\set musicpad {30}         // vertical room above and below the staff for ledger lines and stems
+\set musicleft {44}        // x of the first note — leaves room for the clef
+\set musicpad {30}         // vertical room above and below the staff for ledger lines, stems and flags
 \set musiccolor {black}
 \set musicclef {treble}    // treble or bass; chooses the clef and how pitches sit on the staff
 \set musictimenum {}       // time-signature numerator, drawn after the clef (e.g. {3}); empty for no signature
@@ -36,238 +36,52 @@
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
 \set musicLetters {\map{c 0 d 1 e 2 f 3 g 4 a 5 b 6}}
 
-// ---- The treble clef, embedded -------------------------------------------------
-// The clef is a 74x200 alpha bitmap at 4 bits per pixel (16 grey levels — keeping the curves
-// smooth at this resolution), packed and base64-encoded right here so the package carries its own clef
-// with no external file. It is drawn over the staff by \usebitmap (see musicClef). On a backend without
-// image support \defbitmap is a no-op and the clef falls back to the stroked path.
-// Source: a public-domain treble clef.
-\defbitmap{musicTrebleClef}{74}{200}{4}{AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACe-
-sAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABff__cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATP___-
-MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB-_____6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI_______0
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAn_______-wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACP________9A
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH__________oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAXv______-s_-MA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAt_______4Bf_3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABv_______cACf_AAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACP______9wAALf4wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE7______3AAAAj_cAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHP______kAAAAD_6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJ______-xAAAAAc_RAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAX______8IAAAAACf9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAt______5AAAAAAAf_YAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAj______3AAAAAAAF_5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-______sAAAAAAABP-
-wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj______jAAAAAAAAP_0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAt______cAAAAAAAAD_-
-IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAb_____-xAAAAAAAABP_zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL_____-
-QAAAAAAAAAT_9AAAAAAAAAAAAAAAAAAAAAAAAAAAAALv____-QAAAAAAAAAG__UAAAAAAAAAAAAAAAAAAAAAAAAAAAAG_____9IA
-AAAAAAAACP_2AAAAAAAAAAAAAAAAAAAAAAAAAAAACv____9wAAAAAAAAAAr_9wAAAAAAAAAAAAAAAAAAAAAAAAAAAB3____9EAAA
-AAAAAAAd__gAAAAAAAAAAAAAAAAAAAAAAAAAAAA_____9wAAAAAAAAAAP__4AAAAAAAAAAAAAAAAAAAAAAAAAAAAb____9EAAAAA
-AAAAAH__-AAAAAAAAAAAAAAAAAAAAAAAAAAAAI____9wAAAAAAAAAAC___gAAAAAAAAAAAAAAAAAAAAAAAAAAACv___9IAAAAAAA
-AAAD7__4AAAAAAAAAAAAAAAAAAAAAAAAAAAAz___-QAAAAAAAAAAB___-AAAAAAAAAAAAAAAAAAAAAAAAAAAAd___-
-MAAAAAAAAAABz___cAAAAAAAAAAAAAAAAAAAAAAAAAAALv__-wAAAAAAAAAABv___2AAAAAAAAAAAAAAAAAAAAAAAAAAAD____YA
-AAAAAAAAABz___9QAAAAAAAAAAAAAAAAAAAAAAAAAABP___SAAAAAAAAAABv____MAAAAAAAAAAAAAAAAAAAAAAAAAAAT___oAAA
-AAAAAAAB3____iAAAAAAAAAAAAAAAAAAAAAAAAAAAF___1AAAAAAAAAACP____wQAAAAAAAAAAAAAAAAAAAAAAAAAABf__4gAAAA
-AAAAAD7____6AAAAAAAAAAAAAAAAAAAAAAAAAAAAX__7AAAAAAAAAAG_____9gAAAAAAAAAAAAAAAAAAAAAAAAAAAF__9wAAAAAA
-AAAH_____-MAAAAAAAAAAAAAAAAAAAAAAAAAAABf__QAAAAAAAAATv_____BAAAAAAAAAAAAAAAAAAAAAAAAAAAAT__iAAAAAAAA
-Ac______gAAAAAAAAAAAAAAAAAAAAAAAAAAAAD__wAAAAAAAAAr______0AAAAAAAAAAAAAAAAAAAAAAAAAAAAA-
-_6AAAAAAAAB_______sAAAAAAAAAAAAAAAAAAAAAAAAAAAAALv-AAAAAAAAF_______2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB3_
-YAAAAAAATv______0gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAc_2AAAAAAAt_______4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC_9g
-AAAAACz_______0gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAn_cAAAAAG________4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI_4AA
-AAAa________0gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABv-gAAABr________2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT_sAAA
-Gf________sQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC79EAAJ_________kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAd_jAAn_
-________gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC_9AGf________-
-xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj_cZ_________-MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG_7r_________9wA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABP___________5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALv__________wQAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI___________TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf__________-UAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB___________9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH___________4AAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAj___________oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACP__________-xAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAZ___________7IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABr___________wgAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAGv___________CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAb___________9MAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAABv___________0wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGv___________TAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAJ___________9MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj___________5AAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAB____________-IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH_____________0AAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAb___________2P9gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABe___________ULvgAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAE7__________9QBz6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPf__________5AAK_BAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAc___________kAACP4gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAn__________-QAAAb_MAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAB___________5AAAAE_1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAE7__________lAAAAAu9wAAAAAAAAAAAAAAAAAAAAAAAAAAA
-ALP_________-UAAAAAHfkAAAAAAAAAAAAAAAAAAAAAAAAAAAAJ__________9gAAAAAAv7AAAAAAAAAAAAAAAAAAAAAAAAAAAAX
-__________2AAAAAAAJ_RAAAAAAAAAAAAAAAAAAAAAAAAAAAt__________cAAAAAAABv4gAAAAAAAAAAAAAAAAAAAAAAAAAAj__
-_______-QAAAAAAAAT_QAAAAAAAAAAAAAAAAAAAAAAAAABO_________6EAAAAAAAAC72AAAAAAAAAAAAAAAAAAAAAAAAAAv____
-_____sQAAAAAAAAAd-
-AAAAAAAAAAAAAAAAAAAAAAAAABf_________TAAAAAAAAAAC_okVmdlQxAAAAAAAAAAAAAAAAABz________-QAAAAAAAAAAUz_7
-_____7bhBAAAAAAAAAAAAAABf________9wAAAAAAAAAoz____________YMAAAAAAAAAAAAAv________6AAAAAAAAAo7______
-________-owAAAAAAAAAABP________wgAAAAAAAG3_________________6BAAAAAAAAAAr________kAAAAAAABn__________
-__________EAAAAAAAAAu________gAAAAAAAK______________________mAAAAAAAAf________BAAAAAAA8_____________
-__________3AAAAAAAL_______-QAAAAAAD3________________________3AAAAAAPv______-QAAAAAALP_______________
-__________2AAAAAG_______9IAAAAAAa___________________________kAAAACv______9wAAAAAAf__________________
-__________BAAAB3______9IAAAAABO____________________________-AAABO______-
-QAAAAAAv____________93d7_____________4wAAb_______QAAAAABv_________-
-vf4xESNYzv__________oAAJ_______BAAAAABz________-gwj-IAAAAAON__________QAC_______gAAAAABf________swAG
-_0AAAAAAAo7________6AA3______0AAAAAAv_______9wAABP9gAAAAAAADv________jAO______0QAAAAA-
-_______mAAAALvgAAAAAAAABn_______-AD______7AAAAAAf______-UAAAAB36AAAAAAAAABn_______wQ______-AAAAAAL__
-____9gAAAAAL_AAAAAAAAAABv_______MP______YAAAAAHf_____4AAAAAACf0QAAAAAAAAAD7______3D______0AAAAAD____
-__wQAAAAAAf-IAAAAAAAAAAH______-w______8wAAAABf_____1AAAAAAAF_0AAAAAAAAAAAt______0u_____-IAAAAAf_____
-oAAAAAAAA_9gAAAAAAAAAACf______Xf_____iAAAAAI_____1AAAAAAAALvcAAAAAAAAAAAT______4z_____4gAAAACP____0Q
-AAAAAAABz5AAAAAAAAAAABz_____-6_____-IAAAAAj____5AAAAAAAAAK-
-wAAAAAAAAAAAI______2P_____iAAAAAH____9wAAAAAAAACPwQAAAAAAAAAABf_____-b_____4wAAAABv____YAAAAAAAAAb-I
-AAAAAAAAAAALv_____0______QAAAAAT____1AAAAAAAAAE_zAAAAAAAAAAABz_____8t_____1AAAAAC7___9AAAAAAAAAAu9QA
-AAAAAAAAAAK______C_____9wAAAAAL____QAAAAAAAAAHfcAAAAAAAAAAACP_____wf_____kAAAAAB____1AAAAAAAAAAv4AAA
-AAAAAAAAAb_____4E_____8AAAAAAPv__9wAAAAAAAAAJ-
-gAAAAAAAAAAAF_____8Ac_____iAAAAAAr___sAAAAAAAAAB_wAAAAAAAAAAABf____-gCP____9QAAAAAD7__-IAAAAAAAAAX9E
-AAAAAAAAAAAX_____gAT_____kAAAAAAJ___3AAAAAAAAAD_zAAAAAAAAAAAF_____1AAv____8EAAAAAAc___RAAAAAAAAAu9QA
-AAAAAAAAAB_____0gAG_____0AAAAAAA-__-AAAAAAAAAHPcAAAAAAAAAAAn____6AAAc____9wAAAAAABe__5AAAAAAAAAr5AAA
-AAAAAAAAL____9gAABv____wQAAAAAABv__wgAAAAAAAI-
-wAAAAAAAAAALv___9IAAAHP____QAAAAAAABu__sgAAAAAABv0QAAAAAAAAAF____-QAAAAX____6AAAAAAAABe__sgAAAAAAT-
-IAAAAAAAAACf____QAAAAAr____jAAAAAAAAA7__xAAAAAAD70AAAAAAAAAC3___-gAAAAAC3___-
-gAAAAAAAAAX3_5wAAAAAd9gAAAAAAAABv___-QAAAAAAF____9QAAAAAAAAACaZYAAAAAC_gAAAAAAAABz___-QAAAAAAAI____0
-gAAAAAAAAAAAAAAAAAAr7AAAAAAAABv___9IAAAAAAAAb____oQAAAAAAAAAAAAAAAAAH_RAAAAAAAC3___9QAAAAAAAAAs____g
-AAAAAAAAAAAAAAAAABf4wAAAAAACf___5AAAAAAAAAAA9____cAAAAAAAAAAAAAAAAAP_UAAAAAAG____sQAAAAAAAAAAA9____c
-AAAAAAAAAAAAAAAAC73AAAAAATv___CAAAAAAAAAAAAA8____gQAAAAAAAAAAAAAAAc-
-gAAAAA9___8MAAAAAAAAAAAAAAr____ogAAAAAAAAAAAAAAC_wQAAAD3___wwAAAAAAAAAAAAAAAZ____1QAAAAAAAAAAAAAAn-
-IAAAXf__-yAAAAAAAAAAAAAAAAAG7___-jAAAAAAAAAAAAAG_0AAGO___4EAAAAAAAAAAAAAAAAAADr____pMAAAAAAAAAAABP9g
-Fc___8UAAAAAAAAAAAAAAAAAAAAAXP___-tiAAAAAAAAAAPvps___9cQAAAAAAAAAAAAAAAAAAAAAAFs_____rhTIREREjRp____
-_8cgAAAAAAAAAAAAAAAAAAAAAAAAAVvv_____-3d3e7v_____qUQAAAAAAAAAAAAAAAAAAAAAAAAAAAAN77_____________-
-3IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACWKzu______7b38EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABI0VmZlVCEG_BA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABf4gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP-MAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC70AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAc9gAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC_gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAn6AAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABP0QAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPuMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB30AAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACvgAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG-
-wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABf0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP-I
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC7iAAAAAAAAAAAAAAAAAAAAAAAAAAAAFHmqp0AAAAAAAAAAAAAu8wA
-AAAAAAAAAAAAAAAAAAAAAAAAAKN_____7QAAAAAAAAAAAHfQAAAAAAAAAAAAAAAAAAAAAAAAABt_______-cAAAAAAAAAAB30AAA
-AAAAAAAAAAAAAAAAAAAAAAH__________gAAAAAAAAAAd9AAAAAAAAAAAAAAAAAAAAAAAAAf___________YAAAAAAAAAHfQAAAA
-AAAAAAAAAAAAAAAAAAABO___________9IAAAAAAAAB3zAAAAAAAAAAAAAAAAAAAAAAABv____________4AAAAAAAAAu8wAAAAA
-AAAAAAAAAAAAAAAAABv_____________SAAAAAAAAP-
-IAAAAAAAAAAAAAAAAAAAAAAAv_____________9QAAAAAAAE_RAAAAAAAAAAAAAAAAAAAAAAA-______________kAAAAAAAB_wA
-AAAAAAAAAAAAAAAAAAAAAAb______________7AAAAAAAAn6AAAAAAAAAAAAAAAAAAAAAAAJ______________-wAAAAAAAc9wAA
-AAAAAAAAAAAAAAAAAAAAC_______________sAAAAAAAP_QAAAAAAAAAAAAAAAAAAAAAAAz______________6AAAAAAAH_RAAAA
-AAAAAAAAAAAAAAAAAAAM______________9wAAAAAAHPoAAAAAAAAAAAAAAAAAAAAAAAC______________-
-MAAAAAAF_1AAAAAAAAAAAAAAAAAAAAAAAAr_____________-gAAAAAAG_wQAAAAAAAAAAAAAAAAAAAAAAAH_____________-MA
-AAAAAG_3AAAAAAAAAAAAAAAAAAAAAAAABP____________9gAAAAAAPvwQAAAAAAAAAAAAAAAAAAAAAAAAHP___________3AAAA
-AAAb_1AAAAAAAAAAAAAAAAAAAAAAAAAAb__________-
-YAAAAAABr_kAAAAAAAAAAAAAAAAAAAAAAAAAABz_________swAAAAAAGv-xAAAAAAAAAAAAAAAAAAAAAAAAAAAE7_______1xAA
-AAAAAq_8IAAAAAAAAAAAAAAAAAAAAAAAAAAAAF7_____xyAAAAAAAEz_sgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF7___5hAAAAAA
-ACjv6BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEz___xhAAAAACff-
-0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjf___YUyNHvv6kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJ77______-
-tzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADaLzMuXUgAAAAAAAAAAAAAAAAAAAAAAAAA=}
-
-// ---- The bass clef, embedded ---------------------------------------------------
-// The F (bass) clef as a 108x120 alpha bitmap at 4 bits per pixel, embedded like the treble clef so the
-// package carries it too. It is drawn by \usebitmap when \set musicclef {bass} is in effect.
-// Source: "FClef.svg" by Wikimedia Commons user っ (https://commons.wikimedia.org/wiki/File:FClef.svg),
-// licensed CC BY 2.5 — resized and converted to a packed alpha bitmap for embedding.
-\defbitmap{musicBassClef}{108}{120}{4}{AAAAAAAAAAAAAAAAAAABNpve____7cp1IQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACat7_______
-____7JYgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABWu_________________rcwAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF8_____________________qUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AG3_______________________-1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO______-
-yoZVRWeb7___________ogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH7____-pjEAAAAAAAJa___________WAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGf____xyAAAAAAAAAAAASv__________kQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAACv____WEAAAAAAAAAAAAAAG3_________-yAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8___-gQAAAAAAAAAAAAAAAA
-PP_________8IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPf___EAAAAAAAAAAAAAAAAAAAr__________wgAAAAAAAAAAAAAA
-AAABEAAAAAAAAAAAAAACz___ogAAAAAAAAAAAAAAAAAAACz__________BAAAAAAAAAAAAAAADi93IMAAAAAAAAAAAAK___5EAAA
-AAAAAAAAAAAAAAAAAALf_________6AAAAAAAAAAAAAAB-____-RAAAAAAAAAAB___-QAAAAAAAAAAAAAAAAAAAAAABO________
-__gAAAAAAAAAAAAAn______7EAAAAAAAAAPv__sQAAAAAAAAAAAAAAAAAAAAAAAI__________9QAAAAAAAAAAAG________kAAA
-AAAAAAr__-MAAAAAAAAAAAAAAAAAAAAAAAABz__________SAAAAAAAAAAAd________4wAAAAAAAF___3AAAAAAAAAAAAAAAAAA
-AAAAAAAAX__________5AAAAAAAAAABf________-
-AAAAAAAAL___RAAAAAAAAAAAAAAAAAAAAAAAAAAC___________QAAAAAAAAACf________-wAAAAAABP__-AAAAAAAAAAAAAAAA
-AAAAAAAAAAABf__________sAAAAAAAAACv_________AAAAAAACv__8wAAABJEQxAAAAAAAAAAAAAAAAAAAc__________9QAAA
-AAAAACv_________AAAAAAALv__wQAAOM7__9pRAAAAAAAAAAAAAAAAAH__________-wAAAAAAAACP________-
-gAAAAAAb___oABK7______8YAAAAAAAAAAAAAAAAC7__________0AAAAAAAABP________9wAAAAAAr___gCn_________-iAAA
-AAAAAAAAAAAAAv__________6AAAAAAAAAc________0gAAAAAB3___hM___________8MAAAAAAAAAAAAAAAf__________-IAA
-AAAAAAE7_______YAAAAAAD____3v____________wgAAAAAAAAAAAAAAT___________YAAAAAAAAAbv_____4AAAAAAAG_____
-_____________-gAAAAAAAAAAAAAAHf__________sAAAAAAAAABL____xgAAAAAAAI___________________1AAAAAAAAAAAAA
-AC___________4gAAAAAAAAAAR5mFEAAAAAAAAJ___________________7AAAAAAAAAAAAAACP__________9gAAAAAAAAAAAAA
-AAAAAAAAAAL____________________QAAAAAAAAAAAAABf__________-
-QAAAAAAAAAAAAAAAAAAAAAAAL____________________cAAAAAAAAAAAAAA-___________AAAAAAAAAAAAAAAAAAAAAAAAL___
-_________________oAAAAAAAAAAAAAAd___________iAAAAAAAAAAAAAAAAAAAAAAAL____________________0QAAAAAAAAA
-AAAAL___________0AAAAAAAAAAAAAAAAAAAAAAAL____________________4gAAAAAAAAAAAAAJ___________2AAAAAAAAAAA
-AAAAAAAAAAAAJ____________________8wAAAAAAAAAAAAAH___________4AAAAAAAAAAAAAAAAAAAAAAAI_______________
-_____8wAAAAAAAAAAAAAF___________6AAAAAAAAAAAAAAAAAAAAAAAF____________________8wAAAAAAAAAAAAAE_______
-____7AAAAAAAAAAAAAAAAAAAAAAAD____________________8wAAAAAAAAAAAAAC7__________8EAAAAAAAAAAAAAAAAAAAAAA
-B3___________________4gAAAAAAAAAAAAAB3__________9EAAAAAAAAAAAAAAAAAAAAAAAn___________________0QAAAAA
-AAAAAAAAB3__________-IAAAAAAAAAAAAAAAAAAAAAAAX___________________oAAAAAAAAAAAAAAAz__________-
-IAAAAAAAAAAAAAAAAAAAAAAAHf__________________cAAAAAAAAAAAAAAAv__________-
-MAAAAAAAAAAAAAAAAAAAAAAAB__________________-MAAAAAAAAAAAAAAAr___________MAAAAAAAAAAAAAAAAAAAAAAAAt__
-_______________7AAAAAAAAAAAAAAAAr___________MAAAAAAAAAAAAAAAAAAAAAAAAH_________________1AAAAAAAAAAAA
-AAAAn___________MAAAAAAAAAAAAAAAAAAAAAAAABz_______________-gAAAAAAAAAAAAAAAAn___________MAAAAAAAAAAA
-AAAAAAAAAAAAAATv______________0gAAAAAAAAAAAAAAAAn___________MAAAAAAAAAAAAAAAAAAAAAAAAABe____________
-_9QAAAAAAAAAAAAAAAAAn___________MAAAAAAAACe8y3IAAAAAAAAAAAAF3____________DAAAAAAAAAAAAAAAAAAn_______
-___-IAAAAAAAB-____5wAAAAAAAAAAAAKv_________-kgAAAAAAAAAAAAAAAAAAr__________-IAAAAAAAj______5AAAAAAAA
-AAAAAErv______2TAAAAAAAAAAAAAAAAAAAAr__________9EAAAAAAG________cAAAAAAAAAAAAAAliszLp0EAAAAAAAAAAAAA
-AAAAAAAAv__________8AAAAAAAd________4gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAz__________6AAAAAABf
-________9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABz__________4AAAAAACP________-wAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAB3__________2AAAAAACv_________AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC7___
-_______0AAAAAACv_________AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD___________iAAAAAACP________-wAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF___________AAAAAAABf________9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAG__________-QAAAAAAAc________4gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI__________9QAAAA
-AAAF________cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK__________4gAAAAAAAAb______4AAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAc__________sAAAAAAAAABc____1gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAu
-__________cAAAAAAAAAABWKqVEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABf__________MAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACP_________8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAC__________3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALv_________iAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAb_________-gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAr_________9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AC7_________wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG__________YAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL_________8EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAA__________2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACf_________B
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALv________9QAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj_________oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAC3________-MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI_________4AAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-_________BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAACf________5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT_________
-gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABz________7EAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH_________TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAA-________9QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHP________cAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj________5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAF________-hAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9________
-sQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHP_______7EAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAr_______-yAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAI________sQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB________6EAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAb_______-hAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAG________gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABv_______3
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAb_______5QAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH_______8MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAACP______-iAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABr______-cAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8_______UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAXf______ogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH_______WAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKv______ogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF3______WAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAKf______kgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF3_____-
-0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKv_____9YQAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAX7_____6CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAXP_____pMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABK______owAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADr_____6kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAASu_____pMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABa_____-kwAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWz_____xyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAACff____-
-1EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOe_____YMAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFb_____rYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAWz____8cwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATP___8hBAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAv__8hBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA}
+// ---- SMuFL codepoints ----------------------------------------------------------
+// The Private-Use codepoints of the glyphs this package stamps. Names follow the SMuFL glyph registry.
+\set cpGClef {57424}            // U+E050 gClef
+\set cpFClef {57442}            // U+E062 fClef
+\set cpNoteWhole {57506}        // U+E0A2 noteheadWhole
+\set cpNoteHalf {57507}         // U+E0A3 noteheadHalf
+\set cpNoteBlack {57508}        // U+E0A4 noteheadBlack
+\set cpFlag8Up {57920}          // U+E240 flag8thUp
+\set cpFlag8Down {57921}        // U+E241 flag8thDown
+\set cpRestWhole {58595}        // U+E4E3 restWhole
+\set cpRestHalf {58596}         // U+E4E4 restHalf
+\set cpRestQuarter {58597}      // U+E4E5 restQuarter
+\set cpRest8 {58598}            // U+E4E6 rest8th
+\set cpAccFlat {57952}          // U+E260 accidentalFlat
+\set cpAccNatural {57953}       // U+E261 accidentalNatural
+\set cpAccSharp {57954}         // U+E262 accidentalSharp
+\set cpTimeSig0 {57472}         // U+E080 timeSig0; a digit d is at cpTimeSig0 + d
 
 // ---- The score -----------------------------------------------------------------
-// \score sizes a picture to hold the notes, draws the five staff lines and the clef,
-// then walks the note list left to right. The bottom staff line sits at y = musicpad;
-// a pitch's vertical position is half the line gap per diatonic step above it.
+// \score sizes a picture to hold the notes, draws the five staff lines and the clef, then walks the note
+// list left to right. The bottom staff line sits at y = musicpad; a pitch's vertical position is half the
+// staff space per diatonic step above it. The font size fs is four staff spaces, so a Bravura glyph's own
+// units (where the staff space is a quarter of the em) come out one staff space = musicgap points.
 \def score notes {{
   \set msList {\seq{\notes}}
   \set msN {\size{\msList}}
+  \set g {\musicgap}
+  \set fs {\calc{4 * g}}
 
   // A time signature, if any, takes a column of its own after the clef; shift the music right to clear it.
   \set msShift {0}
-  \if {\size{\cat{\musictimenum}{}}} \set msShift {18} \fi
+  \if {\size{\cat{\musictimenum}{}}} \set msShift {\calc{2.6 * g}} \fi
 
   \set msW {\calc{musicleft + msShift + msN * musicnote + 12}}
   \set msBottom {\musicpad}
-  \set msTop {\calc{msBottom + 4 * musicgap}}
-  \set msH {\calc{msBottom + 4 * musicgap + musicpad}}
+  \set msTop {\calc{msBottom + 4 * g}}
+  \set msMiddle {\calc{msBottom + 2 * g}}
+  \set msH {\calc{msBottom + 4 * g + musicpad}}
 
-  // The common height of a beam: a flat bar a little above the staff, the same for every note in a run.
-  \set msBeamY {\calc{msTop + musicgap + 6}}
+  // The common height of a beam: a flat bar above the staff, the same for every note in a run.
+  \set msBeamY {\calc{msTop + 1.6 * g}}
   \set msBeam {0}
 
   // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff,
   // G2 (index -10) on the bass. A note's index is msOct*7 + its pitch class; its step above the bottom
-  // line is that index minus this base, and half the line gap per step gives its height.
+  // line is that index minus this base, and half the staff space per step gives its height.
   \set msBase {2}
   \if {\= {\musicclef} {bass}} \set msBase {-10} \fi
 
@@ -280,11 +94,11 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
   }
 }}
 
-// The five staff lines, spanning the full width.
+// The five staff lines, spanning the full width, at the SMuFL staff-line thickness.
 \def musicStaffLines {
-  \nofill \stroke{\musiccolor} \linewidth{0.8pt}
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
   \for\i{\range{0}{4}}{
-    \set ly {\calc{msBottom + \i * musicgap}}
+    \set ly {\calc{msBottom + \i * g}}
     \line{8 \ly  \calc{msW - 10} \ly}
   }}
 
@@ -308,14 +122,15 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     \musicWalk{\tail{\items}}
   \fi}
 
-// A barline from the bottom to the top staff line.
+// A barline from the bottom to the top staff line, at the SMuFL thin-barline thickness.
 \def musicBarline {
-  \nofill \stroke{\musiccolor} \linewidth{0.9pt}
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.16 * g}}
   \line{\msX \msBottom  \msX \msTop}}
 
 // ---- One note ------------------------------------------------------------------
-// Parse the token into pitch class, octave offset, and duration; place the head; then
-// the stem and flag (for half notes and shorter), and any ledger lines.
+// Parse the token into pitch class, octave offset, and duration; place the head; then the stem and flag
+// (for half notes and shorter), and any ledger lines. msX is the left edge of the head; the head glyph is
+// stamped origin-on-point with a baseline anchor, since a notehead's origin is its left edge on the line.
 \def musicNote tok {
   \musicParse{\tok}
   \if {\= {\msLetter} {r}}
@@ -323,144 +138,143 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
   \else
     \set li {\mapget musicLetters {\msLetter}}
     \set step {\calc{msOct * 7 + li - msBase}}
-    \set ny {\calc{msBottom + step * musicgap / 2}}
+    \set ny {\calc{msBottom + step * g / 2}}
     \musicLedgers{\step}
     \musicAccidental
-    // The head: filled for a quarter note or shorter, open for a half or whole. Tilted
-    // a little, as an engraved head is, by rotating the coordinate system around it.
-    \group{
-      \translate{\msX \ny}
-      \rotate{20}
-      \if {\>= {\msDur} {4}} \fill{\musiccolor} \nostroke
-      \else \nofill \stroke{\musiccolor} \linewidth{1.1pt} \fi
-      \ellipse{0 0 \musicheadrx \musicheadry}
-    }
-    // The stem and any flag. In a beamed run every note shares one flat beam; otherwise the stem rises
-    // on the right of low notes and falls on the left of high ones, flipping at the middle line, and an
-    // eighth note gets its own flag. A whole note has no stem at all.
+    // The head: a black notehead for a quarter or shorter, an open half-note head, or a whole-note head.
+    \fill{\musiccolor} \nostroke
+    \if {\>= {\msDur} {4}} \set msHead {\cpNoteBlack}
+    \else \if {\= {\msDur} {2}} \set msHead {\cpNoteHalf}
+    \else \set msHead {\cpNoteWhole} \fi \fi
+    \fontglyph anchor:baseline {\msX \ny}{bravura}{\fs}{\msHead}
+    // The stem and any flag. In a beamed run every note shares one flat beam; otherwise the stem rises on
+    // the right of low notes and falls on the left of high ones, flipping at the middle line, and an eighth
+    // note gets its own flag. A whole note has no stem at all.
     \if {\= {\msBeam} {1}}
       \musicBeamedStem
     \else \if {\>= {\msDur} {2}}
-      \nofill \stroke{\musiccolor} \linewidth{1.1pt}
-      \if {\< {\step} {4}}
-        \set sx {\calc{msX + musicheadrx - 0.4}}
-        \set stemEnd {\calc{ny + musicstem}}
-        \line{\sx \ny  \sx \stemEnd}
-        \if {\>= {\msDur} {8}} \musicFlagUp \fi
-      \else
-        \set sx {\calc{msX - musicheadrx + 0.4}}
-        \set stemEnd {\calc{ny - musicstem}}
-        \line{\sx \ny  \sx \stemEnd}
-        \if {\>= {\msDur} {8}} \musicFlagDown \fi
-      \fi
+      \musicStem
     \fi \fi
   \fi}
 
+// The stem and, for an eighth note, its flag. SMuFL gives each black/half head a stem-attachment anchor:
+// stemUpSE = (1.18, 0.168) and stemDownNW = (0, -0.168) staff spaces from the head's origin. A note below
+// the middle line stems up on the right, one at or above it stems down on the left.
+\def musicStem {
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
+  \set msStemLen {\calc{3.3 * g}}
+  \if {\< {\step} {4}}
+    \set msStemX {\calc{msX + 1.12 * g}}
+    \set msStemFoot {\calc{ny - 0.168 * g}}
+    \set msStemTop {\calc{ny + msStemLen}}
+    \line{\msStemX \msStemFoot  \msStemX \msStemTop}
+    \if {\>= {\msDur} {8}}
+      \fill{\musiccolor} \nostroke
+      \fontglyph anchor:baseline {\calc{msStemX - 0.06 * g} \msStemTop}{bravura}{\fs}{\cpFlag8Up}
+    \fi
+  \else
+    \set msStemX {\calc{msX + 0.06 * g}}
+    \set msStemFoot {\calc{ny + 0.168 * g}}
+    \set msStemTop {\calc{ny - msStemLen}}
+    \line{\msStemX \msStemFoot  \msStemX \msStemTop}
+    \if {\>= {\msDur} {8}}
+      \fill{\musiccolor} \nostroke
+      \fontglyph anchor:baseline {\msStemX \msStemTop}{bravura}{\fs}{\cpFlag8Down}
+    \fi
+  \fi}
+
 // A note inside a beamed run: an up-stem reaching the common beam height, joined to the previous note in
-// the run by a thick flat bar. The first note of a run only records its stem foot for the next to beam to.
+// the run by a thick flat bar at that height. The first note of a run only records its stem foot for the
+// next to beam to.
 \def musicBeamedStem {
-  \nofill \stroke{\musiccolor} \linewidth{1.1pt}
-  \set sx {\calc{msX + musicheadrx - 0.4}}
-  \line{\sx \ny  \sx \msBeamY}
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
+  \set msStemX {\calc{msX + 1.12 * g}}
+  \line{\msStemX \calc{ny - 0.168 * g}  \msStemX \msBeamY}
   \if {\= {\msBeamPrev} {1}}
-    \linewidth{2.6pt}
-    \line{\msBeamPrevX \msBeamY  \sx \msBeamY}
+    \linewidth{\calc{0.5 * g}}
+    \line{\msBeamPrevX \msBeamY  \msStemX \msBeamY}
   \fi
   \global\set msBeamPrev {1}
-  \global\set msBeamPrevX {\sx}}
+  \global\set msBeamPrevX {\msStemX}}
 
-// An up-stem flag: a filled hook off the top of the stem (sx, stemEnd).
-\def musicFlagUp {
-  \fill{\musiccolor} \nostroke
-  \path{
-    \moveto{\sx \stemEnd}
-    \curveto{\calc{sx + 7} \calc{stemEnd - 3}  \calc{sx + 8} \calc{stemEnd - 11}  \calc{sx + 3} \calc{stemEnd - 16}}
-    \curveto{\calc{sx + 8} \calc{stemEnd - 10}  \calc{sx + 7} \calc{stemEnd - 4}  \calc{sx} \calc{stemEnd - 4}}
-    \close
-  }}
-
-// A down-stem flag: the mirror, off the bottom of the stem.
-\def musicFlagDown {
-  \fill{\musiccolor} \nostroke
-  \path{
-    \moveto{\sx \stemEnd}
-    \curveto{\calc{sx + 7} \calc{stemEnd + 3}  \calc{sx + 8} \calc{stemEnd + 11}  \calc{sx + 3} \calc{stemEnd + 16}}
-    \curveto{\calc{sx + 8} \calc{stemEnd + 10}  \calc{sx + 7} \calc{stemEnd + 4}  \calc{sx} \calc{stemEnd + 4}}
-    \close
-  }}
-
-// Ledger lines for a note that sits outside the staff: short segments on the even steps
-// between the staff edge and the note (step 0 is the bottom line, step 8 the top).
+// Ledger lines for a note that sits outside the staff: short rules on the even steps between the staff edge
+// and the note (step 0 is the bottom line, step 8 the top), centred on the head and overhanging it a little.
 \def musicLedgers step {
-  \nofill \stroke{\musiccolor} \linewidth{0.8pt}
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.16 * g}}
   \if {\<= {\step} {-2}}
     \set nb {\calc{floor((0 - (\step)) / 2)}}
     \for\k{\range{1}{\nb}}{
-      \set ly {\calc{msBottom - \k * musicgap}}
-      \line{\calc{msX - musicheadrx - 3} \ly  \calc{msX + musicheadrx + 3} \ly}
+      \set ly {\calc{msBottom - \k * g}}
+      \line{\calc{msX - 0.4 * g} \ly  \calc{msX + 1.58 * g} \ly}
     }
   \fi
   \if {\>= {\step} {10}}
     \set na {\calc{floor(((\step) - 8) / 2)}}
     \for\k{\range{1}{\na}}{
-      \set ly {\calc{msTop + \k * musicgap}}
-      \line{\calc{msX - musicheadrx - 3} \ly  \calc{msX + musicheadrx + 3} \ly}
+      \set ly {\calc{msTop + \k * g}}
+      \line{\calc{msX - 0.4 * g} \ly  \calc{msX + 1.58 * g} \ly}
     }
   \fi}
 
-// A rest: a small filled block on the middle line. (A single mark for every duration,
-// enough to hold a beat of silence in a simple line.)
+// A rest sized to its duration, stamped from Bravura. A whole rest hangs under the second line from the
+// top, a half rest sits on the middle line, and quarter and eighth rests centre on the middle line.
 \def musicRest {
   \fill{\musiccolor} \nostroke
-  \set ry {\calc{msBottom + 2 * musicgap}}
-  \rect{\calc{msX - 4} \calc{ry - 1.5} 8 3}}
+  \if {\= {\msDur} {1}}
+    \fontglyph anchor:baseline {\msX \calc{msBottom + 3 * g}}{bravura}{\fs}{\cpRestWhole}
+  \else \if {\= {\msDur} {2}}
+    \fontglyph anchor:baseline {\msX \msMiddle}{bravura}{\fs}{\cpRestHalf}
+  \else \if {\>= {\msDur} {8}}
+    \fontglyph anchor:west {\msX \msMiddle}{bravura}{\fs}{\cpRest8}
+  \else
+    \fontglyph anchor:west {\msX \msMiddle}{bravura}{\fs}{\cpRestQuarter}
+  \fi \fi \fi}
 
 // ---- Accidentals ---------------------------------------------------------------
-// A sharp, flat or natural sign drawn just left of the note head, centred on its line (ax, ny). They are
-// small stroked figures rather than font glyphs, so they match the engraved look of the rest of the staff.
+// A sharp, flat or natural sign drawn just left of the head, its glyph origin (centred on the note line) set
+// a glyph-width plus a small gap to the left of the head. The widths are the glyphs' own, in staff spaces.
 \def musicAccidental {
   \if {\= {\msAcc} {none}} \else
-    \set ax {\calc{msX - musicheadrx - 6}}
-    \nofill \stroke{\musiccolor} \linewidth{0.9pt} \linecap{round} \linejoin{round}
+    \fill{\musiccolor} \nostroke
     \if {\= {\msAcc} {sharp}}
-      // two uprights crossed by two bars that rise to the right
-      \line{\calc{ax - 1.6} \calc{ny - 5.5}  \calc{ax - 1.6} \calc{ny + 5.5}}
-      \line{\calc{ax + 1.6} \calc{ny - 5.5}  \calc{ax + 1.6} \calc{ny + 5.5}}
-      \line{\calc{ax - 3.4} \calc{ny - 2.6}  \calc{ax + 3.4} \calc{ny - 1.4}}
-      \line{\calc{ax - 3.4} \calc{ny + 1.4}  \calc{ax + 3.4} \calc{ny + 2.6}}
+      \fontglyph anchor:baseline {\calc{msX - 1.2 * g} \ny}{bravura}{\fs}{\cpAccSharp}
     \else \if {\= {\msAcc} {flat}}
-      // a tall stem with a bowl on its lower right, like a small b
-      \line{\calc{ax - 1.8} \calc{ny - 3.5}  \calc{ax - 1.8} \calc{ny + 8}}
-      \path{
-        \moveto{\calc{ax - 1.8} \calc{ny + 2}}
-        \curveto{\calc{ax + 3.2} \calc{ny + 1.5}  \calc{ax + 3.2} \calc{ny - 4}  \calc{ax - 1.8} \calc{ny - 3.5}}
-      }
+      \fontglyph anchor:baseline {\calc{msX - 1.1 * g} \ny}{bravura}{\fs}{\cpAccFlat}
     \else
-      // a natural: two offset uprights joined by two bars, a parallelogram
-      \line{\calc{ax - 1.8} \calc{ny - 3}  \calc{ax - 1.8} \calc{ny + 6}}
-      \line{\calc{ax + 1.8} \calc{ny - 6}  \calc{ax + 1.8} \calc{ny + 3}}
-      \line{\calc{ax - 1.8} \calc{ny + 2}  \calc{ax + 1.8} \calc{ny + 3}}
-      \line{\calc{ax - 1.8} \calc{ny - 3}  \calc{ax + 1.8} \calc{ny - 2}}
+      \fontglyph anchor:baseline {\calc{msX - 0.9 * g} \ny}{bravura}{\fs}{\cpAccNatural}
     \fi \fi
   \fi}
 
 // ---- Time signature ------------------------------------------------------------
-// The numerator over the denominator, just after the clef, from the \musictimenum / \musictimeden config.
-// They are real typeset numerals placed with \at and enlarged a little so the pair spans the staff height:
-// the numerator centred between the middle and top lines, the denominator between the middle and bottom.
+// The numerator over the denominator, just after the clef. Each is a row of Bravura time-signature figures
+// (timeSig0..9), centred on a common x: the numerator between the middle and top lines, the denominator
+// between the middle and bottom. A figure is about two staff spaces tall and centred on its baseline, so
+// placing the row's baseline a staff space above and below the middle line seats the pair across the staff.
 \def musicTimeSig {
   \if {\size{\cat{\musictimenum}{}}}
-    \set tsX {\calc{musicleft + 4}}
-    \group{
-      \translate{\tsX \calc{msBottom + 3 * musicgap}}
-      \scale{1.7 1.7}
-      \at anchor:center {0 0}{\musictimenum}
-    }
-    \group{
-      \translate{\tsX \calc{msBottom + musicgap}}
-      \scale{1.7 1.7}
-      \at anchor:center {0 0}{\musictimeden}
-    }
+    \set tsCenterX {\calc{musicleft + 1.0 * g}}
+    \fill{\musiccolor} \nostroke
+    \musicTimeRow{\musictimenum}{\calc{msMiddle + g}}
+    \musicTimeRow{\musictimeden}{\calc{msMiddle - g}}
+  \fi}
+
+// One row of time-signature figures, centred on tsCenterX at height y. Each digit occupies a fixed cell so
+// a two-digit signature (12, 16) stays centred as a block; the digit glyph is centred within its cell.
+\def musicTimeRow digits y {
+  \set ds {\cat{\digits}{}}
+  \set n {\size{\ds}}
+  \set cell {\calc{1.9 * g}}
+  \set x0 {\calc{tsCenterX - n * cell / 2}}
+  \set i {0}
+  \musicTimeDigits{\ds}{\y}}
+
+\def musicTimeDigits s y {
+  \if {\size{\s}}
+    \set d {\head{\s}}
+    \set cx {\calc{x0 + i * cell + cell / 2}}
+    \fontglyph anchor:center {\cx \y}{bravura}{\fs}{\calc{cpTimeSig0 + \d}}
+    \set i {\calc{i + 1}}
+    \musicTimeDigits{\tail{\s}}{\y}
   \fi}
 
 // ---- Note parsing --------------------------------------------------------------
@@ -490,41 +304,14 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     \musicParseRest{\tail{\s}}
   \fi}
 
-// ---- The treble clef -----------------------------------------------------------
-// A G (treble) clef. On a backend with image support the embedded bitmap is placed on the G line —
-// engraving quality, since a drawn clef can only approximate the calligraphic glyph. Where images are
-// unavailable (the imagessupported flag is 0, e.g. the JS layer) it falls back to a stroked path, so
-// the package still works: one pen-like stroke curled around the second line from the bottom (the G line).
+// ---- The clef ------------------------------------------------------------------
+// A G (treble) or F (bass) clef, stamped from Bravura. Each clef's origin sits on the line it names — the G
+// clef on the second line from the bottom, the F clef on the second from the top — so a baseline anchor on
+// that line seats the glyph correctly. A small left margin keeps it clear of the staff's left edge.
 \def musicClef {
-  \if {\= {\imagessupported} {1}}
-    \if {\= {\musicclef} {bass}}
-      \at anchor:north {24 \calc{msTop}}{\usebitmap height:{26} {musicBassClef}}
-    \else
-      \at anchor:center {22 \calc{msBottom + musicgap + 8}}{\usebitmap height:{60} {musicTrebleClef}}
-    \fi
+  \fill{\musiccolor} \nostroke
+  \if {\= {\musicclef} {bass}}
+    \fontglyph anchor:baseline {6 \calc{msBottom + 3 * g}}{bravura}{\fs}{\cpFClef}
   \else
-  \nofill \stroke{\musiccolor} \linewidth{2.4pt} \linecap{round} \linejoin{round}
-  \group{
-    \translate{20 \calc{msBottom + musicgap}}
-    \set u {\calc{musicgap / 8}}
-    \scale{\u \u}
-    // one continuous pen stroke, the way a treble clef is written: up the stem from the
-    // ball, a crook over the top, then the body swooping down through the upper loop into
-    // the big lower belly and spiralling in to an eye centred on the G line (y = 0). The
-    // body crosses the stem twice, as a real clef does.
-    \path{
-      \moveto{-1 -14}
-      \curveto{1 -2     2 18    1 30}
-      \curveto{-3 31    -7 29   -6 25}
-      \curveto{-9 21    -9 16   -7 13}
-      \curveto{-2 10    3 11    6 9}
-      \curveto{8 3      4 -9    -2 -11}
-      \curveto{-8 -12   -11 -8  -10 -2}
-      \curveto{-9 5     -1 5    3 2}
-      \curveto{5 3      2 -3    -1 -1}
-    }
-    // the filled ball at the foot of the stem, below the staff
-    \fill{\musiccolor} \nostroke
-    \circle{-1 -16 2.6}
-  }
+    \fontglyph anchor:baseline {6 \calc{msBottom + 1 * g}}{bravura}{\fs}{\cpGClef}
   \fi}

@@ -11,8 +11,9 @@ The \texttt{music} package draws a line of staff notation on a treble clef. A sc
 a list of notes: a letter \texttt{a}–\texttt{g} for the pitch, optional \texttt{'} or
 \texttt{,} to raise or lower it an octave, and an optional duration digit — \texttt{1}
 whole, \texttt{2} half, \texttt{4} quarter (the default), \texttt{8} eighth. A \texttt{|}
-is a barline. Note heads, stems, flags and ledger lines are all drawn over the
-\texttt{\\picture} layer; there is no music-specific engine code.
+is a barline. The heads, clefs, flags, rests, accidentals and time-signature figures are
+real engraved glyphs from Bravura, the reference font for music notation; the stems, beams,
+staff lines and ledger lines are ruled over the \texttt{\\picture} layer.
 
 \section{A scale}
 

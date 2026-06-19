@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, Color, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
+import io.github.edadma.texish.{Anchor, Box, Color, GlyphBox, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -104,6 +104,30 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     val ops = run("\\picture width:1in height:1in { \\group{ \\stroke{black} \\circle{0 0 1} } }")
     ops.head shouldBe PictureOp.GSave
     ops.last shouldBe PictureOp.GRestore
+  }
+
+  "\\fontglyph places a glyph from a named typeface at a codepoint" in {
+    // The headless glyph seam uses the codepoint itself as the glyph index, so the placed GlyphBox carries the
+    // requested codepoint. gClef is U+E050 = 57424. The default anchor is the baseline.
+    val ops = run("\\picture width:1in height:1in { \\fill{black} \\fontglyph{36 36}{bravura}{32}{57424} }")
+    val placed = ops.collect { case p: PictureOp.Place => p }
+    placed should have size 1
+    placed.head match
+      case PictureOp.Place(g: GlyphBox, anchor, x, y) =>
+        g.glyph shouldBe 0xe050
+        g.font.typeface shouldBe "bravura"
+        g.font.size shouldBe 32.0
+        anchor shouldBe Anchor.Baseline
+        x shouldBe 36.0
+        y shouldBe 36.0
+      case other => fail(s"expected a placed GlyphBox, got $other")
+  }
+
+  "\\fontglyph honours an explicit anchor" in {
+    val ops = run("\\picture width:1in height:1in { \\fill{black} \\fontglyph anchor:center {0 0}{bravura}{40}{57476} }")
+    val placed = ops.collect { case p: PictureOp.Place => p }
+    placed.head.anchor shouldBe Anchor.Center
+    placed.head.box.asInstanceOf[GlyphBox].glyph shouldBe 0xe084 // timeSig4
   }
 
   "a drawing command outside \\picture is an error" in {

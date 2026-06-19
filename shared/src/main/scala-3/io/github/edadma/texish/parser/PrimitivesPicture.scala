@@ -282,6 +282,28 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
     },
   )
 
+  // \fontglyph[anchor:]{x y}{typeface}{size}{codepoint} - place one glyph from a named typeface at a given size,
+  // by codepoint, in the current fill colour. Unlike \glyph, which uses whatever font is current, this names the
+  // face and the point size in the call, so a picture can stamp a glyph from a font it never selects for text —
+  // a music symbol from Bravura, a dingbat, an icon. It selects the font without disturbing the current one (no
+  // scope to manage), since the glyph is built and placed directly. Defaults to a baseline anchor, as \glyph does.
+  proc.registerPrimitive(
+    "fontglyph",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val pm     = requirePicture(t, handler, "fontglyph", pos)
+        val anchor = readAnchor(proc, pos, Anchor.Baseline)
+        val c      = readNumbers(proc, pos)
+        val face   = Value.display(proc.evalArgumentExpr(pos))
+        val size   = num1(proc, pos)
+        val cp     = num1(proc, pos).toInt
+        val font   = t.makeFont(face, size, Set.empty[String])
+        val rf     = font.renderFont.asInstanceOf[t.RenderFont]
+        val color  = pm.fillColor.orElse(pm.strokeColor).getOrElse(Color("black"))
+        pm.place(new GlyphBox(t, t.glyphIndex(rf, cp), font, color), anchor, c(0), c(1))
+    },
+  )
+
 // Register a picture-only command: it guards that a PictureMode is on top (else a clear error) and runs `body`
 // with that mode. Keeps the many shape/state primitives to one line each.
 private[parser] def picturePrimitive(
