@@ -157,15 +157,16 @@
     \fi \fi
   \fi}
 
-// The stem and, for an eighth note, its flag. SMuFL gives each black/half head a stem-attachment anchor:
-// stemUpSE = (1.18, 0.168) and stemDownNW = (0, -0.168) staff spaces from the head's origin. A note below
-// the middle line stems up on the right, one at or above it stems down on the left.
+// The stem and, for an eighth note, its flag. SMuFL gives each black/half head a stem-attachment anchor (in
+// the same y-up frame as the picture): stemUpSE = (1.18, +0.168) on the head's right, just above its centre,
+// and stemDownNW = (0, -0.168) on its left, just below. A note below the middle line stems up, one at or above
+// it stems down. The foot sits at the anchor so the stem meets the head cleanly instead of poking past it.
 \def musicStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemLen {\calc{3.3 * g}}
   \if {\< {\step} {4}}
     \set msStemX {\calc{msX + 1.12 * g}}
-    \set msStemFoot {\calc{ny - 0.168 * g}}
+    \set msStemFoot {\calc{ny + 0.168 * g}}
     \set msStemTop {\calc{ny + msStemLen}}
     \line{\msStemX \msStemFoot  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
@@ -174,7 +175,7 @@
     \fi
   \else
     \set msStemX {\calc{msX + 0.06 * g}}
-    \set msStemFoot {\calc{ny + 0.168 * g}}
+    \set msStemFoot {\calc{ny - 0.168 * g}}
     \set msStemTop {\calc{ny - msStemLen}}
     \line{\msStemX \msStemFoot  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
@@ -189,7 +190,7 @@
 \def musicBeamedStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemX {\calc{msX + 1.12 * g}}
-  \line{\msStemX \calc{ny - 0.168 * g}  \msStemX \msBeamY}
+  \line{\msStemX \calc{ny + 0.168 * g}  \msStemX \msBeamY}
   \if {\= {\msBeamPrev} {1}}
     \linewidth{\calc{0.5 * g}}
     \line{\msBeamPrevX \msBeamY  \msStemX \msBeamY}
