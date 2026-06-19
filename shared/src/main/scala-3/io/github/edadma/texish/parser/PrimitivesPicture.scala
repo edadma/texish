@@ -282,6 +282,124 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
     },
   )
 
+  // \arrow[head: size: heads:]{a b} - a shaft from a to b plus an arrowhead, drawn in the current \stroke colour
+  // (an arrow is ink: shaft and head share the pen, \fill is ignored). The shaft is shortened at each headed end so
+  // the line meets the back of the head rather than poking through its tip. heads = end (default) | start | both.
+  proc.registerPrimitive(
+    "arrow",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val pm    = requirePicture(t, handler, "arrow", pos)
+        val opts  = proc.readOptionalParams(pos)
+        val style = arrowStyleOpt(handler, opts, pos)
+        val len   = opts.get("size").flatMap(points).getOrElse(7.0)
+        val heads = opts.get("heads").map(Value.display).getOrElse("end")
+        val c     = readNumbers(proc, pos)
+        if c.length < 4 then handler.error("\\arrow expects two points {a b}", pos)
+        val (ax, ay, bx, by) = (c(0), c(1), c(2), c(3))
+        val d        = math.hypot(bx - ax, by - ay)
+        val (ux, uy) = if d == 0 then (0.0, 0.0) else ((bx - ax) / d, (by - ay) / d)
+        val ink      = pm.strokeColor.orElse(pm.fillColor).getOrElse(Color("black"))
+
+        val insetEnd   = if heads == "end"   || heads == "both" then emitArrowhead(pm, ax, ay, bx, by, style, len) else 0.0
+        val insetStart = if heads == "start" || heads == "both" then emitArrowhead(pm, bx, by, ax, ay, style, len) else 0.0
+
+        if d > insetStart + insetEnd then
+          pm.newPath()
+          pm.moveTo(ax + insetStart * ux, ay + insetStart * uy)
+          pm.lineTo(bx - insetEnd * ux, by - insetEnd * uy)
+          pm.paintWith(None, Some(ink))
+    },
+  )
+
+  // \arrowhead[head: size:]{a b} - just the head, placed at b and pointing away from a, in the current \stroke
+  // colour. The direction comes from the two points, so a head can cap a hand-built \path (point it from the last
+  // control point to the path end) without the document computing any angle.
+  proc.registerPrimitive(
+    "arrowhead",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val pm    = requirePicture(t, handler, "arrowhead", pos)
+        val opts  = proc.readOptionalParams(pos)
+        val style = arrowStyleOpt(handler, opts, pos)
+        val len   = opts.get("size").flatMap(points).getOrElse(7.0)
+        val c     = readNumbers(proc, pos)
+        if c.length < 4 then handler.error("\\arrowhead expects two points {a b}", pos)
+        emitArrowhead(pm, c(0), c(1), c(2), c(3), style, len)
+    },
+  )
+
+// The arrowhead shapes. The head is geometry — a filled (or, for a bar, stroked) shape oriented along the shaft —
+// so it rides the picture's y-up flip exactly like any other shape and needs none of the upright handling that
+// placed text and glyphs do.
+private[parser] enum ArrowHead:
+  case Triangle, Stealth, Bar, Dot
+
+private[parser] object ArrowHead:
+  def fromString(s: String): Option[ArrowHead] = s.toLowerCase match
+    case "triangle" => Some(Triangle)
+    case "stealth"  => Some(Stealth)
+    case "bar"      => Some(Bar)
+    case "dot"      => Some(Dot)
+    case _          => None
+
+// Read the optional head: style (default the swept-back stealth), validating the name.
+private[parser] def arrowStyleOpt(handler: TypesetterHandler, opts: Map[String, Value], pos: CharReader): ArrowHead =
+  opts.get("head") match
+    case None => ArrowHead.Stealth
+    case Some(v) =>
+      val s = Value.display(v)
+      ArrowHead.fromString(s).getOrElse(handler.error(s"unknown arrowhead '$s' (triangle, stealth, bar, dot)", pos))
+
+// Draw an arrowhead of length `len` at tip `(tx,ty)` pointing away from `(ax,ay)`, in the picture's current pen
+// colour. Lowers to the existing path + paint ops, so no backend support beyond the shapes already render. Returns
+// how far back along the shaft the line should stop at this end so it meets the head cleanly (0 when degenerate).
+private[parser] def emitArrowhead(
+    pm: PictureMode,
+    ax: Double,
+    ay: Double,
+    tx: Double,
+    ty: Double,
+    style: ArrowHead,
+    len: Double,
+): Double =
+  val d = math.hypot(tx - ax, ty - ay)
+  if d == 0.0 then return 0.0
+  val ux = (tx - ax) / d; val uy = (ty - ay) / d // unit direction, toward the tip
+  val px = -uy; val py = ux                       // unit perpendicular (quarter-turn counter-clockwise)
+  val w  = 0.36 * len                             // half the base width — about a 20° half-angle
+  val ink = pm.strokeColor.orElse(pm.fillColor).getOrElse(Color("black"))
+
+  // A point `back` units behind the tip along the shaft and `side` units off to the perpendicular.
+  def at(back: Double, side: Double): (Double, Double) =
+    (tx - back * ux + side * px, ty - back * uy + side * py)
+
+  style match
+    case ArrowHead.Triangle =>
+      val (blx, bly) = at(len, w)
+      val (brx, bry) = at(len, -w)
+      pm.newPath(); pm.moveTo(tx, ty); pm.lineTo(blx, bly); pm.lineTo(brx, bry); pm.close()
+      pm.paintWith(Some(ink), None)
+      len
+    case ArrowHead.Stealth =>
+      val (blx, bly) = at(len, w)
+      val (ntx, nty) = at(0.55 * len, 0.0) // a concave notch pulled in toward the tip
+      val (brx, bry) = at(len, -w)
+      pm.newPath(); pm.moveTo(tx, ty); pm.lineTo(blx, bly); pm.lineTo(ntx, nty); pm.lineTo(brx, bry); pm.close()
+      pm.paintWith(Some(ink), None)
+      0.55 * len // the shaft meets the notch, not the wide base
+    case ArrowHead.Bar =>
+      val (b1x, b1y) = at(0.0, w)
+      val (b2x, b2y) = at(0.0, -w)
+      pm.newPath(); pm.moveTo(b1x, b1y); pm.lineTo(b2x, b2y)
+      pm.paintWith(None, Some(ink))
+      0.0
+    case ArrowHead.Dot =>
+      val r = len / 2
+      pm.newPath(); pm.arc(tx, ty, r, 0, 2 * math.Pi, false); pm.close()
+      pm.paintWith(Some(ink), None)
+      r // the shaft meets the near edge of the dot centred on the tip
+
 // Register a picture-only command: it guards that a PictureMode is on top (else a clear error) and runs `body`
 // with that mode. Keeps the many shape/state primitives to one line each.
 private[parser] def picturePrimitive(

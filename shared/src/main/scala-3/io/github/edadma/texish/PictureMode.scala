@@ -141,6 +141,11 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   def paint(): Unit =
     emit(PictureOp.Paint(fillColour.map(withOpacity(_, fillOpacity)), strokeColour.map(withOpacity(_, strokeOpacity))))
 
+  /** Paint the current path with explicit colours, bypassing the mode's active fill/stroke. For composite shapes
+    * like an arrowhead, whose ink the drawing command chooses (the pen colour, not the picture's `\fill`), rather
+    * than the shape inheriting the picture's fill/stroke state. */
+  def paintWith(fill: Option[Color], stroke: Option[Color]): Unit = emit(PictureOp.Paint(fill, stroke))
+
   // ─── shapes (lower to a fresh path plus one paint) ───────────────────────────────
 
   def line(x1: Double, y1: Double, x2: Double, y2: Double): Unit =

@@ -53,6 +53,10 @@ The vocabulary:
   and `\linetype{solid|dashed|dotted|dashdot}`.
 - **Transforms**: `\translate{dx dy}`, `\scale{sx sy}`, `\rotate{degrees}`.
 - **Shapes**: `\line`, `\rect`, `\circle`, `\ellipse`, `\polygon`, `\polyline`, `\arc`, `\arcn`.
+- **Arrows**: `\arrow[head:… size:… heads:end|start|both]{a b}` draws a shaft from `a` to `b` capped
+  with a head (the shaft is shortened to meet the head's back); `\arrowhead[head:… size:…]{a b}` places
+  just a head at `b` pointing away from `a`. Heads are `stealth` (default), `triangle`, `bar`, and `dot`,
+  drawn in the current `\stroke` colour.
 - **Freeform paths**: `\path{ \moveto{x y} \lineto{x y} \curveto{c1x c1y c2x c2y x y} \close }`.
 - **Grouping & clipping**: `\group{ … }`, `\clip{ <path body> }`.
 - **Placement**: `\at[anchor:…]{x y}{content}` drops fully typeset text or math at a coordinate (it

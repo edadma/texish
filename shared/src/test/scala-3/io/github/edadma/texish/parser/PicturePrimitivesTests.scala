@@ -110,3 +110,44 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     a[ParserException] should be thrownBy proc.process("\\rect{0 0 1 1}")
   }
+
+  // \arrow / \arrowhead lower to the existing path + paint ops, so they need no new backend support; these check the
+  // geometry reaches the display list. The head is filled in the pen colour (fill set, stroke clear), the shaft is
+  // stroked in it (stroke set, fill clear), and the shaft is shortened so it meets the back of the head.
+  "\\arrow draws a filled head at the tip and a shortened stroked shaft" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrow head:triangle size:7 {0 0 20 0} }")
+    ops should contain(PictureOp.MoveTo(20, 0))               // the head's tip sits on the endpoint
+    ops should contain(PictureOp.Paint(Some(Color("black")), None)) // the head, filled in the pen colour
+    ops should contain(PictureOp.LineTo(13, 0))               // the shaft stops a head-length short of the tip
+    ops should contain(PictureOp.Paint(None, Some(Color("black")))) // the shaft, stroked in the pen colour
+  }
+
+  "\\arrow heads:both caps both ends" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrow head:triangle heads:both size:7 {0 0 30 0} }")
+    ops.count { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe 2
+    ops should contain(PictureOp.MoveTo(30, 0)) // tip of the end head
+    ops should contain(PictureOp.MoveTo(0, 0))  // tip of the start head, pointing back from b
+  }
+
+  "\\arrowhead head:dot lowers to a filled disc on the tip" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrowhead head:dot size:8 {0 0 10 0} }")
+    ops should contain(PictureOp.Arc(10, 0, 4, 0, 2 * math.Pi, false)) // radius = size/2, centred on the tip
+    ops should contain(PictureOp.Paint(Some(Color("black")), None))
+  }
+
+  "\\arrowhead defaults to the stealth head" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrowhead size:10 {0 0 10 0} }")
+    // a stealth head has a concave notch, so its outline is four points (tip, base, notch, base), not three
+    ops.count { case _: PictureOp.LineTo => true; case _ => false } shouldBe 3
+  }
+
+  "an unknown arrowhead style is an error" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy
+      proc.process("\\picture width:1in height:1in { \\stroke{black} \\arrowhead head:wedge {0 0 1 0} }")
+  }
+
+  "\\arrow outside \\picture is an error" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy proc.process("\\arrow{0 0 1 1}")
+  }
