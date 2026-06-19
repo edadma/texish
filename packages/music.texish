@@ -193,7 +193,9 @@
   \line{\msStemX \calc{ny + 0.168 * g}  \msStemX \msBeamY}
   \if {\= {\msBeamPrev} {1}}
     \linewidth{\calc{0.5 * g}}
-    \line{\msBeamPrevX \msBeamY  \msStemX \msBeamY}
+    // Run the beam half a stem-width past each stem centre so it ends flush with the outer edge of the stem
+    // rather than leaving the stem's corner poking out; interior segments simply overlap at the shared stems.
+    \line{\calc{msBeamPrevX - 0.06 * g} \msBeamY  \calc{msStemX + 0.06 * g} \msBeamY}
   \fi
   \global\set msBeamPrev {1}
   \global\set msBeamPrevX {\msStemX}}
