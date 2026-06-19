@@ -1,0 +1,201 @@
+// chords — guitar chord-diagram boxes, drawn entirely in the document language over
+// the \picture vector-graphics layer. Import it with:
+//
+//     \use{chords}
+//
+// A chord is drawn by \chord, which takes the chord name, a fret per string, and a
+// finger per string:
+//
+//     \chord{C}{x 3 2 0 1 0}{. 3 2 . 1 .}
+//
+// The two six-value lists run from the lowest string (low E, 6th) on the left to the
+// highest (high e, 1st) on the right — the order you read a chord box left to right.
+// A fret value is a fret number, 0 for an open string (drawn with an "o" above the
+// nut), or x for a string that is not played (drawn with an "×"). A finger value is a
+// fretting-hand finger number (1 index, 2 middle, 3 ring, 4 pinky) shown inside the
+// dot, or . for none. Pass {} for the finger list to draw plain dots with no numbers.
+//
+// When every fretted note fits in the first four frets the diagram is drawn from the
+// nut (the thick line at the top). A chord higher up the neck is shifted into view and
+// labelled with its starting fret to the right, e.g. "5fr".
+//
+// A barre — one finger flattened across several strings — is given with the optional
+// bracket argument "fret first last", where first and last are string columns (1 = low
+// E on the left … 6 = high e on the right). So [1 1 6] barres the first fret across all
+// six strings:
+//
+//     \chord[1 1 6]{F}{1 3 3 2 1 1}{1 3 4 2 1 1}
+//
+// Everything here is the document language: \calc does the geometry, \seq / \head /
+// \tail walk the string lists, and the box itself is a \picture of lines, circles and
+// placed labels. There is no chord-specific engine primitive.
+
+// ---- Configuration (override with \set after \use, before \chord) --------------
+// Sizes are in points (72 per inch). The grid is (strings-1) wide by frets tall.
+\set chordcw {13}          // string spacing (grid column width)
+\set chordrh {15}          // fret spacing (grid row height)
+\set chordnf {4}           // number of fret rows drawn
+\set chorddot {4.4}        // finger-dot radius
+\set chordpad {11}         // side padding (room for the × / o marks and the fret label)
+\set chordtop {13}         // band above the nut for the open / muted marks
+\set chordnamegap {6}      // gap between that band and the chord name
+\set chordnamesize {13}    // chord-name type size
+\set chordlabelsize {9}    // starting-fret label size
+\set chordfingersize {8}   // finger-number size inside a dot
+\set chordcolor {black}    // ink for the whole diagram
+
+// ---- The diagram ---------------------------------------------------------------
+// \chord computes the fret window, opens a picture of the right size, draws the grid
+// and nut (or fret label), the optional barre, then each string's mark or dot, and
+// finally the name. The group keeps the derived variables from leaking out.
+\def chord [barre:] name frets fingers {{
+  \set chGW {\calc{5 * chordcw}}
+  \set chGH {\calc{chordnf * chordrh}}
+  \set chL {\chordpad}
+  \set chB {\chordpad}
+  \set chT {\calc{chB + chGH}}
+  \set chMarkY {\calc{chT + 6}}
+  \set chCenterX {\calc{chL + chGW / 2}}
+  \set chNameY {\calc{chT + chordtop + chordnamegap}}
+  \set chPW {\calc{chGW + 2 * chordpad}}
+  \set chPH {\calc{chNameY + chordnamesize + 2}}
+
+  // Find the fretted span so a chord up the neck can be shifted into the window. When
+  // the highest note fits in the drawn frets, the diagram starts at the nut; otherwise
+  // it starts at the lowest fretted note and the nut becomes an ordinary fret line.
+  \global\set chMin {99}
+  \global\set chMax {0}
+  \chordScan{\seq{\frets}}
+  \if {\> {\chMax} {0}}
+    \if {\<= {\chMax} {\chordnf}} \set chStart {1} \set chNut {1}
+    \else \set chStart {\chMin} \set chNut {0} \fi
+  \else \set chStart {1} \set chNut {1} \fi
+
+  // Decode an optional barre into its fret and its first / last string columns.
+  \set chBarre {0}
+  \set chBF {0}
+  \set chBA {1}
+  \set chBB {6}
+  \if {\> {\size{\barre}} {0}}
+    \set chBarre {1}
+    \set chBSeq {\seq{\barre}}
+    \set chBF {\head{\chBSeq}}
+    \set chBA {\head{\tail{\chBSeq}}}
+    \set chBB {\head{\tail{\tail{\chBSeq}}}}
+  \fi
+
+  \set chCol {1}
+
+  \picture width:{\chPW} height:{\chPH} {
+    \chordGrid
+    \chordNutOrLabel
+    \if {\= {\chBarre} {1}} \chordDrawBarre \fi
+    // An empty finger list draws plain dots: walk against six placeholder dots so every
+    // string still gets a (number-less) dot or mark.
+    \if {\< {\size{\fingers}} {1}}
+      \chordWalk{\seq{\frets}}{\seq{. . . . . .}}
+    \else
+      \chordWalk{\seq{\frets}}{\seq{\fingers}}
+    \fi
+    \at anchor:south {\chCenterX \chNameY}{{\font {lmroman} {\chordnamesize} {bold}\name}}
+  }
+}}
+
+// Track the lowest and highest fretted note, skipping open (0) and muted (x) strings.
+\def chordScan items {
+  \if {\size{\items}}
+    \set sv {\head{\items}}
+    \if {\= {\sv} {x}} \else
+      \set svn {\calc{sv}}
+      \if {\= {\svn} {0}} \else
+        \if {\< {\svn} {\chMin}} \global\set chMin {\svn} \fi
+        \if {\> {\svn} {\chMax}} \global\set chMax {\svn} \fi
+      \fi
+    \fi
+    \chordScan{\tail{\items}}
+  \fi}
+
+// The six strings and the fret lines. The strings run the full height; the fret lines
+// span the grid width. Drawn first, so the nut, barre and dots sit on top.
+\def chordGrid {
+  \nofill \stroke{\chordcolor} \linewidth{0.8pt} \linecap{butt}
+  \for\s{\range{1}{6}}{
+    \set sx {\calc{chL + (\s - 1) * chordcw}}
+    \line{\sx \chB  \sx \chT}
+  }
+  \for\f{\range{0}{\chordnf}}{
+    \set fy {\calc{chT - \f * chordrh}}
+    \line{\chL \fy  \calc{chL + chGW} \fy}
+  }}
+
+// A nut (thick top line) when the chord is at the top of the neck, otherwise a small
+// "<n>fr" label to the right of the first row saying which fret the window starts on.
+\def chordNutOrLabel {
+  \if {\= {\chNut} {1}}
+    \nofill \stroke{\chordcolor} \linewidth{3pt} \linecap{butt}
+    \line{\chL \chT  \calc{chL + chGW} \chT}
+  \else
+    \at anchor:west {\calc{chL + chGW + 5} \calc{chT - chordrh / 2}}{{\font {lmroman} {\chordlabelsize} {regular}\the\chStart fr}}
+  \fi}
+
+// The barre: a thick round-capped line across its string span at its fret row.
+\def chordDrawBarre {
+  \set bdisp {\calc{chBF - chStart + 1}}
+  \set bary {\calc{chT - (bdisp - 0.5) * chordrh}}
+  \set barlo {\calc{chL + (chBA - 1) * chordcw}}
+  \set barhi {\calc{chL + (chBB - 1) * chordcw}}
+  \nofill \stroke{\chordcolor} \linewidth{\calc{chorddot * 2}} \linecap{round}
+  \line{\barlo \bary  \barhi \bary}}
+
+// Walk the strings left to right, drawing a mark above the nut for an open or muted
+// string and a dot on the grid for a fretted one. The current column lives in chCol
+// (1-based); the per-string values pass to the drawing helpers through shared variables
+// rather than as computed arguments, so no evaluated number is ever spliced into a later
+// \calc expression.
+\def chordWalk frets fingers {
+  \if {\size{\frets}}
+    \set chcv {\head{\frets}}
+    \set chcf {\head{\fingers}}
+    \set chcx {\calc{chL + (chCol - 1) * chordcw}}
+    \if {\= {\chcv} {x}}
+      \chordMute
+    \else
+      \set chcvn {\calc{chcv}}
+      \if {\= {\chcvn} {0}}
+        \chordOpen
+      \else
+        \set chdisp {\calc{chcvn - chStart + 1}}
+        \chordFretDot
+      \fi
+    \fi
+    \set chCol {\calc{chCol + 1}}
+    \chordWalk{\tail{\frets}}{\tail{\fingers}}
+  \fi}
+
+// An "×" above the nut for a string that is not played.
+\def chordMute {
+  \nofill \stroke{\chordcolor} \linewidth{1pt} \linecap{round}
+  \line{\calc{chcx - 2.4} \calc{chMarkY - 2.4}  \calc{chcx + 2.4} \calc{chMarkY + 2.4}}
+  \line{\calc{chcx - 2.4} \calc{chMarkY + 2.4}  \calc{chcx + 2.4} \calc{chMarkY - 2.4}}}
+
+// An "o" (open circle) above the nut for a string played open.
+\def chordOpen {
+  \nofill \stroke{\chordcolor} \linewidth{0.9pt}
+  \circle{\calc{chcx} \calc{chMarkY} 2.6}}
+
+// A finger dot at the string column (chcx) and windowed fret row (chdisp), with its
+// finger number (chcf) in white inside. A dot at the barre's own fret is left to the
+// barre, which already covers it.
+\def chordFretDot {
+  \set chDrawDot {1}
+  \if {\= {\chBarre} {1}} \if {\= {\chcvn} {\calc{chBF}}} \set chDrawDot {0} \fi \fi
+  \if {\= {\chDrawDot} {1}}
+    \if {\>= {\chdisp} {1}} \if {\<= {\chdisp} {\chordnf}}
+      \set chDotY {\calc{chT - (chdisp - 0.5) * chordrh}}
+      \fill{\chordcolor} \nostroke
+      \circle{\calc{chcx} \calc{chDotY} \chorddot}
+      \if {\= {\chcf} {.}} \else
+        \at anchor:center {\calc{chcx} \calc{chDotY}}{{\textcolor{white}{\font {lmroman} {\chordfingersize} {bold}\chcf}}}
+      \fi
+    \fi \fi
+  \fi}
