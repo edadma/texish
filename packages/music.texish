@@ -404,7 +404,7 @@ AAAAAAAAAAAAAAAAAAASspRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 \def musicClef {
   \if {\= {\imagessupported} {1}}
     \if {\= {\musicclef} {bass}}
-      \at anchor:north {24 \calc{msTop + 1}}{\usebitmap height:{26} {musicBassClef}}
+      \at anchor:north {24 \calc{msTop - 1}}{\usebitmap height:{26} {musicBassClef}}
     \else
       \at anchor:center {22 \calc{msBottom + musicgap + 8}}{\usebitmap height:{60} {musicTrebleClef}}
     \fi
