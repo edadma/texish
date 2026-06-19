@@ -130,6 +130,33 @@ class CoordTests extends AnyFreeSpec with Matchers:
       val ops = run("\\picture width:1in height:1in { \\set p {\\point{(7,8)}} \\stroke{black}\\nofill \\circle{(p) 3} }")
       ops should contain(PictureOp.Arc(7, 8, 3, 0, 2 * math.Pi, false))
     }
+
+    // each point op is exercised by feeding its result into a circle centre, so the resolved point appears in the Arc
+    def centre(src: String): (Double, Double) =
+      val ops = run(s"\\picture width:1in height:1in { \\stroke{black}\\nofill $src }")
+      val Some(PictureOp.Arc(cx, cy, _, _, _, _)) = ops.collectFirst { case a: PictureOp.Arc => a }: @unchecked
+      (cx, cy)
+
+    "\\padd and \\psub add and subtract points" in {
+      centre("\\circle{\\padd{(1,2)}{(3,4)} 5}") shouldBe (4.0, 6.0)
+      centre("\\circle{\\psub{(10,8)}{(3,2)} 5}") shouldBe (7.0, 6.0)
+    }
+
+    "\\pmid is the midpoint and \\pdist the distance" in {
+      centre("\\circle{\\pmid{(0,0)}{(10,20)} 5}") shouldBe (5.0, 10.0)
+      // \pdist returns a number, used here as the radius from (0,0) — a 3-4-5 triangle gives 5
+      val ops = run("\\picture width:1in height:1in { \\stroke{black}\\nofill \\circle{0 0 \\pdist{(0,0)}{(3,4)}} }")
+      ops should contain(PictureOp.Arc(0, 0, 5, 0, 2 * math.Pi, false))
+    }
+
+    "\\pnormalize and \\pscale make a unit vector and step it to a length" in {
+      val (x, y) = centre("\\circle{\\pscale{\\pnormalize{(3,4)}}{10} 1}")
+      assert(approx(x, 6.0) && approx(y, 8.0)) // (3,4) has length 5, so the unit vector times 10 is (6,8)
+    }
+
+    "\\pperp turns a vector a quarter-turn" in {
+      centre("\\circle{\\pperp{(3,4)} 1}") shouldBe (-4.0, 3.0)
+    }
   }
 
   private class Capture extends HeadlessTypesetter:

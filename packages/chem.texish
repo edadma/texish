@@ -5,53 +5,40 @@
 //
 // The macros below are the whole library: bonds between named coordinates,
 // shortened at each end so atom labels stay clear, and \atom to name-and-label a
-// point. Bond geometry is computed with \xof/\yof and \calc over the picture
-// primitives — no engine code. Tunable through bondgap (clearance at each end) and
-// doublesep (half the gap between the two lines of a double bond).
+// point. Bond geometry is point arithmetic over the picture primitives — \psub for
+// the bond axis, \pnormalize / \pscale to step in from each end, \pperp for the
+// offset of a multiple bond — no engine code. Tunable through bondgap (clearance at
+// each end) and doublesep (half the gap between the two lines of a double bond).
 \set bondgap {9}
 \set doublesep {2.5}
 
+// The shortening vector for a bond from A to B: the unit vector along the bond scaled
+// to bondgap, so a line from A+gap to B−gap clears both atom labels.
+\def bondgapvec a b {\pscale{\pnormalize{\psub{\b}{\a}}}{\bondgap}}
+
 // \bond{A}{B} — a single bond between two coordinates, shortened by bondgap at each end.
 \def bond a b {
-  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
-  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
-  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
-  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
-  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
-  \line{(chemAx + chemUx*bondgap, chemAy + chemUy*bondgap)
-        (chemBx - chemUx*bondgap, chemBy - chemUy*bondgap)}
+  \set g {\bondgapvec{\a}{\b}}
+  \line{\padd{\a}{\g} \psub{\b}{\g}}
 }
 
 // \dbond{A}{B} — a double bond: two parallel lines, offset doublesep either side of the bond axis.
 \def dbond a b {
-  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
-  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
-  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
-  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
-  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
-  \set chemOx {\calc{-chemUy * doublesep}}
-  \set chemOy {\calc{chemUx * doublesep}}
-  \line{(chemAx + chemUx*bondgap + chemOx, chemAy + chemUy*bondgap + chemOy)
-        (chemBx - chemUx*bondgap + chemOx, chemBy - chemUy*bondgap + chemOy)}
-  \line{(chemAx + chemUx*bondgap - chemOx, chemAy + chemUy*bondgap - chemOy)
-        (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
+  \set g {\bondgapvec{\a}{\b}}
+  \set o {\pscale{\pperp{\pnormalize{\psub{\b}{\a}}}}{\doublesep}}
+  \set pa {\padd{\a}{\g}} \set pb {\psub{\b}{\g}}
+  \line{\padd{\pa}{\o} \padd{\pb}{\o}}
+  \line{\psub{\pa}{\o} \psub{\pb}{\o}}
 }
 
 // \tbond{A}{B} — a triple bond: a central line flanked by two parallel lines a little wider apart.
 \def tbond a b {
-  \set chemAx {\xof{\a}} \set chemAy {\yof{\a}}
-  \set chemBx {\xof{\b}} \set chemBy {\yof{\b}}
-  \set chemLen {\calc{hypot(chemBx - chemAx, chemBy - chemAy)}}
-  \set chemUx {\calc{(chemBx - chemAx) / chemLen}}
-  \set chemUy {\calc{(chemBy - chemAy) / chemLen}}
-  \set chemOx {\calc{-chemUy * doublesep * 1.8}}
-  \set chemOy {\calc{chemUx * doublesep * 1.8}}
-  \line{(chemAx + chemUx*bondgap, chemAy + chemUy*bondgap)
-        (chemBx - chemUx*bondgap, chemBy - chemUy*bondgap)}
-  \line{(chemAx + chemUx*bondgap + chemOx, chemAy + chemUy*bondgap + chemOy)
-        (chemBx - chemUx*bondgap + chemOx, chemBy - chemUy*bondgap + chemOy)}
-  \line{(chemAx + chemUx*bondgap - chemOx, chemAy + chemUy*bondgap - chemOy)
-        (chemBx - chemUx*bondgap - chemOx, chemBy - chemUy*bondgap - chemOy)}
+  \set g {\bondgapvec{\a}{\b}}
+  \set o {\pscale{\pperp{\pnormalize{\psub{\b}{\a}}}}{\calc{doublesep * 1.8}}}
+  \set pa {\padd{\a}{\g}} \set pb {\psub{\b}{\g}}
+  \line{\pa \pb}
+  \line{\padd{\pa}{\o} \padd{\pb}{\o}}
+  \line{\psub{\pa}{\o} \psub{\pb}{\o}}
 }
 
 // \atom{name}{coord}{label} — name a coordinate and set its element label, centred on the point.

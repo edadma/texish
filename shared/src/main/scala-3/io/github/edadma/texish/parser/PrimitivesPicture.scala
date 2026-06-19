@@ -72,6 +72,51 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
     },
   )
 
+  // Point arithmetic — small vector operations on points, so coordinate geometry (bond directions, offsets,
+  // midpoints) is written in the document language instead of unpacked into per-component \calc. Each argument is
+  // any coordinate (a literal, a named point, or a nested point expression); the result is a Value.Point that drops
+  // straight into coordinate position, or a number for \pdist. Not picture-only — these are pure value computations.
+  def pointBinary(name: String, op: ((Double, Double), (Double, Double)) => Value): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          val a = readPoint(proc, pos)
+          val b = readPoint(proc, pos)
+          proc.setResult(op(a, b))
+      },
+    )
+  def pointUnary(name: String, op: ((Double, Double)) => Value): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          proc.setResult(op(readPoint(proc, pos)))
+      },
+    )
+
+  pointBinary("padd", (a, b) => Value.Point(a._1 + b._1, a._2 + b._2)) // a + b
+  pointBinary("psub", (a, b) => Value.Point(a._1 - b._1, a._2 - b._2)) // a − b (the vector from b to a)
+  pointBinary("pmid", (a, b) => Value.Point((a._1 + b._1) / 2, (a._2 + b._2) / 2))
+  pointBinary("pdist", (a, b) => Value.Num(math.hypot(b._1 - a._1, b._2 - a._2)))
+  pointUnary("pperp", p => Value.Point(-p._2, p._1)) // a quarter-turn counter-clockwise
+  pointUnary(
+    "pnormalize",
+    p =>
+      val len = math.hypot(p._1, p._2)
+      if len == 0 then Value.Point(0, 0) else Value.Point(p._1 / len, p._2 / len),
+  )
+  // \pscale{point}{factor} - the point scaled by a scalar, for stepping a unit vector out to a length.
+  proc.registerPrimitive(
+    "pscale",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val p = readPoint(proc, pos)
+        val s = num1(proc, pos)
+        proc.setResult(Value.Point(p._1 * s, p._2 * s))
+    },
+  )
+
   // State: colours are picture-mode state baked into each shape's paint; widths/dashes/caps/joins become ops.
   picturePrimitive(proc, handler, "stroke", (pm, p) => pm.setStroke(readColorArg(proc, p)))
   picturePrimitive(proc, handler, "fill", (pm, p) => pm.setFill(readColorArg(proc, p)))
@@ -295,7 +340,13 @@ private[parser] def readNumbers(proc: Processor, pos: CharReader): Vector[Double
       val (x, y) = Coord.parse(text, varResolver(proc), proc.handler.fontUnit, namedResolver(proc))
       advance(x, y)
       Vector(x, y)
-    else Vector(points(proc.evalExpr(chunk, pos)).getOrElse(0.0))
+    else
+      // A chunk that evaluates to a point (a point variable, or a point-arithmetic expression like \padd{…}{…})
+      // contributes both its components, so computed points sit in coordinate position beside literal ones. A
+      // point expression does not move the current point — only coordinates the document writes (`(…)`, `++`) do.
+      proc.evalExpr(chunk, pos) match
+        case Value.Point(x, y) => Vector(x, y)
+        case v                 => Vector(points(v).getOrElse(0.0))
   }
 
 // Reconstruct a chunk's raw text for the coordinate parser: a control sequence contributes its bare name (so a
@@ -325,6 +376,12 @@ private[parser] def namedResolver(proc: Processor): String => Option[(Double, Do
 // Read a single-number group, e.g. \linewidth{2pt} or \rotate{30}.
 private[parser] def num1(proc: Processor, pos: CharReader): Double =
   points(proc.evalArgumentExpr(pos)).getOrElse(0.0)
+
+// Read one coordinate argument as a point: any coordinate form, a point variable, or a nested point expression —
+// the first two numbers of the group (see readNumbers, which already expands all of these to numbers).
+private[parser] def readPoint(proc: Processor, pos: CharReader): (Double, Double) =
+  val c = readNumbers(proc, pos)
+  (if c.nonEmpty then c(0) else 0.0, if c.length > 1 then c(1) else 0.0)
 
 // Split a coordinate group into its whitespace-separated pieces, keeping each piece intact across a brace group
 // (`\*{a}{b}`) and across a parenthesised coordinate (`(60:1in)`, even with an internal space like `(2, 3)`).

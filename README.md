@@ -64,8 +64,10 @@ Coordinates can be parenthesised as well as bare: `(x, y)` is Cartesian, `(angle
 made **relative to the current point**: `++(dx, dy)` offsets from it and then *advances* it, so steps
 chain into a shape or path — `\polygon{(10,10) ++(40,0) ++(0,40) ++(-40,0)}` walks a square — while
 `+(dx, dy)` offsets without moving it, for several spokes from one hub. `\point{(x, y)}` makes a
-first-class point value (for `\set`, printed by `\the` as `(x, y)`), and `\xof{coord}` / `\yof{coord}`
-read a point's components back as numbers.
+first-class point value (for `\set`, printed by `\the` as `(x, y)`), `\xof{coord}` / `\yof{coord}`
+read a point's components back as numbers, and the point operators `\padd` / `\psub` / `\pscale` /
+`\pnormalize` / `\pperp` / `\pmid` / `\pdist` do vector arithmetic on points — so geometry like a bond
+shortened along its own axis is written directly, e.g. `\padd{(A)}{\pscale{\pnormalize{\psub{(B)}{(A)}}}{9}}`.
 
 Coordinates may also be computed, not just literal — a bare variable `\x` is its value and arithmetic
 like `\*{\x}{14}` or `\forloop.index` works — so a plot, a chart, or a chemical diagram is just a path

@@ -21,8 +21,10 @@ These macros draw chemical structures. Name an
 atom with \italic{\\atom}, then connect named atoms with \italic{\\bond} (single),
 \italic{\\dbond} (double), or \italic{\\tbond} (triple). Every bond is shortened
 at both ends so the atom labels stay clear. The macros are written entirely in
-\TeXish: their bond geometry is computed with \italic{\\xof}, \italic{\\yof}, and
-\italic{\\calc} over the picture primitives — no engine code.
+\TeXish: their bond geometry is point arithmetic — \italic{\\psub} for the bond
+axis, \italic{\\pnormalize} and \italic{\\pscale} to step in from each end, and
+\italic{\\pperp} for a multiple bond's offset — over the picture primitives, with
+no engine code.
 
 \bold{Atoms and single bonds — water}
 
