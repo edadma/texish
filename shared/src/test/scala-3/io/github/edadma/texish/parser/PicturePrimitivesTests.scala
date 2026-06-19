@@ -130,6 +130,12 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     placed.head.box.asInstanceOf[GlyphBox].glyph shouldBe 0xe084 // timeSig4
   }
 
+  "\\glyphwidth measures a glyph and yields a number usable in a coordinate" in {
+    // the headless backend reports every glyph as 6 wide with a zero bearing, so the measured ink width is 6
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\line{\\glyphwidth{bravura}{40}{65} 0  0 0} }")
+    ops should contain(PictureOp.MoveTo(6.0, 0.0))
+  }
+
   "a drawing command outside \\picture is an error" in {
     val (_, proc) = fixture()
     a[ParserException] should be thrownBy proc.process("\\rect{0 0 1 1}")

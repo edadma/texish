@@ -673,6 +673,26 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // \glyphwidth{typeface}{size}{codepoint} - the width of one glyph's inked image, in points, at the given size:
+  // the distance from the glyph's origin to the right edge of its ink (x-bearing + ink width). Returns a number
+  // for \set / \calc, so a drawing can size itself to a real glyph rather than a guessed constant — the music
+  // package reads a notehead's width this way to seat a stem on its right edge whatever the music font.
+  proc.registerPrimitive(
+    "glyphwidth",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val face = Value.display(proc.evalArgumentExpr(pos))
+        val size = num1(proc, pos)
+        val cp   = num1(proc, pos).toInt
+        val font = t.makeFont(face, size, Set.empty[String])
+        val rf   = font.renderFont.asInstanceOf[t.RenderFont]
+        val ext  = t.glyphExtents(rf, t.glyphIndex(rf, cp))
+        val w    = ext.xBearing + ext.width
+        proc.setResult(Value.Num(w))
+        proc.handler.text(w.toString)
+    },
+  )
+
   // textsub / textsup - 1 body arg: a text subscript or superscript. The body is set in a smaller version of
   // the current font — scriptScale of its size — and its box is shifted below (sub) or above (sup) the baseline.
   // The size is derived from the current font, so a script adapts to the body size rather than a fixed point

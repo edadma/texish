@@ -78,6 +78,12 @@
   \set g {\musicgap}
   \set fs {\calc{4 * g}}
 
+  // The notehead's actual width (points), read from the chosen music font, so a stem seats on the head's right
+  // edge and a ledger line spans the head whatever font is in use — no per-font constants. (A black and a half
+  // notehead share a width, so one measurement covers every stemmed note.)
+  \set msHeadW {\glyphwidth{\musicfont}{\fs}{\cpNoteBlack}}
+  \set msStemHalf {\calc{0.06 * g}}
+
   \set msBottom {\musicpad}
   \set msTop {\calc{msBottom + 4 * g}}
   \set msMiddle {\calc{msBottom + 2 * g}}
@@ -187,27 +193,24 @@
     \fi \fi
   \fi}
 
-// The stem and, for an eighth note, its flag. SMuFL gives each black/half head a stem-attachment anchor (in
-// the same y-up frame as the picture): stemUpSE = (1.18, +0.168) on the head's right, just above its centre,
-// and stemDownNW = (0, -0.168) on its left, just below. A note below the middle line stems up, one at or above
-// it stems down. The foot sits at the anchor so the stem meets the head cleanly instead of poking past it.
+// The stem and, for an eighth note, its flag. A note below the middle line stems up on the head's right edge,
+// one at or above it stems down on its left; the stem meets the head at its centre height. The head's right
+// edge comes from the font (msHeadW), so the stem seats correctly whatever music font is in use.
 \def musicStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemLen {\calc{3.3 * g}}
   \if {\< {\step} {4}}
-    \set msStemX {\calc{msX + 1.12 * g}}
-    \set msStemFoot {\calc{ny + 0.168 * g}}
+    \set msStemX {\calc{msX + msHeadW - msStemHalf}}
     \set msStemTop {\calc{ny + msStemLen}}
-    \line{\msStemX \msStemFoot  \msStemX \msStemTop}
+    \line{\msStemX \ny  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
       \fill{\musiccolor} \nostroke
-      \fontglyph anchor:baseline {\calc{msStemX - 0.06 * g} \msStemTop}{\musicfont}{\fs}{\cpFlag8Up}
+      \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpFlag8Up}
     \fi
   \else
-    \set msStemX {\calc{msX + 0.06 * g}}
-    \set msStemFoot {\calc{ny - 0.168 * g}}
+    \set msStemX {\calc{msX + msStemHalf}}
     \set msStemTop {\calc{ny - msStemLen}}
-    \line{\msStemX \msStemFoot  \msStemX \msStemTop}
+    \line{\msStemX \ny  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
       \fill{\musiccolor} \nostroke
       \fontglyph anchor:baseline {\msStemX \msStemTop}{\musicfont}{\fs}{\cpFlag8Down}
@@ -219,13 +222,13 @@
 // next to beam to.
 \def musicBeamedStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
-  \set msStemX {\calc{msX + 1.12 * g}}
-  \line{\msStemX \calc{ny + 0.168 * g}  \msStemX \msBeamY}
+  \set msStemX {\calc{msX + msHeadW - msStemHalf}}
+  \line{\msStemX \ny  \msStemX \msBeamY}
   \if {\= {\msBeamPrev} {1}}
     \linewidth{\calc{0.5 * g}}
     // Run the beam half a stem-width past each stem centre so it ends flush with the outer edge of the stem
     // rather than leaving the stem's corner poking out; interior segments simply overlap at the shared stems.
-    \line{\calc{msBeamPrevX - 0.06 * g} \msBeamY  \calc{msStemX + 0.06 * g} \msBeamY}
+    \line{\calc{msBeamPrevX - msStemHalf} \msBeamY  \calc{msStemX + msStemHalf} \msBeamY}
   \fi
   \global\set msBeamPrev {1}
   \global\set msBeamPrevX {\msStemX}}
@@ -238,18 +241,18 @@
     \set nb {\calc{floor((0 - (\step)) / 2)}}
     \for\k{\range{1}{\nb}}{
       \set ly {\calc{msBottom - \k * g}}
-      \line{\calc{msX - 0.4 * g} \ly  \calc{msX + 1.58 * g} \ly}
+      \line{\calc{msX - 0.4 * g} \ly  \calc{msX + msHeadW + 0.4 * g} \ly}
     }
   \fi
   \if {\>= {\step} {10}}
     \set na {\calc{floor(((\step) - 8) / 2)}}
     \for\k{\range{1}{\na}}{
       \set ly {\calc{msTop + \k * g}}
-      \line{\calc{msX - 0.4 * g} \ly  \calc{msX + 1.58 * g} \ly}
+      \line{\calc{msX - 0.4 * g} \ly  \calc{msX + msHeadW + 0.4 * g} \ly}
     }
   \fi}
 
-// A rest sized to its duration, stamped from Bravura. A whole rest hangs under the second line from the
+// A rest sized to its duration, stamped from the music font. A whole rest hangs under the second line from the
 // top, a half rest sits on the middle line, and quarter and eighth rests centre on the middle line.
 \def musicRest {
   \fill{\musiccolor} \nostroke
@@ -281,7 +284,7 @@
 // ---- Key signature -------------------------------------------------------------
 // The sharps or flats of the key, written after the clef in their conventional order and on their conventional
 // staff positions (which differ by clef — see the musicSharpSteps/musicFlatSteps rows). A positive musickey
-// draws that many sharps, a negative one that many flats. Each accidental is a Bravura glyph seated with its
+// draws that many sharps, a negative one that many flats. Each accidental is a music-font glyph seated with its
 // baseline on the pitch's line, advancing 0.9 staff spaces from the previous one.
 \def musicKeySig {
   \set ksN {\calc{musickey}}
@@ -314,7 +317,7 @@
   \fi}
 
 // ---- Time signature ------------------------------------------------------------
-// The numerator over the denominator, after the clef and key signature. Each is a row of Bravura time-signature
+// The numerator over the denominator, after the clef and key signature. Each is a row of the font's time-signature
 // figures (timeSig0..9), centred on a common x: the numerator between the middle and top lines, the denominator
 // between the middle and bottom. A figure is about two staff spaces tall and centred on its baseline, so
 // placing the row's baseline a staff space above and below the middle line seats the pair across the staff.
@@ -373,7 +376,7 @@
   \fi}
 
 // ---- The clef ------------------------------------------------------------------
-// A G (treble) or F (bass) clef, stamped from Bravura. Each clef's origin sits on the line it names — the G
+// A G (treble) or F (bass) clef, stamped from the music font. Each clef's origin sits on the line it names — the G
 // clef on the second line from the bottom, the F clef on the second from the top — so a baseline anchor on
 // that line seats the glyph correctly. A small left margin keeps it clear of the staff's left edge.
 \def musicClef {
