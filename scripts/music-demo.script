@@ -51,3 +51,13 @@ note reaches.
 
 \bigskip
 \centerline{\score{c, e, g, c g c' e' g'}}
+
+\section{The bass clef}
+
+Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where middle
+C sits one ledger line \emph{above} the staff. Here a C major scale from the C below the
+staff up to middle C.
+
+\set musicclef {bass}
+\bigskip
+\centerline{\score{c, d, e, f, g, a, b, c}}
