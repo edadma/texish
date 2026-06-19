@@ -1,5 +1,7 @@
-// music — staff notation drawn with Bravura, the reference font for SMuFL (Standard Music Font Layout),
-// over the \picture vector layer. Import it with:
+// music — staff notation set in a SMuFL (Standard Music Font Layout) music font over the \picture vector
+// layer. SMuFL fixes the codepoint of every notation glyph and the convention that one staff space is a
+// quarter of the em, so the package works with any SMuFL face; \set musicfont {…} chooses it (bravura is the
+// reference font and the default; petaluma is a handwritten-style alternative). Import it with:
 //
 //     \use{music}
 //
@@ -18,10 +20,10 @@
 // So `g,2` is the G below middle C held for a half note, `+c'8` the C-sharp an octave up as an eighth, and
 // `[ c d e f ]` four beamed notes. A time signature is drawn from \musictimenum / \musictimeden (see below).
 //
-// Heads, clefs, flags, rests, accidentals and time-signature figures are real engraved glyphs from Bravura,
-// stamped with \fontglyph; stems, beams, staff lines, ledger lines and barlines are ruled. SMuFL draws every
-// glyph to the convention that one staff space is a quarter of the em, so the font is set at a size of four
-// staff spaces (\set fs inside \score) and its own coordinates fall straight onto the staff.
+// Heads, clefs, flags, rests, accidentals and time-signature figures are real engraved glyphs from the music
+// font, stamped with \fontglyph; stems, beams, staff lines, ledger lines and barlines are ruled. Since one
+// staff space is a quarter of the em, the font is set at a size of four staff spaces (\set fs inside \score)
+// and its own coordinates fall straight onto the staff.
 
 // ---- Configuration (override with \set after \use, before \score) ---------------
 // Sizes are in points (72 per inch).
@@ -30,11 +32,22 @@
 \set musicleft {44}        // x of the first note — leaves room for the clef
 \set musicpad {30}         // vertical room above and below the staff for ledger lines, stems and flags
 \set musiccolor {black}
+\set musicfont {bravura}   // the SMuFL music font to set the glyphs in — any loaded SMuFL face (bravura, petaluma, …)
 \set musicclef {treble}    // treble or bass; chooses the clef and how pitches sit on the staff
 \set musictimenum {}       // time-signature numerator, drawn after the clef (e.g. {3}); empty for no signature
 \set musictimeden {}       // time-signature denominator (e.g. {4})
+\set musickey {0}          // key signature: a signed count — positive = that many sharps, negative = flats (0 none)
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
 \set musicLetters {\map{c 0 d 1 e 2 f 3 g 4 a 5 b 6}}
+
+// Key-signature accidental positions, as diatonic steps above the bottom staff line, in the order the signs are
+// written: sharps F C G D A E B, flats B E A D G C F. The treble and bass staves place them differently, so each
+// has its own row. (Bottom line is step 0; a line or space is one step.) A key signature takes the first |musickey|
+// of the matching row.
+\set musicSharpStepsTreble {\seq{8 5 9 6 3 7 4}}
+\set musicFlatStepsTreble  {\seq{4 7 3 6 2 5 1}}
+\set musicSharpStepsBass   {\seq{6 3 7 4 1 5 2}}
+\set musicFlatStepsBass    {\seq{2 5 1 4 0 3 -1}}
 
 // ---- SMuFL codepoints ----------------------------------------------------------
 // The Private-Use codepoints of the glyphs this package stamps. Names follow the SMuFL glyph registry.
@@ -57,7 +70,7 @@
 // ---- The score -----------------------------------------------------------------
 // \score sizes a picture to hold the notes, draws the five staff lines and the clef, then walks the note
 // list left to right. The bottom staff line sits at y = musicpad; a pitch's vertical position is half the
-// staff space per diatonic step above it. The font size fs is four staff spaces, so a Bravura glyph's own
+// staff space per diatonic step above it. The font size fs is four staff spaces, so a SMuFL glyph's own
 // units (where the staff space is a quarter of the em) come out one staff space = musicgap points.
 \def score notes {{
   \set msList {\seq{\notes}}
@@ -65,15 +78,30 @@
   \set g {\musicgap}
   \set fs {\calc{4 * g}}
 
-  // A time signature, if any, takes a column of its own after the clef; shift the music right to clear it.
-  \set msShift {0}
-  \if {\size{\cat{\musictimenum}{}}} \set msShift {\calc{2.6 * g}} \fi
-
-  \set msW {\calc{musicleft + msShift + msN * musicnote + 12}}
   \set msBottom {\musicpad}
   \set msTop {\calc{msBottom + 4 * g}}
   \set msMiddle {\calc{msBottom + 2 * g}}
   \set msH {\calc{msBottom + 4 * g + musicpad}}
+
+  // The leading area runs clef → key signature → time signature → notes, each taking the room it needs so the
+  // next clears it. The key signature is |musickey| accidentals at 0.9 staff-space steps; the time signature a
+  // column wide enough for its longest row of figures. The first note sits past all of it (but no closer than
+  // musicleft, which still controls the spacing when there is neither a key nor a time signature).
+  \set msKeyX {\calc{4.8 * g}}
+  \set msKeyN {\calc{musickey}}
+  \if {\< {\msKeyN} {0}} \set msKeyN {\calc{0 - msKeyN}} \fi
+  \set msKeyW {\calc{msKeyN * 0.9 * g}}
+  \set msTimeX {\calc{msKeyX + msKeyW + 0.5 * g}}
+  \set msTimeW {0}
+  \if {\size{\cat{\musictimenum}{}}}
+    \set msTimeLen {\size{\cat{\musictimenum}{}}}
+    \if {\< {\msTimeLen} {\size{\cat{\musictimeden}{}}}} \set msTimeLen {\size{\cat{\musictimeden}{}}} \fi
+    \set msTimeW {\calc{msTimeLen * 1.4 * g}}
+  \fi
+  \set msFirstX {\calc{msTimeX + msTimeW + 0.6 * g}}
+  \if {\< {\msFirstX} {\musicleft}} \set msFirstX {\musicleft} \fi
+
+  \set msW {\calc{msFirstX + msN * musicnote + 12}}
 
   // The common height of a beam: a flat bar above the staff, the same for every note in a run.
   \set msBeamY {\calc{msTop + 1.6 * g}}
@@ -88,8 +116,9 @@
   \picture width:{\msW} height:{\msH} {
     \musicStaffLines
     \musicClef
+    \musicKeySig
     \musicTimeSig
-    \set msX {\calc{musicleft + msShift}}
+    \set msX {\msFirstX}
     \musicWalk{\msList}
   }
 }}
@@ -147,7 +176,7 @@
     \if {\>= {\msDur} {4}} \set msHead {\cpNoteBlack}
     \else \if {\= {\msDur} {2}} \set msHead {\cpNoteHalf}
     \else \set msHead {\cpNoteWhole} \fi \fi
-    \fontglyph anchor:baseline {\msX \ny}{bravura}{\fs}{\msHead}
+    \fontglyph anchor:baseline {\msX \ny}{\musicfont}{\fs}{\msHead}
     // The stem and any flag. In a beamed run every note shares one flat beam; otherwise the stem rises on
     // the right of low notes and falls on the left of high ones, flipping at the middle line, and an eighth
     // note gets its own flag. A whole note has no stem at all.
@@ -172,7 +201,7 @@
     \line{\msStemX \msStemFoot  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
       \fill{\musiccolor} \nostroke
-      \fontglyph anchor:baseline {\calc{msStemX - 0.06 * g} \msStemTop}{bravura}{\fs}{\cpFlag8Up}
+      \fontglyph anchor:baseline {\calc{msStemX - 0.06 * g} \msStemTop}{\musicfont}{\fs}{\cpFlag8Up}
     \fi
   \else
     \set msStemX {\calc{msX + 0.06 * g}}
@@ -181,7 +210,7 @@
     \line{\msStemX \msStemFoot  \msStemX \msStemTop}
     \if {\>= {\msDur} {8}}
       \fill{\musiccolor} \nostroke
-      \fontglyph anchor:baseline {\msStemX \msStemTop}{bravura}{\fs}{\cpFlag8Down}
+      \fontglyph anchor:baseline {\msStemX \msStemTop}{\musicfont}{\fs}{\cpFlag8Down}
     \fi
   \fi}
 
@@ -225,13 +254,13 @@
 \def musicRest {
   \fill{\musiccolor} \nostroke
   \if {\= {\msDur} {1}}
-    \fontglyph anchor:baseline {\msX \calc{msBottom + 3 * g}}{bravura}{\fs}{\cpRestWhole}
+    \fontglyph anchor:baseline {\msX \calc{msBottom + 3 * g}}{\musicfont}{\fs}{\cpRestWhole}
   \else \if {\= {\msDur} {2}}
-    \fontglyph anchor:baseline {\msX \msMiddle}{bravura}{\fs}{\cpRestHalf}
+    \fontglyph anchor:baseline {\msX \msMiddle}{\musicfont}{\fs}{\cpRestHalf}
   \else \if {\>= {\msDur} {8}}
-    \fontglyph anchor:west {\msX \msMiddle}{bravura}{\fs}{\cpRest8}
+    \fontglyph anchor:west {\msX \msMiddle}{\musicfont}{\fs}{\cpRest8}
   \else
-    \fontglyph anchor:west {\msX \msMiddle}{bravura}{\fs}{\cpRestQuarter}
+    \fontglyph anchor:west {\msX \msMiddle}{\musicfont}{\fs}{\cpRestQuarter}
   \fi \fi \fi}
 
 // ---- Accidentals ---------------------------------------------------------------
@@ -241,22 +270,57 @@
   \if {\= {\msAcc} {none}} \else
     \fill{\musiccolor} \nostroke
     \if {\= {\msAcc} {sharp}}
-      \fontglyph anchor:baseline {\calc{msX - 1.2 * g} \ny}{bravura}{\fs}{\cpAccSharp}
+      \fontglyph anchor:baseline {\calc{msX - 1.2 * g} \ny}{\musicfont}{\fs}{\cpAccSharp}
     \else \if {\= {\msAcc} {flat}}
-      \fontglyph anchor:baseline {\calc{msX - 1.1 * g} \ny}{bravura}{\fs}{\cpAccFlat}
+      \fontglyph anchor:baseline {\calc{msX - 1.1 * g} \ny}{\musicfont}{\fs}{\cpAccFlat}
     \else
-      \fontglyph anchor:baseline {\calc{msX - 0.9 * g} \ny}{bravura}{\fs}{\cpAccNatural}
+      \fontglyph anchor:baseline {\calc{msX - 0.9 * g} \ny}{\musicfont}{\fs}{\cpAccNatural}
     \fi \fi
   \fi}
 
+// ---- Key signature -------------------------------------------------------------
+// The sharps or flats of the key, written after the clef in their conventional order and on their conventional
+// staff positions (which differ by clef — see the musicSharpSteps/musicFlatSteps rows). A positive musickey
+// draws that many sharps, a negative one that many flats. Each accidental is a Bravura glyph seated with its
+// baseline on the pitch's line, advancing 0.9 staff spaces from the previous one.
+\def musicKeySig {
+  \set ksN {\calc{musickey}}
+  \if {\= {\ksN} {0}} \else
+    \fill{\musiccolor} \nostroke
+    \if {\> {\ksN} {0}}
+      \set ksGlyph {\cpAccSharp}
+      \set ksCount {\ksN}
+      \if {\= {\musicclef} {bass}} \set ksSteps {\musicSharpStepsBass} \else \set ksSteps {\musicSharpStepsTreble} \fi
+    \else
+      \set ksGlyph {\cpAccFlat}
+      \set ksCount {\calc{0 - ksN}}
+      \if {\= {\musicclef} {bass}} \set ksSteps {\musicFlatStepsBass} \else \set ksSteps {\musicFlatStepsTreble} \fi
+    \fi
+    \set ksX {\msKeyX}
+    \set ksI {0}
+    \musicKeyAccs{\ksSteps}
+  \fi}
+
+// Place the next key-signature accidental and recurse for the rest, advancing ksX and the count ksI across the
+// staff. The counter is a plain variable (advanced eagerly with \set) and the recursion peels the steps list,
+// so it stops at ksCount accidentals without doing arithmetic on a macro argument.
+\def musicKeyAccs steps {
+  \if {\< {\ksI} {\ksCount}}
+    \set ksStep {\head{\steps}}
+    \fontglyph anchor:baseline {\ksX \calc{msBottom + ksStep * g / 2}}{\musicfont}{\fs}{\ksGlyph}
+    \set ksX {\calc{ksX + 0.9 * g}}
+    \set ksI {\calc{ksI + 1}}
+    \musicKeyAccs{\tail{\steps}}
+  \fi}
+
 // ---- Time signature ------------------------------------------------------------
-// The numerator over the denominator, just after the clef. Each is a row of Bravura time-signature figures
-// (timeSig0..9), centred on a common x: the numerator between the middle and top lines, the denominator
+// The numerator over the denominator, after the clef and key signature. Each is a row of Bravura time-signature
+// figures (timeSig0..9), centred on a common x: the numerator between the middle and top lines, the denominator
 // between the middle and bottom. A figure is about two staff spaces tall and centred on its baseline, so
 // placing the row's baseline a staff space above and below the middle line seats the pair across the staff.
 \def musicTimeSig {
   \if {\size{\cat{\musictimenum}{}}}
-    \set tsCenterX {\calc{musicleft + 1.0 * g}}
+    \set tsCenterX {\calc{msTimeX + msTimeW / 2}}
     \fill{\musiccolor} \nostroke
     \musicTimeRow{\musictimenum}{\calc{msMiddle + g}}
     \musicTimeRow{\musictimeden}{\calc{msMiddle - g}}
@@ -267,7 +331,7 @@
 \def musicTimeRow digits y {
   \set ds {\cat{\digits}{}}
   \set n {\size{\ds}}
-  \set cell {\calc{1.9 * g}}
+  \set cell {\calc{1.4 * g}}
   \set x0 {\calc{tsCenterX - n * cell / 2}}
   \set i {0}
   \musicTimeDigits{\ds}{\y}}
@@ -276,7 +340,7 @@
   \if {\size{\s}}
     \set d {\head{\s}}
     \set cx {\calc{x0 + i * cell + cell / 2}}
-    \fontglyph anchor:center {\cx \y}{bravura}{\fs}{\calc{cpTimeSig0 + \d}}
+    \fontglyph anchor:center {\cx \y}{\musicfont}{\fs}{\calc{cpTimeSig0 + \d}}
     \set i {\calc{i + 1}}
     \musicTimeDigits{\tail{\s}}{\y}
   \fi}
@@ -315,7 +379,7 @@
 \def musicClef {
   \fill{\musiccolor} \nostroke
   \if {\= {\musicclef} {bass}}
-    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 3 * g}}{bravura}{\fs}{\cpFClef}
+    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 3 * g}}{\musicfont}{\fs}{\cpFClef}
   \else
-    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 1 * g}}{bravura}{\fs}{\cpGClef}
+    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 1 * g}}{\musicfont}{\fs}{\cpGClef}
   \fi}

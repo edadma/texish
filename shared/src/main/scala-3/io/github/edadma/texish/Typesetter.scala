@@ -379,12 +379,14 @@ abstract class Typesetter:
   // no style variants. Math mode reads its MATH table through the SFNT seam (see mathTableFor).
   loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-Regular.otf", Set(), Set())
 
-  // Bravura — the reference font for SMuFL (Standard Music Font Layout). It carries the whole vocabulary of
-  // music notation (clefs, noteheads, flags, rests, accidentals, time-signature figures, and more) at fixed
-  // codepoints in the Unicode Private Use Area, each drawn to the convention that one staff space is a quarter
-  // of the em. The music package sets it with \fontglyph at a size of four staff spaces, so the font's own
-  // coordinates map straight onto the staff. Drawn by glyph index through the same seam math mode uses.
+  // SMuFL (Standard Music Font Layout) music fonts. SMuFL fixes the codepoint of every notation glyph (clefs,
+  // noteheads, flags, rests, accidentals, time-signature figures, and more) in the Unicode Private Use Area and
+  // the convention that one staff space is a quarter of the em, so the music package can set glyphs with
+  // \fontglyph at a size of four staff spaces and have the font's own coordinates map straight onto the staff —
+  // and can swap one face for another. Bravura is the reference font; Petaluma is a handwritten-style face.
+  // Both are SIL OFL. Drawn by glyph index through the same seam math mode uses.
   loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
+  loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
 
   init(1, 1)
   selectFont("lmroman", 14, Set("regular"))

@@ -23,6 +23,7 @@ class MusicTests extends AnyFreeSpec with Matchers:
   private val NoteHalf  = 0xe0a3
   private val NoteBlack = 0xe0a4
   private val GClef     = 0xe050
+  private val AccFlat   = 0xe260
   private val AccSharp  = 0xe262
   private val TimeSig0  = 0xe080
 
@@ -65,9 +66,13 @@ class MusicTests extends AnyFreeSpec with Matchers:
   }
 
   "a pitch's height follows its diatonic step" in {
-    heads(ops("e")).head shouldBe (NoteBlack, 44.0, 30.0) // E is the bottom line, at the first-note x (musicleft)
-    heads(ops("f")).head._3 shouldBe 34.0                 // one step up is half a staff space
-    heads(ops("g")).head._3 shouldBe 38.0                 // the second line
+    heads(ops("e")).head._3 shouldBe 30.0 // E is the bottom line
+    heads(ops("f")).head._3 shouldBe 34.0 // one step up is half a staff space
+    heads(ops("g")).head._3 shouldBe 38.0 // the second line
+    // successive notes advance by musicnote (22) along a common baseline
+    val xs = heads(ops("e e e")).map(_._2)
+    (xs(1) - xs(0)) shouldBe 22.0 +- 0.001
+    (xs(2) - xs(1)) shouldBe 22.0 +- 0.001
   }
 
   "the clef is stamped before the notes" in {
@@ -123,4 +128,25 @@ class MusicTests extends AnyFreeSpec with Matchers:
     val den = figures.find(_._1 == TimeSig0 + 4).get
     num._3 should be > den._3
     num._2 shouldBe den._2 // centred on a common x
+  }
+
+  "a positive key signature writes sharps in order, before the notes" in {
+    val sharps = glyphs(opsRaw("\\set musickey {2}\\score{c d}")).filter((cp, _, _) => cp == AccSharp)
+    sharps should have size 2
+    sharps.map(_._3) shouldBe Vector(62.0, 50.0) // F# on the top line, C# in the third space (treble)
+    sharps(0)._2 should be < sharps(1)._2        // written left to right
+    sharps(1)._2 should be < heads(opsRaw("\\set musickey {2}\\score{c d}")).head._2 // ahead of the first note
+  }
+
+  "a negative key signature writes that many flats" in {
+    val flats = glyphs(opsRaw("\\set musickey {-3}\\score{c}")).filter((cp, _, _) => cp == AccFlat)
+    flats should have size 3
+    flats.map(_._3) shouldBe Vector(46.0, 58.0, 42.0) // Bb middle line, Eb top space, Ab second space (treble)
+  }
+
+  "the music font is configurable" in {
+    // every stamped glyph is set in the chosen SMuFL face, not hard-wired to Bravura
+    val faces = opsRaw("\\set musicfont {petaluma}\\score{c d}")
+      .collect { case PictureOp.Place(g: GlyphBox, _, _, _) => g.font.typeface }.distinct
+    faces shouldBe Vector("petaluma")
   }

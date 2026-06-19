@@ -88,6 +88,23 @@ after the clef. Three-four time, a waltz, with the beats grouped into bars.
 \centerline{\score{c e g | c' g e | d f a | g2 e}}
 \set musictimenum {}
 
+\section{Key signatures}
+
+A key signature follows the clef. Set \texttt{\\set musickey} to a signed count: a positive
+number draws that many sharps, a negative one that many flats, each in its conventional order
+and on its conventional line. Here two sharps (D major), then three flats (E-flat major).
+
+\bigskip
+\set musickey {2}
+\set musictimenum {3}
+\set musictimeden {4}
+\centerline{\score{d e +f g | a b +c' d' | b a g2}}
+\set musictimenum {}
+\bigskip
+\set musickey {-3}
+\centerline{\score{c d e f g a b c'}}
+\set musickey {0}
+
 \section{The bass clef}
 
 Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where middle
@@ -97,3 +114,15 @@ staff up to middle C.
 \set musicclef {bass}
 \bigskip
 \centerline{\score{c, d, e, f, g, a, b, c}}
+
+\section{Choosing the music font}
+
+The glyphs come from a SMuFL music font, and \texttt{\\set musicfont} chooses which one. The
+default is Bravura, the standard reference font. Setting it to \texttt{petaluma} switches to a
+handwritten, jazz-lead-sheet style — the same notes, a different hand. Here the C major scale
+again, in Petaluma.
+
+\set musicclef {treble}
+\set musicfont {petaluma}
+\bigskip
+\centerline{\score{c d e f g a b c'}}
