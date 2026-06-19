@@ -94,12 +94,13 @@
   }
 }}
 
-// The five staff lines, spanning the full width, at the SMuFL staff-line thickness.
+// The five staff lines, spanning the full width, at the SMuFL staff-line thickness. They begin half a staff
+// space in from the picture edge, leaving the clef room to sit inside the staff rather than off its left end.
 \def musicStaffLines {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
   \for\i{\range{0}{4}}{
     \set ly {\calc{msBottom + \i * g}}
-    \line{8 \ly  \calc{msW - 10} \ly}
+    \line{\calc{0.5 * g} \ly  \calc{msW - 10} \ly}
   }}
 
 // Walk the note list, advancing msX. A barline is drawn thin and advances less than a note. `[` and `]`
@@ -314,7 +315,7 @@
 \def musicClef {
   \fill{\musiccolor} \nostroke
   \if {\= {\musicclef} {bass}}
-    \fontglyph anchor:baseline {6 \calc{msBottom + 3 * g}}{bravura}{\fs}{\cpFClef}
+    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 3 * g}}{bravura}{\fs}{\cpFClef}
   \else
-    \fontglyph anchor:baseline {6 \calc{msBottom + 1 * g}}{bravura}{\fs}{\cpGClef}
+    \fontglyph anchor:baseline {\calc{1.4 * g} \calc{msBottom + 1 * g}}{bravura}{\fs}{\cpGClef}
   \fi}
