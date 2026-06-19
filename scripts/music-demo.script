@@ -1,0 +1,53 @@
+\use{document}
+\use{music}
+
+\title{The \texttt{music} Package}
+\author{Simple staff notation, drawn from the document language}
+\maketitle
+
+\section{Reading a score}
+
+The \texttt{music} package draws a line of staff notation on a treble clef. A score is
+a list of notes: a letter \texttt{a}–\texttt{g} for the pitch, optional \texttt{'} or
+\texttt{,} to raise or lower it an octave, and an optional duration digit — \texttt{1}
+whole, \texttt{2} half, \texttt{4} quarter (the default), \texttt{8} eighth. A \texttt{|}
+is a barline. Note heads, stems, flags and ledger lines are all drawn over the
+\texttt{\\picture} layer; there is no music-specific engine code.
+
+\section{A scale}
+
+The C major scale, an octave of quarter notes from middle C — which sits on its own
+ledger line below the staff — up to the C above.
+
+\bigskip
+\centerline{\score{c d e f g a b c'}}
+
+\section{Durations}
+
+The same C, held for a whole note, a half, a quarter, and an eighth. The longer notes
+have open heads; the stem appears at the half note, and the flag at the eighth.
+
+\bigskip
+\centerline{\score{c1 c2 c4 c8}}
+
+\section{A melody}
+
+The opening of \emph{Mary Had a Little Lamb}, with barlines and a half note to close
+each phrase.
+
+\bigskip
+\centerline{\score{e d c d | e e e2 | d d d2 | e g g2}}
+
+\bigskip
+And the start of \emph{Twinkle, Twinkle, Little Star}.
+
+\bigskip
+\centerline{\score{c c g g | a a g2 | f f e e | d d c2}}
+
+\section{Range and ledger lines}
+
+Notes far above or below the staff hang on short ledger lines, drawn only as far as the
+note reaches.
+
+\bigskip
+\centerline{\score{c, e, g, c g c' e' g'}}

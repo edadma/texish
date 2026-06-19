@@ -1,0 +1,210 @@
+// music — simple staff notation on a treble clef, drawn entirely in the document
+// language over the \picture vector layer. Import it with:
+//
+//     \use{music}
+//
+// A line of music is drawn by \score, whose body is a space-separated list of notes:
+//
+//     \score{c d e f g a b c'}
+//     \score{e4 d4 c4 d4 | e4 e4 e2}
+//
+// A note is a letter a–g, optional octave marks, then an optional duration digit:
+//   - letter   the pitch class; lowercase c is middle C (one ledger line below the staff)
+//   - ' or ,   raise / lower by an octave, repeatable (c' is the C above, c, the C below)
+//   - 1 2 4 8  the duration — whole, half, quarter (the default), or eighth note
+// `r` is a rest and `|` a barline. So `g,2` is the G below middle C held for a half
+// note, `c'8` the C an octave up as an eighth. Note heads, stems (their direction set
+// by the staff rule), eighth-note flags and ledger lines are all drawn from the picture
+// primitives — there is no music-specific engine code.
+
+// ---- Configuration (override with \set after \use, before \score) ---------------
+// Sizes are in points (72 per inch).
+\set musicgap {8}          // space between adjacent staff lines
+\set musicnote {22}        // horizontal advance from one note to the next
+\set musicleft {40}        // x of the first note, after the clef
+\set musicheadrx {5}       // note-head radii (it is an ellipse, tilted like an engraved head)
+\set musicheadry {3.4}
+\set musicstem {26}        // stem length
+\set musicpad {30}         // vertical room above and below the staff for ledger lines and stems
+\set musiccolor {black}
+
+// c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
+\set musicLetters {\map{c 0 d 1 e 2 f 3 g 4 a 5 b 6}}
+
+// ---- The score -----------------------------------------------------------------
+// \score sizes a picture to hold the notes, draws the five staff lines and the clef,
+// then walks the note list left to right. The bottom staff line sits at y = musicpad;
+// a pitch's vertical position is half the line gap per diatonic step above it.
+\def score notes {{
+  \set msList {\seq{\notes}}
+  \set msN {\size{\msList}}
+  \set msW {\calc{musicleft + msN * musicnote + 12}}
+  \set msBottom {\musicpad}
+  \set msTop {\calc{msBottom + 4 * musicgap}}
+  \set msH {\calc{msBottom + 4 * musicgap + musicpad}}
+
+  \picture width:{\msW} height:{\msH} {
+    \musicStaffLines
+    \musicClef
+    \set msX {\musicleft}
+    \musicWalk{\msList}
+  }
+}}
+
+// The five staff lines, spanning the full width.
+\def musicStaffLines {
+  \nofill \stroke{\musiccolor} \linewidth{0.8pt}
+  \for\i{\range{0}{4}}{
+    \set ly {\calc{msBottom + \i * musicgap}}
+    \line{8 \ly  \calc{msW - 10} \ly}
+  }}
+
+// Walk the note list, advancing msX. A barline is drawn thin and advances less than a note.
+\def musicWalk items {
+  \if {\size{\items}}
+    \set tok {\head{\items}}
+    \if {\= {\tok} {|}}
+      \musicBarline
+      \set msX {\calc{msX + musicnote * 0.6}}
+    \else
+      \musicNote{\tok}
+      \set msX {\calc{msX + musicnote}}
+    \fi
+    \musicWalk{\tail{\items}}
+  \fi}
+
+// A barline from the bottom to the top staff line.
+\def musicBarline {
+  \nofill \stroke{\musiccolor} \linewidth{0.9pt}
+  \line{\msX \msBottom  \msX \msTop}}
+
+// ---- One note ------------------------------------------------------------------
+// Parse the token into pitch class, octave offset, and duration; place the head; then
+// the stem and flag (for half notes and shorter), and any ledger lines.
+\def musicNote tok {
+  \musicParse{\tok}
+  \if {\= {\msLetter} {r}}
+    \musicRest
+  \else
+    \set li {\mapget musicLetters {\msLetter}}
+    \set step {\calc{msOct * 7 + li - 2}}
+    \set ny {\calc{msBottom + step * musicgap / 2}}
+    \musicLedgers{\step}
+    // The head: filled for a quarter note or shorter, open for a half or whole. Tilted
+    // a little, as an engraved head is, by rotating the coordinate system around it.
+    \group{
+      \translate{\msX \ny}
+      \rotate{-20}
+      \if {\>= {\msDur} {4}} \fill{\musiccolor} \nostroke
+      \else \nofill \stroke{\musiccolor} \linewidth{1.1pt} \fi
+      \ellipse{0 0 \musicheadrx \musicheadry}
+    }
+    // The stem (everything but a whole note) rises on the right of low notes and falls on
+    // the left of high ones, flipping at the middle line. An eighth note gets a flag.
+    \if {\>= {\msDur} {2}}
+      \nofill \stroke{\musiccolor} \linewidth{1.1pt}
+      \if {\< {\step} {4}}
+        \set sx {\calc{msX + musicheadrx - 0.4}}
+        \set stemEnd {\calc{ny + musicstem}}
+        \line{\sx \ny  \sx \stemEnd}
+        \if {\>= {\msDur} {8}} \musicFlagUp \fi
+      \else
+        \set sx {\calc{msX - musicheadrx + 0.4}}
+        \set stemEnd {\calc{ny - musicstem}}
+        \line{\sx \ny  \sx \stemEnd}
+        \if {\>= {\msDur} {8}} \musicFlagDown \fi
+      \fi
+    \fi
+  \fi}
+
+// An up-stem flag: a filled hook off the top of the stem (sx, stemEnd).
+\def musicFlagUp {
+  \fill{\musiccolor} \nostroke
+  \path{
+    \moveto{\sx \stemEnd}
+    \curveto{\calc{sx + 7} \calc{stemEnd - 3}  \calc{sx + 8} \calc{stemEnd - 11}  \calc{sx + 3} \calc{stemEnd - 16}}
+    \curveto{\calc{sx + 8} \calc{stemEnd - 10}  \calc{sx + 7} \calc{stemEnd - 4}  \calc{sx} \calc{stemEnd - 4}}
+    \close
+  }}
+
+// A down-stem flag: the mirror, off the bottom of the stem.
+\def musicFlagDown {
+  \fill{\musiccolor} \nostroke
+  \path{
+    \moveto{\sx \stemEnd}
+    \curveto{\calc{sx + 7} \calc{stemEnd + 3}  \calc{sx + 8} \calc{stemEnd + 11}  \calc{sx + 3} \calc{stemEnd + 16}}
+    \curveto{\calc{sx + 8} \calc{stemEnd + 10}  \calc{sx + 7} \calc{stemEnd + 4}  \calc{sx} \calc{stemEnd + 4}}
+    \close
+  }}
+
+// Ledger lines for a note that sits outside the staff: short segments on the even steps
+// between the staff edge and the note (step 0 is the bottom line, step 8 the top).
+\def musicLedgers step {
+  \nofill \stroke{\musiccolor} \linewidth{0.8pt}
+  \if {\<= {\step} {-2}}
+    \set nb {\calc{floor((0 - (\step)) / 2)}}
+    \for\k{\range{1}{\nb}}{
+      \set ly {\calc{msBottom - \k * musicgap}}
+      \line{\calc{msX - musicheadrx - 3} \ly  \calc{msX + musicheadrx + 3} \ly}
+    }
+  \fi
+  \if {\>= {\step} {10}}
+    \set na {\calc{floor(((\step) - 8) / 2)}}
+    \for\k{\range{1}{\na}}{
+      \set ly {\calc{msTop + \k * musicgap}}
+      \line{\calc{msX - musicheadrx - 3} \ly  \calc{msX + musicheadrx + 3} \ly}
+    }
+  \fi}
+
+// A rest: a small filled block on the middle line. (A single mark for every duration,
+// enough to hold a beat of silence in a simple line.)
+\def musicRest {
+  \fill{\musiccolor} \nostroke
+  \set ry {\calc{msBottom + 2 * musicgap}}
+  \rect{\calc{msX - 4} \calc{ry - 1.5} 8 3}}
+
+// ---- Note parsing --------------------------------------------------------------
+// Set msLetter (pitch class), msOct (octave offset from middle C's octave), msDur
+// (1/2/4/8). The letter is the first character; the rest are octave marks and a digit.
+\def musicParse tok {
+  \set ps {\cat{\tok}{}}
+  \global\set msLetter {\head{\ps}}
+  \global\set msOct {0}
+  \global\set msDur {4}
+  \musicParseRest{\tail{\ps}}}
+
+\def musicParseRest s {
+  \if {\size{\s}}
+    \set pc {\head{\s}}
+    \if {\= {\pc} {'}} \global\set msOct {\calc{msOct + 1}}
+    \else \if {\= {\pc} {,}} \global\set msOct {\calc{msOct - 1}}
+    \else \global\set msDur {\calc{pc}} \fi \fi
+    \musicParseRest{\tail{\s}}
+  \fi}
+
+// ---- The treble clef -----------------------------------------------------------
+// A G (treble) clef, stroked in one pen-like path and curled around the second line
+// from the bottom — the G line the clef names. Authored in local units at the default
+// gap and scaled to musicgap, in a group translated to the G line.
+\def musicClef {
+  \nofill \stroke{\musiccolor} \linewidth{2.2pt} \linecap{round} \linejoin{round}
+  \group{
+    \translate{20 \calc{msBottom + musicgap}}
+    \set u {\calc{musicgap / 8}}
+    \scale{\u \u}
+    // the tall stem with a small top hook and a hooked tail below the staff
+    \path{
+      \moveto{2 30}
+      \curveto{-5 30   -6 24   0 22}
+      \curveto{6 20    3 2     0 -12}
+      \curveto{-2 -18  -8 -17  -7 -11}
+    }
+    // the spiral wrapping the G line
+    \path{
+      \moveto{2 21}
+      \curveto{-11 16  -11 1   -1 0}
+      \curveto{9 1     8 12    -2 9}
+      \curveto{-10 6   -9 -5   1 -6}
+      \curveto{10 -7   12 7    2 12}
+    }
+  }}
