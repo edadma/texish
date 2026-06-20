@@ -63,6 +63,10 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     ),
     publishMavenStyle      := true,
     Test / publishArtifact := false,
+    // Scaladoc on the Scala.js / Scala Native back ends is handed the platform's compiler-plugin flag, which the
+    // doc tool does not accept ("Setting -Xplugin is currently not supported"). The plugin is only needed to
+    // compile, not to build docs from TASTy, so drop it from the doc invocation to keep the doc build clean.
+    Compile / doc / scalacOptions ~= { _.filterNot(_.startsWith("-Xplugin")) },
     // Embed the TeX en-US hyphenation patterns as a Scala constant at build time, so they ship
     // compiled into every target — a native binary has no pattern file to read at runtime.
     // Hyphenation.enableEnglish() loads this. The string is escaped so any pattern content is safe.
