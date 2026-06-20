@@ -13,8 +13,9 @@ Liang hyphenation, legal page breaks with widow/orphan control, footnotes, and g
 a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
 layer over the engine's primitives, with macros, a standard prelude/"format", `\hbox`/`\vbox`,
 `\kern`, `\lower`/`\raise`, the `\TeX` and `\TeXish` logos, units like `pt`/`in`/`em`/`ex`, and
-more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM and
-a Cairo image-and-PDF backend on Native.
+more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM, a
+Cairo image-and-PDF backend on Native, and an SVG and an HTML-canvas backend on Scala.js for rendering
+in the browser (see [In the browser](#in-the-browser)).
 
 It also has a vector-graphics mode (see below) for figures drawn inline in the document — shapes,
 freeform paths, transforms, and placed type — built on the same rendering pipeline as the text.
@@ -103,6 +104,42 @@ cat doc.texish | texish -o doc          # read the source from standard input
 
 Build the binary with `sbt texishNative/nativeLink`; it is produced at
 `native/target/scala-3.8.4/texish`.
+
+## In the browser
+
+texish runs in the browser through its Scala.js build, so a web page can typeset math — and whole
+documents — on the client the way [KaTeX](https://katex.org/) does: no server, no pre-baked images,
+and no fonts to download separately (the Latin Modern text and math fonts and the standard packages
+are embedded in the build).
+
+Link the browser bundle with `sbt texishJS/fullLinkJS` (produced at
+`js/target/scala-3.8.4/texish-opt/main.js`), copy it to your site, and import it. The bundle exposes
+a `texish` object as a named export. The math entry point is `renderMath(source, container)`, where the
+source is a math fragment — `$…$` for inline, `$$…$$` for a centered display — which the source itself
+distinguishes:
+
+```html
+<p>The roots are <span id="quad"></span>.</p>
+<div id="euler"></div>
+
+<script type="importmap">
+{ "imports": { "fs": "./node-fs-stub.js", "path": "./node-path-stub.js" } }
+</script>
+<script type="module">
+  const { texish } = await import('./main.js');
+  // inline — flows in the sentence, aligned on the text baseline:
+  await texish.renderMath("$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$", document.getElementById('quad'));
+  // display — its own centered block:
+  await texish.renderMath("$$ e^{i\\pi} + 1 = 0 $$", document.getElementById('euler'));
+</script>
+```
+
+`renderMath` draws to a `<canvas>` using the browser's hinted text rasterizer, so on-screen text is
+as crisp as native text; `renderMathSvg` is the resolution-independent SVG counterpart for output you
+will scale or print. `autoRender` / `autoRenderCanvas` walk the page and render every matching element
+in place. The `importmap` and the two stub files (copied from `examples/web/`) let the bundle run in a
+browser, where there is no filesystem — full details, the API table, and runnable examples are in
+[Rendering in the Browser](https://texish.edadma.dev/guide/browser-rendering/) and `examples/web/`.
 
 ## Installation
 
