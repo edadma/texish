@@ -70,10 +70,16 @@ final class OtfFont(val data: Array[Byte]):
       loca <- sfnt.table("loca")
     yield TrueTypeOutlines(data, glyf.offset, loca.offset, indexToLocFormat, numGlyphs)
 
-  /** The outline of a glyph as cubic [[PathSeg]]s in em, y-up. Empty for a glyph with no outline (a space) or
-    * for a font whose outline flavour is not yet read. The SVG backend fills these as `<path>` data. */
+  private lazy val cff: Option[CffOutlines] =
+    sfnt.table("CFF ").map(r => CffOutlines(data, r.offset))
+
+  /** The outline of a glyph as cubic [[PathSeg]]s in em, y-up. Empty for a glyph with no outline (a space). The
+    * TrueType (`glyf`) and PostScript (`CFF `) flavours read through their respective interpreters; the SVG
+    * backend fills the result as `<path>` data. */
   def outline(glyph: Int): Vector[PathSeg] =
-    val units = trueType.map(_.segments(glyph)).getOrElse(Vector.empty)
+    val units =
+      if cff.isDefined then cff.get.segments(glyph)
+      else trueType.map(_.segments(glyph)).getOrElse(Vector.empty)
     if units.isEmpty then Vector.empty
     else
       val s = 1.0 / unitsPerEm
