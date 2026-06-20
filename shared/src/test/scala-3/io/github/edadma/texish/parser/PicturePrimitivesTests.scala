@@ -161,9 +161,14 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
       "\\picture width:2in height:1in { \\stroke{black} " +
         "\\path arrow:end head:triangle size:7 { \\moveto{0 40} \\curveto{0 0  36 0  72 0} } }",
     )
-    ops should contain(PictureOp.MoveTo(72, 0))                       // the head's tip sits on the path end
-    ops.collect { case PictureOp.LineTo(x, _) => x }.count(_ == 65.0) shouldBe 2 // both base corners at 72−7, horizontal
-    ops.last shouldBe PictureOp.Paint(Some(Color("black")), None)     // the head is drawn last, over the path end
+    // the head tip lies on the horizontal tangent line through the endpoint (y = 0), pushed a little past x = 72
+    ops.exists { case PictureOp.MoveTo(x, 0.0) => x >= 72.0; case _ => false } shouldBe true
+    // both base corners share one x ⇒ the head points horizontally (the true tangent); along the diagonal chord
+    // (72,0)−(0,40) they would not
+    val baseXs = ops.collect { case PictureOp.LineTo(x, _) => x }
+    baseXs should have size 2
+    baseXs(0) shouldBe baseXs(1)
+    ops.last shouldBe PictureOp.Paint(Some(Color("black")), None) // the head is drawn last, over the path end
   }
 
   "\\path arrow:both caps both ends of the path" in {
@@ -172,8 +177,8 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
         "\\path arrow:both head:triangle size:6 { \\moveto{0 0} \\lineto{50 0} } }",
     )
     ops.count { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe 2
-    ops should contain(PictureOp.MoveTo(50, 0)) // end head tip
-    ops should contain(PictureOp.MoveTo(0, 0))  // start head tip
+    ops.exists { case PictureOp.MoveTo(x, 0.0) => x >= 50.0; case _ => false } shouldBe true // head off the right end
+    ops.exists { case PictureOp.MoveTo(x, 0.0) => x <= 0.0; case _  => false } shouldBe true // head off the left end
   }
 
   "\\path with no arrow option draws no head" in {

@@ -227,10 +227,16 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
           handler.error(s"unknown \\path arrow '$arrows' (end, start, both)", p)
         val style = arrowStyleOpt(handler, opts, p)
         val len   = opts.get("size").flatMap(points).getOrElse(7.0)
+        // A pointed head (triangle, stealth) tapers to nothing at its tip, so the stroke running to the exact
+        // endpoint would poke past it. Push the tip a couple of line widths beyond the endpoint so the head covers
+        // the cap. A bar or dot already spans the full width at the endpoint, so it needs no extension.
+        val ext = style match
+          case ArrowHead.Triangle | ArrowHead.Stealth => 2.0 * pm.lineWidth
+          case _                                       => 0.0
         if arrows == "end" || arrows == "both" then
-          pm.pathEndAnchor.foreach((end, dir) => emitArrowhead(pm, end._1 - dir._1, end._2 - dir._2, end._1, end._2, style, len))
+          pm.pathEndAnchor.foreach((end, dir) => emitArrowhead(pm, end._1 - dir._1, end._2 - dir._2, end._1, end._2, style, len, ext))
         if arrows == "start" || arrows == "both" then
-          pm.pathStartAnchor.foreach((st, dir) => emitArrowhead(pm, st._1 + dir._1, st._2 + dir._2, st._1, st._2, style, len))
+          pm.pathStartAnchor.foreach((st, dir) => emitArrowhead(pm, st._1 + dir._1, st._2 + dir._2, st._1, st._2, style, len, ext))
     },
   )
   picturePrimitive(proc, handler, "moveto", (pm, p) => { val c = readNumbers(proc, p); pm.moveTo(c(0), c(1)) })
@@ -371,6 +377,10 @@ private[parser] def arrowStyleOpt(handler: TypesetterHandler, opts: Map[String, 
 // Draw an arrowhead of length `len` at tip `(tx,ty)` pointing away from `(ax,ay)`, in the picture's current pen
 // colour. Lowers to the existing path + paint ops, so no backend support beyond the shapes already render. Returns
 // how far back along the shaft the line should stop at this end so it meets the head cleanly (0 when degenerate).
+//
+// `tipExtend` pushes the tip that many units further along the direction. A straight `\arrow` passes 0 and shortens
+// its shaft instead; a `\path` head, which cannot trim its (possibly curved) shaft, passes a small extension so the
+// filled head covers the stroke's end cap rather than letting it poke past the thin tip.
 private[parser] def emitArrowhead(
     pm: PictureMode,
     ax: Double,
@@ -379,6 +389,7 @@ private[parser] def emitArrowhead(
     ty: Double,
     style: ArrowHead,
     len: Double,
+    tipExtend: Double = 0.0,
 ): Double =
   val d = math.hypot(tx - ax, ty - ay)
   if d == 0.0 then return 0.0
@@ -386,23 +397,25 @@ private[parser] def emitArrowhead(
   val px = -uy; val py = ux                       // unit perpendicular (quarter-turn counter-clockwise)
   val w  = 0.36 * len                             // half the base width — about a 20° half-angle
   val ink = pm.strokeColor.orElse(pm.fillColor).getOrElse(Color("black"))
+  val tipx = tx + tipExtend * ux                  // the drawn tip, possibly pushed past the geometric endpoint
+  val tipy = ty + tipExtend * uy
 
   // A point `back` units behind the tip along the shaft and `side` units off to the perpendicular.
   def at(back: Double, side: Double): (Double, Double) =
-    (tx - back * ux + side * px, ty - back * uy + side * py)
+    (tipx - back * ux + side * px, tipy - back * uy + side * py)
 
   style match
     case ArrowHead.Triangle =>
       val (blx, bly) = at(len, w)
       val (brx, bry) = at(len, -w)
-      pm.newPath(); pm.moveTo(tx, ty); pm.lineTo(blx, bly); pm.lineTo(brx, bry); pm.close()
+      pm.newPath(); pm.moveTo(tipx, tipy); pm.lineTo(blx, bly); pm.lineTo(brx, bry); pm.close()
       pm.paintWith(Some(ink), None)
       len
     case ArrowHead.Stealth =>
       val (blx, bly) = at(len, w)
       val (ntx, nty) = at(0.55 * len, 0.0) // a concave notch pulled in toward the tip
       val (brx, bry) = at(len, -w)
-      pm.newPath(); pm.moveTo(tx, ty); pm.lineTo(blx, bly); pm.lineTo(ntx, nty); pm.lineTo(brx, bry); pm.close()
+      pm.newPath(); pm.moveTo(tipx, tipy); pm.lineTo(blx, bly); pm.lineTo(ntx, nty); pm.lineTo(brx, bry); pm.close()
       pm.paintWith(Some(ink), None)
       0.55 * len // the shaft meets the notch, not the wide base
     case ArrowHead.Bar =>
@@ -413,7 +426,7 @@ private[parser] def emitArrowhead(
       0.0
     case ArrowHead.Dot =>
       val r = len / 2
-      pm.newPath(); pm.arc(tx, ty, r, 0, 2 * math.Pi, false); pm.close()
+      pm.newPath(); pm.arc(tipx, tipy, r, 0, 2 * math.Pi, false); pm.close()
       pm.paintWith(Some(ink), None)
       r // the shaft meets the near edge of the dot centred on the tip
 

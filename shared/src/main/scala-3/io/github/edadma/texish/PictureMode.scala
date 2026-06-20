@@ -108,7 +108,12 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   def fillColor: Option[Color]   = fillColour.map(withOpacity(_, fillOpacity))
   def strokeColor: Option[Color] = strokeColour.map(withOpacity(_, strokeOpacity))
 
-  def setLineWidth(w: Double): Unit               = emit(PictureOp.SetLineWidth(w))
+  /** The most recently set stroke width, so a `\path` arrowhead can push its tip far enough past the path end to
+    * cover the stroke's end cap (the stroke runs to the exact endpoint, where a pointed head is infinitely thin). */
+  def lineWidth: Double = lineWidthValue
+  private var lineWidthValue: Double = 1.0
+
+  def setLineWidth(w: Double): Unit               = { lineWidthValue = w; emit(PictureOp.SetLineWidth(w)) }
   def setDash(pattern: Vector[Double], offset: Double): Unit = emit(PictureOp.SetDash(pattern, offset))
   def setLineCap(cap: LineCap): Unit              = emit(PictureOp.SetLineCap(cap))
   def setLineJoin(join: LineJoin): Unit           = emit(PictureOp.SetLineJoin(join))
