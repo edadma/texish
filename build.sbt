@@ -151,6 +151,10 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
         "fonts/LatinModernMono/lmmonolt10-bold.otf",
         "fonts/LatinModernMono/lmmono10-italic.otf",
         "fonts/LatinModernMono/lmmonolt10-boldoblique.otf",
+        "fonts/LatinModernSans/lmsans10-regular.otf",
+        "fonts/LatinModernSans/lmsans10-bold.otf",
+        "fonts/LatinModernSans/lmsans10-oblique.otf",
+        "fonts/LatinModernSans/lmsans10-boldoblique.otf",
         "fonts/LatinModernMath/LatinModernMath-SMaFL.otf",
       )
       val enc = java.util.Base64.getEncoder

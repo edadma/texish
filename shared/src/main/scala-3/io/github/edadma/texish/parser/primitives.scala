@@ -336,7 +336,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         handler.flushPendingSpace()
         t.hbox(null)
         t.enter()
-        val font = t.typeface("mono")
+        val font = t.mono()
         t.set("spaceskip", Glue(font.space, 1))
         t.set("xspaceskip", Glue(font.space * 1.5, 1))
         t.currentColor = Color("blue")
@@ -691,25 +691,33 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   declarePrimitive("scshape", _.smallcaps())
   declarePrimitive("upshape", _.removeStyle("italic", "slanted", "smallcaps"))
   declarePrimitive("mdseries", _.nobold())
-  declarePrimitive("normalfont", _.removeStyle("italic", "slanted", "bold", "smallcaps"))
+  declarePrimitive("normalfont", t => { t.removeStyle("italic", "slanted", "bold", "smallcaps"); t.serif() })
 
-  // texttt - 1 body arg: set its content in the monospaced face (Latin Modern Mono) at the current size, for
-  // inline code, file names, URLs and the like. Latin Modern Mono is cut to sit alongside the roman body, so a
-  // plain switch at the same size matches the surrounding text. The switch is scoped, so the surrounding text
-  // resumes in the body font afterwards; the interword space is widened to the mono font's fixed space.
-  proc.registerPrimitive(
-    "texttt",
+  // Family-role declarations (LaTeX \rmfamily / \sffamily / \ttfamily). These flip the family-role axis for the
+  // rest of the group, selecting the roman, sans-serif or typewriter member of the current super-family while
+  // keeping the weight and slope — so \bfseries\ttfamily is bold typewriter when that cut exists.
+  declarePrimitive("rmfamily", _.serif())
+  declarePrimitive("sffamily", _.sans())
+  declarePrimitive("ttfamily", _.mono())
+
+  // \texttt / \textsf / \textrm - 1 body arg: set the content in the typewriter, sans-serif or roman member of the
+  // current super-family, at the current size and keeping the weight and slope. The switch is scoped, so the text
+  // resumes in the previous font afterwards; the interword space is reset to the chosen cut's own space (the mono
+  // face is fixed-width, the others proportional). \texttt is the common case — inline code, file names, URLs.
+  def roleText(switch: Typesetter => Font): Primitive =
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val body = proc.readArgument(pos)
         t.enter()
-        val font = t.typeface("mono")
+        val font = switch(t)
         t.set("spaceskip", Glue(font.space, 1))
         t.set("xspaceskip", Glue(font.space * 1.5, 1))
         proc.processTokenList(body)
         t.exit()
-    },
-  )
+    }
+  proc.registerPrimitive("texttt", roleText(_.mono()))
+  proc.registerPrimitive("textsf", roleText(_.sans()))
+  proc.registerPrimitive("textrm", roleText(_.serif()))
 
   // \glyphwidth{typeface}{size}{codepoint} - the width of one glyph's inked image, in points, at the given size:
   // the distance from the glyph's origin to the right edge of its ink (x-bearing + ink width). Returns a number

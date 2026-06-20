@@ -78,19 +78,18 @@
 \def Huge {\fontsize{25}}
 
 // ---- Inline markup -------------------------------------------------------------
-// \emph and \textit slant the body into italic; \textbf sets it bold. \textsl uses the
-// slanted (oblique) cut, \textsc small capitals, \texttt the monospaced face (an engine
-// primitive). \textrm / \textsf / \textnormal switch family to roman / sans / the
-// default. \textsuperscript and \textsubscript raise or drop a smaller box. \dots / \ldots
-// set an ellipsis. (\texttt, \underline, \smallcaps, \slanted are engine primitives.)
+// \emph and \textit slant the body into italic; \textbf sets it bold; \textsl uses the
+// slanted cut and \textsc small capitals. The family-role switches \textrm / \textsf /
+// \texttt (roman / sans-serif / typewriter) are engine primitives — they keep the current
+// weight and slope — and \textnormal resets to the plain face. \textsuperscript and
+// \textsubscript raise or drop a smaller box; \dots / \ldots set an ellipsis.
+// (\texttt, \textsf, \textrm, \underline, \smallcaps, \slanted are engine primitives.)
 \def emph t {\italic{\t}}
 \def textit t {\italic{\t}}
 \def textbf t {\bold{\t}}
 \def textsl t {\slanted{\t}}
 \def textsc t {\smallcaps{\t}}
-\def textrm t {{\typeface{lmroman}\t}}
-\def textsf t {{\typeface{noto}\t}}
-\def textnormal t {{\normalfont\typeface{lmroman}\t}}
+\def textnormal t {{\normalfont\t}}
 \def textsuperscript t {\textsup{\t}}
 \def textsubscript t {\textsub{\t}}
 \def dots {…}

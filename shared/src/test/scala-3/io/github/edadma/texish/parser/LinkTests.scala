@@ -71,7 +71,7 @@ class LinkTests extends AnyFreeSpec with Matchers:
     link.uri shouldBe "https://example.org/path"
     val cs = chars(link)
     cs.map(_.text).mkString shouldBe "https://example.org/path"
-    cs.foreach(_.font.typeface shouldBe "mono")
+    cs.foreach(_.font.style should contain("mono"))
   }
 
   "a URL keeps a tilde and percent verbatim rather than treating them as active or comment" in {

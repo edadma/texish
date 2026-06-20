@@ -102,6 +102,43 @@ class FontDeclarationTests extends AnyFreeSpec with Matchers:
     styleOf(boxes, "Y") should not contain "slanted"
   }
 
+  "the slope axis is exclusive — italic replaces slanted" in {
+    val boxes = render("{\\slshape A \\itshape B}")
+    styleOf(boxes, "A") should (contain("slanted") and not contain "italic")
+    styleOf(boxes, "B") should (contain("italic") and not contain "slanted")
+  }
+
+  "the family-role axis is exclusive — the sans role replaces the mono role" in {
+    val boxes = render("{\\ttfamily A \\sffamily B}")
+    styleOf(boxes, "A") should (contain("mono") and not contain "sans")
+    styleOf(boxes, "B") should (contain("sans") and not contain "mono")
+  }
+
+  "a family-role switch keeps the current weight (bold sans)" in {
+    val boxes = render("{\\bfseries\\sffamily X}")
+    styleOf(boxes, "X") should contain allOf ("bold", "sans")
+  }
+
+  "\\rmfamily clears the role back to roman" in {
+    val boxes = render("{\\ttfamily A \\rmfamily B}")
+    styleOf(boxes, "A") should contain("mono")
+    styleOf(boxes, "B") should not contain "mono"
+  }
+
+  "a role+shape combination with no cut falls back to the nearest face without error" in {
+    // small-caps mono has no file; it must substitute upright mono rather than throwing
+    val boxes = render("{\\ttfamily\\scshape X}")
+    styleOf(boxes, "X") should contain("mono")
+  }
+
+  "JetBrains Mono is available as a dedicated code face, distinct from the mono role" in {
+    val boxes = render("{\\font jetbrains 10 regular X} \\texttt{Y}")
+    boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get.font.typeface shouldBe
+      "jetbrains"
+    // inline \texttt stays the lmroman mono role, not JetBrains
+    styleOf(boxes, "Y") should contain("mono")
+  }
+
   "\\fontsize changes only the size, keeping the current shape" in {
     val boxes = render("{\\bfseries\\fontsize{20} X} Y")
     val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get

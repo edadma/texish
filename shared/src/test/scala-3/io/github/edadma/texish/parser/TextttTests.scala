@@ -6,9 +6,10 @@ import org.scalatest.matchers.should.Matchers
 
 import scala.collection.mutable.ArrayBuffer
 
-/** \texttt sets its argument in the monospaced face and reverts to the body font afterwards. Because no
-  * ligatures are enabled on the mono font, the smart-quote and dash representations stay off inside it, so
-  * code-like text such as file names is set literally.
+/** \texttt sets its argument in the typewriter member of the current super-family — the mono *role* of the
+  * `lmroman` family, not a separate typeface — and reverts to the body font afterwards. Because the mono cut
+  * carries no ligatures, the smart-quote and dash representations stay off inside it, so code-like text such as
+  * file names is set literally.
   */
 class TextttTests extends AnyFreeSpec with Matchers:
 
@@ -35,15 +36,20 @@ class TextttTests extends AnyFreeSpec with Matchers:
     case v: VBox    => v.boxes.toList.flatMap(chars)
     case _          => Nil
 
-  private def typefaceOf(boxes: Seq[Box], mark: String): String =
-    boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains(mark) => c.font.typeface }.get
+  private def fontOf(boxes: Seq[Box], mark: String): Font =
+    boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains(mark) => c.font }.get
 
   private def allText(boxes: Seq[Box]): String = boxes.toList.flatMap(chars).map(_.text).mkString
 
-  "\\texttt sets its content in the mono typeface and reverts after" in {
+  "\\texttt sets its content in the mono role and reverts after" in {
     val boxes = render("\\texttt{X} Y")
-    typefaceOf(boxes, "X") shouldBe "mono"
-    typefaceOf(boxes, "Y") shouldBe "lmroman"
+    fontOf(boxes, "X").style should contain("mono")
+    fontOf(boxes, "Y").style should not contain "mono"
+  }
+
+  "\\texttt keeps the surrounding weight — bold code stays bold" in {
+    val boxes = render("\\bold{a\\texttt{X}}")
+    fontOf(boxes, "X").style should contain allOf ("mono", "bold")
   }
 
   "the dash representations stay off inside \\texttt" in {

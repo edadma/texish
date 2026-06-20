@@ -46,10 +46,13 @@ abstract class Typesetter:
   var ligatures: Boolean       = true
   var representations: Boolean = true
 
+  // A typeface's style variants each carry their own ligature set, because different cuts of one super-family run
+  // different ligature programs — the roman body forms f-ligatures and the dash/quote text representations, while
+  // the typewriter (mono) role sets code literally with none of them. So the map keys a style to both its font
+  // face and the ligatures that face enables, rather than sharing one set across the whole typeface.
   case class Typeface(
-      fonts: mutable.HashMap[Set[String], FontFace],
+      fonts: mutable.HashMap[Set[String], (FontFace, Set[String])],
       baseline: Option[Double],
-      ligatures: Set[String],
   )
 
   /** Shipout-time page decoration: produces the running header and footer boxes (either may be null) for the page
@@ -334,15 +337,34 @@ abstract class Typesetter:
   )
   overrideBaseline("gentium", 0.8)
   loadTypeface("pt", "fonts/PTSansNarrow/PTSansNarrow", "ﬁﬂ", Set(), "Regular", "Bold")
-  // The monospaced face (\texttt, \url): Latin Modern Mono, the Computer Modern typewriter's OpenType
-  // successor, so code is set in the same family as the roman body and the math. The four core styles are
-  // loaded by file (the .otf names don't follow loadTypeface's "-Style.ttf" convention); bold comes from the
-  // companion lmmonolt weight, the only one with a bold cut. No ligatures: code text is set literally.
-  loadFont("mono", "fonts/LatinModernMono/lmmono10-regular.otf", Set.empty, Set.empty)
-  loadFont("mono", "fonts/LatinModernMono/lmmonolt10-bold.otf", Set.empty, Set("bold"))
-  loadFont("mono", "fonts/LatinModernMono/lmmono10-italic.otf", Set.empty, Set("italic"))
-  loadFont("mono", "fonts/LatinModernMono/lmmonolt10-boldoblique.otf", Set.empty, Set("bold", "italic"))
 
+  // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
+  // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match
+  // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall
+  // x-height and disambiguated glyphs (0/O, 1/l/I) better suited to a block of code. No ligatures — code is set
+  // literally — across the family's full weight range. Selected by name, e.g. \font jetbrains 9 regular.
+  loadTypeface(
+    "jetbrains",
+    "fonts/JetBrainsMono/static/JetBrainsMono",
+    "",
+    Set(),
+    "Bold",
+    ("Bold", "Italic"),
+    "ExtraBold",
+    ("ExtraBold", "Italic"),
+    "ExtraLight",
+    ("ExtraLight", "Italic"),
+    "Italic",
+    "Light",
+    ("Light", "Italic"),
+    "Medium",
+    ("Medium", "Italic"),
+    "Regular",
+    "SemiBold",
+    ("SemiBold", "Italic"),
+    "Thin",
+    ("Thin", "Italic"),
+  )
   val alegreyaMissing = Set(
     `LATIN SMALL LIGATURE FFI`,
     `LATIN SMALL LIGATURE FFL`,
@@ -408,6 +430,21 @@ abstract class Typesetter:
   // around \textsc), registered under the {smallcaps, italic} style so that combination resolves too.
   loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-regular.otf", lmLigatures, Set("smallcaps"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-oblique.otf", lmLigatures, Set("smallcaps", "italic"))
+
+  // The typewriter and sans-serif members of the Latin Modern super-family, registered as the mono and sans
+  // *roles* of the same `lmroman` typeface — so \texttt and \textsf select them by setting the role axis while
+  // keeping the current weight and slope, and a document that switches its body super-family carries its code and
+  // headings to the matching cuts. Latin Modern Mono is set without ligatures (code is literal); its bold comes
+  // from the companion lmmonolt weight, the only one cut bold. Latin Modern Sans uses an oblique for its slope,
+  // mapped to the same `italic` tag the roman role uses, so the slope axis reads uniformly across roles.
+  loadFont("lmroman", "fonts/LatinModernMono/lmmono10-regular.otf", Set.empty, Set("mono"))
+  loadFont("lmroman", "fonts/LatinModernMono/lmmonolt10-bold.otf", Set.empty, Set("mono", "bold"))
+  loadFont("lmroman", "fonts/LatinModernMono/lmmono10-italic.otf", Set.empty, Set("mono", "italic"))
+  loadFont("lmroman", "fonts/LatinModernMono/lmmonolt10-boldoblique.otf", Set.empty, Set("mono", "bold", "italic"))
+  loadFont("lmroman", "fonts/LatinModernSans/lmsans10-regular.otf", lmLigatures, Set("sans"))
+  loadFont("lmroman", "fonts/LatinModernSans/lmsans10-bold.otf", lmLigatures, Set("sans", "bold"))
+  loadFont("lmroman", "fonts/LatinModernSans/lmsans10-oblique.otf", lmLigatures, Set("sans", "italic"))
+  loadFont("lmroman", "fonts/LatinModernSans/lmsans10-boldoblique.otf", lmLigatures, Set("sans", "bold", "italic"))
 
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
   // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
@@ -493,21 +530,44 @@ abstract class Typesetter:
       case Some(Value.Native(color: Color)) => currentColor = color
       case _                                =>
 
-  def italic(): Unit = addStyle("italic")
+  // A font's style is one open set of tags, but the tags fall on a few independent axes — series (the weight),
+  // slope (upright / italic / slanted), caps (small-capitals), and role (the typewriter / sans member of a
+  // super-family). Within an axis the values are mutually exclusive: a face is bold *or* light, italic *or*
+  // slanted, the mono role *or* the sans role — never two at once. The set stays open (a font may carry weights
+  // the engine has never heard of, or a future width axis) by classifying only the tags it knows and leaving the
+  // rest free-combining. selecting an axis value (below) drops any rival on the same axis first.
+  enum StyleAxis:
+    case Series, Slope, Caps, Role, Free
 
-  def noitalic(): Unit = removeStyle("italic")
+  def axisOf(tag: String): StyleAxis = tag.toLowerCase match
+    case "bold" | "light" | "medium" | "semibold" | "extrabold" | "black" | "thin" | "extralight" | "demibold" =>
+      StyleAxis.Series
+    case "italic" | "slanted" | "oblique" => StyleAxis.Slope
+    case "smallcaps"                      => StyleAxis.Caps
+    case "sans" | "mono"                  => StyleAxis.Role
+    case _                                => StyleAxis.Free
 
-  def bold(): Unit = addStyle("bold")
+  /** Select one value on a style axis, replacing whatever rival currently holds that axis (italic kicks slanted,
+    * the mono role kicks the sans role). An empty value clears the axis — its NFSS reset (upright, medium, serif).
+    * Free-axis tags have no rivals, so this just adds the tag. */
+  def setAxis(axis: StyleAxis, value: String): Font =
+    val cleared = currentFont.style.filterNot(t => axisOf(t) == axis)
+    setStyle(if value.isEmpty then cleared else cleared + value.toLowerCase)
 
-  def nobold(): Unit = removeStyle("bold")
-
-  def smallcaps(): Unit = addStyle("smallcaps")
-
+  def italic(): Font    = setAxis(StyleAxis.Slope, "italic")
+  def noitalic(): Unit  = removeStyle("italic")
+  def slanted(): Font   = setAxis(StyleAxis.Slope, "slanted")
+  def noslanted(): Unit = removeStyle("slanted")
+  def bold(): Font      = setAxis(StyleAxis.Series, "bold")
+  def nobold(): Unit    = removeStyle("bold")
+  def smallcaps(): Font   = setAxis(StyleAxis.Caps, "smallcaps")
   def nosmallcaps(): Unit = removeStyle("smallcaps")
 
-  def slanted(): Unit = addStyle("slanted")
-
-  def noslanted(): Unit = removeStyle("slanted")
+  // The family-role axis selects the typewriter (\texttt) or sans-serif (\textsf) member of the current
+  // super-family, keeping the series and slope; serif() clears the role back to the roman default.
+  def mono(): Font  = setAxis(StyleAxis.Role, "mono")
+  def sans(): Font  = setAxis(StyleAxis.Role, "sans")
+  def serif(): Font = setAxis(StyleAxis.Role, "")
 
   def setStyle(style: Set[String]): Font = selectFont(currentFont.typeface, currentFont.size, style)
 
@@ -523,11 +583,11 @@ abstract class Typesetter:
     val font = loadFont(path)
 
     typefaces get typeface match
-      case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> font), None, ligatures)
-      case Some(Typeface(fonts, _, _)) =>
+      case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> (font, ligatures)), None)
+      case Some(Typeface(fonts, _)) =>
         if fonts contains styleSet then
           sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has already been loaded")
-        else fonts(styleSet) = font
+        else fonts(styleSet) = (font, ligatures)
   end loadFont
 
   def loadTypeface(
@@ -555,8 +615,8 @@ abstract class Typesetter:
 
   def overrideBaseline(typeface: String, baseline: Double): Unit =
     typefaces get typeface match
-      case None                                => sys.error(s"typeface '$typeface' not found")
-      case Some(Typeface(fonts, _, ligatures)) => typefaces(typeface) = Typeface(fonts, Some(baseline), ligatures)
+      case None                     => sys.error(s"typeface '$typeface' not found")
+      case Some(Typeface(fonts, _)) => typefaces(typeface) = Typeface(fonts, Some(baseline))
 
   def selectFont(typeface: String, size: Double, style: String*): Font = selectFont(typeface, size, style.toSet)
 
@@ -574,15 +634,24 @@ abstract class Typesetter:
   def makeFont(typeface: String, size: Double, styleSet: Set[String]): Font =
     typefaces get typeface match
       case None => sys.error(s"font for typeface '$typeface' not found")
-      case Some(Typeface(fonts, baseline, ligatures)) =>
-        val font =
-          fonts.getOrElse(
-            styleSet map (_.toLowerCase) filterNot (_ == "regular"),
-            sys.error(
-              s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded",
-            ),
-          )
-        val derivedFont = makeFont(font, size)
+      case Some(Typeface(fonts, baseline)) =>
+        val wanted = styleSet.map(_.toLowerCase).filterNot(_ == "regular")
+        // Resolve the exact style if it was loaded; otherwise substitute the nearest available cut by dropping the
+        // least essential axes in turn — small caps first, then slope, then weight — keeping the family role (the
+        // mono/sans member) as long as possible. So a mono face with no small-caps or slanted cut falls back to
+        // upright mono rather than failing, as LaTeX's font substitution does.
+        val (face, ligatures) =
+          fonts
+            .get(wanted)
+            .orElse(LazyList(StyleAxis.Caps, StyleAxis.Slope, StyleAxis.Series)
+              .scanLeft(wanted)((k, axis) => k.filterNot(t => axisOf(t) == axis))
+              .tail
+              .flatMap(fonts.get)
+              .headOption)
+            .getOrElse(
+              sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded"),
+            )
+        val derivedFont = makeFont(face, size)
 
         Font(
           typeface,

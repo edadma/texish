@@ -55,10 +55,10 @@ class DocumentFeaturesTests extends AnyFreeSpec with Matchers:
     fontOf(render("{\\Huge X}"), "X").size shouldBe (25.0 +- 1e-9)
   }
 
-  "\\textsl sets the slanted shape, \\textsc small caps, \\textsf the sans family" in {
+  "\\textsl sets the slanted shape, \\textsc small caps, \\textsf the sans role" in {
     fontOf(render("\\textsl{X} Y"), "X").style should contain("slanted")
     fontOf(render("\\textsc{X} Y"), "X").style should contain("smallcaps")
-    fontOf(render("\\textsf{X} Y"), "X").typeface shouldBe "noto"
+    fontOf(render("\\textsf{X} Y"), "X").style should contain("sans")
   }
 
   "inline markup reverts to the body font afterwards" in {
