@@ -29,6 +29,12 @@ class MusicTests extends AnyFreeSpec with Matchers:
   private val TimeSig0  = 0xe080
   private val Flag16Up  = 0xe242
   private val AugDot    = 0xe1e7
+  private val AccentAbove   = 0xe4a0
+  private val AccentBelow   = 0xe4a1
+  private val StaccatoBelow = 0xe4a3
+  private val Fermata       = 0xe4c0
+  private val DynM          = 0xe521
+  private val DynF          = 0xe522
 
   private class Capture extends HeadlessTypesetter:
     val pictures = ArrayBuffer[PictureBox]()
@@ -77,6 +83,19 @@ class MusicTests extends AnyFreeSpec with Matchers:
   // note heads: placed glyphs whose codepoint is one of the three notehead shapes
   private def heads(o: Vector[PictureOp]): Vector[(Int, Double, Double)] =
     glyphs(o).filter((cp, _, _) => cp == NoteWhole || cp == NoteHalf || cp == NoteBlack)
+  // straight segments drawn at a given line width, as ((x0,y0),(x1,y1)); used to pick out hairpin rules (0.12*gap)
+  private def rules(o: Vector[PictureOp], w: Double): Vector[((Double, Double), (Double, Double))] =
+    val out = ArrayBuffer[((Double, Double), (Double, Double))]()
+    var cur = 0.0
+    for i <- o.indices do
+      o(i) match
+        case PictureOp.SetLineWidth(x) => cur = x
+        case PictureOp.MoveTo(x0, y0) if math.abs(cur - w) < 1e-9 && i + 1 < o.length =>
+          o(i + 1) match
+            case PictureOp.LineTo(x1, y1) => out += (((x0, y0), (x1, y1)))
+            case _                        =>
+        case _ =>
+    out.toVector
 
   "the staff is five horizontal lines" in {
     // g sits on the staff (no ledger lines), so the only horizontal segments are the five staff lines
@@ -211,4 +230,56 @@ class MusicTests extends AnyFreeSpec with Matchers:
   "a stray space in a score is harmless" in {
     // the trailing space must not introduce a phantom note (regression for the empty-token guard)
     heads(opsRaw("\\score{c d e }")) should have size 3
+  }
+
+  "an articulation is drawn on the side away from the stem" in {
+    // low C stems up, so its accent sits below the head (accentBelow); the high C' stems down, accent above
+    glyphs(ops("c>")).filter((cp, _, _) => cp == AccentBelow) should have size 1
+    glyphs(ops("c>")).filter((cp, _, _) => cp == AccentAbove) shouldBe empty
+    glyphs(ops("c'>")).filter((cp, _, _) => cp == AccentAbove) should have size 1
+    glyphs(ops("c")).filter((cp, _, _) => cp == AccentBelow || cp == AccentAbove) shouldBe empty
+  }
+
+  "several articulations stack outward from the head" in {
+    // c>! carries both an accent and a staccato, and the second sits further from the head than the first
+    val marks = glyphs(ops("c>!")).filter((cp, _, _) => cp == AccentBelow || cp == StaccatoBelow)
+    marks.map(_._1) should contain allOf (AccentBelow, StaccatoBelow)
+    val ys = marks.map(_._3)
+    ys.distinct should have size 2 // stacked, not on top of each other
+  }
+
+  "a fermata arches above the note" in {
+    val f = glyphs(ops("c2;")).filter((cp, _, _) => cp == Fermata)
+    f should have size 1
+    f.head._3 should be > 62.0 // above the top staff line
+  }
+
+  "a slur draws one curved arc over the run" in {
+    ops("c d e").exists(_.isInstanceOf[PictureOp.CurveTo]) shouldBe false
+    ops("( c d e )").count(_.isInstanceOf[PictureOp.CurveTo]) shouldBe 1
+  }
+
+  "a tie joins two notes with a curve" in {
+    ops("c c").count(_.isInstanceOf[PictureOp.CurveTo]) shouldBe 0
+    ops("c- c").count(_.isInstanceOf[PictureOp.CurveTo]) shouldBe 1
+  }
+
+  "a dynamic lays its letters below the staff, left to right" in {
+    val dyn = glyphs(ops("!mf c")).filter((cp, _, _) => cp == DynM || cp == DynF)
+    dyn.map(_._1) shouldBe Vector(DynM, DynF) // mezzo then forte, in writing order
+    dyn.foreach((_, _, y) => y should be < 30.0) // below the bottom staff line at y=30
+    dyn(0)._2 should be < dyn(1)._2 // laid out left to right
+  }
+
+  "hairpins open the way they are written" in {
+    // < opens a crescendo: the two rules meet at a point on the left and spread on the right
+    val cr = rules(ops("< c d e ="), 0.96).filter { case ((x0, _), (x1, _)) => x0 != x1 }
+    cr should have size 2
+    cr.map(_._1._2).distinct should have size 1 // left ends coincide (the point)
+    cr.map(_._2._2).distinct should have size 2 // right ends spread apart
+    // > opens a diminuendo: spread on the left, meeting at a point on the right
+    val dm = rules(ops("> c d e ="), 0.96).filter { case ((x0, _), (x1, _)) => x0 != x1 }
+    dm should have size 2
+    dm.map(_._1._2).distinct should have size 2 // left ends spread apart
+    dm.map(_._2._2).distinct should have size 1 // right ends coincide (the point)
   }

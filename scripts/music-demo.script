@@ -123,6 +123,34 @@ barline \texttt{|.}, and the start and end of a repeated section, \texttt{|:} an
 \bigskip
 \centerline{\score{|: c d e f | g a b c' :| d' c' b a || g1 |.}}
 
+\section{Articulations}
+
+A mark after a note tells the player how to attack it: \texttt{>} an accent, \texttt{!} a
+staccato, \texttt{=} a tenuto, \texttt{*} a marcato, \texttt{;} a fermata. Each sits on the
+side away from the stem, and several may stack. Here the same phrase plain, then accented,
+staccato, tenuto and marcato, closing on a fermata.
+
+\bigskip
+\centerline{\score{c d e f | c> d> e> f> | c! d! e! f! | c= d= e= f= | g2*;}}
+
+\section{Slurs and ties}
+
+A run bracketed by \texttt{(} and \texttt{)} is drawn under one slur. A trailing \texttt{-}
+ties a note to the next of the same pitch, holding it across. Here a slurred turn, then two
+tied half notes.
+
+\bigskip
+\centerline{\score{( c d e f g ) a | c'-2 c'2}}
+
+\section{Dynamics and hairpins}
+
+A token beginning \texttt{!} is a dynamic, set below the staff: \texttt{!p}, \texttt{!mf},
+\texttt{!ff}, \texttt{!sfz}. A \texttt{<} opens a crescendo hairpin and \texttt{>} a
+diminuendo, each closed by \texttt{=}. Here a phrase that starts soft, swells, and falls away.
+
+\bigskip
+\centerline{\score{!p c d < e f g a = !f b c' > b a g f = !p e2}}
+
 \section{The bass clef}
 
 Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where middle

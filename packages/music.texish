@@ -10,15 +10,22 @@
 //     \score{c d e f g a b c'}
 //     \score{e4 d4 c4 d4 | e4 e4 e2}
 //
-// A note is an optional accidental, a letter a–g, optional octave marks, then an optional duration digit:
+// A note is an optional accidental, a letter a–g, optional octave marks, a duration digit, then optional marks:
 //   - + - n    an accidental — sharp, flat, or natural — drawn just left of the head (it changes how the
 //              note reads, not where it sits, so +c and c share a line)
 //   - letter   the pitch class; lowercase c is middle C (one ledger line below the staff)
 //   - ' or ,   raise / lower by an octave, repeatable (c' is the C above, c, the C below)
 //   - 1 2 4 8  the duration — whole, half, quarter (the default), or eighth note
-// `r` is a rest and `|` a barline. `[` and `]` bracket a run of notes joined by one beam instead of flags.
-// So `g,2` is the G below middle C held for a half note, `+c'8` the C-sharp an octave up as an eighth, and
-// `[ c d e f ]` four beamed notes. A time signature is drawn from \musictimenum / \musictimeden (see below).
+//   - .        an augmentation dot, lengthening the note by half
+//   - > ! = * ;  an articulation, drawn on the side away from the stem — accent, staccato, tenuto, marcato,
+//              fermata (several may follow, and they stack outward)
+//   - -        a tie: this note is joined by a curve to the next, which should be the same pitch (so c-c)
+// `r` is a rest and `|` a barline. `[` and `]` bracket a run of notes joined by one beam instead of flags,
+// and `( )` bracket a run under one slur. Expression marks set below the staff are their own tokens: a token
+// beginning `!` is a dynamic built from the marks that follow (`!p`, `!mf`, `!ff`, `!sfz`); `<` opens a
+// crescendo hairpin and `>` a diminuendo, each closed by `=`, spanning the notes between.
+// So `g,2` is the G below middle C held for a half note, `+c'8>` a sharpened eighth with an accent, and
+// `( c d e f )` a slurred run. A time signature is drawn from \musictimenum / \musictimeden (see below).
 //
 // Heads, clefs, flags, rests, accidentals and time-signature figures are real engraved glyphs from the music
 // font, stamped with \fontglyph; stems, beams, staff lines, ledger lines and barlines are ruled. Since one
@@ -76,6 +83,26 @@
 \set cpAccSharp {57954}         // U+E262 accidentalSharp
 \set cpTimeDigitBase {57472}    // U+E080 timeSig0; a digit d is at cpTimeDigitBase + d
 
+// Articulations come in an above and a below form; the package picks the one on the side away from the stem.
+\set cpAccentAbove {58528}      // U+E4A0 articAccentAbove
+\set cpAccentBelow {58529}      // U+E4A1 articAccentBelow
+\set cpStaccatoAbove {58530}    // U+E4A2 articStaccatoAbove
+\set cpStaccatoBelow {58531}    // U+E4A3 articStaccatoBelow
+\set cpTenutoAbove {58532}      // U+E4A4 articTenutoAbove
+\set cpTenutoBelow {58533}      // U+E4A5 articTenutoBelow
+\set cpMarcatoAbove {58540}     // U+E4AC articMarcatoAbove
+\set cpMarcatoBelow {58541}     // U+E4AD articMarcatoBelow
+\set cpFermataAbove {58560}     // U+E4C0 fermataAbove
+\set cpFermataBelow {58561}     // U+E4C1 fermataBelow
+// Dynamic letters are separate glyphs strung together: mf is dynamicMezzo then dynamicForte.
+\set cpDynP {58656}             // U+E520 dynamicPiano
+\set cpDynM {58657}             // U+E521 dynamicMezzo
+\set cpDynF {58658}             // U+E522 dynamicForte
+\set cpDynR {58659}             // U+E523 dynamicRinforzando
+\set cpDynS {58660}             // U+E524 dynamicSforzando
+\set cpDynZ {58661}             // U+E525 dynamicZ
+\set cpDynN {58662}             // U+E526 dynamicNiente
+
 // ---- The score -----------------------------------------------------------------
 // \score sizes a picture to hold the notes, draws the five staff lines and the clef, then walks the note
 // list left to right. The bottom staff line sits at y = musicpad; a pitch's vertical position is half the
@@ -129,6 +156,33 @@
   // height and a per-note slope) is measured from the run's pitches, so the beam tilts to follow the melody.
   \set msBeam {0}
 
+  // Spanning expression marks carry state across the walk: a slur ( … ) records its first and last note, a
+  // hairpin its opening x and kind, and a tie its first note so the curve can be closed at the second. A hairpin
+  // or dynamic token only sets a flag; the next note records the x for it, since msX reads cleanly inside a note
+  // but not in the bracketing tokens at the walk's own recursion level.
+  \global\set msSlur {0}
+  \global\set msSlurStarted {0}
+  \global\set msSlurXst {0}
+  \global\set msSlurYst {0}
+  \global\set msSlurXen {0}
+  \global\set msSlurYen {0}
+  \global\set msTie {0}
+  \global\set msTiePending {0}
+  \global\set msTieXop {0}
+  \global\set msTieY {0}
+  \global\set msTieDrawXop {0}
+  \global\set msTieDrawY {0}
+  \global\set msTieDrawOn {0}
+  \global\set msNoteLeft {0}
+  \global\set msHair {0}
+  \global\set msHairArmed {0}
+  \global\set msHairXst {0}
+  \global\set msDynArmed {0}
+  \global\set dynX {0}
+  \global\set msNoteX {0}
+  // The lane below the staff where dynamics and hairpins are drawn, clear of the notes.
+  \set msUnder {\calc{msBottom - 2.6 * g}}
+
   // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff, G2
   // (index -10) on the bass, F3 (-4) on the alto, D3 (-6) on the tenor. A note's index is msOct*7 + its pitch
   // class; its step above the bottom line is that index minus this base, and half the staff space per step
@@ -158,10 +212,11 @@
     \line{\calc{0.5 * g} \ly  \calc{msW - 10} \ly}
   }}
 
-// Walk the note list, advancing msX. A barline advances less than a note. `[` and `]` open and close a beamed
-// run: the notes between them share one beam, tilted to follow the melody, instead of carrying flags. Several
-// barline kinds are written
-// as their own tokens: `|` plain, `||` double, `|.` final, `|:` and `:|` the start and end of a repeat.
+// Walk the note list, advancing msX. Only notes and barlines advance the cursor; the bracketing and expression
+// tokens annotate the current position. `[` and `]` open and close a beamed run (the notes between them share one
+// beam, tilted to follow the melody, instead of carrying flags); `(` and `)` open and close a slur. A token
+// beginning `!` is a dynamic; `<` and `>` open a crescendo and a diminuendo hairpin and `=` closes it. Several
+// barline kinds are written as their own tokens: `|` plain, `||` double, `|.` final, `|:` and `:|` the start and end of a repeat.
 \def musicWalk items {
   \if {\size{\items}}
     \set tok {\head{\items}}
@@ -171,6 +226,24 @@
       \musicBeamLine{\tail{\items}}
     \else \if {\= {\tok} {]}}
       \global\set msBeam {0}
+    \else \if {\= {\tok} {(}}
+      \global\set msSlur {1}
+      \global\set msSlurStarted {0}
+    \else \if {\= {\tok} {)}}
+      \musicSlurEnd
+      \global\set msSlur {0}
+    \else \if {\= {\tok} {<}}
+      \global\set msHair {1}
+      \global\set msHairArmed {1}
+    \else \if {\= {\tok} {>}}
+      \global\set msHair {2}
+      \global\set msHairArmed {1}
+    \else \if {\= {\tok} {=}}
+      \musicHairpinEnd
+      \global\set msHair {0}
+    \else \if {\= {\head{\cat{\tok}{}}} {!}}
+      \global\set msDynStr {\tail{\cat{\tok}{}}}
+      \global\set msDynArmed {1}
     \else \if {\= {\tok} {|}}
       \musicBarThin{\msX}
       \set msX {\calc{msX + musicnote * 0.6}}
@@ -189,7 +262,7 @@
     \else
       \musicNote{\tok}
       \set msX {\calc{msX + musicnote}}
-    \fi \fi \fi \fi \fi \fi \fi
+    \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi
     \musicWalk{\tail{\items}}
   \fi}
 
@@ -250,14 +323,86 @@
     \else \set msHead {\cpNoteWhole} \fi \fi
     \fontglyph anchor:baseline {\msX \ny}{\musicfont}{\fs}{\msHead}
     \musicDot
-    // The stem and any flag. In a beamed run every note shares one flat beam; otherwise the stem rises on
-    // the right of low notes and falls on the left of high ones, flipping at the middle line, and a flagged
-    // note (eighth or shorter) gets its own flag. A whole note has no stem at all.
+    // The stem and any flag. In a beamed run every note shares one beam; otherwise the stem rises on the right
+    // of low notes and falls on the left of high ones, flipping at the middle line, and a flagged note (eighth
+    // or shorter) gets its own flag. A whole note has no stem at all.
     \if {\= {\msBeam} {1}}
       \musicBeamedStem
     \else \if {\>= {\msDur} {2}}
       \musicStem
     \fi \fi
+    // Articulations sit on the side away from the stem, so they need the stem direction: up for a low note or
+    // any beamed note, down for a high one.
+    \set msStemUp {0}
+    \if {\< {\step} {4}} \set msStemUp {1} \fi
+    \if {\= {\msBeam} {1}} \set msStemUp {1} \fi
+    \musicArtic
+
+    // Expression marks are tracked by updating globals once per note, here at the note's own scope where msX and
+    // ny read cleanly. A 0/1 flag masks each update arithmetically — msSlur, msHairArmed, msDynArmed and msTie
+    // are 1 exactly when the mark applies — so the right note fixes each coordinate without a gating \if. \calc
+    // resolves only lexical (\set) names, never \global ones, so each global it needs is first copied into a local
+    // with plain interpolation; the masked result is computed in a \set, then published back to the global.
+    // Publish this note's reference points. The masked updates below recompute the live coordinate inline from
+    // msX/ny (which are always readable in \calc) rather than from a saved local: an intervening \global\set —
+    // and there are several — zeroes out a plain local when a later \calc tries to read it, the same way an \if
+    // does. Each block's own helper locals are therefore set immediately before the \calc that consumes them.
+    \global\set msNoteX {\calc{msX + msHeadW / 2}}
+    \global\set msNoteLeft {\calc{msX}}
+
+    // Stash the tie opener and pending flag of the *previous* note before this note overwrites them, so the tie
+    // it requested can still be drawn once the captures are done.
+    \global\set msTieDrawXop {\msTieXop}
+    \global\set msTieDrawY {\msTieY}
+    \global\set msTieDrawOn {\msTiePending}
+
+    // A tie: this note's right edge opens a tie if it carries the mark (msTie is 0 or 1, used as a mask).
+    \set gTie {\msTie}
+    \set gTieX0 {\msTieXop}
+    \set gTieY {\msTieY}
+    \set tieXcap {\calc{gTieX0 + gTie * (msX + msHeadW - gTieX0)}}
+    \set tieYn {\calc{gTieY + gTie * (ny - gTieY)}}
+    \global\set msTieXop {\tieXcap}
+    \global\set msTieY {\tieYn}
+    \global\set msTiePending {\msTie}
+
+    // A slur: the first note in the run fixes the start point, every note in the run pushes out the end point.
+    \set gSlur {\msSlur}
+    \set gSlurStarted {\msSlurStarted}
+    \set gSlurX0 {\msSlurXst}
+    \set gSlurY0 {\msSlurYst}
+    \set gSlurX1 {\msSlurXen}
+    \set gSlurY1 {\msSlurYen}
+    \set wantStart {\calc{gSlur * (1 - gSlurStarted)}}
+    \set slXstC {\calc{gSlurX0 + wantStart * (msX + msHeadW / 2 - gSlurX0)}}
+    \set slYstC {\calc{gSlurY0 + wantStart * (ny - gSlurY0)}}
+    \set slStartedn {\calc{gSlurStarted + wantStart}}
+    \set slXenC {\calc{gSlurX1 + gSlur * (msX + msHeadW / 2 - gSlurX1)}}
+    \set slYenC {\calc{gSlurY1 + gSlur * (ny - gSlurY1)}}
+    \global\set msSlurXst {\slXstC}
+    \global\set msSlurYst {\slYstC}
+    \global\set msSlurStarted {\slStartedn}
+    \global\set msSlurXen {\slXenC}
+    \global\set msSlurYen {\slYenC}
+
+    // A hairpin: the first armed note fixes the left end; msNoteX above already tracks the last note, the right end.
+    \set gHairArmed {\msHairArmed}
+    \set gHairX0 {\msHairXst}
+    \set hairXcap {\calc{gHairX0 + gHairArmed * (msX + msHeadW / 2 - gHairX0)}}
+    \global\set msHairXst {\hairXcap}
+    \global\set msHairArmed {0}
+
+    // A dynamic: seat the start of its letters under this note when one is pending (branchless, like the others).
+    \set gDynArmed {\msDynArmed}
+    \set gDynX {\dynX}
+    \set dynXn {\calc{gDynX + gDynArmed * (msX - gDynX)}}
+    \global\set dynX {\dynXn}
+
+    // Drawing comes last: these \if blocks would otherwise sit between a \set and a \calc above and zero it out.
+    // They read only globals, through interpolation (which an \if does not disturb) or as arguments.
+    \if {\= {\msTieDrawOn} {1}} \musicDrawTie{\msTieDrawXop}{\msTieDrawY}{\msNoteLeft} \fi
+    \if {\= {\msDynArmed} {1}} \fill{\musiccolor} \nostroke \musicDynChars{\msDynStr} \fi
+    \global\set msDynArmed {0}
   \fi}
 
 // An augmentation dot, drawn right of the head for a dotted note. A dot belongs in a space, so when the head
@@ -431,6 +576,121 @@
     \fi \fi
   \fi}
 
+// ---- Articulations -------------------------------------------------------------
+// The articulations parsed off the note (staccato, tenuto, accent, marcato), each on the side away from the
+// stem: below an up-stem note, above a down-stem one. They stack outward from the head — artK counts how many
+// are already placed so each clears the last. A fermata is different: it always arches well above the note.
+\def musicArtic {
+  \fill{\musiccolor} \nostroke
+  \global\set artK {0}
+  \if {\= {\msArtStacc} {1}} \musicArticGlyph{\cpStaccatoAbove}{\cpStaccatoBelow} \fi
+  \if {\= {\msArtTen} {1}} \musicArticGlyph{\cpTenutoAbove}{\cpTenutoBelow} \fi
+  \if {\= {\msArtAccent} {1}} \musicArticGlyph{\cpAccentAbove}{\cpAccentBelow} \fi
+  \if {\= {\msArtMarc} {1}} \musicArticGlyph{\cpMarcatoAbove}{\cpMarcatoBelow} \fi
+  \musicFermata}
+
+// Place one articulation, choosing its above or below form from the stem direction and stepping it out past any
+// already placed. artK is global so the count survives each enclosing \if; the glyph is centred over the head.
+\def musicArticGlyph above below {
+  \set artCx {\calc{msX + msHeadW / 2}}
+  \if {\= {\msStemUp} {1}}
+    \fontglyph anchor:center {\artCx \calc{ny - 1.1 * g - artK * 0.9 * g}}{\musicfont}{\fs}{\below}
+  \else
+    \fontglyph anchor:center {\artCx \calc{ny + 1.1 * g + artK * 0.9 * g}}{\musicfont}{\fs}{\above}
+  \fi
+  \global\set artK {\calc{artK + 1}}}
+
+// A fermata, arched above the note — above the top staff line, or higher still if the note reaches above it.
+\def musicFermata {
+  \if {\= {\msArtFerm} {1}}
+    \fill{\musiccolor} \nostroke
+    \global\set ferY {\calc{msTop + 1.8 * g}}
+    \if {\> {\calc{ny + 2 * g}} {\ferY}} \global\set ferY {\calc{ny + 2 * g}} \fi
+    \fontglyph anchor:center {\calc{msX + msHeadW / 2} \ferY}{\musicfont}{\fs}{\cpFermataAbove}
+  \fi}
+
+// ---- Slurs and ties ------------------------------------------------------------
+// A slur ( … ) and a tie are drawn under the notes, as a cubic arc bowing downward — clear of the up-stems that
+// most notes carry. The span endpoints are gathered in globals as the notes are walked (see musicNote): the slur
+// keeps the first and last note of the run, the tie the right edge and height of the note that opened it.
+
+// Draw the slur for the run just closed by ), one arc from the first note (msSlurXst) to the last (msSlurXen). The
+// globals are read into locals at this scope, then the arc is laid with control points pulled below the ends.
+\def musicSlurEnd {
+  \if {\= {\msSlurStarted} {1}}
+    \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
+    \set slxLo {\msSlurXst}
+    \set slxHi {\msSlurXen}
+    \set sly0g {\msSlurYst}
+    \set sly1g {\msSlurYen}
+    \set slDx {\calc{slxHi - slxLo}}
+    \set slYlo {\calc{sly0g - 1.1 * g}}
+    \set slYhi {\calc{sly1g - 1.1 * g}}
+    \set slPeak {\calc{(slYlo + slYhi) / 2 - 1.4 * g}}
+    \path{ \moveto{\slxLo \slYlo} \curveto{\calc{slxLo + slDx * 0.25} \slPeak  \calc{slxLo + slDx * 0.75} \slPeak  \slxHi \slYhi} }
+  \fi}
+
+// Draw one tie: a shallow arc bowing down from (xa, yy) at the first note's right edge to xb at the second note's
+// left edge. Both notes share a pitch, so yy is common. The arguments are interpolated into locals before \calc,
+// since the openers come from globals and \calc reads only lexical names. (Param names are letter-only — a digit
+// in a name can't be referenced with a backslash inside \calc.)
+\def musicDrawTie xa yy xb {
+  \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
+  \set txLo {\xa}
+  \set txHi {\xb}
+  \set tyy {\yy}
+  \set tDx {\calc{txHi - txLo}}
+  \set tY {\calc{tyy - 0.9 * g}}
+  \set tPeak {\calc{tyy - 1.7 * g}}
+  \path{ \moveto{\txLo \tY} \curveto{\calc{txLo + tDx * 0.3} \tPeak  \calc{txLo + tDx * 0.7} \tPeak  \txHi \tY} }}
+
+// ---- Dynamics ------------------------------------------------------------------
+// A dynamic token (!p, !mf, !sfz) sets its marks below the staff under the note it precedes (the walk arms it and
+// the note renders it from msDynStr). The leading ! is dropped on the walk side; each remaining letter maps to
+// its own SMuFL dynamic glyph, laid left to right and advancing by the glyph's own width so the marks butt up the
+// way mf or sfz do.
+\def musicDynChars s {
+  \if {\size{\s}}
+    \set dc {\head{\s}}
+    \global\set dcp {\cpDynF}
+    \if {\= {\dc} {p}} \global\set dcp {\cpDynP}
+    \else \if {\= {\dc} {m}} \global\set dcp {\cpDynM}
+    \else \if {\= {\dc} {r}} \global\set dcp {\cpDynR}
+    \else \if {\= {\dc} {s}} \global\set dcp {\cpDynS}
+    \else \if {\= {\dc} {z}} \global\set dcp {\cpDynZ}
+    \else \if {\= {\dc} {n}} \global\set dcp {\cpDynN}
+    \fi \fi \fi \fi \fi \fi
+    \fontglyph anchor:baseline {\dynX \msUnder}{\musicfont}{\fs}{\dcp}
+    \set dcurX {\dynX}
+    \set dcw {\glyphwidth{\musicfont}{\fs}{\dcp}}
+    \set dynXadv {\calc{dcurX + dcw}}
+    \global\set dynX {\dynXadv}
+    \musicDynChars{\tail{\s}}
+  \fi}
+
+// ---- Hairpins ------------------------------------------------------------------
+// A crescendo (<) or diminuendo (>) hairpin, closed by =, drawn as a pair of rules below the staff that open
+// from a point to a spread. The crescendo points left (opening rightward); the diminuendo opens at the left and
+// closes to a point on the right. msHairXst is the first spanned note's x; msNoteX the last note's x, the close.
+\def musicHairpinEnd {
+  \if {\> {\msHair} {0}}
+    \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
+    \set hpXlo {\msHairXst}
+    \set hpXhi {\msNoteX}
+    // The three heights are computed straight from the staff metrics (outer-scope locals), so they can be read
+    // inside the kind-selecting \if by plain interpolation — no \calc that reads a value set above that \if.
+    \set hpYc {\calc{msUnder + 0.6 * g}}
+    \set hpHi {\calc{msUnder + 1.1 * g}}
+    \set hpLo {\calc{msUnder + 0.1 * g}}
+    \if {\= {\msHair} {1}}
+      \line{\hpXlo \hpYc  \hpXhi \hpHi}
+      \line{\hpXlo \hpYc  \hpXhi \hpLo}
+    \else
+      \line{\hpXlo \hpHi  \hpXhi \hpYc}
+      \line{\hpXlo \hpLo  \hpXhi \hpYc}
+    \fi
+  \fi}
+
 // ---- Key signature -------------------------------------------------------------
 // The sharps or flats of the key, written after the clef in their conventional order and on their conventional
 // staff positions (which differ by clef — see the musicSharpSteps/musicFlatSteps rows). A positive musickey
@@ -505,10 +765,12 @@
 
 // ---- Note parsing --------------------------------------------------------------
 // Set msAcc (accidental: sharp/flat/nat/none), msLetter (pitch class), msOct (octave offset from middle C's
-// octave), msDur (1/2/4/8/16/32), and msDot (1 if dotted). An optional accidental (+ sharp, - flat, n natural)
-// leads the token; then the letter, then any octave marks, a duration number, and a trailing dot. An accidental
-// shifts the look, not the staff line — a sharpened C and a plain C sit on the same line — so it only chooses
-// which sign is drawn. The duration's digits accumulate, so 16 and 32 read as one number, not two marks.
+// octave), msDur (1/2/4/8/16/32), and msDot (1 if dotted), plus a flag for each articulation (msArtAccent,
+// msArtStacc, msArtTen, msArtMarc, msArtFerm) and msTie. An optional accidental (+ sharp, - flat, n natural)
+// leads the token; then the letter, then any octave marks, a duration number, a trailing dot, then any
+// articulation marks (> ! = * ;) and a tie (a trailing -). An accidental shifts the look, not the staff line — a sharpened
+// C and a plain C sit on the same line — so it only chooses which sign is drawn. The duration's digits
+// accumulate, so 16 and 32 read as one number, not two marks.
 \def musicParse tok {
   \global\set ps {\cat{\tok}{}}
   \global\set msAcc {none}
@@ -522,6 +784,12 @@
   \global\set msDur {4}
   \global\set msDot {0}
   \global\set msDurSeen {0}
+  \global\set msArtAccent {0}
+  \global\set msArtStacc {0}
+  \global\set msArtTen {0}
+  \global\set msArtMarc {0}
+  \global\set msArtFerm {0}
+  \global\set msTie {0}
   \musicParseRest{\tail{\ps}}}
 
 \def musicParseRest s {
@@ -530,10 +798,16 @@
     \if {\= {\pc} {'}} \global\set msOct {\calc{msOct + 1}}
     \else \if {\= {\pc} {,}} \global\set msOct {\calc{msOct - 1}}
     \else \if {\= {\pc} {.}} \global\set msDot {1}
+    \else \if {\= {\pc} {>}} \global\set msArtAccent {1}
+    \else \if {\= {\pc} {!}} \global\set msArtStacc {1}
+    \else \if {\= {\pc} {=}} \global\set msArtTen {1}
+    \else \if {\= {\pc} {*}} \global\set msArtMarc {1}
+    \else \if {\= {\pc} {;}} \global\set msArtFerm {1}
+    \else \if {\= {\pc} {-}} \global\set msTie {1}
     \else
       \if {\= {\msDurSeen} {0}} \global\set msDur {\calc{pc}} \global\set msDurSeen {1}
       \else \global\set msDur {\calc{msDur * 10 + pc}} \fi
-    \fi \fi \fi
+    \fi \fi \fi \fi \fi \fi \fi \fi \fi
     \musicParseRest{\tail{\s}}
   \fi}
 
