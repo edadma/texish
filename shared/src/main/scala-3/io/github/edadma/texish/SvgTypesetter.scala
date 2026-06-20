@@ -46,6 +46,21 @@ final class SvgPage(val width: Double, val height: Double):
   private[texish] val defs                   = new StringBuilder
   private[texish] var clipCounter            = 0
 
+  // The bounding box of the drawn ink, in device space, accumulated as geometry is emitted (the page
+  // background is excluded). Used to tight-crop the page to its content when cropping is enabled.
+  private[texish] var inkMinX = Double.MaxValue
+  private[texish] var inkMinY = Double.MaxValue
+  private[texish] var inkMaxX = Double.MinValue
+  private[texish] var inkMaxY = Double.MinValue
+
+  private[texish] def see(x: Double, y: Double): Unit =
+    if x < inkMinX then inkMinX = x
+    if y < inkMinY then inkMinY = y
+    if x > inkMaxX then inkMaxX = x
+    if y > inkMaxY then inkMaxY = y
+
+  private[texish] def hasInk: Boolean = inkMaxX >= inkMinX
+
   /** The assembled standalone `<svg>` document, available once the page has been ejected. */
   var svg: String = ""
 
@@ -71,6 +86,15 @@ class SvgTypesetter extends Typesetter:
   type RenderFont  = SvgRenderFont
 
   val output: String = null
+
+  /** When true, each page's `<svg>` is tight-cropped to its drawn ink (plus a small margin) instead of using
+    * the full page box — so a short fragment renders at its natural size, the way an inline math snippet
+    * should, rather than as a mostly-empty page shrunk to fit. The build-time document renderer leaves this
+    * off to emit real pages; the in-browser renderer turns it on. */
+  var cropToContent: Boolean = false
+
+  /** The margin, in points, left around the ink when [[cropToContent]] crops a page. */
+  var cropMargin: Double = 1.0
 
   private var pageWidth: Double  = 0
   private var pageHeight: Double = 0
@@ -128,15 +152,32 @@ class SvgTypesetter extends Typesetter:
       page.content.append("</g>\n")
       clipDepth = (clipDepth.head - 1) :: clipDepth.tail
 
+    // The viewport: the full page, or — when cropping — a tight box around the drawn ink plus a small margin,
+    // clamped to the page, so a short fragment renders at its natural size instead of as a shrunken page.
+    val (vx, vy, vw, vh) =
+      if cropToContent && page.hasInk then
+        val x0 = math.max(0.0, page.inkMinX - cropMargin)
+        val y0 = math.max(0.0, page.inkMinY - cropMargin)
+        val x1 = math.min(pageWidth, page.inkMaxX + cropMargin)
+        val y1 = math.min(pageHeight, page.inkMaxY + cropMargin)
+        (x0, y0, x1 - x0, y1 - y0)
+      else (0.0, 0.0, pageWidth, pageHeight)
+
     val sb = new StringBuilder
+    // Size the element in points (the engine's unit) so the browser renders it at true physical size; the
+    // viewBox stays in the same point-valued user space, so a "pt" suffix on width/height is all it takes.
     sb.append("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"")
-      .append(fmt(pageWidth))
-      .append("\" height=\"")
-      .append(fmt(pageHeight))
-      .append("\" viewBox=\"0 0 ")
-      .append(fmt(pageWidth))
+      .append(fmt(vw))
+      .append("pt\" height=\"")
+      .append(fmt(vh))
+      .append("pt\" viewBox=\"")
+      .append(fmt(vx))
       .append(' ')
-      .append(fmt(pageHeight))
+      .append(fmt(vy))
+      .append(' ')
+      .append(fmt(vw))
+      .append(' ')
+      .append(fmt(vh))
       .append("\">\n")
     if page.defs.nonEmpty then sb.append("<defs>\n").append(page.defs).append("</defs>\n")
     sb.append(page.content)
@@ -257,6 +298,7 @@ class SvgTypesetter extends Typesetter:
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
     val (ax, ay) = ctm(x1, y1)
     val (bx, by) = ctm(x2, y2)
+    page.see(ax, ay); page.see(bx, by)
     page.content
       .append("<line x1=\"").append(fmt(ax)).append("\" y1=\"").append(fmt(ay))
       .append("\" x2=\"").append(fmt(bx)).append("\" y2=\"").append(fmt(by))
@@ -284,6 +326,7 @@ class SvgTypesetter extends Typesetter:
     val sb = new StringBuilder
     for (cx, cy) <- Seq((x, y), (x + w, y), (x + w, y + h), (x, y + h)) do
       val (dx, dy) = ctm(cx, cy)
+      page.see(dx, dy)
       if sb.nonEmpty then sb.append(' ')
       sb.append(fmt(dx)).append(',').append(fmt(dy))
     sb.toString
@@ -436,10 +479,13 @@ class SvgTypesetter extends Typesetter:
   // ─── helpers ────────────────────────────────────────────────────────────────
 
   private def moveCmd(d: StringBuilder, p: (Double, Double)): Unit =
+    page.see(p._1, p._2)
     d.append("M").append(fmt(p._1)).append(' ').append(fmt(p._2)).append(' ')
   private def lineCmd(d: StringBuilder, p: (Double, Double)): Unit =
+    page.see(p._1, p._2)
     d.append("L").append(fmt(p._1)).append(' ').append(fmt(p._2)).append(' ')
   private def curveCmd(d: StringBuilder, c1: (Double, Double), c2: (Double, Double), e: (Double, Double)): Unit =
+    page.see(c1._1, c1._2); page.see(c2._1, c2._2); page.see(e._1, e._2)
     d.append("C").append(fmt(c1._1)).append(' ').append(fmt(c1._2)).append(' ')
       .append(fmt(c2._1)).append(' ').append(fmt(c2._2)).append(' ')
       .append(fmt(e._1)).append(' ').append(fmt(e._2)).append(' ')

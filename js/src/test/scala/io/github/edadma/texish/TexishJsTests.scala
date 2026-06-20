@@ -71,3 +71,12 @@ class TexishJsTests extends AnyFreeSpec with Matchers:
     for name <- Seq("document", "book", "logos", "counters", "theorem") do
       EmbeddedPackages.sources.keySet should contain(name)
   }
+
+  "a fragment is tight-cropped, not a full page" in {
+    // The in-browser renderer crops each page to its ink, so a short line is sized to the content (in points)
+    // rather than emitted as a full 612x792 page shrunk to fit.
+    val svg = quiet(Texish.renderToString("Hi"))
+    val w   = "width=\"([0-9.]+)pt\"".r.findFirstMatchIn(svg).map(_.group(1).toDouble)
+    w.isDefined shouldBe true
+    w.get should be < 200.0 // far smaller than a full page width (612pt)
+  }

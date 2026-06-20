@@ -12,6 +12,10 @@ package io.github.edadma.texish
   * file to both the build's embed list and the list below. */
 class SvgTypesetterJS extends SvgTypesetter:
 
+  // Crop each page to its ink: web output is wanted at the natural size of the content, like an inline math
+  // snippet, not as a full page shrunk to fit.
+  cropToContent = true
+
   override protected def readFontBytes(path: String): Array[Byte] = EmbeddedFonts.bytes(path)
 
   override protected def loadBundledFonts(): Unit =
