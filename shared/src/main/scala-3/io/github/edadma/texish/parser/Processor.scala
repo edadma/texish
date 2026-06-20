@@ -930,6 +930,29 @@ def stripOuterBraces(tokens: Vector[Token]): Vector[Token] =
       rest.init.toVector
     case other => other
 
+/** True when the tokens are a single balanced group wrapping everything — `{ … }` whose opening brace is closed
+  * only by the final token (so `{a}{b}`, whose first brace closes early, is not a wrapper). */
+def isSingleWrappingGroup(tokens: Vector[Token]): Boolean =
+  tokens.length >= 2 && tokens.head.isInstanceOf[Token.BeginGroup] && tokens.last.isInstanceOf[Token.EndGroup] && {
+    var depth       = 0
+    var closedEarly = false
+    for (t, i) <- tokens.zipWithIndex do
+      t match
+        case _: Token.BeginGroup => depth += 1
+        case _: Token.EndGroup   => depth -= 1; if depth == 0 && i != tokens.length - 1 then closedEarly = true
+        case _                   =>
+    depth == 0 && !closedEarly
+  }
+
+/** Strip every brace layer that wraps the whole token vector — `{{x}}` → `x` — while leaving inner groups that
+  * are only part of the content (`{a {b} c}` → `a {b} c`, no further). Primitives that split their argument into
+  * pieces (\seq, \map) need this: macro-parameter substitution wraps an argument in an extra `{…}` layer, and a
+  * lone strip would leave that wrapper's braces to split off as spurious empty pieces. */
+def stripWrappingGroups(tokens: Vector[Token]): Vector[Token] =
+  var cur = tokens
+  while isSingleWrappingGroup(cur) do cur = cur.tail.init
+  cur
+
 /** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm, 1.5em, 2ex */
 private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)""".r
 
@@ -1407,7 +1430,7 @@ object SeqPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     // Read items from brace group - space separated
     val items = Vector.newBuilder[Value]
-    val groupTokens = stripOuterBraces(proc.readArgument(pos))
+    val groupTokens = stripWrappingGroups(proc.readArgument(pos))
     // Parse items from the group - space separated
     var current = Vector.newBuilder[Token]
     groupTokens.foreach {
@@ -1482,7 +1505,7 @@ object MapPrimitive extends Primitive:
     // Read key-value pairs from brace group - space separated
     // Syntax: \map{key1 value1 key2 value2}
     val items = Vector.newBuilder[Value]
-    val groupTokens = proc.readArgument(pos)
+    val groupTokens = stripWrappingGroups(proc.readArgument(pos))
     // Parse items from the group - space separated
     var current = Vector.newBuilder[Token]
     groupTokens.foreach {

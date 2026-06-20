@@ -291,6 +291,18 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       process("\\set s {\\seq{a b c}}\\the\\s") shouldBe "[a, b, c]"
     }
 
+    "should not add a phantom element for a macro argument with a trailing space" in {
+      // a macro argument is brace-wrapped on substitution, so \seq{\x} becomes \seq{{a b c }}; stripping every
+      // wrapping layer keeps the trailing space from splitting off the closing brace as an empty element
+      process("\\def f x {\\set s {\\seq{\\x}}\\the\\s}\\f{a b c}") shouldBe "[a, b, c]"
+      process("\\def f x {\\set s {\\seq{\\x}}\\the\\s}\\f{a b c }") shouldBe "[a, b, c]"
+    }
+
+    "should split a doubly-wrapped sequence like a singly-wrapped one" in {
+      // the extra brace layer (as macro substitution produces) is stripped, not split into empty elements
+      process("\\set s {\\seq{{a b c}}}\\the\\s") shouldBe "[a, b, c]"
+    }
+
     "should handle \\head with string" in {
       process("\\head{hello}") shouldBe "h"
     }
@@ -450,6 +462,11 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
 
     "should iterate over map entries" in {
       process("\\set m {\\map{a 1 b 2}}\\for\\e{\\m}{\\e.key=\\e.value,}") shouldBe "a=1,b=2,"
+    }
+
+    "should build a map from a macro argument with a trailing space" in {
+      // the same brace-wrapping that broke \seq would leave \map with an odd, trailing-empty element list
+      process("\\def f x {\\set m {\\map{\\x}}\\m.a}\\f{a 1 b 2 }") shouldBe "1"
     }
 
     // ============ ESCAPE SEQUENCE TESTS ============

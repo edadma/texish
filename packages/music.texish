@@ -164,8 +164,7 @@
 \def musicWalk items {
   \if {\size{\items}}
     \set tok {\head{\items}}
-    \if {\= {\size{\tok}} {0}}     // skip an empty token, so stray whitespace in the score is harmless
-    \else \if {\= {\tok} {[}}
+    \if {\= {\tok} {[}}
       \global\set msBeam {1}
       \global\set msBeamPrev {0}
     \else \if {\= {\tok} {]}}
@@ -188,7 +187,7 @@
     \else
       \musicNote{\tok}
       \set msX {\calc{msX + musicnote}}
-    \fi \fi \fi \fi \fi \fi \fi \fi
+    \fi \fi \fi \fi \fi \fi \fi
     \musicWalk{\tail{\items}}
   \fi}
 
