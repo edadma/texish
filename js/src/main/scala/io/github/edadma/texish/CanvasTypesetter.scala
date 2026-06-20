@@ -233,24 +233,34 @@ class CanvasTypesetter extends Typesetter with EmbeddedFontSet:
       ax += curFont.font.advanceWidthEm(gid) * curFont.size
     }
 
+  // Math mode positions every glyph by index — including ordinary letters, digits and operators, which do have
+  // a codepoint. Draw those with the browser's hinted fillText, exactly like body text, so they are crisp; only
+  // the size-variant and assembly glyphs that have no codepoint fall back to an outline fill.
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit =
-    val p = new dom.Path2D()
-    for seg <- font.font.outline(glyph) do
-      seg match
-        case PathSeg.MoveTo(px, py) => p.moveTo(x + px * font.size, y - py * font.size)
-        case PathSeg.LineTo(px, py) => p.lineTo(x + px * font.size, y - py * font.size)
-        case PathSeg.CurveTo(x1, y1, x2, y2, px, py) =>
-          p.bezierCurveTo(
-            x + x1 * font.size,
-            y - y1 * font.size,
-            x + x2 * font.size,
-            y - y2 * font.size,
-            x + px * font.size,
-            y - py * font.size,
-          )
-        case PathSeg.Close => p.closePath()
-    applyFill()
-    page.ctx.fill(p)
+    font.font.codepointForGlyph(glyph) match
+      case Some(cp) =>
+        val ctx = page.ctx
+        applyFill()
+        ctx.font = s"${fmt(font.size)}px '${font.family}'"
+        ctx.fillText(stringOf(cp), x, y)
+      case None =>
+        val p = new dom.Path2D()
+        for seg <- font.font.outline(glyph) do
+          seg match
+            case PathSeg.MoveTo(px, py) => p.moveTo(x + px * font.size, y - py * font.size)
+            case PathSeg.LineTo(px, py) => p.lineTo(x + px * font.size, y - py * font.size)
+            case PathSeg.CurveTo(x1, y1, x2, y2, px, py) =>
+              p.bezierCurveTo(
+                x + x1 * font.size,
+                y - y1 * font.size,
+                x + x2 * font.size,
+                y - y2 * font.size,
+                x + px * font.size,
+                y - py * font.size,
+              )
+            case PathSeg.Close => p.closePath()
+        applyFill()
+        page.ctx.fill(p)
 
   // ─── immediate rules ──────────────────────────────────────────────────────────
 

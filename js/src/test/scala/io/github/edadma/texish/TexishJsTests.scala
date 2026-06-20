@@ -72,6 +72,18 @@ class TexishJsTests extends AnyFreeSpec with Matchers:
       EmbeddedPackages.sources.keySet should contain(name)
   }
 
+  "math glyphs that have a codepoint resolve back to one, so they draw with the hinted fillText path" in {
+    // Math mode selects every glyph by index; the canvas backend draws a glyph with fillText when it has a
+    // codepoint and only outline-fills the ones that do not. Confirm the formula's glyphs round-trip.
+    val math = new io.github.edadma.texish.opentype.OtfFont(
+      EmbeddedFonts.bytes("fonts/LatinModernMath/LatinModernMath-Regular.otf"),
+    )
+    for cp <- Seq('x'.toInt, 'a'.toInt, '2'.toInt, '='.toInt, 0x221a /* √ */, 0x00b1 /* ± */) do
+      val gid = math.glyphIndex(cp)
+      gid should be > 0
+      math.codepointForGlyph(gid) should not be empty
+  }
+
   "a fragment is tight-cropped, not a full page" in {
     // The in-browser renderer crops each page to its ink, so a short line is sized to the content (in points)
     // rather than emitted as a full 612x792 page shrunk to fit.

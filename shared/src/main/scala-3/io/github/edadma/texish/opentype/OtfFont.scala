@@ -62,6 +62,26 @@ final class OtfFont(val data: Array[Byte]):
   /** Map a Unicode codepoint to a glyph index, or 0 (.notdef) when the font has no glyph for it. */
   def glyphIndex(codepoint: Int): Int = cmap.glyphIndex(codepoint)
 
+  /** A reverse character map, built by scanning the codepoint ranges where text and math glyphs live (Latin,
+    * Greek, punctuation, arrows, mathematical operators, and the mathematical-alphanumeric block). The first
+    * codepoint that maps to each glyph wins. It lets a host render a glyph that was selected by index — as math
+    * mode selects every glyph — through a codepoint API (the browser's hinted `fillText`) when one exists,
+    * falling back to the outline only for the size-variant and assembly glyphs that have no codepoint at all. */
+  private lazy val reverseCmap: Map[Int, Int] =
+    val m = scala.collection.mutable.HashMap.empty[Int, Int]
+    def scan(lo: Int, hi: Int): Unit =
+      var cp = lo
+      while cp <= hi do
+        val g = cmap.glyphIndex(cp)
+        if g != 0 && !m.contains(g) then m(g) = cp
+        cp += 1
+    scan(0x20, 0x2fff)     // Latin, Greek, punctuation, arrows, mathematical operators, misc symbols
+    scan(0x1d400, 0x1d7ff) // mathematical alphanumeric symbols (math italics, script, fraktur, etc.)
+    m.toMap
+
+  /** A codepoint that maps to `glyph`, if any — see [[reverseCmap]]. */
+  def codepointForGlyph(glyph: Int): Option[Int] = reverseCmap.get(glyph)
+
   // ─── glyph outlines (glyf / CFF) ──────────────────────────────────────────────
 
   private lazy val trueType: Option[TrueTypeOutlines] =
