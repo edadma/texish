@@ -63,10 +63,12 @@ final class OtfFont(val data: Array[Byte]):
   def glyphIndex(codepoint: Int): Int = cmap.glyphIndex(codepoint)
 
   /** A reverse character map, built by scanning the codepoint ranges where text and math glyphs live (Latin,
-    * Greek, punctuation, arrows, mathematical operators, and the mathematical-alphanumeric block). The first
-    * codepoint that maps to each glyph wins. It lets a host render a glyph that was selected by index — as math
-    * mode selects every glyph — through a codepoint API (the browser's hinted `fillText`) when one exists,
-    * falling back to the outline only for the size-variant and assembly glyphs that have no codepoint at all. */
+    * Greek, punctuation, arrows, mathematical operators, the mathematical-alphanumeric block, and the
+    * private-use area a SMaFL conversion populates). The first codepoint that maps to each glyph wins. It lets
+    * a host render a glyph that was selected by index — as math mode selects every glyph — through a codepoint
+    * API (the browser's hinted `fillText`) when one exists, falling back to the outline only for glyphs that
+    * have no codepoint at all. In a SMaFL font that fallback set is empty: every size-variant and assembly
+    * glyph carries a private-use codepoint, so even the tall surd and the big integral take the hinted path. */
   private lazy val reverseCmap: Map[Int, Int] =
     val m = scala.collection.mutable.HashMap.empty[Int, Int]
     def scan(lo: Int, hi: Int): Unit =
@@ -76,6 +78,7 @@ final class OtfFont(val data: Array[Byte]):
         if g != 0 && !m.contains(g) then m(g) = cp
         cp += 1
     scan(0x20, 0x2fff)     // Latin, Greek, punctuation, arrows, mathematical operators, misc symbols
+    scan(0xe000, 0xf8ff)   // private-use area — SMaFL math size-variant and assembly glyphs
     scan(0x1d400, 0x1d7ff) // mathematical alphanumeric symbols (math italics, script, fraktur, etc.)
     m.toMap
 

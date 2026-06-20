@@ -380,10 +380,13 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
 
-  // The default math font: Latin Modern Math, an OpenType font with a full MATH table. Loaded by file
-  // directly (not loadTypeface, whose naming assumes a .ttf) since it is a CFF/.otf and stands alone with
-  // no style variants. Math mode reads its MATH table through the SFNT seam (see mathTableFor).
-  loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-Regular.otf", Set(), Set())
+  // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
+  // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
+  // SmaflConvertMain build tool). Loaded by file directly (not loadTypeface, whose naming assumes a .ttf)
+  // since it is a CFF/.otf and stands alone with no style variants. Math mode reads its MATH table through the
+  // SFNT seam (see mathTableFor); the SMaFL cmap lets the in-browser canvas backend draw stretchy glyphs
+  // through the browser's hinted text path. The extra cmap entries are inert on the outline-filling backends.
+  loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-SMaFL.otf", Set(), Set())
 
   // SMuFL (Standard Music Font Layout) music fonts. SMuFL fixes the codepoint of every notation glyph (clefs,
   // noteheads, flags, rests, accidentals, time-signature figures, and more) in the Unicode Private Use Area and

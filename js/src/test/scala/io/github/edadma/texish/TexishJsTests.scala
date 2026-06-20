@@ -74,14 +74,19 @@ class TexishJsTests extends AnyFreeSpec with Matchers:
 
   "math glyphs that have a codepoint resolve back to one, so they draw with the hinted fillText path" in {
     // Math mode selects every glyph by index; the canvas backend draws a glyph with fillText when it has a
-    // codepoint and only outline-fills the ones that do not. Confirm the formula's glyphs round-trip.
+    // codepoint and only outline-fills the ones that do not. The embedded math font is the SMaFL build, whose
+    // cmap gives the size-variant and assembly glyphs private-use codepoints too — so a private-use codepoint
+    // resolves to a glyph, and that glyph round-trips back, proving the hinted path reaches the stretchy glyphs.
     val math = new io.github.edadma.texish.opentype.OtfFont(
-      EmbeddedFonts.bytes("fonts/LatinModernMath/LatinModernMath-Regular.otf"),
+      EmbeddedFonts.bytes("fonts/LatinModernMath/LatinModernMath-SMaFL.otf"),
     )
     for cp <- Seq('x'.toInt, 'a'.toInt, '2'.toInt, '='.toInt, 0x221a /* √ */, 0x00b1 /* ± */) do
       val gid = math.glyphIndex(cp)
       gid should be > 0
       math.codepointForGlyph(gid) should not be empty
+    val variantGid = math.glyphIndex(0xe000) // first SMaFL private-use assignment
+    variantGid should be > 0
+    math.codepointForGlyph(variantGid) shouldBe Some(0xe000)
   }
 
   "a fragment is tight-cropped, not a full page" in {

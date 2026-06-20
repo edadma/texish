@@ -17,8 +17,10 @@
 <h1>texish, rendered to canvas</h1>
 <p class="note">
   Same engine as the <a href="./index.html">SVG demo</a>, but drawn with <code>texish.autoRenderCanvas()</code>:
-  ordinary text is painted with the browser's own hinted <code>fillText</code>, so it is as crisp as native
-  text, and only the no-codepoint math glyphs are filled as canvas paths. Rendered at the device pixel ratio.
+  text is painted with the browser's own hinted <code>fillText</code>, so it is as crisp as native text. The
+  math font is the SMaFL build of Latin Modern Math — its size-variant and assembly glyphs (the tall surd in
+  the quadratic formula below, big operators, stretchy delimiters) carry private-use codepoints, so they too go
+  through <code>fillText</code> rather than being filled as outlines. Rendered at the device pixel ratio.
 </p>
 
 <div class="texish">The mass-energy relation is $E = mc^2$, and the roots of $a x^2 + b x + c = 0$ are
