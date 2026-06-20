@@ -62,4 +62,27 @@ final class OtfFont(val data: Array[Byte]):
   /** Map a Unicode codepoint to a glyph index, or 0 (.notdef) when the font has no glyph for it. */
   def glyphIndex(codepoint: Int): Int = cmap.glyphIndex(codepoint)
 
+  // ─── glyph outlines (glyf / CFF) ──────────────────────────────────────────────
+
+  private lazy val trueType: Option[TrueTypeOutlines] =
+    for
+      glyf <- sfnt.table("glyf")
+      loca <- sfnt.table("loca")
+    yield TrueTypeOutlines(data, glyf.offset, loca.offset, indexToLocFormat, numGlyphs)
+
+  /** The outline of a glyph as cubic [[PathSeg]]s in em, y-up. Empty for a glyph with no outline (a space) or
+    * for a font whose outline flavour is not yet read. The SVG backend fills these as `<path>` data. */
+  def outline(glyph: Int): Vector[PathSeg] =
+    val units = trueType.map(_.segments(glyph)).getOrElse(Vector.empty)
+    if units.isEmpty then Vector.empty
+    else
+      val s = 1.0 / unitsPerEm
+      units.map {
+        case PathSeg.MoveTo(x, y) => PathSeg.MoveTo(x * s, y * s)
+        case PathSeg.LineTo(x, y) => PathSeg.LineTo(x * s, y * s)
+        case PathSeg.CurveTo(x1, y1, x2, y2, x, y) =>
+          PathSeg.CurveTo(x1 * s, y1 * s, x2 * s, y2 * s, x * s, y * s)
+        case PathSeg.Close => PathSeg.Close
+      }
+
 end OtfFont
