@@ -61,11 +61,55 @@
 \def rlap m {\hbox to:0 {\m\hss}}
 \def llap m {\hbox to:0 {\hss\m}}
 
+// ---- Font-size declarations ----------------------------------------------------
+// LaTeX's size-changing declarations, on a 10pt base. Each switches the type size for
+// the rest of the current group — use one inside { … } or an environment — keeping the
+// current family and shape and resetting the leading to TeX's 1.2× the new size. The
+// scale is `article`'s 10pt option: \footnotesize 8, \small 9, \large 12, \Large 14.
+\def tiny {\fontsize{5}}
+\def scriptsize {\fontsize{7}}
+\def footnotesize {\fontsize{8}}
+\def small {\fontsize{9}}
+\def normalsize {\fontsize{10}}
+\def large {\fontsize{12}}
+\def Large {\fontsize{14}}
+\def LARGE {\fontsize{17}}
+\def huge {\fontsize{20}}
+\def Huge {\fontsize{25}}
+
 // ---- Inline markup -------------------------------------------------------------
+// \emph and \textit slant the body into italic; \textbf sets it bold. \textsl uses the
+// slanted (oblique) cut, \textsc small capitals, \texttt the monospaced face (an engine
+// primitive). \textrm / \textsf / \textnormal switch family to roman / sans / the
+// default. \textsuperscript and \textsubscript raise or drop a smaller box. \dots / \ldots
+// set an ellipsis. (\texttt, \underline, \smallcaps, \slanted are engine primitives.)
 \def emph t {\italic{\t}}
 \def textit t {\italic{\t}}
 \def textbf t {\bold{\t}}
+\def textsl t {\slanted{\t}}
+\def textsc t {\smallcaps{\t}}
+\def textrm t {{\typeface{lmroman}\t}}
+\def textsf t {{\typeface{noto}\t}}
+\def textnormal t {{\normalfont\typeface{lmroman}\t}}
+\def textsuperscript t {\textsup{\t}}
+\def textsubscript t {\textsub{\t}}
 \def dots {…}
+\def ldots {…}
+
+// ---- Text symbols --------------------------------------------------------------
+// The common LaTeX text symbols, each a single Unicode character.
+\def S {§}
+\def P {¶}
+\def dag {†}
+\def ddag {‡}
+\def copyright {©}
+\def textregistered {®}
+\def texttrademark {™}
+\def pounds {£}
+\def textbullet {•}
+\def textemdash {—}
+\def textendash {–}
+\def textdegree {°}
 
 // ---- TeX-family logos ----------------------------------------------------------
 // The classic logos come from the logos package.
@@ -115,24 +159,70 @@
 // orphaned the heading at the foot of a page falls before the heading instead.
 \newcounter{section}
 \newcounter{subsection}
+\newcounter{subsubsection}
 \counterwithin{subsection}{section}
+\counterwithin{subsubsection}{subsection}
 
-\def section t {
-  \stepcounter{section}
+// The printed section numbers route through \thesection / \thesubsection /
+// \thesubsubsection, so \appendix can switch the top level from 1, 2, 3 to A, B, C just
+// by redefining \thesection — the lower levels follow because they build on it.
+\def thesection {\arabic{\value{section}}}
+\def thesubsection {\thesection.\arabic{\value{subsection}}}
+\def thesubsubsection {\thesubsection.\arabic{\value{subsubsection}}}
+
+// Each heading takes a leading * for the unnumbered form (\section*{…}): the star form
+// skips the counter and prints no number, exactly as in LaTeX.
+\def section * t {
   \vskip 14pt plus 3pt minus 1pt
-  \leftline{\font lmroman 14 bold \arabic{\value{section}}\hskip 10 \t}
+  \if {\star}
+    \leftline{\font lmroman 14 bold \t}
+  \else
+    \stepcounter{section}
+    \leftline{\font lmroman 14 bold \thesection\hskip 10 \t}
+  \fi
   \nobreak
   \vskip 8pt plus 2pt
   \noindent
 }
 
-\def subsection t {
-  \stepcounter{subsection}
+\def subsection * t {
   \vskip 12pt plus 3pt minus 1pt
-  \leftline{\font lmroman 12 bold \arabic{\value{section}}.\arabic{\value{subsection}}\hskip 10 \t}
+  \if {\star}
+    \leftline{\font lmroman 12 bold \t}
+  \else
+    \stepcounter{subsection}
+    \leftline{\font lmroman 12 bold \thesubsection\hskip 10 \t}
+  \fi
   \nobreak
   \vskip 6pt plus 1pt
   \noindent
+}
+
+\def subsubsection * t {
+  \vskip 10pt plus 2pt minus 1pt
+  \if {\star}
+    \leftline{\font lmroman 11 bold \t}
+  \else
+    \stepcounter{subsubsection}
+    \leftline{\font lmroman 11 bold \thesubsubsection\hskip 10 \t}
+  \fi
+  \nobreak
+  \vskip 5pt plus 1pt
+  \noindent
+}
+
+// \paragraph is the lowest level: a bold run-in heading on the same line as the text it
+// introduces, with no number and no break after it.
+\def paragraph t {
+  \medskip
+  \noindent {\font lmroman 10 bold \t}\hskip 6 \ignorespaces
+}
+
+// \appendix restarts the section counter and switches its number to a letter, so the
+// sections after it read Appendix A, B, … while keeping the same \section command.
+\def appendix {
+  \setcounter{section}{0}
+  \def thesection {\Alph{\value{section}}}
 }
 
 // ---- Quotation block -----------------------------------------------------------
@@ -147,6 +237,31 @@
 \newenvironment quotation {
   \set leftskip {40}
   \set rightskip {40}
+} {}
+
+// ---- Alignment environments ----------------------------------------------------
+// Block forms of the alignment declarations: every paragraph inside is centred, set
+// ragged-right (flushleft) or ragged-left (flushright). The infinite glue on the
+// stretching side(s) plus a zero parfillskip makes even the last line align, and
+// parindent is dropped so the block has no first-line indent. The settings revert at
+// \end because the environment is its own group.
+\newenvironment center {
+  \set leftskip {0 plus 1fil}
+  \set rightskip {0 plus 1fil}
+  \set parfillskip {0}
+  \set parindent {0}
+} {}
+
+\newenvironment flushleft {
+  \set rightskip {0 plus 1fil}
+  \set parfillskip {0}
+  \set parindent {0}
+} {}
+
+\newenvironment flushright {
+  \set leftskip {0 plus 1fil}
+  \set parfillskip {0}
+  \set parindent {0}
 } {}
 
 // ---- Lists ---------------------------------------------------------------------
@@ -172,13 +287,23 @@
 } {}
 \newcounter{enumi}
 
+// A description list: terms with hanging definitions. The marker for each item is the
+// bracketed label given to \item ( \item[Term] ), set bold, rather than a bullet or
+// number — so itemmark is empty here and the label supplies the marker.
+\newenvironment description {
+  \set listdepth {\calc{listdepth + 1}}
+  \set leftskip {\calc{listdepth * listindent}}
+  \def itemmark {}
+} {}
+
 // \item starts one list item. The item text begins at the list's left margin
 // (leftskip), so wrapped continuation lines align under it automatically. The
 // marker is set in a zero-width \llap box that hangs to the left, a labelsep gap
-// before the text, exactly as a LaTeX list label does. The closing \ignorespaces
+// before the text, exactly as a LaTeX list label does. An optional [label] overrides
+// the list marker (the description-list form, set bold). The closing \ignorespaces
 // drops the space before the item's text.
-\def item {
-  \noindent\llap{\itemmark\hskip\labelsep}\ignorespaces}
+\def item [label:] {
+  \noindent\llap{\if {\label} {\font lmroman 10 bold \label} \else \itemmark \fi\hskip\labelsep}\ignorespaces}
 
 // ---- Floats (figures and tables) ----------------------------------------------
 // \figure / \table detach their body to a page edge (default top) over the engine's

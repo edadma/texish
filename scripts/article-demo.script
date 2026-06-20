@@ -58,6 +58,55 @@ aligns under the text rather than the number,
 \item another bullet.
 \end{itemize}
 
+A description list pairs a term with its definition:
+
+\begin{description}
+\item[texish] the layout engine these notes are typeset with.
+\item[package] a reusable bundle of macros, loaded with \texttt{use}.
+\end{description}
+
+\section {Type and text}
+
+\subsection {Inline markup}
+
+The body can be set \textit{italic}, \textsl{slanted}, \textbf{bold},
+\textsc{in small caps}, \texttt{monospaced}, or \textsf{sans-serif}, and switched
+back with \textrm{roman}. A water molecule is H\textsubscript{2}O and the
+1\textsuperscript{st} item carries a raised ordinal. Common symbols come for free:
+the section sign~\S, paragraph mark~\P, dagger~\dag, copyright~\copyright, and the
+pound sign~\pounds.
+
+\subsection {Type sizes}
+
+The size declarations run from {\tiny tiny} through {\small small},
+{\normalsize normal}, {\large large}, and {\Large Larger} to {\huge huge}, each
+keeping the current family and shape.
+
+\subsubsection {A deeper heading}
+
+Sections nest three levels deep, and a starred heading omits its number.
+
+\paragraph{A run-in heading.} The lowest sectioning level sets its title bold on
+the same line as the text it introduces, with no number.
+
+\subsection* {An unnumbered subsection}
+
+This heading was written with a star, so it carries no number while still standing
+out from the body.
+
+\section {Alignment}
+
+The alignment environments set a whole block flush left, centred, or flush right:
+
+\begin{center}
+This paragraph is centred, with both margins stretching equally so every line
+finds the middle of the measure.
+\end{center}
+
+\begin{flushright}
+This paragraph is set flush right, ragged down its left edge.
+\end{flushright}
+
 \section {Code, colour, and links}
 
 Set a file name or a snippet in a monospaced face with \texttt{texttt}, e.g.
@@ -67,5 +116,12 @@ with \textcolor{red}{textcolor}, or switch the pen for the rest of a group.
 Links are real and clickable in the PDF. Visit the
 \href{https://www.overleaf.com/learn}{help library} for tutorials, or write a
 bare address such as \url{https://example.org} that links to itself.
+
+\appendix
+
+\section {Notation}
+
+After \texttt{appendix}, sections are lettered rather than numbered, so this one is
+Appendix~A while keeping the same \texttt{section} command.
 
 \vfill\eject

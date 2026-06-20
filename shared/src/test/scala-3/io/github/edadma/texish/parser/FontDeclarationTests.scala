@@ -89,3 +89,24 @@ class FontDeclarationTests extends AnyFreeSpec with Matchers:
     styleOf(boxes, "X") should contain("italic")
     styleOf(boxes, "Y") should not contain "italic"
   }
+
+  "\\slshape sets the slanted shape for the rest of the group and reverts" in {
+    val boxes = render("{\\slshape X} Y")
+    styleOf(boxes, "X") should contain("slanted")
+    styleOf(boxes, "Y") should not contain "slanted"
+  }
+
+  "the argument-wrapping \\slanted sets the slanted shape" in {
+    val boxes = render("\\slanted{X} Y")
+    styleOf(boxes, "X") should contain("slanted")
+    styleOf(boxes, "Y") should not contain "slanted"
+  }
+
+  "\\fontsize changes only the size, keeping the current shape" in {
+    val boxes = render("{\\bfseries\\fontsize{20} X} Y")
+    val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get
+    x.font.size shouldBe (20.0 +- 1e-9)
+    x.font.style should contain("bold")
+    val y = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("Y") => c }.get
+    y.font.size shouldBe (14.0 +- 1e-9) // back to the default size after the group closes
+  }

@@ -257,6 +257,7 @@ class Processor(val handler: Handler):
       val tokens = p.kind match
         case ParamKind.Mandatory       => readArgument(pos)
         case ParamKind.Optional(deflt) => readOptionalArg(pos).getOrElse(deflt)
+        case ParamKind.Star            => readStarFlag(pos)
       p.name -> tokens
     }.toMap
 
@@ -296,6 +297,19 @@ class Processor(val handler: Handler):
             case other                   => out += other
         Some(out.result())
       case _ => None
+
+  /** Read a `\section*`-style star flag: consume a leading `*` if one follows and return `1`, otherwise consume
+    * nothing and return `0`. The `*` is ordinary text, so it may sit at the head of a longer text token; the tail
+    * after it is pushed back to be read as the next argument. */
+  def readStarFlag(pos: CharReader): Vector[Token] =
+    skipSpaces()
+    peekToken() match
+      case Token.Text(s, sp) if s.startsWith("*") =>
+        nextToken()
+        val rest = s.substring(1)
+        if rest.nonEmpty then pushBack(Vector(Token.Text(rest, sp)))
+        Vector(Token.Text("1", sp))
+      case _ => Vector(Token.Text("0", pos))
 
   /** Read a brace-delimited argument verbatim — the literal characters, with no comment, escape, active-char or
     * macro processing. For URL-like arguments that must survive `//` (otherwise a comment) and other specials.
@@ -810,6 +824,14 @@ private[parser] def readMacroParams(proc: Processor, pos: CharReader): Vector[Ma
         out += MacroParam(name, ParamKind.Optional(defTokens))
         proc.skipSpaces()
 
+      case Token.Text(s, sp) if s.startsWith("*") =>
+        // A bare `*` declares a star flag (named `star`); the tail after it continues the parameter list.
+        proc.nextToken()
+        val rest = s.substring(1)
+        if rest.nonEmpty then proc.pushBack(Vector(Token.Text(rest, sp)))
+        out += MacroParam("star", ParamKind.Star)
+        proc.skipSpaces()
+
       case Token.Text(s, _) if s.nonEmpty && s.head.isLetter =>
         proc.nextToken()
         out += MacroParam(s, ParamKind.Mandatory)
@@ -961,8 +983,10 @@ private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|e
 private val FlexPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)""".r
 
 /** Match a full glue spec: a dimension with optional `plus <flex>` and `minus <flex>` parts */
+// A unit is optional on each numeric component: an omitted unit means points, matching texish's point-space
+// model where a bare number is already a length (so `\set leftskip {0 plus 1fil}` works, not only `0pt plus 1fil`).
 private val GluePattern =
-  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill))?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill))?""".r
+  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)?(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)?)?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)?)?""".r
 
 /** Points per unit. Context-free units have fixed factors; em and ex come from the host's current font via the
   * resolver, and fail to resolve when the host has none (or has no font yet).
@@ -1004,12 +1028,13 @@ def parseGlue(s: String, fontUnit: String => Option[Double] = _ => None): Option
         if n == null then Some((0.0, 0))
         else
           u match
-            case "fil"  => Some((n.toDouble, 1))
-            case "fill" => Some((n.toDouble, 2))
-            case _      => unitPoints(u, fontUnit).map(f => (n.toDouble * f, 0))
+            case "fil"   => Some((n.toDouble, 1))
+            case "fill"  => Some((n.toDouble, 2))
+            case null    => Some((n.toDouble, 0)) // unitless stretch/shrink is in points
+            case _       => unitPoints(u, fontUnit).map(f => (n.toDouble * f, 0))
 
       for
-        factor                 <- unitPoints(unit, fontUnit)
+        factor                 <- if unit == null then Some(1.0) else unitPoints(unit, fontUnit)
         (stretch, stretchOrder) <- flex(stNum, stUnit)
         (shrink, shrinkOrder)   <- flex(shNum, shUnit)
       yield

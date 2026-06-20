@@ -45,6 +45,12 @@ class GlueSyntaxTests extends AnyFreeSpec with Matchers:
       parseGlue("12pt") shouldBe Some(Value.Dimen(12))
     }
 
+    "an omitted unit means points, so unitless glue parses" in {
+      parseGlue("0 plus 1fil") shouldBe Some(Value.Glue(0, 1, 0, 1, 0))
+      parseGlue("0 plus 1fil minus 1fil") shouldBe Some(Value.Glue(0, 1, 1, 1, 1))
+      parseGlue("3 plus 2") shouldBe Some(Value.Glue(3, 2, 0))
+    }
+
     "a malformed flex part does not parse" in {
       parseGlue("12pt plus bogus") shouldBe None
     }

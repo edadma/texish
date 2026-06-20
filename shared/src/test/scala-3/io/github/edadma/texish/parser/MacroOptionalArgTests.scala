@@ -48,3 +48,15 @@ class MacroOptionalArgTests extends AnyFreeSpec with Matchers:
     run(s"$src\\begin{w}q\\end{w}").result shouldBe "n=5;q;z"
     run(s"$src\\begin{w}[8]q\\end{w}").result shouldBe "n=8;q;z"
   }
+
+  "a bare * declares a star flag: 1 when * follows, 0 when it does not" in {
+    val src = "\\def s * t {\\if {\\star}S\\else N\\fi:\\t}"
+    run(s"$src\\s*{x}").result shouldBe "S:x"
+    run(s"$src\\s{x}").result shouldBe "N:x"
+  }
+
+  "a star flag may precede a mandatory argument given as bare text" in {
+    val src = "\\def s * t {\\if {\\star}+\\fi\\t}"
+    run(s"$src\\s*x").result shouldBe "+x"
+    run(s"$src\\s y").result shouldBe "y"
+  }

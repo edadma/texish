@@ -219,6 +219,24 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // fontsize - 1 braced arg: change only the type size, keeping the current typeface and shape/series. Unlike
+  // \font, which re-selects all three, this is the size knob the LaTeX-style size declarations (\small, \large,
+  // \Large …) are built on, so a size change inside bold or italic text keeps that style. selectFont also resets
+  // \baselineskip to TeX's 1.2 × size default leading; a document that wants a different leading sets it after.
+  proc.registerPrimitive(
+    "fontsize",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        evalArg(proc, pos) match
+          case Value.Num(sz) =>
+            val cur  = t.currentFont
+            val font = t.selectFont(cur.typeface, sz.toDouble, cur.style)
+            t.set("spaceskip", Glue(font.space, 1))
+            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+          case _ => handler.error("\\fontsize expects a number", pos)
+    },
+  )
+
   // image - 1 arg
   proc.registerPrimitive(
     "image",
@@ -638,6 +656,20 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // slanted - 1 body arg: set its content in the slanted (oblique) shape, the upright body face sheared rather
+  // than the separately-drawn italic. The shape axis: \slanted and \italic both flip it, so this is the
+  // text-mode partner of \italic for a face that has a slanted cut (Latin Modern Roman does).
+  proc.registerPrimitive(
+    "slanted",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val body = proc.readArgument(pos)
+        t.slanted()
+        proc.processTokenList(body) // scoping happens automatically from { } tokens
+        t.noslanted()
+    },
+  )
+
   // Font-shape and -series declarations (LaTeX \itshape / \bfseries / …). Unlike \italic{…} and \bold{…}, which
   // wrap an argument, these flip the current font for the *rest of the enclosing group* and take no argument. Font
   // state is saved on every group open and restored on close (Typesetter.enter/exit), so a declaration reverts at
@@ -654,11 +686,12 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     )
 
   declarePrimitive("itshape", _.italic())
+  declarePrimitive("slshape", _.slanted())
   declarePrimitive("bfseries", _.bold())
   declarePrimitive("scshape", _.smallcaps())
-  declarePrimitive("upshape", _.removeStyle("italic", "smallcaps"))
+  declarePrimitive("upshape", _.removeStyle("italic", "slanted", "smallcaps"))
   declarePrimitive("mdseries", _.nobold())
-  declarePrimitive("normalfont", _.removeStyle("italic", "bold", "smallcaps"))
+  declarePrimitive("normalfont", _.removeStyle("italic", "slanted", "bold", "smallcaps"))
 
   // texttt - 1 body arg: set its content in the monospaced face (Latin Modern Mono) at the current size, for
   // inline code, file names, URLs and the like. Latin Modern Mono is cut to sit alongside the roman body, so a

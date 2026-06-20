@@ -13,6 +13,9 @@ case class MacroParam(name: String, kind: ParamKind)
   *     always been read.
   *   - [[ParamKind.Optional]] — a bracketed `[…]` argument that may be omitted; when omitted the parameter expands to
   *     `default`. This is LaTeX's optional argument, declared `[name:default]` (or `[name]` for an empty default).
+  *   - [[ParamKind.Star]] — a leading `*` flag, declared with a bare `*` in the parameter list. The parameter (named
+  *     `star`) expands to `1` when a `*` follows the macro at the call site and `0` when it does not, so a body can
+  *     branch with `\if {\star} … \else … \fi`. This is xparse's `s` argument — the `\section*` star form.
   *
   * The kind is a small sealed set so new shapes (delimited parameters, read up to a literal token) can be added
   * without disturbing existing call sites.
@@ -20,3 +23,4 @@ case class MacroParam(name: String, kind: ParamKind)
 enum ParamKind:
   case Mandatory
   case Optional(default: Vector[Token])
+  case Star

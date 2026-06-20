@@ -15,6 +15,8 @@ trait EmbeddedFontSet extends Typesetter:
     loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
     loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
     loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
+    loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-regular.otf", lmLigatures, Set("smallcaps"))
+    loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-oblique.otf", lmLigatures, Set("smallcaps", "italic"))
     loadFont("mono", "fonts/LatinModernMono/lmmono10-regular.otf", Set.empty, Set.empty)
     loadFont("mono", "fonts/LatinModernMono/lmmonolt10-bold.otf", Set.empty, Set("bold"))
     loadFont("mono", "fonts/LatinModernMono/lmmono10-italic.otf", Set.empty, Set("italic"))

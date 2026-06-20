@@ -145,6 +145,8 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
         "fonts/LatinModernRoman/lmroman10-italic.otf",
         "fonts/LatinModernRoman/lmroman10-bolditalic.otf",
         "fonts/LatinModernRoman/lmromanslant10-regular.otf",
+        "fonts/LatinModernRoman/lmromancaps10-regular.otf",
+        "fonts/LatinModernRoman/lmromancaps10-oblique.otf",
         "fonts/LatinModernMono/lmmono10-regular.otf",
         "fonts/LatinModernMono/lmmonolt10-bold.otf",
         "fonts/LatinModernMono/lmmono10-italic.otf",

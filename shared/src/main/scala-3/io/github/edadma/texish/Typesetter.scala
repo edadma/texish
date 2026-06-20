@@ -403,6 +403,11 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
+  // The small-caps cut of the body face, so \textsc / \scshape / \smallcaps set capitals-and-small-capitals in
+  // the same family as the roman text. The oblique cut backs the small-caps shape inside italic context (\emph
+  // around \textsc), registered under the {smallcaps, italic} style so that combination resolves too.
+  loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-regular.otf", lmLigatures, Set("smallcaps"))
+  loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-oblique.otf", lmLigatures, Set("smallcaps", "italic"))
 
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
   // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
@@ -499,6 +504,10 @@ abstract class Typesetter:
   def smallcaps(): Unit = addStyle("smallcaps")
 
   def nosmallcaps(): Unit = removeStyle("smallcaps")
+
+  def slanted(): Unit = addStyle("slanted")
+
+  def noslanted(): Unit = removeStyle("slanted")
 
   def setStyle(style: Set[String]): Font = selectFont(currentFont.typeface, currentFont.size, style)
 
