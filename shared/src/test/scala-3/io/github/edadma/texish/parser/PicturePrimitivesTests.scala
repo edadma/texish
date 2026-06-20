@@ -140,3 +140,84 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     a[ParserException] should be thrownBy proc.process("\\rect{0 0 1 1}")
   }
+
+  // \arrow / \arrowhead lower to the existing path + paint ops, so they need no new backend support; these check the
+  // geometry reaches the display list. The head is filled in the pen colour (fill set, stroke clear), the shaft is
+  // stroked in it (stroke set, fill clear), and the shaft is shortened so it meets the back of the head.
+  "\\arrow draws a filled head at the tip and a shortened stroked shaft" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrow head:triangle size:7 {0 0 20 0} }")
+    ops should contain(PictureOp.MoveTo(20, 0))               // the head's tip sits on the endpoint
+    ops should contain(PictureOp.Paint(Some(Color("black")), None)) // the head, filled in the pen colour
+    ops should contain(PictureOp.LineTo(13, 0))               // the shaft stops a head-length short of the tip
+    ops should contain(PictureOp.Paint(None, Some(Color("black")))) // the shaft, stroked in the pen colour
+  }
+
+  "\\arrow heads:both caps both ends" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrow head:triangle heads:both size:7 {0 0 30 0} }")
+    ops.count { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe 2
+    ops should contain(PictureOp.MoveTo(30, 0)) // tip of the end head
+    ops should contain(PictureOp.MoveTo(0, 0))  // tip of the start head, pointing back from b
+  }
+
+  "\\arrowhead head:dot lowers to a filled disc on the tip" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrowhead head:dot size:8 {0 0 10 0} }")
+    ops should contain(PictureOp.Arc(10, 0, 4, 0, 2 * math.Pi, false)) // radius = size/2, centred on the tip
+    ops should contain(PictureOp.Paint(Some(Color("black")), None))
+  }
+
+  "\\arrowhead defaults to the stealth head" in {
+    val ops = run("\\picture width:1in height:1in { \\stroke{black} \\arrowhead size:10 {0 0 10 0} }")
+    // a stealth head has a concave notch, so its outline is four points (tip, base, notch, base), not three
+    ops.count { case _: PictureOp.LineTo => true; case _ => false } shouldBe 3
+  }
+
+  "an unknown arrowhead style is an error" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy
+      proc.process("\\picture width:1in height:1in { \\stroke{black} \\arrowhead head:wedge {0 0 1 0} }")
+  }
+
+  "\\arrow outside \\picture is an error" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy proc.process("\\arrow{0 0 1 1}")
+  }
+
+  // \path arrow:… caps the path with a head oriented to its TRUE end tangent, not the start→end chord. The curve
+  // below starts at (0,40) and ends at (72,0) with its last control point at (36,0), so its end tangent is purely
+  // horizontal even though the chord is diagonal. A head pointing horizontally has both its base corners at the
+  // same x (tip-x minus head-length); a head pointing along the chord would not. So the base x's distinguish them.
+  "\\path arrow:end orients the head to the end tangent, not the chord" in {
+    val ops = run(
+      "\\picture width:2in height:1in { \\stroke{black} " +
+        "\\path arrow:end head:triangle size:7 { \\moveto{0 40} \\curveto{0 0  36 0  72 0} } }",
+    )
+    // the head tip lies on the horizontal tangent line through the endpoint (y = 0), pushed a little past x = 72
+    ops.exists { case PictureOp.MoveTo(x, 0.0) => x >= 72.0; case _ => false } shouldBe true
+    // both base corners share one x ⇒ the head points horizontally (the true tangent); along the diagonal chord
+    // (72,0)−(0,40) they would not
+    val baseXs = ops.collect { case PictureOp.LineTo(x, _) => x }
+    baseXs should have size 2
+    baseXs(0) shouldBe baseXs(1)
+    ops.last shouldBe PictureOp.Paint(Some(Color("black")), None) // the head is drawn last, over the path end
+  }
+
+  "\\path arrow:both caps both ends of the path" in {
+    val ops = run(
+      "\\picture width:2in height:1in { \\stroke{black} " +
+        "\\path arrow:both head:triangle size:6 { \\moveto{0 0} \\lineto{50 0} } }",
+    )
+    ops.count { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe 2
+    ops.exists { case PictureOp.MoveTo(x, 0.0) => x >= 50.0; case _ => false } shouldBe true // head off the right end
+    ops.exists { case PictureOp.MoveTo(x, 0.0) => x <= 0.0; case _  => false } shouldBe true // head off the left end
+  }
+
+  "\\path with no arrow option draws no head" in {
+    val ops = run("\\picture width:2in height:1in { \\stroke{black} \\path{ \\moveto{0 0} \\lineto{50 0} } }")
+    ops.exists { case PictureOp.Paint(Some(_), None) => true; case _ => false } shouldBe false
+  }
+
+  "an unknown \\path arrow value is an error" in {
+    val (_, proc) = fixture()
+    a[ParserException] should be thrownBy
+      proc.process("\\picture width:1in height:1in { \\stroke{black} \\path arrow:middle { \\moveto{0 0} \\lineto{1 0} } }")
+  }

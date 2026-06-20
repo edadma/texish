@@ -102,6 +102,48 @@ coordinates (\italic{++}) are measured from the current point.
   \at anchor:east {3.7in 1.3in}{end}
 }
 
+\bold{Arrows}
+
+\italic{\\arrow} draws a shaft with a head; \italic{\\arrowhead} places a head
+alone. The head points along the line and the shaft is shortened to meet its
+back. The style is \italic{stealth} (swept-back, the default), \italic{triangle},
+\italic{bar}, or \italic{dot}, and \italic{heads:both} caps both ends.
+
+\picture width:4in height:1.8in {
+  \stroke{steelblue} \linewidth{1.2pt}
+  \arrow{0.3in 1.5in  2in 1.5in}
+  \arrow head:triangle {0.3in 1.1in  2in 1.1in}
+  \arrow head:bar      {0.3in 0.7in  2in 0.7in}
+  \arrow head:dot      {0.3in 0.3in  2in 0.3in}
+  \at anchor:west {2.15in 1.5in}{stealth}
+  \at anchor:west {2.15in 1.1in}{triangle}
+  \at anchor:west {2.15in 0.7in}{bar}
+  \at anchor:west {2.15in 0.3in}{dot}
+
+  // a double-headed dimension line
+  \stroke{firebrick} \linewidth{1.5pt}
+  \arrow heads:both size:9pt {3.2in 0.3in  3.2in 1.5in}
+  \at anchor:west {3.3in 0.9in}{$h$}
+}
+
+A \italic{\\path} carrying \italic{arrow:end} (or \italic{start} / \italic{both})
+is capped with a head pointing along the curve's true tangent — for a Bézier the
+last control point toward the endpoint — so a curved arrow leaves the page the way
+the curve does, not along the straight chord between its ends.
+
+\picture width:4in height:1.4in {
+  \nofill \stroke{seagreen} \linewidth{1.5pt}
+  \path arrow:end {
+    \moveto{0.3in 0.3in}
+    \curveto{1.4in 1.7in  2.6in -0.5in  3.7in 1in}
+  }
+  \stroke{indigo}
+  \path arrow:both head:triangle {
+    \moveto{0.3in 1.1in}
+    \curveto{1.5in 0.2in  2.5in 1.6in  3.7in 0.4in}
+  }
+}
+
 \eject
 
 \bold{Application — a line graph}

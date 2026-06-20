@@ -30,6 +30,31 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   private var curX: Double = 0
   private var curY: Double = 0
 
+  // Tangent tracking for `\path` arrowheads. While `tracking` is on (a `\path` carrying an arrow: option), each
+  // segment records where the path starts and ends and the travel direction at each end, so an arrowhead can be
+  // oriented to the path's true tangent — for a Bézier the end tangent is the last control point → endpoint, for an
+  // arc it is perpendicular to the end radius — rather than to the straight start→end chord. Direction magnitudes
+  // are arbitrary (the arrowhead normalises them).
+  private var tracking = false
+  private var pathStart:    Option[(Double, Double)] = None
+  private var pathStartDir: Option[(Double, Double)] = None
+  private var pathEnd:      Option[(Double, Double)] = None
+  private var pathEndDir:   Option[(Double, Double)] = None
+
+  private def nonZero(v: (Double, Double)): Boolean = math.hypot(v._1, v._2) > 1e-9
+
+  private def firstNonZero(vs: (Double, Double)*): (Double, Double) = vs.find(nonZero).getOrElse(vs.last)
+
+  // Record a segment running from the current point to (endX, endY), with travel direction `outDir` leaving its
+  // start and `inDir` arriving at its end. Only the first segment's outgoing direction fixes the path's start
+  // tangent; every segment updates the end. A degenerate (zero-length) direction does not clobber a good one.
+  private def trackSegment(outDir: (Double, Double), inDir: (Double, Double), endX: Double, endY: Double): Unit =
+    if tracking then
+      if pathStart.isEmpty then pathStart = Some((curX, curY))
+      if pathStartDir.isEmpty && nonZero(outDir) then pathStartDir = Some(outDir)
+      if nonZero(inDir) then pathEndDir = Some(inDir)
+      pathEnd = Some((endX, endY))
+
   /** Collection-time state a `\group` saves and restores: the active colours, opacities, and the current point.
     * The transform and stroke parameters are restored by the backend's own gstate, so they are not kept here. */
   private case class GState(
@@ -83,7 +108,12 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   def fillColor: Option[Color]   = fillColour.map(withOpacity(_, fillOpacity))
   def strokeColor: Option[Color] = strokeColour.map(withOpacity(_, strokeOpacity))
 
-  def setLineWidth(w: Double): Unit               = emit(PictureOp.SetLineWidth(w))
+  /** The most recently set stroke width, so a `\path` arrowhead can push its tip far enough past the path end to
+    * cover the stroke's end cap (the stroke runs to the exact endpoint, where a pointed head is infinitely thin). */
+  def lineWidth: Double = lineWidthValue
+  private var lineWidthValue: Double = 1.0
+
+  def setLineWidth(w: Double): Unit               = { lineWidthValue = w; emit(PictureOp.SetLineWidth(w)) }
   def setDash(pattern: Vector[Double], offset: Double): Unit = emit(PictureOp.SetDash(pattern, offset))
   def setLineCap(cap: LineCap): Unit              = emit(PictureOp.SetLineCap(cap))
   def setLineJoin(join: LineJoin): Unit           = emit(PictureOp.SetLineJoin(join))
@@ -118,18 +148,51 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
 
   // ─── path building ──────────────────────────────────────────────────────────────
 
+  /** Begin tracking the path being built so its endpoints' tangents can orient arrowheads; resets the recorded
+    * anchors. Called by `\path` when it carries an arrow: option. */
+  def beginTrackedPath(): Unit =
+    tracking = true
+    pathStart = None; pathStartDir = None; pathEnd = None; pathEndDir = None
+
+  /** Stop tracking. Called before any arrowheads are drawn, so their own path segments are not recorded. */
+  def endTrackedPath(): Unit = tracking = false
+
+  /** The path's end and the incoming travel direction there, for an end arrowhead; None if it drew no segments. */
+  def pathEndAnchor: Option[((Double, Double), (Double, Double))] =
+    for { e <- pathEnd; d <- pathEndDir } yield (e, d)
+
+  /** The path's start and the outgoing travel direction there, for a start arrowhead (which points backwards). */
+  def pathStartAnchor: Option[((Double, Double), (Double, Double))] =
+    for { s <- pathStart; d <- pathStartDir } yield (s, d)
+
   def newPath(): Unit = emit(PictureOp.NewPath)
 
   def moveTo(x: Double, y: Double): Unit =
+    if tracking && pathStart.isEmpty then pathStart = Some((x, y)) // the first moveTo fixes the path's start point
     emit(PictureOp.MoveTo(x, y)); curX = x; curY = y
 
   def lineTo(x: Double, y: Double): Unit =
+    val dir = (x - curX, y - curY)
+    trackSegment(dir, dir, x, y)
     emit(PictureOp.LineTo(x, y)); curX = x; curY = y
 
   def curveTo(c1x: Double, c1y: Double, c2x: Double, c2y: Double, x: Double, y: Double): Unit =
+    // The Bézier leaves its start toward the first control point and arrives at its end from the last control point;
+    // a control point coincident with its endpoint falls through to the next-best direction.
+    val outDir = firstNonZero((c1x - curX, c1y - curY), (c2x - curX, c2y - curY), (x - curX, y - curY))
+    val inDir  = firstNonZero((x - c2x, y - c2y), (x - c1x, y - c1y), (x - curX, y - curY))
+    trackSegment(outDir, inDir, x, y)
     emit(PictureOp.CurveTo(c1x, c1y, c2x, c2y, x, y)); curX = x; curY = y
 
   def arc(cx: Double, cy: Double, r: Double, a0: Double, a1: Double, negative: Boolean): Unit =
+    if tracking then
+      // The arc's tangent is perpendicular to its radius; travel is counter-clockwise unless `negative`.
+      val startTan = if negative then (math.sin(a0), -math.cos(a0)) else (-math.sin(a0), math.cos(a0))
+      val endTan   = if negative then (math.sin(a1), -math.cos(a1)) else (-math.sin(a1), math.cos(a1))
+      if pathStart.isEmpty then pathStart = Some((cx + r * math.cos(a0), cy + r * math.sin(a0)))
+      if pathStartDir.isEmpty then pathStartDir = Some(startTan)
+      pathEndDir = Some(endTan)
+      pathEnd = Some((cx + r * math.cos(a1), cy + r * math.sin(a1)))
     emit(PictureOp.Arc(cx, cy, r, a0, a1, negative))
     curX = cx + r * math.cos(a1)
     curY = cy + r * math.sin(a1)
@@ -140,6 +203,11 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
     * end of a `\path` or a shape. */
   def paint(): Unit =
     emit(PictureOp.Paint(fillColour.map(withOpacity(_, fillOpacity)), strokeColour.map(withOpacity(_, strokeOpacity))))
+
+  /** Paint the current path with explicit colours, bypassing the mode's active fill/stroke. For composite shapes
+    * like an arrowhead, whose ink the drawing command chooses (the pen colour, not the picture's `\fill`), rather
+    * than the shape inheriting the picture's fill/stroke state. */
+  def paintWith(fill: Option[Color], stroke: Option[Color]): Unit = emit(PictureOp.Paint(fill, stroke))
 
   // ─── shapes (lower to a fresh path plus one paint) ───────────────────────────────
 
