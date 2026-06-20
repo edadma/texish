@@ -213,6 +213,12 @@ abstract class Typesetter:
 
   def getDocument: DocumentMode = document
 
+  loadBundledFonts()
+
+  /** Load the bundled typefaces this backend draws with, registering each style of each family. The JVM and
+    * Native hosts load the full set from disk; the Scala.js host, which has no filesystem and must keep the
+    * download small, overrides this to load only the embedded fonts it ships. */
+  protected def loadBundledFonts(): Unit = {
   loadTypeface(
     "noto",
     "fonts/NotoSerif/NotoSerif",
@@ -280,7 +286,7 @@ abstract class Typesetter:
     "Regular",
   )
 
-  private val gentiumbookMissing = Set(
+  val gentiumbookMissing = Set(
     `LONG LEFT RIGHT ARROW`,
     `LONG LEFT RIGHT DOUBLE ARROW`,
     `LONG LEFTWARDS ARROW`,
@@ -313,7 +319,7 @@ abstract class Typesetter:
   loadFont("mono", "fonts/LatinModernMono/lmmono10-italic.otf", Set.empty, Set("italic"))
   loadFont("mono", "fonts/LatinModernMono/lmmonolt10-boldoblique.otf", Set.empty, Set("bold", "italic"))
 
-  private val alegreyaMissing = Set(
+  val alegreyaMissing = Set(
     `LATIN SMALL LIGATURE FFI`,
     `LATIN SMALL LIGATURE FFL`,
     `LATIN SMALL LIGATURE FF`,
@@ -367,7 +373,7 @@ abstract class Typesetter:
   // Math, so a document can set body text in the same family the math is set in (and a logo's hand-tuned kerns
   // land as designed). The 10-point optical size is the body face; its four core styles are registered by
   // file, since the .otf names don't follow loadTypeface's "-Style.ttf" convention.
-  private val lmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet ++ Ligatures.TEXT_REPRESENTATIONS
+  val lmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet ++ Ligatures.TEXT_REPRESENTATIONS
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-regular.otf", lmLigatures, Set.empty)
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bold.otf", lmLigatures, Set("bold"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
@@ -387,6 +393,7 @@ abstract class Typesetter:
   // Both are SIL OFL. Drawn by glyph index through the same seam math mode uses.
   loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
   loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
+  }
 
   init(1, 1)
   selectFont("lmroman", 14, Set("regular"))

@@ -2,6 +2,7 @@ package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.path.Path
+import io.github.edadma.texish.EmbeddedPackages
 import scala.collection.mutable
 
 /** The streaming processor/expander for parser.
@@ -1150,10 +1151,17 @@ object UsePrimitive extends Primitive:
 
     roots.map(_ / fileName).find(p => p.exists && p.isFile) match
       case None =>
-        proc.handler.error(
-          s"\\use: module '$name' not found (searched: ${roots.map(r => (r / fileName).toString).mkString(", ")})",
-          pos,
-        )
+        // No file on disk: fall back to a module embedded in the build. This is how a host with no package
+        // directory — chiefly the browser — resolves the standard modules; on a host with the files present
+        // the filesystem search above wins first, so a local package still shadows the embedded copy.
+        EmbeddedPackages.sources.get(name.stripSuffix(".texish")) match
+          case Some(chunks) =>
+            if proc.claimModule(s"embedded:${name.stripSuffix(".texish")}") then proc.loadModule(chunks.mkString, ".")
+          case None =>
+            proc.handler.error(
+              s"\\use: module '$name' not found (searched: ${roots.map(r => (r / fileName).toString).mkString(", ")})",
+              pos,
+            )
       case Some(file) =>
         val resolved  = file.toAbsolutePath.normalize
         val canonical = resolved.toPlatformString
