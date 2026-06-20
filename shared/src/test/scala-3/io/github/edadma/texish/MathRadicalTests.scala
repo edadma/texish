@@ -16,7 +16,7 @@ class MathRadicalTests extends AnyFreeSpec with Matchers:
     sm.addChar(c)
     sm.result.asInstanceOf[Box]
 
-  "a radical sets the bar above the radicand and is as wide as surd plus radicand" in {
+  "a radical is as wide as surd plus radicand plus the vinculum's overshoot, with the bar above the radicand" in {
     val t  = new HeadlessTypesetter
     val bf = base(t)
     val m  = new MathMode(t, bf, MathStyle.Text)
@@ -24,7 +24,9 @@ class MathRadicalTests extends AnyFreeSpec with Matchers:
 
     val rad = m.makeRadical(r).asInstanceOf[RadicalBox]
 
-    rad.width shouldBe (12.0 +- 0.001)  // surd 6 + radicand 6
+    // surd 6 + radicand 6 + the overbar's overshoot past the radicand (0.05 × 14pt), so a glyph whose ink fills
+    // its advance does not end flush with the bar.
+    rad.width shouldBe (12.7 +- 0.001)
     rad.ascent should be > r.ascent     // the vinculum and its clearance rise above the radicand top (8)
     rad.descent should be >= r.descent  // at least as deep as the radicand
   }
@@ -61,6 +63,24 @@ class MathRadicalTests extends AnyFreeSpec with Matchers:
     val (_, randX, randY) = rec.drawn.find { case (g, _, _) => g == '8'.toInt }.get
     degX should be < randX // the index sits left of the radicand, in the surd's kink
     degY should be < randY // and rides high — its baseline is above the radicand's
+  }
+
+  "an oversized surd's surplus is centred, halving how far its point dips below the radicand" in {
+    // The smallest precomposed surd a font offers is often far taller than a short radicand (a lone π) needs.
+    // Hung from the bar by its top, all that surplus would dive below the baseline; TeX centres it instead, so
+    // half raises the bar's clearance and half remains as the dip. A tall surd over a short, depthless radicand
+    // exercises that: with RuleBoxes standing in for the glyphs, only the box metrics matter here.
+    val t        = new HeadlessTypesetter
+    val p        = RadicalParams.texDefaults(14, display = false)
+    val surd     = new RuleBox(t, 6, 1.0, 19.0) // height 20, mostly hanging below its own baseline
+    val radicand = new RuleBox(t, 6, 5.0, 0.0)  // height 5, no depth — the surd is much taller than needed
+    val rad      = new RadicalBox(t, surd, radicand, p)
+
+    val minBarTop = radicand.ascent + p.verticalGap + p.ruleThickness
+    val surplus   = surd.height - minBarTop - radicand.descent // would all dive below without centring
+
+    rad.descent shouldBe (radicand.descent + surplus / 2 +- 0.001) // half the surplus, not all of it
+    rad.descent should be < surplus                               // strictly shallower than the un-centred dip
   }
 
   "a radical enters the list as an Ord atom and lays out with positive size" in {

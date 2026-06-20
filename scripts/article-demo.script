@@ -38,7 +38,9 @@ $$ \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} $$
 
 Roman words inside a formula use \texttt{text}, as in $V = \text{volume}$, and a
 calligraphic letter comes from \texttt{mathcal}, as in the category $\mathcal{C}$
-or the power set $\mathcal{P}(S)$.
+or the power set $\mathcal{P}(S)$. A square root draws its radical over the whole
+radicand, whether a single letter like $\sqrt{\pi}$, a number like $\sqrt{2}$, or
+an expression like $\sqrt{x + y}$.
 
 \section {Lists}
 
