@@ -556,7 +556,9 @@ abstract class Typesetter:
 
     if f != currentFont then
       currentFont = f
-      set("baselineskip", Glue(f.size))
+      // Track the font with TeX's default leading (\baselineskip = 1.2 × the size), so changing the font size
+      // keeps proportional line spacing. A document that wants a specific leading sets baselineskip after.
+      set("baselineskip", Glue(f.size * 1.2))
 
     currentFont
 
@@ -755,11 +757,11 @@ abstract class Typesetter:
       "xspaceskip"    -> Glue(currentFont.space * 1.5, 1),
       "hsize"         -> 6.5 * in,
       "vsize"         -> 9 * in,
-      "parindent"     -> in / 2,
-      "parfillskip"   -> FilGlue,
+      "parindent"     -> 20 * pt, // TeX's \parindent
+      "parfillskip"   -> FilGlue, // 0pt plus 1fil, so the last line of a paragraph fills out to the margin
       "leftskip"      -> ZeroGlue,
       "rightskip"     -> ZeroGlue,
-      "parskip"       -> FilGlue,
+      "parskip"       -> Glue(0, 1 * pt), // TeX's \parskip: 0pt plus 1pt between paragraphs
       "hangindent"    -> 0.0,
       "hangafter"     -> 1.0,
       "hoffset"       -> 1 * in,
@@ -767,7 +769,7 @@ abstract class Typesetter:
       "pageno"        -> 1.0,
       "headsep"       -> in / 4, // bottom of the running header to the top of the body
       "footskip"      -> in / 4, // bottom of the body to the top of the running footer
-      "topskip"       -> Glue(currentFont.size * 1.2 * pt), // distance from the page top to the first baseline
+      "topskip"       -> Glue(10 * pt), // TeX's \topskip: distance from the page top to the first baseline
       "raggedbottom"  -> 0.0, // nonzero: pad page bottoms with fil instead of stretching the page's glue
 
       // display math ($$…$$): the glue set above and below a displayed formula

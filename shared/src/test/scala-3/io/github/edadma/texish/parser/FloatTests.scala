@@ -107,7 +107,7 @@ class FloatTests extends AnyFreeSpec with Matchers:
   "a float that cannot share its reference page is carried to head a later one" in quietly {
     val (t, doc, proc) = fixture()
     t.set("raggedbottom", 1.0)
-    t.set("vsize", 80.0)
+    t.set("vsize", 50.0)
     t.set("hsize", 200.0)
 
     // the page fills with paragraph lines, then a float is asked for near the bottom; counting its height
