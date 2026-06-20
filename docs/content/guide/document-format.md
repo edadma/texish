@@ -6,7 +6,7 @@ weight: 1
 The engine itself is small — boxes, glue, macros, math. The familiar article furniture
 (titles, sections, lists, figures) comes from a *format* you load at the top of a document:
 
-```
+```texish
 \use{document}
 ```
 
@@ -18,7 +18,7 @@ needed. Everything below assumes it is loaded.
 
 Declare the title, author, and date, then typeset the block with `\maketitle`:
 
-```
+```texish
 \title{On the Electrodynamics of Moving Bodies}
 \author{A. Einstein}
 \date{June 1905}
@@ -29,7 +29,7 @@ Each is optional; `\maketitle` centers whichever were given.
 
 ## Abstract
 
-```
+```texish
 \begin{abstract}
 A short summary of the document, indented on both sides under a centered heading.
 \end{abstract}
@@ -41,7 +41,7 @@ A short summary of the document, indented on both sides under a centered heading
 section. The first paragraph after a heading is set flush left with no indent, as in a
 LaTeX article; following paragraphs indent.
 
-```
+```texish
 \section{Introduction}
 The opening paragraph sits flush against the left margin.
 
@@ -56,7 +56,7 @@ Numbered 1.1, 1.2, and so on.
 Lists nest, and the markers hang to the left of the text so wrapped lines align under the
 content rather than the marker.
 
-```
+```texish
 \begin{enumerate}
 \item First point.
 \item Second point.
@@ -76,7 +76,7 @@ content rather than the marker.
 `quote` indents a block on both sides; `quotation` indents it further. Both revert at the
 matching `\end`.
 
-```
+```texish
 \begin{quote}
 The art of writing is the art of discovering what you believe.
 \end{quote}
@@ -87,13 +87,13 @@ The art of writing is the art of discovering what you believe.
 `\footnote` raises a numbered marker in the text and sets its body at the foot of whatever
 page the marker lands on.
 
-```
+```texish
 The result was first noted by Gauss\footnote{In a letter of 1809.} and later refined.
 ```
 
 ## Spacing and page breaks
 
-```
+```texish
 \smallskip   \medskip   \bigskip       % named vertical gaps
 \vskip 12pt plus 2pt minus 1pt         % explicit vertical glue
 \vfill                                  % stretchable fill to the page bottom
@@ -105,7 +105,7 @@ The result was first noted by Gauss\footnote{In a letter of 1809.} and later ref
 The format ships a page number in the footer. Override `\footline`, or define a
 `\headline`, to change the running head or foot; `\the\pageno` is the current page.
 
-```
+```texish
 \def headline {\hfil\italic{Draft}\hfil}
 ```
 

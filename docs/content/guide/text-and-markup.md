@@ -19,7 +19,7 @@ so they fire in ordinary running text:
 
 ## Emphasis and weight
 
-```
+```texish
 \emph{emphasis}        % italic
 \textit{italic}        \italic{…}
 \textbf{bold}          \bold{…}
@@ -30,7 +30,7 @@ so they fire in ordinary running text:
 `\texttt` sets its argument in Latin Modern Mono at the surrounding size — for file names,
 inline code, and the like:
 
-```
+```texish
 The file \texttt{document.texish} defines \texttt{\\maketitle}.
 ```
 
@@ -42,7 +42,7 @@ it rather than looming over it.
 `\textsub` and `\textsup` set a subscript or superscript in running text, sized from the
 current font (so they scale with the body):
 
-```
+```texish
 H\textsub{2}O          the 1\textsup{st}          x\textsup{2}
 ```
 
@@ -53,7 +53,7 @@ H\textsub{2}O          the 1\textsup{st}          x\textsup{2}
 `\color` sets the pen for the rest of the current group; `\textcolor` colours just its
 argument. A colour is a CSS name (`blue`, `darkred`, …) or a `#RRGGBB` hex code.
 
-```
+```texish
 \textcolor{firebrick}{a single red word}, then black again.
 {\color{blue}the rest of this group is blue.}
 ```
@@ -64,7 +64,7 @@ argument. A colour is a CSS name (`blue`, `darkred`, …) or a `#RRGGBB` hex cod
 text blue on every backend). The URL is read verbatim, so a `//`, `~`, or `%` in the
 address survives intact.
 
-```
+```texish
 Visit the \href{https://example.org/docs}{documentation} for details, or go straight to
 \url{https://example.org}.
 ```

@@ -7,14 +7,14 @@ The `plot` package draws 2-D data plots — line graphs, scatter plots, bar char
 function curves — with labelled axes, tick marks, a grid, a legend, and reference lines.
 Load it with:
 
-```
+```texish
 \use{plot}
 ```
 
 A plot is set up by declaring the data ranges (or letting `\autorange` derive them), then
 drawn by `\plot`, whose body holds one or more data series:
 
-```
+```texish
 \xrange{0}{6}
 \yrange{0}{130}
 \xlabel{time (s)}
@@ -61,7 +61,7 @@ forced steps are cleared afterwards, so set what you want fresh before each plot
 exactly, and y is padded slightly and rested on a zero baseline when the data is
 non-negative:
 
-```
+```texish
 \autorange{1 12  2 19  3 15  4 27  5 22  6 31  7 28}
 \plot{ \lineplot{1 12  2 19  3 15  4 27  5 22  6 31  7 28} }
 ```
@@ -73,7 +73,7 @@ For non-numeric categories, `\xcategories` names the ticks instead of numbering 
 categories sit at `x = 1, 2, 3, …`, so a series (bars especially) plotted at those integer
 positions lines up under the labels:
 
-```
+```texish
 \xcategories{Q1 Q2 Q3 Q4}
 \plot{ \bars[teal]{1 95  2 130  3 80  4 150} }
 ```
@@ -98,7 +98,7 @@ Every series takes two optional bracket arguments before its data — a **colour
 Both brackets are optional. With no colour (or an empty `[]`), a series takes its colour
 from a palette in turn, so several series are automatically distinct:
 
-```
+```texish
 \plot{
   \lineplot{0 0  1 1  2 3  3 6}      % palette colour 1
   \lineplot{0 1  1 2  2 2  3 4}      % palette colour 2
@@ -110,7 +110,7 @@ a data list: it samples the expression across the domain, written in terms of th
 variable `x`, so any function the [expression evaluator](/guide/mathematics/) knows can be
 drawn:
 
-```
+```texish
 \xrange{-3}{3}  \yrange{0}{9}  \plottitle{$y = x^2$}
 \plot{ \fnplot[seagreen]{x*x} }
 ```
@@ -128,7 +128,7 @@ past the range does not spill into the margins; set `plotclip` to `0` to allow o
 at each point — usually over a `\scatter` of the same points. `\trendline` fits the
 least-squares line through `x y` data and draws it dashed across the range:
 
-```
+```texish
 \plot{
   \scatter[steelblue][mean]{1 8  3 17  5 24  7 39  9 47}
   \errorbars[steelblue]{1 8 3  3 17 5  5 24 4  7 39 6  9 47 5}
@@ -144,7 +144,7 @@ least-squares line through `x y` data and draws it dashed across the range:
 the value honestly). The discs are translucent, so overlapping points and a second bubble
 series stay legible:
 
-```
+```texish
 \plot{
   \bubble[royalblue][premium]{2 8 12  4 7 30  6 9 8  8 6 22}
   \bubble[darkorange][budget]{3 4 18  5 3 9  7 5 25  9 2 14}
@@ -164,7 +164,7 @@ swatch (a line, the series' marker, or a filled square according to the series k
 beside each label, on a light background sized to the labels — in a corner of the data
 area: `ne` (default), `nw`, `se`, or `sw`.
 
-```
+```texish
 \plot{
   \bars[teal][actual]{1 95  2 110  3 80  4 140}
   \lineplot[crimson][target]{1 100  4 100}
@@ -177,7 +177,7 @@ area: `ne` (default), `nw`, `se`, or `sw`.
 `\hline[colour]{y}` and `\vline[colour]{x}` draw a dashed line across the plot at a data
 value — a threshold, a target, a mean. With no colour they use `plotreflcolor`:
 
-```
+```texish
 \plot{
   \bars[teal]{1 95  2 110  3 80  4 140  5 120  6 150}
   \hline[crimson]{115.8}
@@ -192,7 +192,7 @@ the majors. `\xtickformat{prefix}{suffix}` and `\ytickformat{prefix}{suffix}` wr
 numeric tick label, so currency or units read naturally (a literal `$` is `\$`, a literal
 `%` is `\%`):
 
-```
+```texish
 \set plotyminor {5}
 \xtickformat{}{\%}
 \ytickformat{\$}{}

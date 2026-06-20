@@ -10,7 +10,7 @@ convention); a bare number is a point, and unit suffixes (`in`, `mm`, `pt`, `em`
 honoured. Shapes draw immediately in the current graphics state, which `\group` saves and
 restores.
 
-```
+```texish
 \picture width:3in height:2in {
   \fill{lightsteelblue} \stroke{steelblue} \linewidth{1.5pt}
   \rect{0.2in 0.2in 1in 1in}

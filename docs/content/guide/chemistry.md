@@ -6,7 +6,7 @@ weight: 6
 The `chem` package adds chemical reaction equations and 2D structure drawings. Load it
 with:
 
-```
+```texish
 \use{chem}
 ```
 
@@ -15,7 +15,7 @@ with:
 `\ce` typesets a reaction from a compact, mhchem-style notation — and like mhchem it sets
 the result **inline**, flowing in the running text:
 
-```
+```texish
 Methane burns: \ce{CH4 + 2 O2 -> CO2 + 2 H2O}.
 ```
 
@@ -32,7 +32,7 @@ operator `+` and the arrows are math symbols, so they get the proper math spacin
 Arrow tokens: `->` (reaction), `<=>` (equilibrium), `<-`, `<->`. To show a reaction
 centered on its own line, wrap it (at a larger size if you like) in `\centerline`:
 
-```
+```texish
 \centerline{\font lmroman 14 regular \ce{CH4 + 2 O2 -> CO2 + 2 H2O}}
 ```
 
@@ -44,7 +44,7 @@ ion, write the charge with `\up` outside `\ce` (a `^` cannot pass through a macr
 
 For a formula in running prose without `\ce`, the helpers set counts and charges directly:
 
-```
+```texish
 a litre of H\dn{2}O        % subscript
 the ion Na\up{$+$}         % superscript charge
 sulfate SO\dn{4}\up{$2-$}
@@ -59,7 +59,7 @@ named coordinates: `\atom{name}{x y}{label}` places and labels an atom, and `\bo
 `\dbond`, `\tbond` draw single, double, and triple bonds between two named atoms, shortened
 at each end so the labels stay clear.
 
-```
+```texish
 \picture width:2in height:1in {
   \atom{c}{0.4in 0.5in}{C}
   \atom{o}{1.4in 0.5in}{O}

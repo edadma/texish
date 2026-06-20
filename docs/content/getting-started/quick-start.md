@@ -10,7 +10,7 @@ figures — live in a format you load with `\use{document}` at the top.
 
 Save this as `hello.texish`:
 
-```
+```texish
 \use{document}
 
 \title{A First Document}

@@ -8,7 +8,7 @@ weight: 4
 `\includegraphics` places a raster image — PNG or JPEG — at its natural size, or sized by
 an optional `key=value` list:
 
-```
+```texish
 \includegraphics{frog.jpg}
 \includegraphics[width=200pt]{frog.jpg}
 \includegraphics[width=0.4\linewidth]{diagram.png}
@@ -28,7 +28,7 @@ A relative path is resolved against the directory of the document being rendered
 
 `\centerline` centers a single line — the simplest way to center an image:
 
-```
+```texish
 \centerline{\includegraphics[width=0.4\linewidth]{frog.jpg}}
 ```
 
@@ -42,7 +42,7 @@ counterparts of `\centerline`.
 `\figure` and `\table` detach their body to a page edge and number it on its own counter; a
 `\caption` written inside reads "Figure 1: …" or "Table 1: …".
 
-```
+```texish
 \figure[h]{
   \centerline{\includegraphics[width=0.35\linewidth]{frog.jpg}}
   \vskip 6pt
@@ -58,7 +58,7 @@ command. `[h]` keeps the float in place if it fits; the default is top.
 `\tabular` sets a table from a column spec (`l`/`c`/`r` for alignment, `|` for a vertical
 rule); rows are separated by `\\` and a horizontal rule by `\hline`:
 
-```
+```texish
 \tabular{|l|c|r|}{
   \hline
   Item & Qty & Price \\

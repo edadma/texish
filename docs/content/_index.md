@@ -13,7 +13,7 @@ texish lays out and renders documents the way TeX does. You write in a small TeX
 language — macros, math mode, boxes and glue — and the engine breaks paragraphs into lines
 and lines into pages, then draws them through a pluggable backend.
 
-```
+```texish
 \use{document}
 \title{On the Motion of Small Particles}
 \author{A. Einstein}
