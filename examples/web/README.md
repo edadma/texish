@@ -29,13 +29,26 @@ is exactly what a self-contained web renderer wants.
 
 ## API
 
-The build exports a `texish` object:
+The build exports a `texish` object.
+
+SVG (vector, scales infinitely; outline-filled text is soft at small sizes):
 
 - `texish.renderToString(source)` — the first page of `source` as an `<svg>` document string.
 - `texish.renderAllToStrings(source)` — every page, as an array of strings.
 - `texish.render(source)` — the first page parsed into a live `<svg>` element to insert into the page.
 - `texish.renderAll(source)` — every page, as an array of `<svg>` elements.
 - `texish.autoRender(selector = ".texish")` — render every matching element in place from its text content.
+
+Canvas (raster, drawn at the device pixel ratio; ordinary text uses the browser's hinted `fillText`, so it is
+as crisp as native text — only the no-codepoint math glyphs are filled as canvas paths). Canvas rendering is
+asynchronous because the fonts load into the browser first:
+
+- `texish.renderToCanvas(source, container)` — returns a promise of the first page's `<canvas>` and, if
+  `container` is given, appends it there.
+- `texish.autoRenderCanvas(selector = ".texish")` — render every matching element to a canvas in place.
+
+Use SVG for output you will scale or print; use canvas for crisp on-screen text. See `index.html` (SVG) and
+`canvas.html` (canvas) for the same content rendered both ways.
 
 ## What ships in the bundle
 

@@ -57,6 +57,48 @@ object Texish:
     holder.innerHTML = svg
     holder.firstElementChild.asInstanceOf[dom.SVGElement]
 
+  // ─── canvas rendering (crisp, hinted text) ──────────────────────────────────────
+
+  /** Render `source` to an HTML `<canvas>`, drawing ordinary text with the browser's own hinted rasteriser so
+    * it is as sharp as native text (the SVG path renderer cannot be), and falling back to canvas paths only for
+    * the math glyphs that have no codepoint. Fonts must be loaded into the browser first, so this is async: it
+    * returns a promise of the first page's canvas and, if `container` is given, appends it there. Browser only.
+    */
+  @JSExport
+  def renderToCanvas(source: String, container: dom.Element): js.Promise[dom.html.Canvas] =
+    val t = new CanvasTypesetter
+    t.fontsReady.`then`[dom.html.Canvas] { (_: js.Any) =>
+      val handler = new TypesetterHandler(t)
+      val proc    = new Processor(handler)
+      registerTypesettingPrimitives(proc, handler)
+      proc.setBaseDir(".")
+      proc.process(source)
+      t.end()
+      val canvas = t.pageCanvases.headOption.getOrElse {
+        val c = dom.document.createElement("canvas").asInstanceOf[dom.html.Canvas]
+        c.width = 1; c.height = 1; c
+      }
+      if container != null && !js.isUndefined(container) then container.appendChild(canvas)
+      (canvas: dom.html.Canvas | js.Thenable[dom.html.Canvas])
+    }
+
+  /** Render every element matching `selector` (default `.texish`) to a canvas in place, the canvas analogue of
+    * [[autoRender]]. Each render is asynchronous (fonts load first); failures are isolated per element. Browser
+    * only. */
+  @JSExport
+  def autoRenderCanvas(selector: String = ".texish"): Unit =
+    val nodes = dom.document.querySelectorAll(selector)
+    var i     = 0
+    while i < nodes.length do
+      val el  = nodes(i).asInstanceOf[dom.Element]
+      val src = el.textContent
+      el.textContent = ""
+      renderToCanvas(src, el).`catch` { (e: Any) =>
+        dom.console.error("texish: failed to render an element to canvas", e.asInstanceOf[js.Any])
+        (): Unit | js.Thenable[Unit]
+      }
+      i += 1
+
   /** Render every element matching `selector` (default `.texish`) in place: its text content is taken as a
     * texish source and replaced with the rendered SVG, the way KaTeX's auto-render walks a page. Browser only.
     */
