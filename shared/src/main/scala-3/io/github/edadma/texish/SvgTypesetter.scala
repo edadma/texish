@@ -96,6 +96,11 @@ class SvgTypesetter extends Typesetter:
   /** The margin, in points, left around the ink when [[cropToContent]] crops a page. */
   var cropMargin: Double = 1.0
 
+  // The first cropped page's geometry, recorded at eject so a fragment renderer can read it back as
+  // FragmentMetrics together with the body baseline.
+  private var firstFragment: Option[FragmentMetrics] = None
+  override def fragmentMetrics: Option[FragmentMetrics] = firstFragment
+
   private var pageWidth: Double  = 0
   private var pageHeight: Double = 0
   private var page: SvgPage      = uninitialized
@@ -162,6 +167,11 @@ class SvgTypesetter extends Typesetter:
         val y1 = math.min(pageHeight, page.inkMaxY + cropMargin)
         (x0, y0, x1 - x0, y1 - y0)
       else (0.0, 0.0, pageWidth, pageHeight)
+
+    // Record the first cropped page's geometry and where the body baseline falls within it, for fragment
+    // rendering (an inline formula aligned on the surrounding text's baseline).
+    if firstFragment.isEmpty && cropToContent && page.hasInk then
+      firstFragment = Some(FragmentMetrics(vw, vh, bodyBaseline - vy))
 
     val sb = new StringBuilder
     // Size the element in points (the engine's unit) so the browser renders it at true physical size; the

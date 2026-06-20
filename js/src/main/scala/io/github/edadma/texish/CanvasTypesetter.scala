@@ -44,6 +44,11 @@ class CanvasTypesetter extends Typesetter with EmbeddedFontSet:
   /** The margin, in points, left around the ink when a page is cropped to its content. */
   var cropMargin: Double = 1.0
 
+  // The first cropped page's geometry (in points), recorded while cropping so a fragment renderer can align an
+  // inline formula on the surrounding text's baseline.
+  private var firstFragment: Option[FragmentMetrics] = None
+  override def fragmentMetrics: Option[FragmentMetrics] = firstFragment
+
   private var pageWidth: Double  = 0
   private var pageHeight: Double = 0
   private var page: CanvasPage   = uninitialized
@@ -140,6 +145,10 @@ class CanvasTypesetter extends Typesetter with EmbeddedFontSet:
       octx.drawImage(src, x0.toDouble, y0.toDouble, sw.toDouble, sh.toDouble, 0, 0, sw.toDouble, sh.toDouble)
       out.style.width = s"${fmt(sw / scale)}pt"
       out.style.height = s"${fmt(sh / scale)}pt"
+      // The crop box is in device pixels; convert to points (the engine's unit) and place the baseline within
+      // it, so an inline formula can be aligned on the surrounding text's baseline.
+      if firstFragment.isEmpty then
+        firstFragment = Some(FragmentMetrics(sw / scale, sh / scale, bodyBaseline - y0 / scale))
       out
 
   private def newCanvas(w: Int, h: Int): dom.html.Canvas =

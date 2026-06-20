@@ -48,6 +48,25 @@ not an outline fill. Canvas rendering is asynchronous because the fonts load int
   `container` is given, appends it there.
 - `texish.autoRenderCanvas(selector = ".texish")` — render every matching element to a canvas in place.
 
+Single inline / display math, for dropping one formula into flowing HTML text (the `katex.render` shape).
+The source is a math fragment — `$…$` for inline, `$$…$$` for a display equation — which the source already
+distinguishes. An inline formula's `vertical-align` is set from its rendered baseline, so it sits on the
+surrounding text's baseline instead of its bottom edge riding the line; a display equation is a centered block.
+
+- `texish.renderMath(source, container?)` — canvas (hinted text); returns a promise of the styled element and
+  appends it to `container` if given. Async (fonts load first).
+- `texish.renderMathSvg(source, container?)` — the SVG counterpart (resolution-independent, for scaling or
+  print); synchronous. Same baseline alignment.
+
+```js
+// inline, in a sentence:
+await texish.renderMath("$\\frac{a}{b}$", document.getElementById('frac'));
+// display, its own centered block:
+await texish.renderMath("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$", document.getElementById('eq'));
+```
+
+See `math.html` for inline and display math flowing in real paragraph text.
+
 Use SVG for output you will scale or print; use canvas for crisp on-screen text. See `index.html` (SVG) and
 `canvas.html` (canvas) for the same content rendered both ways.
 

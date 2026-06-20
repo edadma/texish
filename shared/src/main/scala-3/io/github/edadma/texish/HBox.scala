@@ -12,6 +12,10 @@ class HBox(rawBoxes: Seq[Box]) extends ContentBox:
   val xAdvance: Double = boxes.map(_.xAdvance).sum
 
   def draw(t: Typesetter, x: Double, y: Double): Unit =
+    // The first line drawn on a page sets the body baseline a fragment renderer aligns an inline formula by:
+    // `y` here is the true line baseline, even for a fraction whose own glyphs all sit off it. The outermost
+    // line box draws before any nested one, and the recorder keeps the first value, so this is that line.
+    t.recordBodyBaseline(y)
     box(t, x, y)
     var currentX = x
     for box <- boxes do

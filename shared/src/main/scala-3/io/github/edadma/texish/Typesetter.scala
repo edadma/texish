@@ -10,6 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized
 import scala.language.postfixOps
 
+/** The geometry of a single rendered fragment cropped to its ink, in points: its `width` and `height`, and
+  * `baseline` — the distance from the top of the cropped box down to the math baseline. An inline math element
+  * is aligned to the surrounding text by setting its CSS `vertical-align` to `baseline - height` (pt), which
+  * drops the element so its math baseline, not its bottom edge, sits on the text baseline. */
+final case class FragmentMetrics(width: Double, height: Double, baseline: Double)
+
 abstract class Typesetter:
 
   type ImageHandle
@@ -86,6 +92,24 @@ abstract class Typesetter:
   def createPageTarget: Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
+
+  /** The device-space y, in points, of the first body line's baseline on the page being shipped — recorded by
+    * the page builder as it draws the body. NaN until a body has been drawn. A fragment renderer reads it back,
+    * with the cropped page box, to align an inline formula on the surrounding text's baseline. */
+  private var bodyBaselineY: Double = Double.NaN
+
+  /** Record the first body line's baseline (device y, in points); the first value seen per render wins, so a
+    * multi-line column reports the top line — the one an inline fragment is aligned by. */
+  def recordBodyBaseline(y: Double): Unit = if bodyBaselineY.isNaN then bodyBaselineY = y
+
+  /** The recorded first-line baseline (device y, points), or NaN if no body has been drawn. */
+  def bodyBaseline: Double = bodyBaselineY
+
+  /** For a single-fragment render — an inline or display formula cropped to its ink — the cropped box's size
+    * and the distance from its top to the math baseline, all in points. None on a backend that does not crop,
+    * or before a page has shipped. The in-browser math API uses [[FragmentMetrics.baseline]] to set an inline
+    * element's `vertical-align` so the formula sits on the surrounding text's baseline. */
+  def fragmentMetrics: Option[FragmentMetrics] = None
 
   def ejectPageTarget(): Unit
 

@@ -99,6 +99,79 @@ object Texish:
       }
       i += 1
 
+  // ─── single inline / display math (baseline-aligned, KaTeX-style) ───────────────
+
+  /** Render one math formula for placement in flowing HTML text, the way `katex.render` produces a single
+    * formula. The source is a texish math fragment: `$…$` for inline math (default) or `$$…$$` for a display
+    * equation, which the source already distinguishes. The result is a `<canvas>` (hinted text via the SMaFL
+    * math font) styled for its context: an inline formula's `vertical-align` is set from the rendered baseline,
+    * so it sits on the surrounding text's baseline rather than its bottom edge riding the line; a display
+    * equation is a centered block. If `container` is given the element is appended there. Async — the fonts
+    * load into the browser first. Browser only. */
+  @JSExport
+  def renderMath(source: String, container: dom.Element = null): js.Promise[dom.html.Canvas] =
+    val display = isDisplay(source)
+    val t       = new CanvasTypesetter
+    t.fontsReady.`then`[dom.html.Canvas] { (_: js.Any) =>
+      val canvas = layoutOne(t, source, t.pageCanvases.headOption).getOrElse(emptyCanvas())
+      styleMath(canvas, t.fragmentMetrics, display)
+      if container != null && !js.isUndefined(container) then container.appendChild(canvas)
+      (canvas: dom.html.Canvas | js.Thenable[dom.html.Canvas])
+    }
+
+  /** The SVG counterpart of [[renderMath]]: a resolution-independent `<svg>` element, baseline-aligned the same
+    * way, for output that will be scaled or printed (its outline-filled text is slightly softer on screen than
+    * the canvas form). Synchronous — SVG needs no font preload. Browser only. */
+  @JSExport
+  def renderMathSvg(source: String, container: dom.Element = null): dom.SVGElement =
+    val display = isDisplay(source)
+    val t       = new SvgTypesetterJS
+    t.cropToContent = true
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    proc.setBaseDir(".")
+    proc.process(source)
+    t.end()
+    val el = parseSvg(t.pageSvgs.headOption.getOrElse(""))
+    styleMath(el, t.fragmentMetrics, display)
+    if container != null && !js.isUndefined(container) then container.appendChild(el)
+    el
+
+  /** Whether a math source is a display equation (`$$…$$`) rather than inline (`$…$`). */
+  private def isDisplay(source: String): Boolean = source.trim.startsWith("$$")
+
+  /** Lay `source` out on `t` and return the first page target, or None if nothing shipped. */
+  private def layoutOne[A](t: CanvasTypesetter, source: String, page: => Option[A]): Option[A] =
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    proc.setBaseDir(".")
+    proc.process(source)
+    t.end()
+    page
+
+  /** Style a rendered math element for its context. An inline formula is dropped by `baseline - height` points
+    * (a negative `vertical-align`) so its math baseline, not its bottom edge, lands on the text baseline; a
+    * display equation becomes a centered block. */
+  private def styleMath(el: dom.Element, metrics: Option[FragmentMetrics], display: Boolean): Unit =
+    val style = el.asInstanceOf[js.Dynamic].style
+    if display then
+      style.display = "block"
+      style.margin = "0.6em auto"
+    else
+      style.verticalAlign = metrics match
+        case Some(m) => s"${fmtPt(m.baseline - m.height)}pt"
+        case None    => "baseline"
+
+  private def emptyCanvas(): dom.html.Canvas =
+    val c = dom.document.createElement("canvas").asInstanceOf[dom.html.Canvas]
+    c.width = 1; c.height = 1; c
+
+  private def fmtPt(v: Double): String =
+    val r = math.rint(v * 1000) / 1000
+    if r == r.toLong.toDouble then r.toLong.toString else r.toString
+
   /** Render every element matching `selector` (default `.texish`) in place: its text content is taken as a
     * texish source and replaced with the rendered SVG, the way KaTeX's auto-render walks a page. Browser only.
     */
