@@ -125,8 +125,8 @@
 
   \set msW {\calc{msFirstX + msN * musicnote + 12}}
 
-  // The common height of a beam: a flat bar above the staff, the same for every note in a run.
-  \set msBeamY {\calc{msTop + 1.6 * g}}
+  // msBeam is 1 while a [ … ] run is open. The beam itself is not flat: when a run opens, its line (a start
+  // height and a per-note slope) is measured from the run's pitches, so the beam tilts to follow the melody.
   \set msBeam {0}
 
   // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff, G2
@@ -159,7 +159,8 @@
   }}
 
 // Walk the note list, advancing msX. A barline advances less than a note. `[` and `]` open and close a beamed
-// run: the notes between them share one flat beam instead of carrying flags. Several barline kinds are written
+// run: the notes between them share one beam, tilted to follow the melody, instead of carrying flags. Several
+// barline kinds are written
 // as their own tokens: `|` plain, `||` double, `|.` final, `|:` and `:|` the start and end of a repeat.
 \def musicWalk items {
   \if {\size{\items}}
@@ -167,6 +168,7 @@
     \if {\= {\tok} {[}}
       \global\set msBeam {1}
       \global\set msBeamPrev {0}
+      \musicBeamLine{\tail{\items}}
     \else \if {\= {\tok} {]}}
       \global\set msBeam {0}
     \else \if {\= {\tok} {|}}
@@ -298,25 +300,88 @@
     \fi \fi
   \fi}
 
-// A note inside a beamed run: an up-stem reaching the common beam height, joined to the previous note in the
-// run by a thick flat bar at that height. A run of sixteenths carries a second beam just below the first. The
-// first note of a run only records its stem foot for the next to beam to.
+// Measure the beam line for the run that starts at the head of `items` and ends at the next `]`. The beam is an
+// up-stem beam above the staff; its line is recorded as a start height (msBeamY0, at the first note) and a slope
+// (msBeamDy, the rise from one note to the next), so each note finds the beam at its own position. The slope
+// follows the run's first-to-last pitch but is clamped so a wide leap does not tilt the beam wildly, and the
+// whole line is then shifted up so even the highest interior note keeps a stem of at least msBeamMin.
+\def musicBeamLine items {
+  \global\set bmCount {0}
+  \global\set bmFirst {0}
+  \global\set bmS0 {0}
+  \global\set bmSN {0}
+  \musicBeamMeasure{\items}
+  \set bmNy0 {\calc{msBottom + bmS0 * g / 2}}
+  \set bmRise {\calc{(bmSN - bmS0) * g / 2}}
+  \set bmCap {\calc{1.5 * g}}
+  \if {\> {\bmRise} {\bmCap}} \set bmRise {\bmCap} \fi
+  \if {\< {\bmRise} {\calc{0 - bmCap}}} \set bmRise {\calc{0 - bmCap}} \fi
+  \global\set msBeamY0 {\calc{bmNy0 + 3.3 * g}}
+  \global\set msBeamDy {0}
+  \if {\> {\bmCount} {1}} \global\set msBeamDy {\calc{bmRise / (bmCount - 1)}} \fi
+  // Raise the line until every note clears it by at least msBeamMin staff spaces, so an interior peak (an arch
+  // like c g c) never pokes through the beam.
+  \global\set bmJ {0}
+  \global\set bmShift {0}
+  \musicBeamClear{\items}
+  \global\set msBeamY0 {\calc{msBeamY0 + bmShift}}
+  \global\set msBeamJ {0}}
+
+// First pass: count the notes in the run and record the diatonic step of its first and last note.
+\def musicBeamMeasure items {
+  \if {\size{\items}}
+    \set tok {\head{\items}}
+    \if {\= {\tok} {]}} \else
+      \musicParse{\tok}
+      \set li {\mapget musicLetters {\msLetter}}
+      \set bs {\calc{msOct * 7 + li - msBase}}
+      \if {\= {\bmFirst} {0}} \global\set bmS0 {\bs} \global\set bmFirst {1} \fi
+      \global\set bmSN {\bs}
+      \global\set bmCount {\calc{bmCount + 1}}
+      \musicBeamMeasure{\tail{\items}}
+    \fi
+  \fi}
+
+// Second pass: for each note find how far the provisional beam line falls short of a full stem above it, and
+// keep the largest such shortfall in bmShift; adding it to the line lengthens the tightest stem to msBeamMin.
+\def musicBeamClear items {
+  \if {\size{\items}}
+    \set tok {\head{\items}}
+    \if {\= {\tok} {]}} \else
+      \musicParse{\tok}
+      \set li {\mapget musicLetters {\msLetter}}
+      \set bs {\calc{msOct * 7 + li - msBase}}
+      \set bny {\calc{msBottom + bs * g / 2}}
+      \set bby {\calc{msBeamY0 + bmJ * msBeamDy}}
+      \set bneed {\calc{bny + 2.5 * g - bby}}
+      \if {\> {\bneed} {\bmShift}} \global\set bmShift {\bneed} \fi
+      \global\set bmJ {\calc{bmJ + 1}}
+      \musicBeamClear{\tail{\items}}
+    \fi
+  \fi}
+
+// A note inside a beamed run: an up-stem reaching the beam line at this note's place in the run (msBeamYcur),
+// joined to the previous note by a thick bar along the line. A run of sixteenths carries a second beam parallel
+// to and just below the first. The first note of a run only records its stem foot for the next to beam to.
 \def musicBeamedStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemX {\calc{msX + msHeadW - msStemHalf}}
-  \line{\msStemX \calc{ny + msStemAttach}  \msStemX \msBeamY}
+  \set msBeamYcur {\calc{msBeamY0 + msBeamJ * msBeamDy}}
+  \line{\msStemX \calc{ny + msStemAttach}  \msStemX \msBeamYcur}
   \if {\= {\msBeamPrev} {1}}
     \linewidth{\calc{0.5 * g}}
     // Run the beam half a stem-width past each stem centre so it ends flush with the outer edge of the stem
     // rather than leaving the stem's corner poking out; interior segments simply overlap at the shared stems.
-    \line{\calc{msBeamPrevX - msStemHalf} \msBeamY  \calc{msStemX + msStemHalf} \msBeamY}
-    // A second beam, three-quarters of a staff space below the first, for a run of sixteenth notes.
+    \line{\calc{msBeamPrevX - msStemHalf} \msBeamPrevY  \calc{msStemX + msStemHalf} \msBeamYcur}
+    // A second beam, three-quarters of a staff space below the first, parallel to it, for a run of sixteenths.
     \if {\>= {\msDur} {16}}
-      \line{\calc{msBeamPrevX - msStemHalf} \calc{msBeamY - 0.75 * g}  \calc{msStemX + msStemHalf} \calc{msBeamY - 0.75 * g}}
+      \line{\calc{msBeamPrevX - msStemHalf} \calc{msBeamPrevY - 0.75 * g}  \calc{msStemX + msStemHalf} \calc{msBeamYcur - 0.75 * g}}
     \fi
   \fi
   \global\set msBeamPrev {1}
-  \global\set msBeamPrevX {\msStemX}}
+  \global\set msBeamPrevX {\msStemX}
+  \global\set msBeamPrevY {\msBeamYcur}
+  \global\set msBeamJ {\calc{msBeamJ + 1}}}
 
 // Ledger lines for a note that sits outside the staff: short rules on the even steps between the staff edge
 // and the note (step 0 is the bottom line, step 8 the top), centred on the head and overhanging it a little.

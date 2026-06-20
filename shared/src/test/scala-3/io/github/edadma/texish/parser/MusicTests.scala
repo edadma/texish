@@ -13,7 +13,7 @@ import org.scalatest.matchers.should.Matchers
   * `glyph` field is the SMuFL codepoint — which lets these tests check which symbol landed where. They cover the
   * parts that carry the music: the staff is five lines, a pitch's height follows its diatonic step, stems flip at
   * the middle line, the duration decides head shape and whether there is a stem, off-staff notes get ledger lines,
-  * an accidental sits to the left of its head, a beamed run shares a flat beam, and a time signature stacks figures.
+  * an accidental sits to the left of its head, a beamed run shares a beam tilted to the melody, and a time signature stacks figures.
   * (Default config: gap 8, pad 30, left 44, so the bottom line is y=30 and a diatonic step is 4 units.)
   */
 class MusicTests extends AnyFreeSpec with Matchers:
@@ -59,6 +59,21 @@ class MusicTests extends AnyFreeSpec with Matchers:
   // placed glyphs as (codepoint, x, y) — the headless seam makes the glyph index equal the codepoint
   private def glyphs(o: Vector[PictureOp]): Vector[(Int, Double, Double)] =
     o.collect { case PictureOp.Place(g: GlyphBox, _, x, y) => (g.glyph, x, y) }
+  // beam segments as ((x0,y0),(x1,y1)). Beams are the only rules drawn at 0.5*gap (=4.0 at the default gap),
+  // so tracking the current line width isolates them from stems (0.12*gap) and staff/ledger lines, whatever
+  // their slope or height — a contour beam need not be horizontal or sit above the staff.
+  private def beams(o: Vector[PictureOp]): Vector[((Double, Double), (Double, Double))] =
+    val out = ArrayBuffer[((Double, Double), (Double, Double))]()
+    var w   = 0.0
+    for i <- o.indices do
+      o(i) match
+        case PictureOp.SetLineWidth(x) => w = x
+        case PictureOp.MoveTo(x0, y0) if w == 4.0 && i + 1 < o.length =>
+          o(i + 1) match
+            case PictureOp.LineTo(x1, y1) => out += (((x0, y0), (x1, y1)))
+            case _                        =>
+        case _ =>
+    out.toVector
   // note heads: placed glyphs whose codepoint is one of the three notehead shapes
   private def heads(o: Vector[PictureOp]): Vector[(Int, Double, Double)] =
     glyphs(o).filter((cp, _, _) => cp == NoteWhole || cp == NoteHalf || cp == NoteBlack)
@@ -116,10 +131,14 @@ class MusicTests extends AnyFreeSpec with Matchers:
     glyphs(ops("c")).filter((cp, _, _) => cp == AccSharp) shouldBe empty
   }
 
-  "a beamed run draws a flat beam above the staff" in {
-    // the beam is a horizontal segment at the common beam height (msTop + 1.6*gap), above the top staff line at 62,
-    // and the run carries no eighth-note flags of its own
-    hlines(ops("[ c d e ]")).filter(_ > 62.5) should not be empty
+  "a beamed run draws a beam that tilts with the melody" in {
+    // c d e rises, so the beam over the run rises too: its segments are sloped (the two ends differ in height),
+    // not the flat bar a fixed beam height would give. The run carries no eighth-note flags of its own.
+    val bs = beams(ops("[ c d e ]"))
+    bs should not be empty
+    bs.foreach { case ((_, y0), (_, y1)) => y1 should be > y0 } // each segment climbs to the right
+    // and a level run (one repeated pitch) draws a flat beam, confirming the slope tracks the pitches
+    beams(ops("[ c c c ]")).foreach { case ((_, y0), (_, y1)) => y1 shouldBe y0 }
   }
 
   "a time signature stacks two figures after the clef" in {
@@ -168,9 +187,13 @@ class MusicTests extends AnyFreeSpec with Matchers:
   }
 
   "a beamed run of sixteenths draws a second beam below the first" in {
-    // two horizontal beam heights above the staff (primary + secondary), versus one for eighths
-    hlines(ops("[ c16 d16 ]")).filter(_ > 62.5).distinct.size shouldBe 2
-    hlines(ops("[ c8 d8 ]")).filter(_ > 62.5).distinct.size shouldBe 1
+    // a two-note run draws one beam span between the stems; a sixteenth run adds a second, parallel span below it
+    beams(ops("[ c16 d16 ]")) should have size 2
+    beams(ops("[ c8 d8 ]")) should have size 1
+    // the second beam runs parallel to and below the first
+    val Vector(primary, secondary) = beams(ops("[ c16 d16 ]"))
+    secondary._1._2 should be < primary._1._2
+    (primary._1._2 - secondary._1._2) shouldBe (primary._2._2 - secondary._2._2) +- 0.001
   }
 
   "the repeat barlines draw their dots" in {
