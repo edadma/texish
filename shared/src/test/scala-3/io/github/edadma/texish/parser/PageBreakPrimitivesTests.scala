@@ -46,6 +46,25 @@ class PageBreakPrimitivesTests extends AnyFreeSpec with Matchers:
     t.mode.asInstanceOf[Builder].last.asInstanceOf[Penalty].penalty shouldBe Penalty.Inhibit
   }
 
+  // The document package keeps a section heading with the text it introduces by following the heading box with an
+  // inhibiting penalty: that makes the glue beneath the heading a non-break, so a page break that would orphan the
+  // heading at the foot of a page falls before it instead. Regression for a heading stranded at the page bottom.
+  "a section heading is followed by an inhibiting penalty so it is not orphaned" in quietly {
+    val (t, proc) = fixture()
+    // A paragraph after the heading closes back to the page builder, so its list holds the section's vertical
+    // items: the space above, the heading box, the \nobreak, then the space below.
+    proc.process("\\use{document}\\section{Heading}\n\nbody text here\n\n")
+    val items  = t.mode.asInstanceOf[Builder].list
+    val penIdx = items.indexWhere {
+      case p: Penalty => p.penalty == Penalty.Inhibit
+      case _          => false
+    }
+    penIdx should be > 0
+    items(penIdx - 1) should not be a[Glue]    // the heading line box, not glue
+    items(penIdx - 1) should not be a[Penalty]
+    items(penIdx + 1) shouldBe a[Glue]         // the glue under the heading, now non-breakable
+  }
+
   "\\eject ends the paragraph and ships the page" in quietly {
     val (t, doc, proc) = capturing()
     proc.process("one two three\n\n\\eject")

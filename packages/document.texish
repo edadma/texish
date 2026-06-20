@@ -110,7 +110,9 @@
 // ---- Sections ------------------------------------------------------------------
 // Two levels, auto-numbered. A subsection's number resets with each new section.
 // The paragraph that follows a heading is set flush left (no first-line indent),
-// as in LaTeX.
+// as in LaTeX. A \nobreak after the heading keeps it with the text it introduces:
+// it makes the glue below the heading a non-break, so a page break that would have
+// orphaned the heading at the foot of a page falls before the heading instead.
 \newcounter{section}
 \newcounter{subsection}
 \counterwithin{subsection}{section}
@@ -119,6 +121,7 @@
   \stepcounter{section}
   \vskip 14pt plus 3pt minus 1pt
   \leftline{\font lmroman 14 bold \arabic{\value{section}}\hskip 10 \t}
+  \nobreak
   \vskip 8pt plus 2pt
   \noindent
 }
@@ -127,6 +130,7 @@
   \stepcounter{subsection}
   \vskip 12pt plus 3pt minus 1pt
   \leftline{\font lmroman 12 bold \arabic{\value{section}}.\arabic{\value{subsection}}\hskip 10 \t}
+  \nobreak
   \vskip 6pt plus 1pt
   \noindent
 }
