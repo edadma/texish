@@ -5,7 +5,7 @@ import java.nio.file.{Files, Paths}
 import io.github.edadma.texish.opentype.{Smafl, SmaflEntry}
 
 /** Build-time SMaFL converter: read an OpenType math font, assign private-use codepoints to its MATH-table
-  * size-variant and assembly glyphs ([[Smafl]]), and write the extended font alongside a `smafl.json` table of
+  * size-variant and assembly glyphs (the `opentype.Smafl` converter), and write the extended font alongside a `smafl.json` table of
   * the assignments. Run it to regenerate `LatinModernMath-SMaFL.otf`; the in-browser renderer then draws the
   * tall surd and other stretchy math glyphs through the browser's hinted text path instead of filling outlines.
   *
