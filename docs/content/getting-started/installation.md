@@ -3,8 +3,9 @@ title: "Installation"
 weight: 1
 ---
 
-texish is cross-published for the JVM, Scala Native, and Scala.js. There are two ways to
-use it: as the standalone command-line renderer, or as a library in an sbt build.
+texish is cross-published for the JVM, Scala Native, and Scala.js. Use it as the standalone
+command-line renderer, as a library in an sbt build, or in the browser through its Scala.js
+build (see [Rendering in the Browser](/guide/browser-rendering/)).
 
 ## As a library
 

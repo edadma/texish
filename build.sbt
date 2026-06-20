@@ -80,6 +80,36 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       )
       Seq(out)
     }.taskValue,
+    // Embed the bundled `packages/*.texish` modules as Scala constants at build time, so they ship compiled
+    // into every target. The module loader consults these as a fallback after its filesystem search, which
+    // lets a host with no package directory on disk — chiefly the browser — resolve the standard modules,
+    // while a local package file still shadows the embedded one wherever the filesystem search finds it first.
+    // Each module's source is split into chunks small enough for the compiler and rejoined at runtime.
+    Compile / sourceGenerators += Def.task {
+      val root   = (LocalRootProject / baseDirectory).value
+      val pkgDir = root / "packages"
+      val out =
+        (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedPackages.scala"
+      def esc(s: String): String =
+        s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
+      val files = (pkgDir * "*.texish").get.sortBy(_.getName)
+      val sb    = new StringBuilder
+      sb.append("package io.github.edadma.texish\n\n")
+      sb.append("// Generated at build time from the packages/ directory — do not edit.\n")
+      sb.append("private[texish] object EmbeddedPackages {\n")
+      sb.append("  val sources: Map[String, Array[String]] = Map(\n")
+      for (f <- files) {
+        val name   = f.getName.stripSuffix(".texish")
+        val chunks = IO.read(f).grouped(8000).toSeq
+        sb.append("    \"").append(name).append("\" -> Array(\n")
+        for (c <- chunks) sb.append("      \"").append(esc(c)).append("\",\n")
+        sb.append("    ),\n")
+      }
+      sb.append("  )\n")
+      sb.append("}\n")
+      IO.write(out, sb.toString)
+      Seq(out)
+    }.taskValue,
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
@@ -101,6 +131,44 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
     Test / scalaJSUseMainModuleInitializer := false,
     Test / scalaJSUseTestModuleInitializer := true,
+    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0",
+    // Embed the fonts the in-browser SVG renderer draws with, as base64 in a generated Scala source, since a
+    // browser has no filesystem. Only the Latin Modern text/math/mono stack is shipped — the full set is 61MB;
+    // this curated subset is ~1.3MB. The path list MUST stay in sync with SvgTypesetterJS.loadBundledFonts.
+    Compile / sourceGenerators += Def.task {
+      val root = (LocalRootProject / baseDirectory).value
+      val out =
+        (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedFontData.scala"
+      val fontPaths = Seq(
+        "fonts/LatinModernRoman/lmroman10-regular.otf",
+        "fonts/LatinModernRoman/lmroman10-bold.otf",
+        "fonts/LatinModernRoman/lmroman10-italic.otf",
+        "fonts/LatinModernRoman/lmroman10-bolditalic.otf",
+        "fonts/LatinModernRoman/lmromanslant10-regular.otf",
+        "fonts/LatinModernMono/lmmono10-regular.otf",
+        "fonts/LatinModernMono/lmmonolt10-bold.otf",
+        "fonts/LatinModernMono/lmmono10-italic.otf",
+        "fonts/LatinModernMono/lmmonolt10-boldoblique.otf",
+        "fonts/LatinModernMath/LatinModernMath-SMaFL.otf",
+      )
+      val enc = java.util.Base64.getEncoder
+      val sb  = new StringBuilder
+      sb.append("package io.github.edadma.texish\n\n")
+      sb.append("// Generated at build time from the bundled font files — do not edit.\n")
+      sb.append("// Base64 of each embedded font, split into chunks small enough for the compiler.\n")
+      sb.append("private[texish] object EmbeddedFontData:\n")
+      sb.append("  val chunks: Map[String, Array[String]] = Map(\n")
+      for (p <- fontPaths) {
+        val b64   = enc.encodeToString(IO.readBytes(root / p))
+        val parts = b64.grouped(32000).toSeq // 32000 is a multiple of 4 — chunks split on base64 boundaries
+        sb.append("    \"").append(p).append("\" -> Array(\n")
+        for (part <- parts) sb.append("      \"").append(part).append("\",\n")
+        sb.append("    ),\n")
+      }
+      sb.append("  )\n")
+      IO.write(out, sb.toString)
+      Seq(out)
+    }.taskValue,
   )
 
 lazy val root = project

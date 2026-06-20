@@ -9,6 +9,7 @@ case class RadicalParams(
     ruleThickness:    Double,
     verticalGap:      Double,
     extraAscender:    Double,
+    vinculumOvershoot: Double, // how far the overbar runs past the radicand's right edge
     degreeRaise:      Double, // fraction of the surd's height the degree's bottom is raised by
     kernBeforeDegree: Double,
     kernAfterDegree:  Double,
@@ -21,6 +22,10 @@ object RadicalParams:
       ruleThickness    = theta,
       verticalGap      = (if display then 0.15 else 0.06) * size,
       extraAscender    = theta,
+      // A small overhang of the overbar past the radicand, so a glyph whose ink fills its advance width (π, for
+      // one) does not end flush with the bar and read as if it had none. Sized to the em so it scales with the
+      // formula and matches the natural overhang a glyph with side bearing (a digit) already has.
+      vinculumOvershoot = 0.05 * size,
       degreeRaise      = 0.6,
       kernBeforeDegree = 5.0 / 18.0 * size,   // plain TeX's \mkern5mu before the index
       kernAfterDegree  = -10.0 / 18.0 * size, // and \mkern-10mu after, tucking it over the surd
@@ -40,8 +45,15 @@ object RadicalParams:
 class RadicalBox(t: Typesetter, surd: Box, radicand: Box, p: RadicalParams, degree: Option[Box] = None)
     extends ContentBox:
 
-  // the bar clears the radicand by exactly the font's vertical gap; surd height beyond that drops below
-  private val gap        = p.verticalGap
+  // The bar clears the radicand by the font's vertical gap. But the smallest precomposed surd a font offers is
+  // often far taller than a short radicand (a lone letter like π) needs, and a surd hung from the bar by its
+  // top would then send its point diving far below the baseline. TeX centres that surplus: half of it raises
+  // the bar's clearance and half stays as the surd's dip below, keeping the sign balanced around a short
+  // radicand instead of dangling well under it. With a well-fitting surd the surplus is zero and the gap is
+  // exactly the font's.
+  private val minBarTop = radicand.ascent + p.verticalGap + p.ruleThickness
+  private val surplus   = math.max(0.0, (surd.height - minBarTop) - radicand.descent)
+  private val gap        = p.verticalGap + surplus / 2
   private val barBottom  = radicand.ascent + gap
   private val barTop     = barBottom + p.ruleThickness
 
@@ -56,8 +68,8 @@ class RadicalBox(t: Typesetter, surd: Box, radicand: Box, p: RadicalParams, degr
     case None    => 0.0
 
   val width: Double = degree match
-    case Some(d) => math.max(p.kernBeforeDegree + d.width, surdOffset + surd.width + radicand.width)
-    case None    => surd.width + radicand.width
+    case Some(d) => math.max(p.kernBeforeDegree + d.width, surdOffset + surd.width + radicand.width + p.vinculumOvershoot)
+    case None    => surd.width + radicand.width + p.vinculumOvershoot
   val xAdvance: Double = width
 
   val ascent: Double =
@@ -73,7 +85,7 @@ class RadicalBox(t: Typesetter, surd: Box, radicand: Box, p: RadicalParams, degr
       case Some(d) => math.max(base, degreeBaseline + d.descent) // normally negative — the index is up high
       case None    => base
 
-  private val rule = RuleBox(t, radicand.width, p.ruleThickness, 0)
+  private val rule = RuleBox(t, radicand.width + p.vinculumOvershoot, p.ruleThickness, 0)
 
   def draw(t: Typesetter, x: Double, y: Double): Unit =
     box(t, x, y)

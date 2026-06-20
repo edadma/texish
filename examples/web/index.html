@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>texish in the browser</title>
+<style>
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; color: #222; }
+  h1 { font-weight: 600; }
+  p.note { color: #666; }
+  .texish { margin: 1.5rem 0; }
+  .texish svg { max-width: 100%; height: auto; border: 1px solid #eee; }
+  code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>texish, rendered in the browser</h1>
+<p class="note">
+  Each block below is a texish source. The page calls <code>texish.autoRender()</code>, which finds every
+  element with class <code>texish</code>, lays its text out with the pure-Scala SVG backend, and replaces it
+  with the rendered SVG. Glyphs — text and math alike — are filled as vector outlines from the fonts embedded
+  in the bundle; nothing is downloaded separately and there is no server. This is vector and scales infinitely,
+  but outline-filled text looks soft at small sizes — for crisp on-screen text see the
+  <a href="./canvas.html">canvas demo</a>, which draws with the browser's hinted text rasteriser.
+</p>
+
+<div class="texish">The mass-energy relation is $E = mc^2$, and the roots of $a x^2 + b x + c = 0$ are
+$$x = \frac{-b \pm \sqrt{b^2 - 4 a c}}{2 a}.$$</div>
+
+<div class="texish">\use{document}
+\section{A whole document}
+This block uses the \emph{document} package — its source is embedded in the bundle, so it resolves with no
+filesystem. Lists, sections and the \TeX, \LaTeX and \TeXish logos all come from the same embed.
+
+\begin{itemize}
+\item outline-filled text in Latin Modern Roman,
+\item math set in Latin Modern Math,
+\item and no fonts to download.
+\end{itemize}</div>
+
+<pre id="err" style="color:#b00;white-space:pre-wrap"></pre>
+
+<!-- The bundle statically imports Node's `fs` and `path` (the engine touches a filesystem for `\use`). A
+     browser cannot resolve those bare specifiers, so we map them to browser stubs: `fs` reports that nothing
+     exists, which makes `\use` fall back to the packages embedded in the bundle. -->
+<script type="importmap">
+{ "imports": { "fs": "./node-fs-stub.js", "path": "./node-path-stub.js" } }
+</script>
+
+<script type="module">
+  // Built by `sbt texishJS/fullLinkJS` (output: js/target/scala-3.8.4/texish-opt/main.js).
+  // Use fastLinkJS during development and point this import at texish-fastopt/main.js instead.
+  const err = document.getElementById('err');
+  try {
+    const { texish } = await import('../../js/target/scala-3.8.4/texish-opt/main.js');
+    texish.autoRender();
+  } catch (e) {
+    err.textContent = 'texish failed to load: ' + (e && e.stack ? e.stack : e);
+    console.error(e);
+  }
+</script>
+</body>
+</html>

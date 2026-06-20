@@ -566,6 +566,11 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive(";", mathSpace(5))
   proc.registerPrimitive("!", mathSpace(-3))
 
+  // \quad is a 1em space and \qquad a 2em space (18mu and 36mu, since a mu is 1/18 em) — the wide manual gaps
+  // TeX uses to set formulas or examples apart on a line.
+  proc.registerPrimitive("quad", mathSpace(18))
+  proc.registerPrimitive("qquad", mathSpace(36))
+
   // lower / raise - shift the following box (an \hbox or \vbox) down / up by a dimension, e.g.
   // \lower.5ex\hbox{E}. The box keeps its own width and height; only where it draws moves.
   proc.registerPrimitive(

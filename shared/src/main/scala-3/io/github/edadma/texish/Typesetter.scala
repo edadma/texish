@@ -10,6 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized
 import scala.language.postfixOps
 
+/** The geometry of a single rendered fragment cropped to its ink, in points: its `width` and `height`, and
+  * `baseline` — the distance from the top of the cropped box down to the math baseline. An inline math element
+  * is aligned to the surrounding text by setting its CSS `vertical-align` to `baseline - height` (pt), which
+  * drops the element so its math baseline, not its bottom edge, sits on the text baseline. */
+final case class FragmentMetrics(width: Double, height: Double, baseline: Double)
+
 abstract class Typesetter:
 
   type ImageHandle
@@ -86,6 +92,24 @@ abstract class Typesetter:
   def createPageTarget: Any
 
   def draw(box: Box, xoffset: Double = 0, yoffset: Double = 0): Unit = box.draw(this, xoffset, yoffset + box.ascent)
+
+  /** The device-space y, in points, of the first body line's baseline on the page being shipped — recorded by
+    * the page builder as it draws the body. NaN until a body has been drawn. A fragment renderer reads it back,
+    * with the cropped page box, to align an inline formula on the surrounding text's baseline. */
+  private var bodyBaselineY: Double = Double.NaN
+
+  /** Record the first body line's baseline (device y, in points); the first value seen per render wins, so a
+    * multi-line column reports the top line — the one an inline fragment is aligned by. */
+  def recordBodyBaseline(y: Double): Unit = if bodyBaselineY.isNaN then bodyBaselineY = y
+
+  /** The recorded first-line baseline (device y, points), or NaN if no body has been drawn. */
+  def bodyBaseline: Double = bodyBaselineY
+
+  /** For a single-fragment render — an inline or display formula cropped to its ink — the cropped box's size
+    * and the distance from its top to the math baseline, all in points. None on a backend that does not crop,
+    * or before a page has shipped. The in-browser math API uses [[FragmentMetrics.baseline]] to set an inline
+    * element's `vertical-align` so the formula sits on the surrounding text's baseline. */
+  def fragmentMetrics: Option[FragmentMetrics] = None
 
   def ejectPageTarget(): Unit
 
@@ -213,6 +237,12 @@ abstract class Typesetter:
 
   def getDocument: DocumentMode = document
 
+  loadBundledFonts()
+
+  /** Load the bundled typefaces this backend draws with, registering each style of each family. The JVM and
+    * Native hosts load the full set from disk; the Scala.js host, which has no filesystem and must keep the
+    * download small, overrides this to load only the embedded fonts it ships. */
+  protected def loadBundledFonts(): Unit = {
   loadTypeface(
     "noto",
     "fonts/NotoSerif/NotoSerif",
@@ -280,7 +310,7 @@ abstract class Typesetter:
     "Regular",
   )
 
-  private val gentiumbookMissing = Set(
+  val gentiumbookMissing = Set(
     `LONG LEFT RIGHT ARROW`,
     `LONG LEFT RIGHT DOUBLE ARROW`,
     `LONG LEFTWARDS ARROW`,
@@ -313,7 +343,7 @@ abstract class Typesetter:
   loadFont("mono", "fonts/LatinModernMono/lmmono10-italic.otf", Set.empty, Set("italic"))
   loadFont("mono", "fonts/LatinModernMono/lmmonolt10-boldoblique.otf", Set.empty, Set("bold", "italic"))
 
-  private val alegreyaMissing = Set(
+  val alegreyaMissing = Set(
     `LATIN SMALL LIGATURE FFI`,
     `LATIN SMALL LIGATURE FFL`,
     `LATIN SMALL LIGATURE FF`,
@@ -367,17 +397,20 @@ abstract class Typesetter:
   // Math, so a document can set body text in the same family the math is set in (and a logo's hand-tuned kerns
   // land as designed). The 10-point optical size is the body face; its four core styles are registered by
   // file, since the .otf names don't follow loadTypeface's "-Style.ttf" convention.
-  private val lmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet ++ Ligatures.TEXT_REPRESENTATIONS
+  val lmLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet ++ Ligatures.TEXT_REPRESENTATIONS
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-regular.otf", lmLigatures, Set.empty)
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bold.otf", lmLigatures, Set("bold"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
 
-  // The default math font: Latin Modern Math, an OpenType font with a full MATH table. Loaded by file
-  // directly (not loadTypeface, whose naming assumes a .ttf) since it is a CFF/.otf and stands alone with
-  // no style variants. Math mode reads its MATH table through the SFNT seam (see mathTableFor).
-  loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-Regular.otf", Set(), Set())
+  // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
+  // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
+  // SmaflConvertMain build tool). Loaded by file directly (not loadTypeface, whose naming assumes a .ttf)
+  // since it is a CFF/.otf and stands alone with no style variants. Math mode reads its MATH table through the
+  // SFNT seam (see mathTableFor); the SMaFL cmap lets the in-browser canvas backend draw stretchy glyphs
+  // through the browser's hinted text path. The extra cmap entries are inert on the outline-filling backends.
+  loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-SMaFL.otf", Set(), Set())
 
   // SMuFL (Standard Music Font Layout) music fonts. SMuFL fixes the codepoint of every notation glyph (clefs,
   // noteheads, flags, rests, accidentals, time-signature figures, and more) in the Unicode Private Use Area and
@@ -387,6 +420,7 @@ abstract class Typesetter:
   // Both are SIL OFL. Drawn by glyph index through the same seam math mode uses.
   loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
   loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
+  }
 
   init(1, 1)
   selectFont("lmroman", 14, Set("regular"))

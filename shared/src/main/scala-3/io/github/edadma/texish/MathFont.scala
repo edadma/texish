@@ -80,6 +80,9 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
           ruleThickness    = c.value("radicalRuleThickness") * size,
           verticalGap      = c.value(if display then "radicalDisplayStyleVerticalGap" else "radicalVerticalGap") * size,
           extraAscender    = c.value("radicalExtraAscender") * size,
+          // The MATH table specifies no horizontal overhang for the overbar, so the bar would end flush with the
+          // radicand; give it the same small em-proportional overshoot the TeX defaults use.
+          vinculumOvershoot = 0.05 * size,
           degreeRaise      = c.radicalDegreeBottomRaisePercent,
           kernBeforeDegree = c.value("radicalKernBeforeDegree") * size,
           kernAfterDegree  = c.value("radicalKernAfterDegree") * size,

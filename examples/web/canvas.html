@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>texish in the browser — canvas</title>
+<style>
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; color: #222; }
+  h1 { font-weight: 600; }
+  p.note { color: #666; }
+  .texish { margin: 1.5rem 0; }
+  .texish canvas { max-width: 100%; border: 1px solid #eee; }
+  code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>texish, rendered to canvas</h1>
+<p class="note">
+  Same engine as the <a href="./index.html">SVG demo</a>, but drawn with <code>texish.autoRenderCanvas()</code>:
+  text is painted with the browser's own hinted <code>fillText</code>, so it is as crisp as native text. The
+  math font is the SMaFL build of Latin Modern Math — its size-variant and assembly glyphs (the tall surd in
+  the quadratic formula below, big operators, stretchy delimiters) carry private-use codepoints, so they too go
+  through <code>fillText</code> rather than being filled as outlines. Rendered at the device pixel ratio.
+</p>
+
+<div class="texish">The mass-energy relation is $E = mc^2$, and the roots of $a x^2 + b x + c = 0$ are
+$$x = \frac{-b \pm \sqrt{b^2 - 4 a c}}{2 a}.$$</div>
+
+<div class="texish">\use{document}
+\section{A whole document}
+This block uses the \emph{document} package — its source is embedded in the bundle, so it resolves with no
+filesystem. Lists, sections and the \TeX, \LaTeX and \TeXish logos all come from the same embed.
+
+\begin{itemize}
+\item outline-filled text in Latin Modern Roman,
+\item math set in Latin Modern Math,
+\item and no fonts to download.
+\end{itemize}</div>
+
+<pre id="err" style="color:#b00;white-space:pre-wrap"></pre>
+
+<script type="importmap">
+{ "imports": { "fs": "./node-fs-stub.js", "path": "./node-path-stub.js" } }
+</script>
+
+<script type="module">
+  const err = document.getElementById('err');
+  try {
+    const { texish } = await import('../../js/target/scala-3.8.4/texish-opt/main.js');
+    texish.autoRenderCanvas();
+  } catch (e) {
+    err.textContent = 'texish failed to load: ' + (e && e.stack ? e.stack : e);
+    console.error(e);
+  }
+</script>
+</body>
+</html>

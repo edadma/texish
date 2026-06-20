@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>texish — inline & display math in HTML</title>
+<style>
+  body { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; color: #222;
+         font: 17px/1.7 Georgia, "Times New Roman", serif; }
+  h1 { font: 600 1.4rem system-ui, sans-serif; }
+  p.note { color: #666; font: 0.9rem system-ui, sans-serif; }
+  code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.85em; }
+  .row { border-top: 1px solid #eee; padding-top: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>Inline and display math, dropped into HTML text</h1>
+<p class="note">
+  Each formula below is placed with <code>texish.renderMath(src, el)</code> — canvas, hinted text via the
+  SMaFL math font. Inline formulas get their <code>vertical-align</code> from the rendered baseline, so they
+  sit on this paragraph's baseline rather than riding high or low. Resize the window / zoom to inspect.
+</p>
+
+<p class="row">
+  An inline fraction <span data-math="$\frac{a}{b}$"></span> and a subscript <span data-math="$x_2$"></span>
+  and a superscript <span data-math="$x^2$"></span> should all rest on the same baseline as this running
+  text, the way <span data-math="$E = mc^2$"></span> does. A root in a sentence,
+  <span data-math="$\sqrt{b^2 - 4ac}$"></span>, keeps the line spacing honest, and a summation
+  <span data-math="$\sum_{i=1}^{n} i$"></span> with limits tucks into the line without shoving its neighbours.
+</p>
+
+<p class="row">
+  Display math is its own centered block:
+</p>
+<div data-math="$$ x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} $$"></div>
+<div data-math="$$ \int_0^\infty e^{-x^2}\, dx = \frac{\sqrt{\pi}}{2} $$"></div>
+
+<pre id="err" style="color:#b00;white-space:pre-wrap;font:0.85rem ui-monospace,monospace"></pre>
+
+<script type="importmap">
+{ "imports": { "fs": "./node-fs-stub.js", "path": "./node-path-stub.js" } }
+</script>
+
+<script type="module">
+  const err = document.getElementById('err');
+  try {
+    const { texish } = await import('../../js/target/scala-3.8.4/texish-opt/main.js');
+    // Render every element that carries a data-math source, in place.
+    for (const el of document.querySelectorAll('[data-math]')) {
+      await texish.renderMath(el.getAttribute('data-math'), el);
+    }
+  } catch (e) {
+    err.textContent = 'texish failed: ' + (e && e.stack ? e.stack : e);
+    console.error(e);
+  }
+</script>
+</body>
+</html>

@@ -12,6 +12,9 @@ Inline, like $a^2 + b^2 = c^2$, or displayed:
 $$ e^{i\pi} + 1 = 0. $$
 ```
 
+To render math on a web page (KaTeX-style, in the browser), see
+[Rendering in the Browser](/guide/browser-rendering/).
+
 ## Scripts
 
 `^` and `_` attach a superscript and subscript to the preceding atom. Braces group a
