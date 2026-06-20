@@ -1141,27 +1141,22 @@ object UsePrimitive extends Primitive:
     // the environment on Native, so a host that sets the variable after start would not be seen).
     val texishHome = PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty)
 
-    val roots: List[Path] =
-      List(
-        Some(Path(proc.currentDir)),
-        Some(Path(".")),
-        texishHome.map(h => Path(h) / "packages"),
-        Some(Path(".") / "packages"),
-      ).flatten
+    // Search the filesystem first, but tolerate a host that has no working filesystem at all — a browser, where
+    // the path layer reaches for Node APIs that are absent. If probing the filesystem throws, treat it as "no
+    // file found" and fall through to the embedded copy below.
+    val onDisk: Option[Path] =
+      try
+        val roots: List[Path] =
+          List(
+            Some(Path(proc.currentDir)),
+            Some(Path(".")),
+            texishHome.map(h => Path(h) / "packages"),
+            Some(Path(".") / "packages"),
+          ).flatten
+        roots.map(_ / fileName).find(p => p.exists && p.isFile)
+      catch case _: Throwable => None
 
-    roots.map(_ / fileName).find(p => p.exists && p.isFile) match
-      case None =>
-        // No file on disk: fall back to a module embedded in the build. This is how a host with no package
-        // directory — chiefly the browser — resolves the standard modules; on a host with the files present
-        // the filesystem search above wins first, so a local package still shadows the embedded copy.
-        EmbeddedPackages.sources.get(name.stripSuffix(".texish")) match
-          case Some(chunks) =>
-            if proc.claimModule(s"embedded:${name.stripSuffix(".texish")}") then proc.loadModule(chunks.mkString, ".")
-          case None =>
-            proc.handler.error(
-              s"\\use: module '$name' not found (searched: ${roots.map(r => (r / fileName).toString).mkString(", ")})",
-              pos,
-            )
+    onDisk match
       case Some(file) =>
         val resolved  = file.toAbsolutePath.normalize
         val canonical = resolved.toPlatformString
@@ -1171,6 +1166,15 @@ object UsePrimitive extends Primitive:
           catch
             case e: ParserException => throw e
             case e: Exception       => proc.handler.error(s"\\use: cannot load module '$name': ${e.getMessage}", pos)
+      case None =>
+        // No file on disk: fall back to a module embedded in the build. This is how a host with no package
+        // directory — chiefly the browser — resolves the standard modules; where the files are present the
+        // search above wins first, so a local package still shadows the embedded copy.
+        EmbeddedPackages.sources.get(name.stripSuffix(".texish")) match
+          case Some(chunks) =>
+            if proc.claimModule(s"embedded:${name.stripSuffix(".texish")}") then proc.loadModule(chunks.mkString, ".")
+          case None =>
+            proc.handler.error(s"\\use: module '$name' not found on the filesystem or among the embedded modules", pos)
 
 // ============ ARITHMETIC ============
 

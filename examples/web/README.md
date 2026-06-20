@@ -18,6 +18,15 @@ python3 -m http.server 8000
 During development, `sbt texishJS/fastLinkJS` builds faster; point the import in `index.html` at
 `texish-fastopt/main.js` instead of `texish-opt/main.js`.
 
+## Browser shims
+
+The engine reaches for a filesystem when resolving `\use`, so the Scala.js bundle statically imports Node's
+`fs` and `path`. A browser cannot resolve those bare module specifiers, so `index.html` maps them to the
+small stubs `node-fs-stub.js` and `node-path-stub.js` via an `importmap`. The `fs` stub reports that nothing
+exists; the engine then falls back to the packages embedded in the bundle (it tolerates a host with no working
+filesystem). No `\use` of an on-disk file works in the browser — only the embedded standard packages — which
+is exactly what a self-contained web renderer wants.
+
 ## API
 
 The build exports a `texish` object:

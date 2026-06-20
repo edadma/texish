@@ -36,11 +36,26 @@ filesystem. Lists, sections and the \TeX, \LaTeX and \TeXish logos all come from
 \item and no fonts to download.
 \end{itemize}</div>
 
+<pre id="err" style="color:#b00;white-space:pre-wrap"></pre>
+
+<!-- The bundle statically imports Node's `fs` and `path` (the engine touches a filesystem for `\use`). A
+     browser cannot resolve those bare specifiers, so we map them to browser stubs: `fs` reports that nothing
+     exists, which makes `\use` fall back to the packages embedded in the bundle. -->
+<script type="importmap">
+{ "imports": { "fs": "./node-fs-stub.js", "path": "./node-path-stub.js" } }
+</script>
+
 <script type="module">
   // Built by `sbt texishJS/fullLinkJS` (output: js/target/scala-3.8.4/texish-opt/main.js).
   // Use fastLinkJS during development and point this import at texish-fastopt/main.js instead.
-  import { texish } from '../../js/target/scala-3.8.4/texish-opt/main.js';
-  texish.autoRender();
+  const err = document.getElementById('err');
+  try {
+    const { texish } = await import('../../js/target/scala-3.8.4/texish-opt/main.js');
+    texish.autoRender();
+  } catch (e) {
+    err.textContent = 'texish failed to load: ' + (e && e.stack ? e.stack : e);
+    console.error(e);
+  }
 </script>
 </body>
 </html>

@@ -66,5 +66,8 @@ object Texish:
     var i     = 0
     while i < nodes.length do
       val el = nodes(i).asInstanceOf[dom.Element]
-      el.innerHTML = renderToString(el.textContent)
+      // Isolate failures: a source that does not lay out leaves its element untouched rather than aborting the
+      // whole sweep, so one bad block never blanks the rest of the page.
+      try el.innerHTML = renderToString(el.textContent)
+      catch case e: Throwable => dom.console.error("texish: failed to render an element", e.asInstanceOf[js.Any])
       i += 1
