@@ -247,8 +247,55 @@
     \global\mapset rrKind {\sid}{S}
     \global\mapset rrChild {\calc{\sid * 1000}}{\first}
     \rrSeqLoop{\sid}{1}
+    \rrCheckSepList{\sid}
   \else
     \global\set rrRet {\first}
+  \fi
+}}
+
+// Recognise a separated-list idiom — A ( B A )* (or +), where A is a single symbol — and
+// fold it into one "list" node (kind L) holding the item A and the separator B. It then draws
+// the bottlecaps way: A on the line with B on a return loop, far clearer than the literal
+// "A then zero-or-more of (B A)".
+\def rrCheckSepList sid {{
+  \if {\= {\mapget rrCount {\sid}}{2}}
+    \set a {\mapget rrChild {\calc{\sid * 1000}}}
+    \set w {\mapget rrChild {\calc{\sid * 1000 + 1}}}
+    \set wk {\mapget rrKind {\w}}
+    \global\set rrSP {0}
+    \if {\= {\wk}{R}}\global\set rrSP {1}\fi
+    \if {\= {\wk}{P}}\global\set rrSP {1}\fi
+    \if {\= {\rrSP}{1}}
+      \set ws {\mapget rrSub {\w}}
+      \if {\= {\mapget rrKind {\ws}}{S}}
+        \if {\= {\mapget rrCount {\ws}}{2}}
+          \set b {\mapget rrChild {\calc{\ws * 1000}}}
+          \set a2 {\mapget rrChild {\calc{\ws * 1000 + 1}}}
+          \rrLeafEq{\a}{\a2}
+          \if {\= {\rrEq}{1}}
+            \global\mapset rrKind {\sid}{L}
+            \global\mapset rrSepItem {\sid}{\a}
+            \global\mapset rrSepBy {\sid}{\b}
+          \fi
+        \fi
+      \fi
+    \fi
+  \fi
+}}
+
+// rrEq = 1 when two nodes are the same single symbol — same leaf kind (terminal, nonterminal
+// or character class) and the same label.
+\def rrLeafEq a b {{
+  \global\set rrEq {0}
+  \set ka {\mapget rrKind {\a}}
+  \if {\= {\ka}{\mapget rrKind {\b}}}
+    \global\set rrLf {0}
+    \if {\= {\ka}{T}}\global\set rrLf {1}\fi
+    \if {\= {\ka}{N}}\global\set rrLf {1}\fi
+    \if {\= {\ka}{X}}\global\set rrLf {1}\fi
+    \if {\= {\rrLf}{1}}
+      \if {\= {\mapget rrLabel {\a}}{\mapget rrLabel {\b}}}\global\set rrEq {1}\fi
+    \fi
   \fi
 }}
 \def rrSeqLoop sid k {{
@@ -316,7 +363,26 @@
   \else\if {\= {\k}{X}}\rrMeasLeaf{\nid}{2}
   \else\if {\= {\k}{S}}\rrMeasSeq{\nid}
   \else\if {\= {\k}{C}}\rrMeasChoice{\nid}
-  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi\fi
+  \else\if {\= {\k}{L}}\rrMeasL{\nid}
+  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi\fi\fi
+}}
+
+// A separated list A (B A)*: the item A sits on the rail and the separator B rides a return
+// loop above it. As wide as the wider of the two plus the loop lead; as tall as A's upper half
+// plus the clearance and B above.
+\def rrMeasL id {{
+  \set nid {\id}
+  \set a {\mapget rrSepItem {\nid}}
+  \set b {\mapget rrSepBy {\nid}}
+  \rrMeasure{\a}
+  \rrMeasure{\b}
+  \set aw {\mapget rrW {\a}}\set au {\mapget rrUp {\a}}\set ad {\mapget rrDn {\a}}
+  \set bw {\mapget rrW {\b}}\set bu {\mapget rrUp {\b}}\set bd {\mapget rrDn {\b}}
+  \global\set rrInner {\aw}
+  \if {\> {\bw}{\aw}}\global\set rrInner {\bw}\fi
+  \global\mapset rrW {\nid}{\calc{rrInner + 2 * rrloopx}}
+  \global\mapset rrUp {\nid}{\calc{\au + rrloop + \bd + \bu}}
+  \global\mapset rrDn {\nid}{\ad}
 }}
 
 // A box sizes to its label — the label plus rrpadx on each side — the same for every shape: a
@@ -447,7 +513,55 @@
   \else\if {\= {\k}{C}}\rrDrawChoice{\nid}{\bx}{\by}
   \else\if {\= {\k}{Q}}\rrDrawOpt{\nid}{\bx}{\by}
   \else\if {\= {\k}{R}}\rrDrawStar{\nid}{\bx}{\by}
-  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi
+  \else\if {\= {\k}{L}}\rrDrawL{\nid}{\bx}{\by}
+  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi\fi
+}}
+
+// A separated list: the item A on the main line, the separator B on a return loop above it,
+// the loop rising from after A, running left through B, and dropping back to before A.
+\def rrDrawL id x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set a {\mapget rrSepItem {\nid}}
+  \set b {\mapget rrSepBy {\nid}}
+  \set aw {\mapget rrW {\a}}\set au {\mapget rrUp {\a}}
+  \set bw {\mapget rrW {\b}}\set bd {\mapget rrDn {\b}}
+  \set w {\mapget rrW {\nid}}
+  \global\set rrInner {\aw}\if {\> {\bw}{\aw}}\global\set rrInner {\bw}\fi
+  \set xL {\calc{\bx + rrloopx}}
+  \set xR {\calc{\bx + \w - rrloopx}}
+  \set xA {\calc{\xL + (rrInner - \aw) / 2}}
+  \set xB {\calc{\xL + (rrInner - \bw) / 2}}
+  \set yt {\calc{\by + \au + rrloop + \bd}}
+  \rrRail{\bx}{\by}{\xA}{\by}
+  \rrDraw{\a}{\xA}{\by}
+  \rrRail{\calc{\xA + \aw}}{\by}{\calc{\bx + \w}}{\by}
+  \rrDraw{\b}{\xB}{\yt}
+  \rrSepRight{\xR}{\by}{\yt}{\calc{\xB + \bw}}
+  \rrSepLeft{\xB}{\yt}{\xL}{\by}
+}}
+
+// The right half of a separated-list loop: up from (xr,y), round the top, left to the
+// separator's right edge (xbr); and the left half: from the separator's left edge (xbl) left,
+// round the top, and down to (xl,y).
+\def rrSepRight xr y yt xbr {{
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{
+    \moveto{\xr \y}
+    \lineto{\xr \calc{\yt - \r}}
+    \curveto{\xr \calc{\yt - \r + \kr}  \calc{\xr - \r + \kr} \yt  \calc{\xr - \r} \yt}
+    \lineto{\xbr \yt}
+  }
+}}
+\def rrSepLeft xbl yt xl y {{
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{
+    \moveto{\xbl \yt}
+    \lineto{\calc{\xl + \r} \yt}
+    \curveto{\calc{\xl + \r - \kr} \yt  \xl \calc{\yt - \r + \kr}  \xl \calc{\yt - \r}}
+    \lineto{\xl \y}
+  }
 }}
 
 // A leaf box, the label centred on it: a rounded stadium for a terminal (shape 1), a pointed
