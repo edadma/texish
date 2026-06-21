@@ -1,0 +1,93 @@
+// tract.texish - impose a bilingual Z-fold gospel tract onto US Letter.
+//
+// One Letter sheet (portrait) carries TWO identical half-letter tracts stacked top and bottom; cut
+// the sheet across the middle to get two tracts. Each tract is Z-folded in thirds -- three 2.833in
+// columns. The message in language A flows down the front's three columns (leftmost column first);
+// the same message in language B flows down the back's three columns. Printed double-sided and
+// flipped on the LONG edge, the back columns are imposed in reverse so that after the flip each B
+// column lands behind its A column. So when a tract is unfolded flat it shows the whole message in
+// language A on one face and language B on the other.
+//
+//   \use{tract}
+//   \tract{ <language A body> }{ <language B body> }
+//
+// Geometry (points, 72 per inch): sheet 612x792, each tract 612x396, column 204 wide, fold lines at
+// x=204 and x=408, cut line at y=396. Print double-sided, flip on the long edge, cut, then Z-fold.
+
+// ---- configuration ----
+\set tractmargin {18}            // inset from each panel edge to its content (0.25in)
+\set tractguides {1}             // draw fold (vertical) and cut (horizontal) guide lines
+\set tractguidecolor {#b0b0b0}
+
+// ---- fixed sheet geometry ----
+\set trSheetW {612}
+\set trSheetH {792}
+\set trColW {204}
+\set trTractH {396}
+\set trCut {396}
+\set trFoldA {204}
+\set trFoldB {408}
+
+// Derived metrics: column content box size, the three column x origins, and the content-top y of the
+// upper and lower tract. Computed once per \tract call so a changed margin takes effect. (Names are
+// letter-only: a digit in a \-referenced name would be read as a separate token.)
+\def trSetup {
+  \global\set trCW {\calc{trColW - 2 * tractmargin}}
+  \global\set trCH {\calc{trTractH - 2 * tractmargin}}
+  \global\set trXa {\tractmargin}
+  \global\set trXb {\calc{trColW + tractmargin}}
+  \global\set trXc {\calc{2 * trColW + tractmargin}}
+  \global\set trYup {\calc{trSheetH - tractmargin}}
+  \global\set trYdn {\calc{trTractH - tractmargin}}
+}
+
+// The fold and cut guides, drawn light and dashed so they are easy to see on a proof yet unobtrusive.
+// Turn them off with \set tractguides {0} for the final run if your trimmer prefers a clean sheet.
+\def trGuides {
+  \if {\tractguides}
+    \nofill\stroke{\tractguidecolor}\linewidth{0.5}\dash{3 3}
+    \line{\trFoldA 0 \trFoldA \trSheetH}
+    \line{\trFoldB 0 \trFoldB \trSheetH}
+    \line{0 \trCut \trSheetW \trCut}
+    \dash{}\stroke{black}\linewidth{1}
+  \fi
+}
+
+// Place three column boxes across one tract at content-top y. Used twice per page, once for the upper
+// tract and once for the lower, so the two tracts on the sheet are identical.
+\def trPlace pa pb pc y {
+  \at anchor:northwest {\trXa \y}{\pa}
+  \at anchor:northwest {\trXb \y}{\pb}
+  \at anchor:northwest {\trXc \y}{\pc}
+}
+
+// One side of the sheet: the guides, then the three given columns set into both the upper and the
+// lower tract. Each column argument is re-evaluated for each tract, so pass \copy (not \box) to keep
+// the register alive for the second placement.
+\def trSide ca cb cc {
+  \noindent\picture width:{\trSheetW} height:{\trSheetH} {
+    \trGuides
+    \trPlace{\ca}{\cb}{\cc}{\trYup}
+    \trPlace{\ca}{\cb}{\cc}{\trYdn}
+  }
+}
+
+\def tract bodyA bodyB {{
+  \trSetup
+  // Typeset each language's body at the column content width.
+  \set hsize {\trCW}
+  \setbox trA \vbox{\noindent\bodyA}
+  \setbox trB \vbox{\noindent\bodyB}
+  \set hsize {\trSheetW}
+  // Split each body into three panel-height columns. The first cut is column 1 (leftmost), the second
+  // is column 2, and the remainder is column 3 -- so the message fills the columns left to right.
+  \setbox trA1 \vsplit trA to:{\trCH}
+  \setbox trA2 \vsplit trA to:{\trCH}
+  \setbox trB1 \vsplit trB to:{\trCH}
+  \setbox trB2 \vsplit trB to:{\trCH}
+  // FRONT: language A, columns A1 A2 A3 left to right.
+  \trSide{\copy trA1}{\copy trA2}{\copy trA}
+  \newpage
+  // BACK: language B, reversed to B3 B2 B1 so the long-edge duplex flip lands each behind its A.
+  \trSide{\copy trB}{\copy trB2}{\copy trB1}
+}}
