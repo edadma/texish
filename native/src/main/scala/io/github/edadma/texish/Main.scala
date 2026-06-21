@@ -113,12 +113,15 @@ private def typeset(t: Typesetter, source: String, baseDir: String = "."): Unit 
   t.end()
 
 private[texish] def renderPdf(source: String, output: String, paper: String, baseDir: String = "."): Unit =
-  val t      = new CairoPDFTypesetter(output)
-  val (w, h) = paperDimensions(paper, t)
+  val t = Passes.untilStable() { () =>
+    val t      = new CairoPDFTypesetter(output)
+    val (w, h) = paperDimensions(paper, t)
 
-  t.set("paperwidth", w)
-  t.set("paperheight", h)
-  typeset(t, source, baseDir)
+    t.set("paperwidth", w)
+    t.set("paperheight", h)
+    t
+  }(typeset(_, source, baseDir))
+
   t.destroy()
   println(s"wrote $output")
 
@@ -129,12 +132,14 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
       case "hd"  => 150.0
       case "fhd" => 300.0
 
-  val t      = new CairoImageTypesetter(dpi)
-  val (w, h) = paperDimensions(paper, t)
+  val t = Passes.untilStable() { () =>
+    val t      = new CairoImageTypesetter(dpi)
+    val (w, h) = paperDimensions(paper, t)
 
-  t.set("paperwidth", w)
-  t.set("paperheight", h)
-  typeset(t, source, baseDir)
+    t.set("paperwidth", w)
+    t.set("paperheight", h)
+    t
+  }(typeset(_, source, baseDir))
 
   // each shipped page is its own ARGB32 surface; write one PNG per page
   val pages = t.getDocument.printedPages

@@ -245,6 +245,12 @@ abstract class Typesetter:
 
   def destroy(): Unit
 
+  /** Release this pass's output without handing it back — for the throwaway intermediate passes of a multi-pass
+    * run (see [[Passes]]), whose pages are discarded. The default is [[destroy]]; a backend that hands its
+    * collected page surfaces to the caller (rather than freeing them in destroy) frees them here instead.
+    */
+  def discard(): Unit = destroy()
+
   def getDocument: DocumentMode = document
 
   loadBundledFonts()
