@@ -153,7 +153,6 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   )
   .nativeSettings(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-    libraryDependencies += "com.github.scopt"  %%% "scopt"           % "4.1.0",
     libraryDependencies ++= Seq(
       "io.github.edadma" %%% "libcairo"  % "0.0.7",
       "io.github.edadma" %%% "freetype"  % "0.0.7",
@@ -211,9 +210,34 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     }.taskValue,
   )
 
+// The command-line tool is a native-only application, kept out of the published `texish` library so a library
+// consumer never inherits the CLI's `@main` entry point or its scopt dependency. It depends on the native
+// library for the engine and the Cairo PDF/PNG backends.
+lazy val texishCli = project
+  .in(file("cli"))
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(texish.native)
+  .settings(
+    name := "texish-cli",
+    scalacOptions ++=
+      Seq(
+        "-deprecation",
+        "-feature",
+        "-unchecked",
+        "-language:postfixOps",
+        "-language:implicitConversions",
+        "-language:existentials",
+        "-language:dynamics",
+      ),
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
+    libraryDependencies += "com.github.scopt" %%% "scopt"   % "4.1.0",
+    publish / skip      := true,
+    publishLocal / skip := true,
+  )
+
 lazy val root = project
   .in(file("."))
-  .aggregate(texish.js, texish.jvm, texish.native)
+  .aggregate(texish.js, texish.jvm, texish.native, texishCli)
   .settings(
     name                := "texish",
     publish / skip      := true,
