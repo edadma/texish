@@ -71,6 +71,54 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // \label - 1 arg: bind a name to the current reference point so a later \ref/\pageref can name its number and
+  // page. The reference text is whatever `currentlabel` holds right now — a sectioning command sets it to the
+  // section number, just as LaTeX's \refstepcounter sets \@currentlabel — captured here so a counter that steps
+  // afterwards does not change it. The page is unknown until shipout, so an invisible LabelBox rides the vertical
+  // list to the page the label lands on (see ReferenceTable / PageMode).
+  proc.registerPrimitive(
+    "label",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val text = t.get("currentlabel") match
+          case Some(v) => Value.display(v)
+          case None    => ""
+
+        t.references.declare(name, text)
+        t.add(new LabelBox(name))
+    },
+  )
+
+  // \ref - 1 arg: print the reference text bound to a label (a section/figure number). Forward references resolve
+  // on a later pass; until then, and for a name that was never labelled, it prints "??" — LaTeX's placeholder and
+  // the cue to rerun.
+  proc.registerPrimitive(
+    "ref",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val text = t.references.refText(name).getOrElse("??")
+
+        proc.setResult(Value.Text(text))
+        proc.handler.text(text)
+    },
+  )
+
+  // \pageref - 1 arg: print the folio of the page a label sits on. Like \ref it shows "??" until a pass has shipped
+  // the page that carries the label.
+  proc.registerPrimitive(
+    "pageref",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val text = t.references.refPage(name).map(_.toString).getOrElse("??")
+
+        proc.setResult(Value.Text(text))
+        proc.handler.text(text)
+    },
+  )
+
   // footnote - 1 body arg: a raised marker number in the running text, with the body typeset at the foot of
   // whatever page the marker lands on. The body is typeset immediately, at footnotesize, into a block that rides
   // the vertical list as a zero-size insert (see InsertBox); the page builder counts its height against the page

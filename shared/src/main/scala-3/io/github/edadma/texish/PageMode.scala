@@ -142,6 +142,16 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     t.set("firstmark", marks.headOption.getOrElse(top))
     t.set("botmark", marks.lastOption.getOrElse(top))
 
+    // cross-references resolve here too: a label or a table-of-contents entry learns its folio from the page it
+    // ships on. pageno is still the shipping page's number at this point (DocumentMode advances it after the add).
+    val folio = t.getNumber("pageno").toInt
+
+    boxes.foreach {
+      case l: LabelBox    => t.references.setPage(l.name, folio)
+      case e: TocMarkBox  => t.references.recordToc(e.level, e.number, e.title, folio)
+      case _              =>
+    }
+
     t.getDocument add result
     clear()
 
