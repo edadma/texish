@@ -232,11 +232,13 @@ object KnuthPlass:
 
       if endBreaks.isEmpty then None else Some(endBreaks.minBy(_.totalDemerits))
 
-    // First pass at the normal tolerance. If a paragraph can't be justified within it, retry with a relaxed
-    // tolerance plus \emergencystretch, distributing the unavoidable looseness evenly the way TeX does rather
-    // than dropping to the greedy fallback. Only a genuinely unbreakable paragraph (e.g. a single box wider
-    // than the measure) still yields None, leaving the greedy fallback as a true last resort.
-    val solution = solve(tolerance, 0.0).orElse(solve(10000.0, emergencystretch))
+    // First pass at the normal tolerance. If a paragraph can't be justified within it and the document has
+    // asked for \emergencystretch, retry at the SAME tolerance but with that extra per-line give, the way
+    // TeX's final pass does — just enough slack to bring otherwise-too-loose lines within tolerance, without
+    // accepting the ugly badness a blanket tolerance bump would. With the default \emergencystretch of 0 no
+    // second pass runs, so the result (and the greedy fallback the caller uses on None) is unchanged.
+    val solution =
+      solve(tolerance, 0.0).orElse(if emergencystretch > 0 then solve(tolerance, emergencystretch) else None)
 
     // Trace back to get break positions in item indices
     var best = solution match
