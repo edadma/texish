@@ -340,6 +340,10 @@ class Processor(val handler: Handler):
       case None =>
         handler.error(s"\\begin{$name} without a matching \\end{$name} (a verbatim environment cannot come from a macro)", pos)
 
+  /** Read an optional verbatim `[...]` argument (e.g. the `[language]` of `\code`) raw from live input, before a
+    * raw brace body. None if there is no `[` next. */
+  def readOptionalRawBracket(): Option[String] = tokenSources.top.readOptionalRawBracket()
+
   /** Read a single macro argument (brace-delimited or single token) */
   def readArgument(pos: CharReader): Vector[Token] =
     skipSpaces()
@@ -765,6 +769,7 @@ trait TokenSource:
   def readRawGroup(): Option[String] = None
   def readVerb(): Option[String] = None
   def readRawUntilEnd(name: String): Option[String] = None
+  def readOptionalRawBracket(): Option[String] = None
 
 class TokenizerSource(tokenizer: Tokenizer) extends TokenSource:
   def peek: Token = tokenizer.peek
@@ -773,6 +778,7 @@ class TokenizerSource(tokenizer: Tokenizer) extends TokenSource:
   override def readRawGroup(): Option[String] = tokenizer.readRawGroup()
   override def readVerb(): Option[String] = tokenizer.readVerb()
   override def readRawUntilEnd(name: String): Option[String] = tokenizer.readRawUntilEnd(name)
+  override def readOptionalRawBracket(): Option[String] = tokenizer.readOptionalRawBracket()
 
 class TokenListSource(tokens: Vector[Token]) extends TokenSource:
   private var index = 0

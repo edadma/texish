@@ -57,6 +57,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       "io.github.edadma" %%% "char_reader"    % "0.1.29",
       "io.github.edadma" %%% "cross_platform" % "0.1.7",
       "io.github.edadma" %%% "path"           % "0.0.6",
+      "io.github.edadma" %%% "highlighter"    % "0.0.10",
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
@@ -104,6 +105,35 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       sb.append("  val sources: Map[String, Array[String]] = Map(\n")
       for (f <- files) {
         val name   = f.getName.stripSuffix(".texish")
+        val chunks = IO.read(f).grouped(8000).toSeq
+        sb.append("    \"").append(name).append("\" -> Array(\n")
+        for (c <- chunks) sb.append("      \"").append(esc(c)).append("\",\n")
+        sb.append("    ),\n")
+      }
+      sb.append("  )\n")
+      sb.append("}\n")
+      IO.write(out, sb.toString)
+      Seq(out)
+    }.taskValue,
+    // Embed the bundled TextMate grammars (grammars/*.tmLanguage.json) as Scala constants at build time, so the
+    // \code highlighter can resolve a language with no grammar file on disk — chiefly in the browser. A local
+    // grammar file may still shadow the embedded one. Each grammar's JSON is split into chunks small enough for
+    // the compiler and rejoined at runtime.
+    Compile / sourceGenerators += Def.task {
+      val root    = (LocalRootProject / baseDirectory).value
+      val grmDir  = root / "grammars"
+      val out =
+        (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedGrammars.scala"
+      def esc(s: String): String =
+        s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
+      val files = (grmDir * "*.tmLanguage.json").get.sortBy(_.getName)
+      val sb    = new StringBuilder
+      sb.append("package io.github.edadma.texish\n\n")
+      sb.append("// Generated at build time from the grammars/ directory — do not edit.\n")
+      sb.append("private[texish] object EmbeddedGrammars {\n")
+      sb.append("  val sources: Map[String, Array[String]] = Map(\n")
+      for (f <- files) {
+        val name   = f.getName.stripSuffix(".tmLanguage.json")
         val chunks = IO.read(f).grouped(8000).toSeq
         sb.append("    \"").append(name).append("\" -> Array(\n")
         for (c <- chunks) sb.append("      \"").append(esc(c)).append("\",\n")

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "texish",
+  "scopeName": "source.texish",
+  "fileTypes": ["texish", "script"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#math-display" },
+    { "include": "#math-inline" },
+    { "include": "#control-word" },
+    { "include": "#control-symbol" },
+    { "include": "#group" },
+    { "include": "#tie" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.texish",
+      "match": "//.*$"
+    },
+    "control-word": {
+      "comment": "A control word: backslash followed by letters, e.g. \\section or \\frac.",
+      "name": "keyword.control.texish",
+      "match": "\\\\[A-Za-z]+"
+    },
+    "control-symbol": {
+      "comment": "A control symbol: backslash followed by one non-letter, e.g. \\{ \\$ \\% \\\\ — an escaped literal, set plain.",
+      "name": "constant.character.escape.texish",
+      "match": "\\\\[^A-Za-z]"
+    },
+    "group": {
+      "name": "punctuation.definition.group.texish",
+      "match": "[{}]"
+    },
+    "tie": {
+      "name": "keyword.operator.tie.texish",
+      "match": "~"
+    },
+    "math-inline": {
+      "comment": "Inline math, $ ... $. Delimiters are punctuation; the body still highlights control sequences.",
+      "begin": "\\$",
+      "end": "\\$",
+      "beginCaptures": { "0": { "name": "punctuation.definition.math.begin.texish" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.math.end.texish" } },
+      "patterns": [ { "include": "#math-content" } ]
+    },
+    "math-display": {
+      "comment": "Display math, $$ ... $$. Tried before inline so $$ is one delimiter, not two.",
+      "begin": "\\$\\$",
+      "end": "\\$\\$",
+      "beginCaptures": { "0": { "name": "punctuation.definition.math.begin.texish" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.math.end.texish" } },
+      "patterns": [ { "include": "#math-content" } ]
+    },
+    "math-content": {
+      "patterns": [
+        { "include": "#control-word" },
+        { "include": "#control-symbol" },
+        { "include": "#group" },
+        { "name": "keyword.operator.script.texish", "match": "[\\^_&]" },
+        { "name": "constant.numeric.texish", "match": "[0-9]+(\\.[0-9]+)?" }
+      ]
+    }
+  }
+}

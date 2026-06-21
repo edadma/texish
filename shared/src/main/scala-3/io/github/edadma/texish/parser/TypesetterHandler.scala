@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{Box, CharBox, HBox, HorizontalMode, MathMode, MathStyle, Mode, PictureMode, Typesetter, VerticalMode}
+import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HorizontalMode, MathMode, MathStyle, Mode, PictureMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -88,29 +88,67 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   override def endParagraph(): Unit = typesetter.paragraph()
 
-  /** `verbatim` is the one built-in raw-capture environment: its body is set line for line, exactly as written. */
-  override def rawEnvironment(name: String): Boolean = name == "verbatim"
+  /** The built-in raw-capture environments: `verbatim` (set literally) and `code` (set as a syntax-highlighted
+    * listing, language from `\set codelang`). Both capture their body straight from the input. */
+  override def rawEnvironment(name: String): Boolean = name == "verbatim" || name == "code"
 
-  /** Set a verbatim body. Each source line becomes its own line box in the typewriter face, with leading and
-    * interior spaces preserved (the mono cut is fixed-width, so they line up) and no line breaking — one source
-    * line is one output line. The block is dropped onto the vertical list between the surrounding paragraphs;
-    * the running text after `\end{verbatim}` opens a fresh paragraph as usual. */
+  /** Set the body of a raw-capture environment. `verbatim` is set line for line in the typewriter face; `code`
+    * is set as a highlighted listing using the language named by the `codelang` variable. */
   override def rawEnvironmentBody(name: String, body: String): Unit =
     if !suppressed then
-      val t = typesetter
-      t.paragraph()       // close any open paragraph: the block rides the vertical list
-      resetNewlineCount()
-      val saved = t.currentFont
-      t.mono()
-      for line <- verbatimLines(body) do
-        // an empty source line still occupies a line; a single space gives it the face's height
-        val text = if line.isEmpty then " " else line
-        t add new HBox(Seq(new CharBox(t, text, t.currentFont, t.currentColor)))
-      t.currentFont = saved
+      name match
+        case "code" => placeCode(varString("codelang"), body, null)
+        case _ =>
+          // verbatim: the typewriter role of the current family, one uncoloured run per source line
+          placeLines(() => typesetter.mono(), verbatimLines(body).map(line => Seq((line, typesetter.currentColor))))
 
-  /** Split a raw verbatim body into its source lines: drop the newline that follows `\begin{verbatim}` and the
-    * one just before `\end{verbatim}` (neither is part of the content), keep every interior blank line, and
-    * tolerate CRLF endings. */
+  /** Typeset a code listing: each source line on its own output line, set in the JetBrains Mono code face with
+    * leading and interior spaces preserved and no line breaking. With a `lang` the body is syntax-highlighted
+    * using that language's bundled grammar and the current code theme (`codetheme`, defaulting to a light theme
+    * that reads on a white page); with an empty `lang` it is set plain. An unknown language is an error. */
+  def placeCode(lang: String, body: String, pos: CharReader): Unit =
+    if !suppressed then
+      val lines = verbatimLines(body)
+      val styled: Seq[Seq[(String, Color)]] =
+        if lang.isEmpty then lines.map(line => Seq((line, typesetter.currentColor)))
+        else
+          CodeHighlight.forLanguage(lang) match
+            case Right(hl) =>
+              val themeName = varString("codetheme")
+              val theme     = CodeHighlight.themes.getOrElse(if themeName.isEmpty then "onelight" else themeName,
+                                CodeHighlight.themes("onelight"))
+              CodeHighlight.styledLines(hl, theme, lines.mkString("\n"))
+            case Left(msg) => error(msg, pos)
+      placeLines(() => typesetter.typeface("jetbrains"), styled)
+
+  /** Stack a block of pre-styled lines onto the vertical list as fixed-line boxes: close any open paragraph,
+    * select the listing font, then add one HBox per line of coloured runs (an empty line gets a single space so
+    * it still occupies a line), and restore the running font. No line breaking — one input line is one output
+    * line; leading spaces survive because each run is set as a literal fixed-width string. */
+  private def placeLines(selectFont: () => Unit, lines: Seq[Seq[(String, Color)]]): Unit =
+    val t = typesetter
+    t.paragraph() // close any open paragraph: the block rides the vertical list
+    resetNewlineCount()
+    val saved = t.currentFont
+    selectFont()
+    for runs <- lines do
+      val nonEmpty = runs.filter(_._1.nonEmpty)
+      val boxes: Seq[Box] =
+        if nonEmpty.isEmpty then Seq(new CharBox(t, " ", t.currentFont, t.currentColor))
+        else nonEmpty.map((text, color) => new CharBox(t, text, t.currentFont, color))
+      t add new HBox(boxes)
+    t.currentFont = saved
+
+  /** A variable's value as a trimmed string, or "" if it is unset — for reading the `codelang` / `codetheme`
+    * selections that a `\code` block consults. */
+  private def varString(name: String): String =
+    get(name) match
+      case Value.Undefined => ""
+      case v               => Value.display(v).trim
+
+  /** Split a raw verbatim/code body into its source lines: drop the newline that follows `\begin{…}` and the one
+    * just before `\end{…}` (neither is part of the content), keep every interior blank line, and tolerate CRLF
+    * endings. */
   private def verbatimLines(body: String): Seq[String] =
     var s = body
     if s.startsWith("\r\n") then s = s.substring(2)

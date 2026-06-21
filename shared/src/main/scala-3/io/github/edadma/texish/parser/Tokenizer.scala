@@ -79,6 +79,26 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
       reader = reader.next // consume the closing delimiter
       Some(sb.toString)
 
+  /** If the next character is `[`, read raw up to the matching `]` and return the bracketed content (consuming
+    * both brackets, and any blanks left before a following `{`); otherwise leave the reader untouched and return
+    * None. This reads an optional verbatim argument — the `[language]` of `\code[scala]{…}` — before the raw
+    * brace body, where tokenizing the bracket first would defeat the raw read. Requires no token to have been
+    * peeked. */
+  def readOptionalRawBracket(): Option[String] =
+    if pendingToken.isDefined || reader.eoi || reader.ch != '[' then return None
+    reader = reader.next
+
+    val sb = new StringBuilder
+    while !reader.eoi && reader.ch != ']' do
+      sb.append(reader.ch)
+      reader = reader.next
+
+    if reader.eoi then None
+    else
+      reader = reader.next // consume ]
+      while !reader.eoi && (reader.ch == ' ' || reader.ch == '\t') do reader = reader.next
+      Some(sb.toString)
+
   /** Read source literally up to the next `\end{<name>}`, consuming that sentinel, and return the raw text before
     * it (spaces and newlines preserved). This is the raw-capture a verbatim environment needs: unlike a generic
     * `\begin`/`\end` body, nothing between the delimiters is tokenized. The sentinel may carry spaces around its
