@@ -34,8 +34,9 @@
 
 // ---- Configuration (override with \set after \use, before \railroad) ------------
 // All sizes are in points (72 per inch).
-\set rrfont {10}            // type size of the labels inside the boxes
-\set rrtitlefont {11}       // type size of the rule-name title above each diagram
+\set rrface {jetbrains}     // typeface for the labels and titles (JetBrains Mono, a code face)
+\set rrfont {9}             // type size of the labels inside the boxes
+\set rrtitlefont {10}       // type size of the rule-name title above each diagram
 \set rrpadx {8}             // horizontal padding between a label and its box edge
 \set rrboxh {21}            // height of a box (the rail runs through its middle)
 \set rrhgap {15}            // length of a connecting rail between items in a row
@@ -318,7 +319,9 @@
 \def rrMeasLeaf id term {{
   \set nid {\id}
   \set lbl {\mapget rrLabel {\nid}}
-  \setbox rrbox \hbox{{\font {lmroman} {\rrfont} {regular}\lbl}}
+  \global\set rrwt {regular}
+  \if {\= {\term}{1}}\global\set rrwt {bold}\fi
+  \setbox rrbox \hbox{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
   \set tw {\wd rrbox}
   \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx + \term * rrboxh}}
   \global\mapset rrUp {\nid}{\calc{rrboxh / 2}}
@@ -445,6 +448,8 @@
   \set nid {\id}\set bx {\x}\set by {\y}
   \set bw {\mapget rrW {\nid}}
   \set lbl {\mapget rrLabel {\nid}}
+  \global\set rrwt {regular}
+  \if {\= {\term}{1}}\global\set rrwt {bold}\fi
   \set top {\calc{\by + rrboxh / 2}}\set bot {\calc{\by - rrboxh / 2}}
   \if {\= {\term}{1}}
     \set r {\calc{rrboxh / 2}}
@@ -462,7 +467,7 @@
     \fill{\rrnontermfill}\stroke{\rrlinecolor}\linewidth{1pt}
     \rect{\bx \bot \bw \rrboxh}
   \fi
-  \at anchor:center {\calc{\bx + \bw / 2} \by}{{\font {lmroman} {\rrfont} {regular}\lbl}}
+  \at anchor:center {\calc{\bx + \bw / 2} \by}{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
 }}
 
 // A sequence draws each child in turn with a connecting rail between neighbours.
@@ -687,7 +692,7 @@
   \set ry {\calc{rrmargin + \dn}}
   \set yt {\calc{rrmargin + \dn + \up + \titleh / 2}}
   \picture width:{\pw} height:{\ph} {
-    \at anchor:west {\rrmargin \yt}{{\font {lmroman} {\rrtitlefont} {bold}\rname}}
+    \at anchor:west {\rrmargin \yt}{{\font {\rrface} {\rrtitlefont} {bold}\rname}}
     \set xa {\calc{rrmargin + rrah}}
     \rrArrow{\xa}{\ry}
     \set xstart {\calc{\xa + rrhgap}}
