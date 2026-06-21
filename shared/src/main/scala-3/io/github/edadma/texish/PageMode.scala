@@ -160,7 +160,13 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
   override def done(): Unit =
     pop
 
-    if nonEmpty then newpage()
+    if nonEmpty then
+      // end of document, as plain TeX's \bye does with \vfill\eject: the final page is under-full, so cap it
+      // with an infinite fil to soak up the slack and keep its content at the top — otherwise a flush-bottom
+      // page (raggedbottom == 0) would justify, stretching the small interparagraph glue down the whole page.
+      // When raggedbottom is set, result already appends this fil to every page, so don't add a second one.
+      if t.getNumber("raggedbottom") == 0 then super.add(FilGlue)
+      newpage()
 
   def newpage(): Unit =
     // record this page's marks before shipping, so shipout-time material (running headers) reads them: topmark

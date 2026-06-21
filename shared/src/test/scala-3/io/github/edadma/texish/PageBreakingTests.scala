@@ -205,6 +205,30 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
     t.document.page shouldBe 1
   }
 
+  "the final under-full page keeps its content at the top (flush-bottom default)" in {
+    // raggedbottom defaults to 0, so a full page is justified — but the last page is under-full, and
+    // ending the document must cap it with a fil (plain TeX's \bye) so its content stays at the top
+    // rather than the tiny interparagraph glue being stretched down the whole page.
+    val t = new HeadlessTypesetter
+    t.set("vsize", 300)
+    val doc = new CapturingDocument(t)
+    t.document = doc
+
+    Console.withOut(new java.io.ByteArrayOutputStream) {
+      t.add(new CharBox(t, "one"))
+      t.paragraph()
+      t.add(new CharBox(t, "two"))
+      t.end()
+    }
+
+    doc.shipped.length shouldBe 1
+    val page = doc.shipped(0)
+    page.height shouldBe 300.0 +- 1e-9
+    // the slack is one big space at the very bottom, not spread between the two paragraphs
+    page.boxes.last shouldBe a[VSpaceBox]
+    page.boxes.last.height should be > 150.0
+  }
+
   "interline glue is inserted across a penalty, measured from the last box" in {
     val t = new HeadlessTypesetter
     t.set("baselineskip", Glue(20))
