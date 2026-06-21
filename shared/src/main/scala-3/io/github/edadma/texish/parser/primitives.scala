@@ -596,6 +596,48 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // Leaders fill a flexible space with repeated copies of a box instead of leaving it blank — TeX's \leaders
+  // (\cleaders, \xleaders) family. Each reads the unit box (the next \hbox/\vbox) then a glue spec giving the
+  // space to fill (usually a fil-stretch glue so it spans whatever slack the line has). \leaders aligns copies to
+  // a page-anchored grid, \cleaders centres them, \xleaders spreads the leftover space between them.
+  def leaderPrimitive(kind: LeaderKind): Primitive =
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        readBoxArg(proc, t, pos) match
+          case b: Box =>
+            val argPos = argumentPos(proc, pos)
+            glueArg(proc, pos) match
+              case Some(g) =>
+                t.add(new LeaderGlue(b, kind, g.naturalSize, g.stretch, g.shrink, g.stretchOrder, g.shrinkOrder))
+              case None => handler.error("leaders expect a glue after the unit box", argPos)
+          case null =>
+            handler.error("leaders expect a box (\\hbox or \\vbox) followed by a glue", argumentPos(proc, pos))
+    }
+  proc.registerPrimitive("leaders", leaderPrimitive(LeaderKind.Aligned))
+  proc.registerPrimitive("cleaders", leaderPrimitive(LeaderKind.Centered))
+  proc.registerPrimitive("xleaders", leaderPrimitive(LeaderKind.Expanded))
+
+  // \dotfill — centred dot leaders that fill the line, the staple of a table of contents (`entry \dotfill page`).
+  // The unit is a period followed by a gap, so the dots are evenly spaced; the glue is 0pt plus 1fil.
+  proc.registerPrimitive(
+    "dotfill",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val unit = new HBox(Seq(new CharBox(t, "."), HSpaceBox(t.currentFont.size * 0.4)))
+        t.add(new LeaderGlue(unit, LeaderKind.Centered, 0, 1, 0, 1))
+    },
+  )
+
+  // \hrulefill — a thin rule that stretches to fill the line (a continuous leader). Useful for form fields and
+  // signature lines. The rule is 0.4pt thick (TeX's default) and is re-sized to whatever width the glue takes.
+  proc.registerPrimitive(
+    "hrulefill",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.add(new LeaderGlue(new RuleBox(t, 0, 0.4, 0), LeaderKind.Aligned, 0, 1, 0, 1))
+    },
+  )
+
   // The TeX math-spacing commands: \, thin (3mu), \: medium (4mu), \; thick (5mu), \! negative thin (-3mu).
   // A mu is 1/18 em and em is the current font size, so these scale with the font. Rigid horizontal spaces that
   // work in math or text — the manual spaces you reach for between a coefficient and a species, around an

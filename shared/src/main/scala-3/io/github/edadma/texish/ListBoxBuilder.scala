@@ -25,8 +25,9 @@ abstract class ListBoxBuilder extends Builder:
 
   protected def build: Seq[Box] =
     boxes map {
-      case g: Glue => skip(g.naturalSize)
-      case b       => b
+      case lg: LeaderGlue => lg.setTo(lg.naturalSize)
+      case g: Glue        => skip(g.naturalSize)
+      case b              => b
     } toSeq
 
   /** Set the glue so the box reaches the target size — TeX's glue-setting rules.
@@ -41,9 +42,13 @@ abstract class ListBoxBuilder extends Builder:
 
     val glue = boxes.zipWithIndex.collect { case (g: Glue, idx) => (g, idx) }
 
-    // replace every Glue with a fixed skip of the given size
+    // replace every Glue with a fixed skip of the given size — a leader becomes a box that fills that width
     def setGlue(f: Glue => Double): Unit =
-      glue.foreach((g, idx) => boxes(idx) = skip(f(g)))
+      glue.foreach((g, idx) =>
+        boxes(idx) = g match
+          case lg: LeaderGlue => lg.setTo(f(g))
+          case _              => skip(f(g)),
+      )
 
     var reported = false
 
