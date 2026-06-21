@@ -108,9 +108,41 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     def sizes(i: Int): Double =
       heights(i) + (if notes(i) > 0 then notes(i) + separatorSize else 0) + floatAreaSize(boxes.take(i))
 
-    val candidates = (boxes.length - 1) to 1 by -1
+    // The break is chosen by cost, as in TeX, rather than by taking the latest legal break that happens to fit.
+    // The cost of breaking at item i is the page's badness there plus the penalty at the break: badness measures
+    // how hard the page glue must work to reach vsize — stretching when the content is short, shrinking when it
+    // overruns — and a positive penalty makes a discouraged break less attractive even when it fits. A page that
+    // cannot reach vsize because it would overrun beyond the available shrink is infeasible. The least-cost
+    // feasible break wins; ties go to the later break, so a page still carries as much as it can. On a rigid text
+    // page (interline glue has no stretch) every fitting break is equally bad, so ties alone pick the latest one
+    // that fits — exactly the old first-fit — and the cost model only changes the outcome where glue can flex or a
+    // penalty intervenes.
+    val glueStretch = boxes.scanLeft(0.0)((a, b) => a + (b match { case g: Glue if g.stretchOrder == 0 => g.stretch; case _ => 0.0 }))
+    val glueShrink  = boxes.scanLeft(0.0)((a, b) => a + (b match { case g: Glue if g.shrinkOrder == 0 => g.shrink; case _ => 0.0 }))
+    val canFill     = boxes.scanLeft(false)((a, b) => a || (b match { case g: Glue => g.stretchOrder >= 1; case _ => false }))
 
-    candidates.find(i => legal(i) && sizes(i) <= vsize).orElse(candidates.find(legal)) match
+    val Infeasible = Double.PositiveInfinity
+
+    def cost(i: Int): Double =
+      val natural = sizes(i)
+      val badness =
+        if natural <= vsize then
+          val short = vsize - natural
+          if canFill(i) || short <= 1e-6 then 0.0
+          else if glueStretch(i) <= 1e-6 then 10000.0
+          else math.min(10000.0, 100.0 * math.pow(short / glueStretch(i), 3))
+        else
+          val over = natural - vsize
+          if over <= glueShrink(i) + 1e-6 && glueShrink(i) > 1e-6 then
+            math.min(10000.0, 100.0 * math.pow(over / glueShrink(i), 3))
+          else Infeasible
+      val penalty = boxes(i) match { case p: Penalty => p.penalty.toDouble; case _ => 0.0 }
+      if badness == Infeasible then Infeasible else badness + penalty
+
+    // descending, so the first occurrence of the minimum cost is the latest break among ties
+    val legalDescending = ((boxes.length - 1) to 1 by -1).filter(legal)
+
+    legalDescending.filter(cost(_) < Infeasible).minByOption(cost).orElse(legalDescending.headOption) match
       case None =>
       case Some(i) =>
         val carried = boxes.drop(i).toList
