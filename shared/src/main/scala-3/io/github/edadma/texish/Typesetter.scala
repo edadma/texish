@@ -63,6 +63,13 @@ abstract class Typesetter:
   var pageDecorator: (() => (Box | Null, Box | Null)) | Null = null
 
   protected[texish] var document: DocumentMode         = new DocumentMode(this)
+
+  /** Cross-reference store for `\label`/`\ref`/`\tableofcontents`. The driver shares one table across the passes of
+    * a run (assigning it here before each pass) so forward references resolve; left to its own per-typesetter
+    * default it simply collects within a single pass, which is all a backward reference needs.
+    */
+  var references: ReferenceTable                        = new ReferenceTable
+
   protected val typefaces                                  = new mutable.HashMap[String, Typeface]
   private val scopes                                       = mutable.Stack[Map[String, Value]](Map.empty)
   protected[texish] val modeStack: mutable.Stack[Mode] = new mutable.Stack
@@ -237,6 +244,12 @@ abstract class Typesetter:
   def setLineJoin(join: LineJoin): Unit = ()
 
   def destroy(): Unit
+
+  /** Release this pass's output without handing it back — for the throwaway intermediate passes of a multi-pass
+    * run (see [[Passes]]), whose pages are discarded. The default is [[destroy]]; a backend that hands its
+    * collected page surfaces to the caller (rather than freeing them in destroy) frees them here instead.
+    */
+  def discard(): Unit = destroy()
 
   def getDocument: DocumentMode = document
 

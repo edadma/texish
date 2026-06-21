@@ -169,15 +169,30 @@
 \def thesubsection {\thesection.\arabic{\value{subsection}}}
 \def thesubsubsection {\thesubsection.\arabic{\value{subsubsection}}}
 
+// Value forms of the same numbers, for places that capture the number as a string rather than print it: a
+// cross-reference (currentlabel) and a contents entry. The printed forms above join their parts with a literal
+// dot, which reads as the dotted-access operator when the macro is evaluated in expression position, so the
+// captured value would lose everything after the dot; these build the dotted number with \cat instead. The top
+// level is just \thesection, so \appendix's switch to lettered numbers carries through here too.
+\def thesectionnum {\thesection}
+\def thesubsectionnum {\cat{\thesection}{\cat{.}{\arabic{\value{subsection}}}}}
+\def thesubsubsectionnum {\cat{\thesubsectionnum}{\cat{.}{\arabic{\value{subsubsection}}}}}
+
 // Each heading takes a leading * for the unnumbered form (\section*{…}): the star form
 // skips the counter and prints no number, exactly as in LaTeX.
+// A numbered heading also records itself for cross-references and the table of contents: currentlabel holds the
+// number a following \label captures (set \global because the \else branch is inside \if's group), and \tocentry
+// notes the heading so \tableofcontents can list it with the page it lands on. The starred forms do neither, as
+// in LaTeX.
 \def section * t {
   \vskip 14pt plus 3pt minus 1pt
   \if {\star}
     \leftline{\font lmroman 14 bold \t}
   \else
     \stepcounter{section}
+    \global\set currentlabel {\thesectionnum}
     \leftline{\font lmroman 14 bold \thesection\hskip 10 \t}
+    \tocentry{1}{\thesectionnum}{\t}
   \fi
   \nobreak
   \vskip 8pt plus 2pt
@@ -190,7 +205,9 @@
     \leftline{\font lmroman 12 bold \t}
   \else
     \stepcounter{subsection}
+    \global\set currentlabel {\thesubsectionnum}
     \leftline{\font lmroman 12 bold \thesubsection\hskip 10 \t}
+    \tocentry{2}{\thesubsectionnum}{\t}
   \fi
   \nobreak
   \vskip 6pt plus 1pt
@@ -203,11 +220,31 @@
     \leftline{\font lmroman 11 bold \t}
   \else
     \stepcounter{subsubsection}
+    \global\set currentlabel {\thesubsubsectionnum}
     \leftline{\font lmroman 11 bold \thesubsubsection\hskip 10 \t}
+    \tocentry{3}{\thesubsubsectionnum}{\t}
   \fi
   \nobreak
   \vskip 5pt plus 1pt
   \noindent
+}
+
+// The table of contents is driven by the engine's \tableofcontents, which calls this once per entry it collected,
+// passing the heading's level, number, title and the page it starts on. Each line indents by depth, sets the
+// number and title, then a dotted leader carries the eye to the page number at the right margin. \tocheading
+// prints the contents title above the list.
+\def tocindent lvl {\calc{(\lvl - 1) * 18}}
+
+\def tocformat lvl num ttl pg {
+  \set tocskip {\tocindent{\lvl}}
+  \hbox to:\hsize {\hskip \tocskip \num\hskip 8 \ttl\dotfill \pg}
+}
+
+\def tableofcontentstitle {Contents}
+
+\def contents {
+  \section*{\tableofcontentstitle}
+  \tableofcontents
 }
 
 // \paragraph is the lowest level: a bold run-in heading on the same line as the text it

@@ -71,6 +71,88 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // \label - 1 arg: bind a name to the current reference point so a later \ref/\pageref can name its number and
+  // page. The reference text is whatever `currentlabel` holds right now — a sectioning command sets it to the
+  // section number, just as LaTeX's \refstepcounter sets \@currentlabel — captured here so a counter that steps
+  // afterwards does not change it. The page is unknown until shipout, so an invisible LabelBox rides the vertical
+  // list to the page the label lands on (see ReferenceTable / PageMode).
+  proc.registerPrimitive(
+    "label",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val text = t.get("currentlabel") match
+          case Some(v) => Value.display(v)
+          case None    => ""
+
+        t.references.declare(name, text)
+        t.add(new LabelBox(name))
+    },
+  )
+
+  // \ref - 1 arg: print the reference text bound to a label (a section/figure number). Forward references resolve
+  // on a later pass; until then, and for a name that was never labelled, it prints "??" — LaTeX's placeholder and
+  // the cue to rerun.
+  proc.registerPrimitive(
+    "ref",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val text = t.references.refText(name).getOrElse("??")
+
+        proc.setResult(Value.Text(text))
+        proc.handler.text(text)
+    },
+  )
+
+  // \pageref - 1 arg: print the folio of the page a label sits on. Like \ref it shows "??" until a pass has shipped
+  // the page that carries the label.
+  proc.registerPrimitive(
+    "pageref",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val text = t.references.refPage(name).map(_.toString).getOrElse("??")
+
+        proc.setResult(Value.Text(text))
+        proc.handler.text(text)
+    },
+  )
+
+  // \tocentry - 3 args (level, number, title): note this point for the table of contents. Like a label its page is
+  // learned at shipout, via an invisible TocMarkBox; a sectioning command issues one so the entry's folio is the
+  // page its heading starts on.
+  proc.registerPrimitive(
+    "tocentry",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val level  = argInt(proc, pos)
+        val number = Value.display(evalArg(proc, pos))
+        val title  = Value.display(evalArg(proc, pos))
+
+        t.add(new TocMarkBox(level, number, title))
+    },
+  )
+
+  // \tableofcontents - 0 args: replay the entries collected by \tocentry on the previous pass. The engine owns the
+  // collection and the iteration; the document language owns the look, through a \tocformat macro it must define —
+  // called once per entry as \tocformat{level}{number}{title}{page}. On the first pass there are no entries yet, so
+  // this emits nothing and the contents simply appear once the document has been set through.
+  proc.registerPrimitive(
+    "tableofcontents",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val entries = t.references.toc
+
+        if entries.nonEmpty then
+          val src = entries
+            .map(e => s"\\tocformat{${e.level}}{${e.number}}{${e.title}}{${e.page}}")
+            .mkString
+
+          proc.processContent(src)
+    },
+  )
+
   // footnote - 1 body arg: a raised marker number in the running text, with the body typeset at the foot of
   // whatever page the marker lands on. The body is typeset immediately, at footnotesize, into a block that rides
   // the vertical list as a zero-size insert (see InsertBox); the page builder counts its height against the page
@@ -469,6 +551,104 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // phantom / hphantom / vphantom / smash - 1 body arg: reserve the size of the argument along selected axes
+  // without its full ink. \phantom leaves an invisible box the exact size of its argument; \hphantom keeps only
+  // its width; \vphantom only its height and depth (the classic way to make a row of fractions share a baseline,
+  // or align \sqrt signs); \smash draws the argument but reports zero height and depth, so tall material overlaps
+  // its neighbours instead of spreading the line. The argument is set in the current mode — as a math sub-formula
+  // inside a formula, as ordinary horizontal material otherwise — so a phantom matches what it stands in for.
+  def phantomPrimitive(name: String, keepWidth: Boolean, keepHeight: Boolean, visible: Boolean): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              handler.mathSubFormula(proc, parent.style, proc.readArgument(pos)) match
+                case inner: Box => parent.add(new PhantomBox(inner, keepWidth, keepHeight, visible))
+                case null       =>
+            case _ =>
+              val inner = HBox(typesetGroupBoxes(proc, t, pos).toVector)
+              t.add(new PhantomBox(inner, keepWidth, keepHeight, visible))
+      },
+    )
+
+  phantomPrimitive("phantom", keepWidth = true, keepHeight = true, visible = false)
+  phantomPrimitive("hphantom", keepWidth = true, keepHeight = false, visible = false)
+  phantomPrimitive("vphantom", keepWidth = false, keepHeight = true, visible = false)
+  phantomPrimitive("smash", keepWidth = true, keepHeight = false, visible = true)
+
+  // columns - [gap:<dim>] {n} {body}: set the body as n balanced side-by-side columns. The body is typeset once
+  // into a vbox at the column width — the current \hsize less the gutters, divided by n — then divided into n
+  // pieces of roughly equal height with \vsplit's page-style breaking, and the pieces are set side by side with
+  // the gutter between them. This is column balancing (the columns come out level), as opposed to filling one
+  // column to the bottom before starting the next. The whole thing enters the current list as a single
+  // horizontal box, so it sits within the ordinary page; a balanced block taller than the page is not yet split
+  // across pages. The gutter defaults to one em, overridable with [gap:<dim>].
+  proc.registerPrimitive(
+    "columns",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts = proc.readOptionalParams(pos)
+        val gap  = opts.get("gap").flatMap(points).getOrElse(t.currentFont.size)
+        val n    = math.max(1, argInt(proc, pos))
+        val body = proc.readArgument(pos)
+
+        val hsize    = t.getNumber("hsize")
+        val colWidth = (hsize - (n - 1) * gap) / n
+
+        // typeset the body once into a vbox at the column width, then restore the page measure
+        t.set("hsize", colWidth)
+        t.vbox()
+        proc.processTokenList(body)
+        t.paragraph()
+        val full = t.mode.exit
+        t.set("hsize", hsize)
+
+        full match
+          case vb: VerticalBox =>
+            // Balancing minimizes the height of the tallest column: find the smallest column height that still
+            // packs the material into n columns. An equal share (total / n) is the floor; the whole height
+            // trivially fits in one column, so it is a feasible ceiling. Binary search between them — feasibility
+            // is monotonic in the height — converges on the tight balance point, much closer to level than
+            // simply aiming each column at total / n (which lets first-fit under-fill the early columns and dump
+            // the slack into the last).
+            def fits(h: Double): Boolean =
+              var rest  = vb.boxes
+              var count = 0
+              while rest.nonEmpty && count < n do
+                rest = splitVList(rest, h)._2
+                count += 1
+              rest.isEmpty
+
+            var lo = vb.height / n
+            var hi = vb.height
+            var i  = 0
+            while i < 40 && hi - lo > 0.01 do
+              val mid = (lo + hi) / 2
+              if fits(mid) then hi = mid else lo = mid
+              i += 1
+            val target = hi // the smallest feasible column height
+
+            // peel off n-1 balanced pieces with \vsplit's breaking; the last column keeps whatever remains
+            var rest = vb.boxes
+            val cols = Vector.newBuilder[Box]
+            for _ <- 0 until n - 1 do
+              val (top, remainder) = splitVList(rest, target)
+              cols += new VBox(top)
+              rest = remainder
+            cols += new VBox(rest)
+
+            // lay the columns out left to right with the gutter between adjacent pairs
+            val laid = cols.result().zipWithIndex.flatMap {
+              case (c, 0) => Seq(c)
+              case (c, _) => Seq(HSpaceBox(gap), c)
+            }
+            t.add(new HBox(laid))
+          case _ =>
+    },
+  )
+
   // setbox name \hbox{...} (or \vbox / \vtop) - typeset a box now and save it in a register under `name`, for
   // later measurement (\wd / \ht / \dp) and placement (\box / \copy). Like \set, the assignment is local to the
   // current group. The box's contents are typeset at this point, not when the register is later used.
@@ -477,7 +657,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val name = proc.readIdentifier(pos)
-        readBoxArg(proc, t, pos) match
+        readBoxArg(proc, handler, t, pos) match
           case b: Box => proc.handler.set(name, Value.Native(b))
           case null   => handler.error("\\setbox expects a box (\\hbox, \\vbox, or \\vtop)", argumentPos(proc, pos))
     },
@@ -501,6 +681,20 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val name = proc.readIdentifier(pos)
         t.add(boxRegister(proc, handler, name, "copy", pos))
+    },
+  )
+
+  // vsplit name to:<height> - split a saved vbox at the latest legal breakpoint no taller than the height, the
+  // way a page breaks: the top piece is produced (added to the current list when used on its own, or captured by
+  // a surrounding \setbox), and the remainder is left in the register for the next split. This is how a long
+  // vertical list — overflowing footnotes, a column to balance — is divided into page- or column-sized pieces.
+  proc.registerPrimitive(
+    "vsplit",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        vsplitBox(proc, handler, t, pos) match
+          case b: Box => t.add(b)
+          case null   =>
     },
   )
 
@@ -603,7 +797,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   def leaderPrimitive(kind: LeaderKind): Primitive =
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        readBoxArg(proc, t, pos) match
+        readBoxArg(proc, handler, t, pos) match
           case b: Box =>
             val argPos = argumentPos(proc, pos)
             glueArg(proc, pos) match
@@ -665,7 +859,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val argPos = argumentPos(proc, pos)
         points(proc.evalArgumentExpr(pos)) match
           case Some(d) =>
-            readBoxArg(proc, t, pos) match
+            readBoxArg(proc, handler, t, pos) match
               case b: Box => t.add(ShiftBox(b, d))
               case null   => handler.error("\\lower expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\lower expects a dimension", argPos)
@@ -678,7 +872,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val argPos = argumentPos(proc, pos)
         points(proc.evalArgumentExpr(pos)) match
           case Some(d) =>
-            readBoxArg(proc, t, pos) match
+            readBoxArg(proc, handler, t, pos) match
               case b: Box => t.add(ShiftBox(b, -d))
               case null   => handler.error("\\raise expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\raise expects a dimension", argPos)
@@ -1245,7 +1439,7 @@ private[parser] def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, 
 // Read the <box> that follows \lower / \raise / \setbox — the next \hbox, \vbox, or \vtop, built and returned
 // without adding it to the current list, so the caller can wrap, shift, or store it. Returns null for
 // anything that is not a box command.
-private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | Null =
+private[parser] def readBoxArg(proc: Processor, handler: TypesetterHandler, t: Typesetter, pos: CharReader): Box | Null =
   proc.skipSpaces()
   if !proc.hasMoreTokens then null
   else
@@ -1253,6 +1447,9 @@ private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader):
       case Token.ControlSeq(name, _) if name == "hbox" || name == "vbox" || name == "vtop" =>
         proc.nextToken() // consume the box command
         buildBox(proc, t, vertical = name != "hbox", top = name == "vtop", pos)
+      case Token.ControlSeq("vsplit", _) =>
+        proc.nextToken() // consume \vsplit; it produces the top piece and leaves the remainder in its register
+        vsplitBox(proc, handler, t, pos)
       case _ => null
 
 // Typeset a braced `{…}` argument as a single LR-mode hbox and return it (null when empty) — the way the
@@ -1318,6 +1515,53 @@ private[parser] def typesetGroupBoxes(proc: Processor, t: Typesetter, pos: CharR
     case null    => Seq.empty
     case h: HBox => h.boxes
     case b: Box  => Seq(b)
+
+// Split a vertical list for a target height, returning the boxes above the break and the boxes from the break
+// onward. When the whole list already fits the target it is taken intact (the end of a list is always a valid
+// break) and the remainder is empty; otherwise the cut is the latest legal interior breakpoint whose prefix is
+// no taller than the target — the same first-fit rule and legal-breakpoint test the page builder uses
+// (PageMode.breakPage), and, if none fits, the latest legal break regardless of height. A break is legal at a
+// penalty below the inhibit threshold, or at breakable glue whose predecessor is not itself discardable. The
+// break item and any discardables that follow it vanish at the top of the remainder, so the lower piece never
+// begins with stray space. With no legal breakpoint at all the whole list is the top and the remainder is empty.
+private[parser] def splitVList(boxes: Seq[Box], target: Double): (Seq[Box], Seq[Box]) =
+  val v = boxes.toVector
+
+  // A break is legal at a penalty below the inhibit threshold or at discardable vertical space whose predecessor
+  // is not itself discardable. The space appears as live Glue while a list is still being built (the page builder
+  // breaks such a list) and as a resolved VSpaceBox once a vbox has been finalized into a register (what \vsplit
+  // is handed), so both forms count.
+  def legal(i: Int): Boolean =
+    v(i) match
+      case p: Penalty   => p.penalty < Penalty.Inhibit
+      case g: Glue      => !g.nobreak && i > 0 && !v(i - 1).isSpace
+      case _: VSpaceBox => i > 0 && !v(i - 1).isSpace
+      case _            => false
+
+  val heights = v.scanLeft(0.0)(_ + _.height) // measure in vertical mode is the box height
+
+  if heights(v.length) <= target then (v, Vector.empty)
+  else
+    val candidates = (v.length - 1) to 1 by -1
+
+    candidates.find(i => legal(i) && heights(i) <= target).orElse(candidates.find(legal)) match
+      case None    => (v, Vector.empty)
+      case Some(i) => (v.take(i), v.drop(i).dropWhile(_.isSpace))
+
+// Read the `name to:<height>` that follows \vsplit, split that vbox register, leave the remainder in the register
+// (emptied when nothing is left), and return the top piece as a \vbox. Shared by the \vsplit primitive and by
+// readBoxArg, so \setbox top \vsplit src to:144pt captures the top while src keeps the rest.
+private[parser] def vsplitBox(proc: Processor, handler: TypesetterHandler, t: Typesetter, pos: CharReader): Box | Null =
+  val name = proc.readIdentifier(pos)
+  proc.readOptionalParams(pos).get("to").flatMap(points) match
+    case None => handler.error("\\vsplit expects a target height, as in \\vsplit name to:144pt", pos)
+    case Some(target) =>
+      boxRegister(proc, handler, name, "vsplit", pos) match
+        case vb: VerticalBox =>
+          val (topBoxes, rest) = splitVList(vb.boxes, target)
+          proc.handler.set(name, if rest.isEmpty then Value.Undefined else Value.Native(new VBox(rest)))
+          new VBox(topBoxes)
+        case _ => handler.error(s"\\vsplit: '$name' is not a \\vbox or \\vtop", pos)
 
 // Fetch a box stored in a register by \setbox. Errors (rather than returning a sentinel) when the register
 // is empty or holds a non-box, so a misused box command points at the offending name.

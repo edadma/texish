@@ -1,0 +1,49 @@
+\use{document}
+
+\title {Math Alphabets, Phantoms and Smash}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+\section {The math alphabets}
+
+A formula draws its variables from the Mathematical Alphanumeric blocks of the
+math font. Each alphabet command remaps the letters of its argument into one of
+those blocks, so the same word can be set in any of the standard math typefaces:
+
+$$ \mathrm{Roman} \quad \mathbf{Bold} \quad \mathit{Italic} \quad \mathsf{Sans} \quad \mathtt{Typewriter} $$
+
+The two decorative alphabets that mathematicians reach for constantly are
+blackboard bold, for the number systems, and calligraphic and fraktur, for
+structures and ideals:
+
+$$ \mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R} \subset \mathbb{C} $$
+
+$$ \mathcal{F} : \mathfrak{A} \to \mathfrak{B}, \qquad \mathfrak{p} \subset \mathcal{O}_K $$
+
+A worked sentence mixes several at once: let $\mathbb{F}$ be a field, $V$ a
+vector space over $\mathbb{F}$, and $\mathcal{L}(V)$ the algebra of operators on
+it; write $\mathbf{x}$ for a column vector and $\mathrm{tr}\, A$ for a trace.
+
+\section {Phantoms}
+
+A \emph{phantom} reserves the size of its argument without printing it. The
+plain \texttt{phantom} reserves both width and height, so it can push text
+sideways by exactly the width of some other word. Compare the gap left by
+$\mathbf{a}\phantom{bbbb}\mathbf{c}$ --- the space between is the width of four
+b's, drawn as nothing.
+
+The \texttt{vphantom} form reserves only height, the usual way to give a row of
+fractions a common strut so they share a baseline:
+
+$$ \frac{1}{2} \qquad \frac{a}{b} \qquad \frac{x^2}{y_0} $$
+
+\section {Smash}
+
+Where a phantom prints nothing but keeps its size, \texttt{smash} does the
+opposite: it prints its argument but reports zero height and depth, so a tall
+construction stops pushing its line apart. The smashed radical $\smash{\sqrt{2}}$
+sits on the same line spacing as the ordinary text around it, while an unsmashed
+$\sqrt{2}$ opens the line up to clear the surd.
+
+\vfill\eject

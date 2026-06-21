@@ -14,15 +14,17 @@ object SvgMain:
   /** Render `source` and return one SVG document per page. `baseDir` resolves `\use` packages and relative
     * paths against the document's own directory. */
   def renderSvg(source: String, baseDir: String = "."): Seq[String] =
-    val t       = new SvgTypesetter
-    val handler = new TypesetterHandler(t)
-    val proc    = new Processor(handler)
+    val t = Passes.untilStable() { () => new SvgTypesetter } { t =>
+      val handler = new TypesetterHandler(t)
+      val proc    = new Processor(handler)
 
-    registerTypesettingPrimitives(proc, handler)
-    proc.setBaseDir(baseDir)
-    proc.process(source)
-    t.end()
-    t.pageSvgs
+      registerTypesettingPrimitives(proc, handler)
+      proc.setBaseDir(baseDir)
+      proc.process(source)
+      t.end()
+    }
+
+    t.asInstanceOf[SvgTypesetter].pageSvgs
 
   def main(args: Array[String]): Unit =
     if args.isEmpty then

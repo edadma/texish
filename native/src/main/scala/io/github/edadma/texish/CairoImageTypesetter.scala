@@ -1,6 +1,6 @@
 package io.github.edadma.texish
 
-import io.github.edadma.libcairo.{Format, imageSurfaceCreate}
+import io.github.edadma.libcairo.{Format, Surface, imageSurfaceCreate}
 
 /** Renders each page onto its own Cairo ARGB32 image surface, in memory, at the given resolution. The shipped
   * surfaces are collected in the document's `printedPages` — exactly as the JVM Graphics2D backend collects a
@@ -65,3 +65,12 @@ class CairoImageTypesetter(dpi: Double = 100) extends CairoTypesetter:
     if ready then ctx.destroy()
     // collected page surfaces belong to the caller; only an uncollected scratch is the backend's to free
     if ready && !pageStarted then surface.destroy()
+
+  // an intermediate pass's pages are never handed out, so this backend must free the surfaces destroy leaves for
+  // the caller before tearing the context down
+  override def discard(): Unit =
+    getDocument.printedPages.foreach {
+      case s: Surface => s.destroy()
+      case _          =>
+    }
+    destroy()

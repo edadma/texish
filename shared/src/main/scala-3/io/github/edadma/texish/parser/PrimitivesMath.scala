@@ -210,6 +210,38 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // Math alphabets - 1 body arg each: its letters set in one of the Mathematical Alphanumeric alphabets, as
+  // \mathbf{x} sets a bold x and \mathbb{R} the blackboard-bold ℝ. Math-mode only; this is the same mechanism
+  // as \mathcal generalized over the alphabet — each letter is remapped to its codepoint in the matching block
+  // and added as an Ord atom, so the run gets ordinary inter-atom spacing. A character the alphabet has no form
+  // for (a digit in an alphabet without digit shapes, a symbol) falls back to its usual math classification.
+  def alphabetPrimitive(name: String, alphabet: MathAlphabet): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              for tok <- stripOuterBraces(proc.readArgument(pos)) do
+                tok match
+                  case Token.Text(s, _) =>
+                    for ch <- s do
+                      MathSymbols.alphabetNode(parent.mathFont, alphabet, ch.toInt) match
+                        case Some(node) => parent.addNode(node)
+                        case None       => parent.addChar(ch.toInt)
+                  case _ =>
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  alphabetPrimitive("mathbf", MathAlphabet.Bold)
+  alphabetPrimitive("mathit", MathAlphabet.Italic)
+  alphabetPrimitive("mathrm", MathAlphabet.Roman)
+  alphabetPrimitive("mathsf", MathAlphabet.SansSerif)
+  alphabetPrimitive("mathtt", MathAlphabet.Typewriter)
+  alphabetPrimitive("mathbb", MathAlphabet.BlackboardBold)
+  alphabetPrimitive("mathfrak", MathAlphabet.Fraktur)
+
   // matrix and its bracketed forms - 1 body arg: a grid of math cells, & between columns and \cr (or \\)
   // between rows. Math-mode only; each cell is typeset by a nested math mode in the array's cell style (text
   // style, so a matrix in a display does not enlarge its entries), the cells are aligned into columns and
