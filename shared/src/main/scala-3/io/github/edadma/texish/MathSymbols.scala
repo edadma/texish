@@ -1,5 +1,12 @@
 package io.github.edadma.texish
 
+/** A math alphabet — the typeface a command like `\mathbf` selects for the letters in its argument. In the
+  * unicode-math model a real math font implements, each alphabet is a contiguous block of the one math font
+  * (Latin Modern Math here), so selecting an alphabet is remapping each ASCII letter to its codepoint in that
+  * block rather than loading a separate font. `Script` is the calligraphic alphabet `\mathcal` selects. */
+enum MathAlphabet:
+  case Bold, Italic, Roman, SansSerif, Typewriter, BlackboardBold, Fraktur, Script
+
 /** The mapping from input to math atoms: from the single characters typed inside `$…$` and from
   * control-sequence names (`\alpha`, `\leq`, `\sum`, …) to a Unicode codepoint in the math font plus the
   * [[MathClass]] that determines the spacing around it.
@@ -41,7 +48,69 @@ object MathSymbols:
   /** A calligraphic atom for one `\mathcal` letter, or None for a character with no script form (so the caller
     * can fall back to ordinary classification for a stray digit or symbol in the argument). */
   def mathcalNode(mf: MathFont, codepoint: Int): Option[MathNode] =
-    scriptLetter(codepoint.toChar).map(cp => glyphAtom(mf, Ord, cp))
+    alphabetNode(mf, MathAlphabet.Script, codepoint)
+
+  /** Letters Unicode encoded in the Letterlike Symbols block and unified there rather than duplicate inside the
+    * Mathematical Alphanumeric blocks, so `\mathbb{R}` must reach ℝ (U+211D) and not the reserved hole. */
+  private val blackboardExceptions: Map[Char, Int] = Map(
+    'C' -> 0x2102, 'H' -> 0x210D, 'N' -> 0x2115, 'P' -> 0x2119, 'Q' -> 0x211A, 'R' -> 0x211D, 'Z' -> 0x2124,
+  )
+  private val frakturExceptions: Map[Char, Int] = Map(
+    'C' -> 0x212D, 'H' -> 0x210C, 'I' -> 0x2111, 'R' -> 0x211C, 'Z' -> 0x2128,
+  )
+
+  /** The codepoint a character takes in a math alphabet, or None when that alphabet has no form for it — a
+    * digit in an alphabet without digit shapes (italic, fraktur, script), or any non-alphanumeric — so the
+    * caller can fall back to the character's ordinary math classification. Each alphabet is a contiguous
+    * Mathematical Alphanumeric block save for the Letterlike-block exceptions and italic lowercase `h`. */
+  def alphabetCodepoint(alphabet: MathAlphabet, c: Char): Option[Int] =
+    import MathAlphabet.*
+    val upper = c >= 'A' && c <= 'Z'
+    val lower = c >= 'a' && c <= 'z'
+    val digit = c >= '0' && c <= '9'
+    alphabet match
+      case Bold =>
+        if upper then Some(0x1D400 + (c - 'A'))
+        else if lower then Some(0x1D41A + (c - 'a'))
+        else if digit then Some(0x1D7CE + (c - '0'))
+        else None
+      case Italic =>
+        if c == 'h' then Some(0x210E) // italic small h is the Planck-constant slot, U+210E
+        else if upper then Some(0x1D434 + (c - 'A'))
+        else if lower then Some(0x1D44E + (c - 'a'))
+        else None
+      case Roman =>
+        if upper || lower || digit then Some(c.toInt) else None // upright ASCII
+      case SansSerif =>
+        if upper then Some(0x1D5A0 + (c - 'A'))
+        else if lower then Some(0x1D5BA + (c - 'a'))
+        else if digit then Some(0x1D7E2 + (c - '0'))
+        else None
+      case Typewriter =>
+        if upper then Some(0x1D670 + (c - 'A'))
+        else if lower then Some(0x1D68A + (c - 'a'))
+        else if digit then Some(0x1D7F6 + (c - '0'))
+        else None
+      case BlackboardBold =>
+        blackboardExceptions.get(c).orElse(
+          if upper then Some(0x1D538 + (c - 'A'))
+          else if lower then Some(0x1D552 + (c - 'a'))
+          else if digit then Some(0x1D7D8 + (c - '0'))
+          else None,
+        )
+      case Fraktur =>
+        frakturExceptions.get(c).orElse(
+          if upper then Some(0x1D504 + (c - 'A'))
+          else if lower then Some(0x1D51E + (c - 'a'))
+          else None,
+        )
+      case Script => scriptLetter(c)
+
+  /** An ordinary atom for one letter set in a math alphabet, or None when the alphabet has no form for the
+    * character. The whole run a `\mathbf`/`\mathbb`/… command sets enters as a sequence of Ord atoms, so it
+    * gets ordinary inter-atom spacing. */
+  def alphabetNode(mf: MathFont, alphabet: MathAlphabet, codepoint: Int): Option[MathNode] =
+    alphabetCodepoint(alphabet, codepoint.toChar).map(cp => glyphAtom(mf, Ord, cp))
 
   // Single non-alphanumeric characters: the codepoint to set (often a dedicated math character rather than
   // the ASCII one) and the atom class.
