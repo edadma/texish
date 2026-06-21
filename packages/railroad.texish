@@ -532,35 +532,42 @@
   \set xA {\calc{\xL + (rrInner - \aw) / 2}}
   \set xB {\calc{\xL + (rrInner - \bw) / 2}}
   \set yt {\calc{\by + \au + rrloop + \bd}}
+  \set xw {\calc{\bx + \w}}
   \rrRail{\bx}{\by}{\xA}{\by}
   \rrDraw{\a}{\xA}{\by}
-  \rrRail{\calc{\xA + \aw}}{\by}{\calc{\bx + \w}}{\by}
+  \rrRail{\calc{\xA + \aw}}{\by}{\xw}{\by}
   \rrDraw{\b}{\xB}{\yt}
-  \rrSepRight{\xR}{\by}{\yt}{\calc{\xB + \bw}}
-  \rrSepLeft{\xB}{\yt}{\xL}{\by}
+  \rrSepRight{\xR}{\xw}{\by}{\yt}{\calc{\xB + \bw}}
+  \rrSepLeft{\xL}{\bx}{\by}{\yt}{\xB}
 }}
 
-// The right half of a separated-list loop: up from (xr,y), round the top, left to the
-// separator's right edge (xbr); and the left half: from the separator's left edge (xbl) left,
-// round the top, and down to (xl,y).
-\def rrSepRight xr y yt xbr {{
+// The two halves of a separated-list loop. Like the repeat loop, each leaves the main line at
+// its connection point (cx), runs out to the loop's outer edge (ox), and rounds the corner
+// up — so the loop bows outward and meets the line with a curve, not a right angle — then runs
+// along the top to the separator's edge. Right half: cx on the right, B's right edge (xbr).
+\def rrSepRight cx ox y yt xbr {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
   \nofill\stroke{\rrlinecolor}\linewidth{1pt}
   \path{
-    \moveto{\xr \y}
-    \lineto{\xr \calc{\yt - \r}}
-    \curveto{\xr \calc{\yt - \r + \kr}  \calc{\xr - \r + \kr} \yt  \calc{\xr - \r} \yt}
+    \moveto{\cx \y}
+    \lineto{\calc{\ox - \r} \y}
+    \curveto{\calc{\ox - \r + \kr} \y  \ox \calc{\y + \r - \kr}  \ox \calc{\y + \r}}
+    \lineto{\ox \calc{\yt - \r}}
+    \curveto{\ox \calc{\yt - \r + \kr}  \calc{\ox - \r + \kr} \yt  \calc{\ox - \r} \yt}
     \lineto{\xbr \yt}
   }
 }}
-\def rrSepLeft xbl yt xl y {{
+// Left half: cx on the left, ox the left outer edge, down to B's left edge (xbl).
+\def rrSepLeft cx ox y yt xbl {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
   \nofill\stroke{\rrlinecolor}\linewidth{1pt}
   \path{
     \moveto{\xbl \yt}
-    \lineto{\calc{\xl + \r} \yt}
-    \curveto{\calc{\xl + \r - \kr} \yt  \xl \calc{\yt - \r + \kr}  \xl \calc{\yt - \r}}
-    \lineto{\xl \y}
+    \lineto{\calc{\ox + \r} \yt}
+    \curveto{\calc{\ox + \r - \kr} \yt  \ox \calc{\yt - \r + \kr}  \ox \calc{\yt - \r}}
+    \lineto{\ox \calc{\y + \r}}
+    \curveto{\ox \calc{\y + \r - \kr}  \calc{\ox + \r - \kr} \y  \calc{\ox + \r} \y}
+    \lineto{\cx \y}
   }
 }}
 
