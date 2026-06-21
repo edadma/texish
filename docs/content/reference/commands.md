@@ -153,7 +153,9 @@ The grammar is read verbatim. Rules are `name ::= expression`; an expression sup
 (alternation), juxtaposition (concatenation), `?`/`*`/`+` (optional / zero-or-more /
 one-or-more), `(…)` grouping, `"…"`/`'…'` terminals (rounded boxes), `[…]` character classes
 (pointed hexagons), and bare names as nonterminals (square boxes). Labels are set in JetBrains
-Mono with terminals in bold.
+Mono with terminals in bold. Common shapes are drawn idiomatically: a separated list
+`A (sep A)*` becomes `A` with `sep` on a return loop, and an optional choice `(A|B|C)?` folds
+the skip into the choice. See the [guide](/guide/railroad/) for customising colours and sizes.
 
 ## Units
 
