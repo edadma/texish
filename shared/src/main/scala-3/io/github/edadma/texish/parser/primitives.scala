@@ -586,7 +586,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val name = proc.readIdentifier(pos)
-        readBoxArg(proc, t, pos) match
+        readBoxArg(proc, handler, t, pos) match
           case b: Box => proc.handler.set(name, Value.Native(b))
           case null   => handler.error("\\setbox expects a box (\\hbox, \\vbox, or \\vtop)", argumentPos(proc, pos))
     },
@@ -610,6 +610,20 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val name = proc.readIdentifier(pos)
         t.add(boxRegister(proc, handler, name, "copy", pos))
+    },
+  )
+
+  // vsplit name to:<height> - split a saved vbox at the latest legal breakpoint no taller than the height, the
+  // way a page breaks: the top piece is produced (added to the current list when used on its own, or captured by
+  // a surrounding \setbox), and the remainder is left in the register for the next split. This is how a long
+  // vertical list — overflowing footnotes, a column to balance — is divided into page- or column-sized pieces.
+  proc.registerPrimitive(
+    "vsplit",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        vsplitBox(proc, handler, t, pos) match
+          case b: Box => t.add(b)
+          case null   =>
     },
   )
 
@@ -712,7 +726,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   def leaderPrimitive(kind: LeaderKind): Primitive =
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        readBoxArg(proc, t, pos) match
+        readBoxArg(proc, handler, t, pos) match
           case b: Box =>
             val argPos = argumentPos(proc, pos)
             glueArg(proc, pos) match
@@ -774,7 +788,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val argPos = argumentPos(proc, pos)
         points(proc.evalArgumentExpr(pos)) match
           case Some(d) =>
-            readBoxArg(proc, t, pos) match
+            readBoxArg(proc, handler, t, pos) match
               case b: Box => t.add(ShiftBox(b, d))
               case null   => handler.error("\\lower expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\lower expects a dimension", argPos)
@@ -787,7 +801,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val argPos = argumentPos(proc, pos)
         points(proc.evalArgumentExpr(pos)) match
           case Some(d) =>
-            readBoxArg(proc, t, pos) match
+            readBoxArg(proc, handler, t, pos) match
               case b: Box => t.add(ShiftBox(b, -d))
               case null   => handler.error("\\raise expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\raise expects a dimension", argPos)
@@ -1186,7 +1200,7 @@ private[parser] def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, 
 // Read the <box> that follows \lower / \raise / \setbox — the next \hbox, \vbox, or \vtop, built and returned
 // without adding it to the current list, so the caller can wrap, shift, or store it. Returns null for
 // anything that is not a box command.
-private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader): Box | Null =
+private[parser] def readBoxArg(proc: Processor, handler: TypesetterHandler, t: Typesetter, pos: CharReader): Box | Null =
   proc.skipSpaces()
   if !proc.hasMoreTokens then null
   else
@@ -1194,6 +1208,9 @@ private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader):
       case Token.ControlSeq(name, _) if name == "hbox" || name == "vbox" || name == "vtop" =>
         proc.nextToken() // consume the box command
         buildBox(proc, t, vertical = name != "hbox", top = name == "vtop", pos)
+      case Token.ControlSeq("vsplit", _) =>
+        proc.nextToken() // consume \vsplit; it produces the top piece and leaves the remainder in its register
+        vsplitBox(proc, handler, t, pos)
       case _ => null
 
 // Typeset a braced `{…}` argument as horizontal material and return its boxes — used for the three parts of a
@@ -1208,6 +1225,53 @@ private[parser] def typesetGroupBoxes(proc: Processor, t: Typesetter, pos: CharR
     case null    => Seq.empty
     case h: HBox => h.boxes
     case b: Box  => Seq(b)
+
+// Split a vertical list for a target height, returning the boxes above the break and the boxes from the break
+// onward. When the whole list already fits the target it is taken intact (the end of a list is always a valid
+// break) and the remainder is empty; otherwise the cut is the latest legal interior breakpoint whose prefix is
+// no taller than the target — the same first-fit rule and legal-breakpoint test the page builder uses
+// (PageMode.breakPage), and, if none fits, the latest legal break regardless of height. A break is legal at a
+// penalty below the inhibit threshold, or at breakable glue whose predecessor is not itself discardable. The
+// break item and any discardables that follow it vanish at the top of the remainder, so the lower piece never
+// begins with stray space. With no legal breakpoint at all the whole list is the top and the remainder is empty.
+private[parser] def splitVList(boxes: Seq[Box], target: Double): (Seq[Box], Seq[Box]) =
+  val v = boxes.toVector
+
+  // A break is legal at a penalty below the inhibit threshold or at discardable vertical space whose predecessor
+  // is not itself discardable. The space appears as live Glue while a list is still being built (the page builder
+  // breaks such a list) and as a resolved VSpaceBox once a vbox has been finalized into a register (what \vsplit
+  // is handed), so both forms count.
+  def legal(i: Int): Boolean =
+    v(i) match
+      case p: Penalty   => p.penalty < Penalty.Inhibit
+      case g: Glue      => !g.nobreak && i > 0 && !v(i - 1).isSpace
+      case _: VSpaceBox => i > 0 && !v(i - 1).isSpace
+      case _            => false
+
+  val heights = v.scanLeft(0.0)(_ + _.height) // measure in vertical mode is the box height
+
+  if heights(v.length) <= target then (v, Vector.empty)
+  else
+    val candidates = (v.length - 1) to 1 by -1
+
+    candidates.find(i => legal(i) && heights(i) <= target).orElse(candidates.find(legal)) match
+      case None    => (v, Vector.empty)
+      case Some(i) => (v.take(i), v.drop(i).dropWhile(_.isSpace))
+
+// Read the `name to:<height>` that follows \vsplit, split that vbox register, leave the remainder in the register
+// (emptied when nothing is left), and return the top piece as a \vbox. Shared by the \vsplit primitive and by
+// readBoxArg, so \setbox top \vsplit src to:144pt captures the top while src keeps the rest.
+private[parser] def vsplitBox(proc: Processor, handler: TypesetterHandler, t: Typesetter, pos: CharReader): Box | Null =
+  val name = proc.readIdentifier(pos)
+  proc.readOptionalParams(pos).get("to").flatMap(points) match
+    case None => handler.error("\\vsplit expects a target height, as in \\vsplit name to:144pt", pos)
+    case Some(target) =>
+      boxRegister(proc, handler, name, "vsplit", pos) match
+        case vb: VerticalBox =>
+          val (topBoxes, rest) = splitVList(vb.boxes, target)
+          proc.handler.set(name, if rest.isEmpty then Value.Undefined else Value.Native(new VBox(rest)))
+          new VBox(topBoxes)
+        case _ => handler.error(s"\\vsplit: '$name' is not a \\vbox or \\vtop", pos)
 
 // Fetch a box stored in a register by \setbox. Errors (rather than returning a sentinel) when the register
 // is empty or holds a non-box, so a misused box command points at the offending name.

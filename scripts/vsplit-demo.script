@@ -1,0 +1,38 @@
+\use{document}
+
+\title {Splitting a Column with vsplit}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+\section {One column, cut in two}
+
+The \texttt{vsplit} primitive cuts a saved vertical box at a page-style
+breakpoint --- the latest legal break no taller than a target height --- handing
+back the top piece and leaving the remainder in the register for the next cut.
+It is the building block under split footnotes and column balancing. Below, a
+single tall paragraph is typeset into a narrow \texttt{vbox}, split near its
+middle, and the two halves are set side by side as a pair of columns.
+
+\set hsize {170}
+\setbox col \vbox{\noindent
+The quick brown fox jumps over the lazy dog, and then, gathering its breath, it
+turns and jumps back again, because a single leap is never quite enough to settle
+an old argument between a fox and a dog. Typesetting a paragraph this narrow
+forces many short lines, which gives the column builder plenty of legal
+breakpoints --- one between every pair of lines --- so a split can land almost
+anywhere. When the cut is made, everything above the chosen break becomes the top
+piece and everything below it stays behind, ready to flow into the next column or
+the next page. That is exactly how a page builder fills one page and carries the
+rest onto the following one, and it is how a balanced two-column layout divides a
+galley into equal halves.}
+\set hsize {460}
+
+\vskip 6pt
+
+\set colheight {\ht col}
+\setbox colA \vsplit col to:{\calc{\colheight / 2}}
+
+\hbox{\box colA \hskip 24 \box col}
+
+\vfill\eject
