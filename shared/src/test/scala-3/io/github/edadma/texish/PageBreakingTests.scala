@@ -231,8 +231,9 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
 
   "the greedy fallback backs up to the last space instead of stranding a box" in {
     // A box that fits at a line's end, before a box that does not, must move to the next line with it —
-    // the greedy fallback (forced here by tolerance 0) backs up to the last interword space rather than
-    // leaving the fitting box (an opening "(", say) stranded at the line end.
+    // the greedy fallback backs up to the last interword space rather than leaving the fitting box (an
+    // opening "(", say) stranded at the line end. The trailing box is wider than the measure, so Knuth-Plass
+    // (even its emergency-stretch second pass) cannot justify the line and genuinely falls through to greedy.
     class W(val width: Double) extends ContentBox:
       val xAdvance: Double = width
       val ascent: Double   = 8
@@ -242,7 +243,7 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
     val t = new HeadlessTypesetter
     t.set("vsize", 5000); t.set("tolerance", 0.0); t.set("parindent", 0.0); t.set("hsize", 100.0)
     val open = new W(5)
-    val wide = new W(60)
+    val wide = new W(150)
     val doc  = new CapturingDocument(t)
     t.document = doc
 
