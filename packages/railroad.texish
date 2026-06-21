@@ -447,8 +447,12 @@
   \if {\= {\term}{1}}
     \set r {\calc{rrboxh / 2}}
     \set xl {\calc{\bx + \r}}\set xr {\calc{\bx + \bw - \r}}
+    // fill the whole stadium: the rectangular middle, then each rounded cap. A filled
+    // half-circle arc fills the segment up to its chord — the cap's flat side — so the two
+    // caps meet the middle rect exactly with no seam.
     \fill{\rrtermfill}\nostroke
     \rect{\xl \bot \calc{\xr - \xl} \rrboxh}
+    \arc{\xl \by \r 90 270}\arc{\xr \by \r 270 90}
     \stroke{\rrlinecolor}\linewidth{1pt}\nofill
     \line{\xl \top \xr \top}\line{\xl \bot \xr \bot}
     \arc{\xl \by \r 90 270}\arc{\xr \by \r 270 90}
