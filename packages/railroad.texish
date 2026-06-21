@@ -538,7 +538,7 @@
   \set xin {\calc{\bx + rrfork}}
   \set xout {\calc{\bx + rrfork + \cw}}
   \set xr {\calc{\xout + rrfork}}
-  \set yt {\calc{\by + \cu + rrloop / 2}}
+  \set yt {\calc{\by + \cu + rrloop}}
   \rrRail{\bx}{\by}{\xin}{\by}
   \rrDraw{\c}{\xin}{\by}
   \rrRail{\xout}{\by}{\xr}{\by}
@@ -555,8 +555,8 @@
   \set xin {\calc{\bx + rrfork}}
   \set xout {\calc{\bx + rrfork + \cw}}
   \set xr {\calc{\xout + rrfork}}
-  \set yt {\calc{\by + \cu + rrloop / 2}}
-  \set yb {\calc{\by - \cd - rrloop / 2}}
+  \set yt {\calc{\by + \cu + rrloop}}
+  \set yb {\calc{\by - \cd - rrloop}}
   \rrRail{\bx}{\by}{\xin}{\by}
   \rrDraw{\c}{\xin}{\by}
   \rrRail{\xout}{\by}{\xr}{\by}
@@ -573,7 +573,7 @@
   \set xin {\calc{\bx + rrfork}}
   \set xout {\calc{\bx + rrfork + \cw}}
   \set xr {\calc{\xout + rrfork}}
-  \set yb {\calc{\by - \cd - rrloop / 2}}
+  \set yb {\calc{\by - \cd - rrloop}}
   \rrRail{\bx}{\by}{\xin}{\by}
   \rrDraw{\c}{\xin}{\by}
   \rrRail{\xout}{\by}{\xr}{\by}
@@ -602,19 +602,21 @@
   }
 }}
 
-// A return rail under an item, from (bx,y) down to yb and across to (ax,y) — the repeat loop.
+// A return rail under an item, leaving the main line at its entry (ax,y) and exit (bx,y),
+// bowing OUTWARD a corner-radius past each so the loop's sides clear the box, then down to
+// yb and back — the repeat loop.
 \def rrReturn ax bx y yb {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
   \nofill\stroke{\rrlinecolor}\linewidth{1pt}
   \path{
-    \moveto{\calc{\ax + \r} \y}
-    \curveto{\calc{\ax + \r - \kr} \y  \ax \calc{\y - \r + \kr}  \ax \calc{\y - \r}}
-    \lineto{\ax \calc{\yb + \r}}
-    \curveto{\ax \calc{\yb + \r - \kr}  \calc{\ax + \r - \kr} \yb  \calc{\ax + \r} \yb}
-    \lineto{\calc{\bx - \r} \yb}
-    \curveto{\calc{\bx - \r + \kr} \yb  \bx \calc{\yb + \r - \kr}  \bx \calc{\yb + \r}}
-    \lineto{\bx \calc{\y - \r}}
-    \curveto{\bx \calc{\y - \r + \kr}  \calc{\bx - \r + \kr} \y  \calc{\bx - \r} \y}
+    \moveto{\ax \y}
+    \curveto{\calc{\ax - \kr} \y  \calc{\ax - \r} \calc{\y - \r + \kr}  \calc{\ax - \r} \calc{\y - \r}}
+    \lineto{\calc{\ax - \r} \calc{\yb + \r}}
+    \curveto{\calc{\ax - \r} \calc{\yb + \r - \kr}  \calc{\ax - \kr} \yb  \ax \yb}
+    \lineto{\bx \yb}
+    \curveto{\calc{\bx + \kr} \yb  \calc{\bx + \r} \calc{\yb + \r - \kr}  \calc{\bx + \r} \calc{\yb + \r}}
+    \lineto{\calc{\bx + \r} \calc{\y - \r}}
+    \curveto{\calc{\bx + \r} \calc{\y - \r + \kr}  \calc{\bx + \kr} \y  \bx \y}
   }
 }}
 
