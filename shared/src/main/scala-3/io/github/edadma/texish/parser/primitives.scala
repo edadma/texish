@@ -844,6 +844,140 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // fbox / framebox - typeset the body and draw a rectangular frame around it, with \fboxsep of padding between
+  // the content and the rule and a rule \fboxrule thick (LaTeX defaults 3pt / 0.4pt). \framebox is the same here
+  // (its optional [width][pos] sizing is not supported). The frame colour is the current pen colour.
+  def frameBoxPrimitive: Primitive =
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        captureHBox(proc, t, handler, pos) match
+          case b: Box =>
+            val sep  = numVarOr(t, "fboxsep", 3.0)
+            val rule = numVarOr(t, "fboxrule", 0.4)
+            handler.addBox(new FrameBox(b, sep, rule, t.currentColor, null))
+          case null =>
+    }
+  proc.registerPrimitive("fbox", frameBoxPrimitive)
+  proc.registerPrimitive("framebox", frameBoxPrimitive)
+
+  // colorbox color body - fill the body's background (padded by \fboxsep) with the named colour, no frame.
+  proc.registerPrimitive(
+    "colorbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        evalArg(proc, pos) match
+          case Value.Text(name) =>
+            captureHBox(proc, t, handler, pos) match
+              case b: Box => handler.addBox(new FrameBox(b, numVarOr(t, "fboxsep", 3.0), 0.0, null, Color(name)))
+              case null   =>
+          case _ => handler.error("\\colorbox expects a colour name or #RRGGBB code", pos)
+    },
+  )
+
+  // fcolorbox framecolor backgroundcolor body - draw a frame in the first colour around a body filled with the
+  // second, padded and ruled like \fbox.
+  proc.registerPrimitive(
+    "fcolorbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        (evalArg(proc, pos), evalArg(proc, pos)) match
+          case (Value.Text(frame), Value.Text(bg)) =>
+            captureHBox(proc, t, handler, pos) match
+              case b: Box =>
+                handler.addBox(new FrameBox(b, numVarOr(t, "fboxsep", 3.0), numVarOr(t, "fboxrule", 0.4), Color(frame), Color(bg)))
+              case null =>
+          case _ => handler.error("\\fcolorbox expects two colour names or #RRGGBB codes", pos)
+    },
+  )
+
+  // rotatebox angle body - rotate the body counter-clockwise by `angle` degrees about its left baseline (LaTeX's
+  // default origin), reserving the bounding box of the rotated result.
+  proc.registerPrimitive(
+    "rotatebox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
+        Value.number(evalArg(proc, pos)) match
+          case Some(deg) =>
+            captureHBox(proc, t, handler, pos) match
+              case b: Box =>
+                val rad = deg * math.Pi / 180.0
+                val c   = math.cos(rad)
+                val s   = math.sin(rad)
+                // Device y is down, so a visually counter-clockwise turn is a clockwise matrix in device space:
+                // (x,y) -> (x cos + y sin, -x sin + y cos); the backend gets the matching rotate(-rad).
+                handler.addBox(new TransformBox(b, c, s, -s, c, _.rotate(-rad)))
+              case null =>
+          case None => handler.error("\\rotatebox expects an angle in degrees", argPos)
+    },
+  )
+
+  // scalebox factor [yfactor] body - scale the body horizontally by `factor` and vertically by `yfactor`
+  // (defaulting to `factor`, so a single argument scales uniformly).
+  proc.registerPrimitive(
+    "scalebox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
+        Value.number(evalArg(proc, pos)) match
+          case Some(sx) =>
+            val sy = readOptionalNumber(proc).getOrElse(sx)
+            captureHBox(proc, t, handler, pos) match
+              case b: Box => handler.addBox(new TransformBox(b, sx, 0, 0, sy, _.scale(sx, sy)))
+              case null   =>
+          case None => handler.error("\\scalebox expects a scale factor", argPos)
+    },
+  )
+
+  // reflectbox body - mirror the body left-to-right (a horizontal scale of -1), the common case of \scalebox.
+  proc.registerPrimitive(
+    "reflectbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        captureHBox(proc, t, handler, pos) match
+          case b: Box => handler.addBox(new TransformBox(b, -1, 0, 0, 1, _.scale(-1, 1)))
+          case null   =>
+    },
+  )
+
+  // resizebox width height body - scale the body to the given width and height. A `!` for either dimension keeps
+  // the aspect ratio set by the other, so \resizebox{2in}{!}{...} scales to 2in wide without distortion.
+  proc.registerPrimitive(
+    "resizebox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val wOpt = resizeDim(proc, pos)
+        val hOpt = resizeDim(proc, pos)
+        captureHBox(proc, t, handler, pos) match
+          case b: Box =>
+            val natW = b.width
+            val natH = b.height
+            val (sx, sy) = (wOpt, hOpt) match
+              case (Some(w), Some(h)) => (if natW > 0 then w / natW else 1.0, if natH > 0 then h / natH else 1.0)
+              case (Some(w), None)    => val f = if natW > 0 then w / natW else 1.0; (f, f)
+              case (None, Some(h))    => val f = if natH > 0 then h / natH else 1.0; (f, f)
+              case (None, None)       => (1.0, 1.0)
+            handler.addBox(new TransformBox(b, sx, 0, 0, sy, _.scale(sx, sy)))
+          case null =>
+    },
+  )
+
+  // raisebox lift body - raise the body by `lift` (lower it when negative), adjusting the box's reported height
+  // and depth to its new position (unlike \raise / \lower, which leave the metrics alone).
+  proc.registerPrimitive(
+    "raisebox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val argPos = argumentPos(proc, pos)
+        points(proc.evalArgumentExpr(pos)) match
+          case Some(lift) =>
+            captureHBox(proc, t, handler, pos) match
+              case b: Box => handler.addBox(new RaiseBox(b, lift))
+              case null   =>
+          case None => handler.error("\\raisebox expects a dimension", argPos)
+    },
+  )
+
   // Running headers and footers: if the document defines a headline or footline macro, each shipped page builds
   // an hbox to hsize from its body at shipout time — pageno is already set to the shipping page's number, so
   // \the\pageno in the macro is always current. The hbox is built on a temporary mode pushed over whatever is
@@ -1086,6 +1220,57 @@ private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader):
         proc.nextToken() // consume the box command
         buildBox(proc, t, vertical = name != "hbox", top = name == "vtop", pos)
       case _ => null
+
+// Typeset a braced `{…}` argument as a single LR-mode hbox and return it (null when empty) — the way the
+// wrapping boxes (\fbox, \colorbox, \rotatebox, \scalebox, \resizebox, \raisebox, …) capture their content,
+// matching \underline. The body is read first, then the pending interword space is flushed before the hbox is
+// pushed, so a source newline before the command keeps its space.
+private[parser] def captureHBox(proc: Processor, t: Typesetter, handler: TypesetterHandler, pos: CharReader): Box | Null =
+  val body = proc.readArgument(pos)
+  handler.flushPendingSpace()
+  t.hbox(null)
+  proc.processTokenList(body)
+  t.mode.exit
+
+// Read a numeric variable in points, falling back to `default` when it is unset — used for \fboxsep / \fboxrule,
+// which a document may set with \set but which have LaTeX-default values otherwise.
+private[parser] def numVarOr(t: Typesetter, name: String, default: Double): Double =
+  t.get(name).flatMap(points).getOrElse(default)
+
+// Read an optional bracketed number ([0.5], [-1]) following \scalebox, in the style of readPlacementSpec. Returns
+// None (leaving the stream untouched) when no '[' run follows.
+private[parser] def readOptionalNumber(proc: Processor): Option[Double] =
+  proc.skipSpaces()
+  proc.peekToken() match
+    case Token.Text(s, sp) if s.startsWith("[") =>
+      proc.nextToken()
+      val out    = new StringBuilder
+      var closed = false
+
+      def takeText(str: String, p: CharReader): Unit =
+        val idx = str.indexOf(']')
+        if idx < 0 then out ++= str
+        else
+          out ++= str.substring(0, idx)
+          val after = str.substring(idx + 1)
+          if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, p)))
+          closed = true
+
+      takeText(s.substring(1), sp)
+      while !closed && proc.hasMoreTokens do
+        proc.nextToken() match
+          case Token.Text(str, p) => takeText(str, p)
+          case Token.EOF(_)       => closed = true
+          case _                  => ()
+      out.toString.trim.toDoubleOption
+    case _ => None
+
+// Read a \resizebox dimension argument: a braced dimension, or `!` to mean "keep the aspect ratio set by the
+// other dimension" (returned as None).
+private[parser] def resizeDim(proc: Processor, pos: CharReader): Option[Double] =
+  evalArg(proc, pos) match
+    case Value.Text(s) if s.trim == "!" => None
+    case v                              => points(v)
 
 // Typeset a braced `{…}` argument as horizontal material and return its boxes — used for the three parts of a
 // \discretionary. The content is set in a throwaway \hbox so it goes through the normal text path (font, kerning,
