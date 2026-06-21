@@ -2,20 +2,20 @@
 //
 // Render with:  texish scripts/code-demo.script -p letter
 
-\font lmroman 12 regular
+\use{document}
 
-\bold{Code listings}
+\section*{Code listings}
 
 Source code is set with \verb|\code|, in the JetBrains Mono code face. A bare
 \verb|\code{…}| sets the body plainly; a \verb|\code[language]{…}| highlights it
 with that language's grammar and the current theme (\verb|\set codetheme {…}|,
 a light theme by default so the ink reads on white paper).
 
-A short JSON value, highlighted inline-style as a block:
+A short JSON value, highlighted as a block:
 
 \code[json]{{"name": "texish", "version": 5, "cross": ["jvm", "js", "native"]}}
 
-For a whole listing — and for code whose braces do not balance — the code
+For a whole listing --- and for code whose braces do not balance --- the code
 environment reads everything up to its end and takes its language from
 \verb|\set codelang|:
 
