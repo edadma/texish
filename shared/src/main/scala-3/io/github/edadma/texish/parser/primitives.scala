@@ -119,6 +119,40 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // \tocentry - 3 args (level, number, title): note this point for the table of contents. Like a label its page is
+  // learned at shipout, via an invisible TocMarkBox; a sectioning command issues one so the entry's folio is the
+  // page its heading starts on.
+  proc.registerPrimitive(
+    "tocentry",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val level  = argInt(proc, pos)
+        val number = Value.display(evalArg(proc, pos))
+        val title  = Value.display(evalArg(proc, pos))
+
+        t.add(new TocMarkBox(level, number, title))
+    },
+  )
+
+  // \tableofcontents - 0 args: replay the entries collected by \tocentry on the previous pass. The engine owns the
+  // collection and the iteration; the document language owns the look, through a \tocformat macro it must define —
+  // called once per entry as \tocformat{level}{number}{title}{page}. On the first pass there are no entries yet, so
+  // this emits nothing and the contents simply appear once the document has been set through.
+  proc.registerPrimitive(
+    "tableofcontents",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val entries = t.references.toc
+
+        if entries.nonEmpty then
+          val src = entries
+            .map(e => s"\\tocformat{${e.level}}{${e.number}}{${e.title}}{${e.page}}")
+            .mkString
+
+          proc.processContent(src)
+    },
+  )
+
   // footnote - 1 body arg: a raised marker number in the running text, with the body typeset at the foot of
   // whatever page the marker lands on. The body is typeset immediately, at footnotesize, into a block that rides
   // the vertical list as a zero-size insert (see InsertBox); the page builder counts its height against the page

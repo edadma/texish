@@ -1,0 +1,54 @@
+\use{document}
+
+\title {Cross-References in texish}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+\contents
+
+\vskip 18pt
+
+\section {Introduction}
+
+This document is typeset more than once. On the first pass the engine learns
+where every numbered heading lands; on the next it fills in the table of contents
+above and the references below. Forward references work because of it: the
+conclusion is section~\ref{sec:conclusion}, which begins on page~\pageref{sec:conclusion},
+and the worked example is section~\ref{sec:example} on page~\pageref{sec:example}.
+
+\label{sec:intro}A reference can also point backward, of course --- this
+introduction is section~\ref{sec:intro}.
+
+\section {Background}
+
+\label{sec:background}A cross-reference binds a name to a numbered thing with \texttt{label}, then names
+it later with \texttt{ref} (the number) or \texttt{pageref} (the page). The number
+is captured where the label is written; the page is learned when that page ships,
+so neither has to be known in advance.
+
+\subsection {How the table of contents is built}
+
+Each sectioning command quietly records its level, number, title and page. The
+\texttt{tableofcontents} command replays those entries, drawing a dotted leader
+from each title to its page number --- the classic use of leaders.
+
+\vfill\eject
+
+\section {A worked example}
+
+\label{sec:example}This section sits on its own page so its number and folio are
+worth referencing from the introduction. Look back at the contents: this is
+section~\ref{sec:example}, and the background discussion was
+section~\ref{sec:background}.
+
+\vfill\eject
+
+\section {Conclusion}
+
+\label{sec:conclusion}Forward and backward references, and a table of contents
+with real page numbers, all fall out of typesetting the document twice over one
+shared table. This conclusion is section~\ref{sec:conclusion} on
+page~\pageref{sec:conclusion}.
+
+\vfill\eject

@@ -533,6 +533,14 @@ class Processor(val handler: Handler):
     tokenSources.push(TokenListSource(tokens))
     processTokensUntilDepth(minDepth)
 
+  /** Typeset a freshly built source string as part of the current document — re-entrant, so a primitive can
+    * synthesize content (a table of contents replaying its entries) and have it processed in place, returning to
+    * the enclosing document at the same stack depth. Unlike [[loadModule]] output is not suppressed. */
+  def processContent(content: String): Unit =
+    val minDepth = tokenSources.size
+    tokenSources.push(TokenizerSource(Tokenizer(content, activeChars)))
+    processTokensUntilDepth(minDepth)
+
   /** Push a tokenizer onto the source stack (used by \include) */
   def pushTokenizer(tokenizer: Tokenizer): Unit =
     tokenSources.push(TokenizerSource(tokenizer))

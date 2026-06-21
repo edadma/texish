@@ -8,6 +8,7 @@ import io.github.edadma.texish.{
   LabelBox,
   ReferenceTable,
   TocEntry,
+  TocMarkBox,
 }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -118,6 +119,36 @@ class ReferenceTests extends AnyFreeSpec with Matchers:
     items.count(_.isInstanceOf[LabelBox]) shouldBe 1
     for line <- items.collect { case h: HBox => h } do
       line.boxes.exists(_.isInstanceOf[LabelBox]) shouldBe false
+  }
+
+  "\\tocentry records a contents entry as a migrating box" in {
+    val (t, proc) = fixture()
+    proc.process("\\tocentry{2}{1.3}{Methods}")
+
+    val last = t.mode.asInstanceOf[Builder].list.last
+    last shouldBe a[TocMarkBox]
+    val e = last.asInstanceOf[TocMarkBox]
+    (e.level, e.number, e.title) shouldBe (2, "1.3", "Methods")
+  }
+
+  "\\tableofcontents replays the resolved entries through \\tocformat, in order" in {
+    val (t, proc) = fixture()
+    t.references.recordToc(1, "1", "Intro", 3)
+    t.references.recordToc(2, "1.1", "Background", 4)
+    t.references.commit() // promote the collection so \tableofcontents reads it
+
+    proc.process(
+      "\\def tocformat a b c d {\\set rec {\\cat{\\rec}{(\\a,\\b,\\c,\\d)}}}\\set rec {}\\tableofcontents",
+    )
+
+    textOf(t, "rec") shouldBe "(1,1,Intro,3)(2,1.1,Background,4)"
+  }
+
+  "\\tableofcontents emits nothing when no entries have been collected yet" in {
+    val (t, proc) = fixture()
+    proc.process("\\def tocformat a b c d {x}\\set rec {clean}\\tableofcontents")
+
+    textOf(t, "rec") shouldBe "clean"
   }
 
   "\\pageref reports the folio of the page a label ships on" in quietly {
