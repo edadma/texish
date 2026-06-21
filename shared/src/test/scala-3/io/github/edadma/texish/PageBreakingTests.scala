@@ -229,6 +229,38 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
     page.boxes.last.height should be > 150.0
   }
 
+  "the greedy fallback backs up to the last space instead of stranding a box" in {
+    // A box that fits at a line's end, before a box that does not, must move to the next line with it —
+    // the greedy fallback (forced here by tolerance 0) backs up to the last interword space rather than
+    // leaving the fitting box (an opening "(", say) stranded at the line end.
+    class W(val width: Double) extends ContentBox:
+      val xAdvance: Double = width
+      val ascent: Double   = 8
+      val descent: Double  = 2
+      def draw(t: Typesetter, x: Double, y: Double): Unit = ()
+
+    val t = new HeadlessTypesetter
+    t.set("vsize", 5000); t.set("tolerance", 0.0); t.set("parindent", 0.0); t.set("hsize", 100.0)
+    val open = new W(5)
+    val wide = new W(60)
+    val doc  = new CapturingDocument(t)
+    t.document = doc
+
+    Console.withOut(new java.io.ByteArrayOutputStream) {
+      t.start // enter paragraph (horizontal) mode, as prose does
+      t.add(new W(30)); t.glue(4, 2, 1); t.add(new W(30)); t.glue(4, 2, 1)
+      t.add(open); t.add(wide)
+      t.end()
+    }
+
+    def contents(line: Box): Seq[Box] = line match
+      case h: HBox => h.boxes.toSeq
+      case b       => Seq(b)
+    val lines    = doc.shipped(0).boxes.filterNot(_.isInstanceOf[VSpaceBox])
+    val openLine = lines.find(l => contents(l).contains(open))
+    openLine.map(l => contents(l).contains(wide)) shouldBe Some(true)
+  }
+
   "interline glue is inserted across a penalty, measured from the last box" in {
     val t = new HeadlessTypesetter
     t.set("baselineskip", Glue(20))

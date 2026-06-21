@@ -126,6 +126,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
             println(s"Warning: overflow: ${boxes.head}")
             hbox add boxes.remove(0)
           else
+            val sizeBefore = hbox.size
             boxes.head match
               case b: CharBox =>
                 b.text.indexOf('-') match
@@ -163,6 +164,19 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
                       boxes.insert(0, b.newCharBox(b.text.substring(idx + 1)))
               case _ =>
             end match
+
+            // A box did not fit and could not be hyphenated onto the line. Back up to the last interword
+            // space so a box that *did* fit — an opening "(" before a wide inline \verb, say — is not
+            // stranded at the line end before the box that did not; the run since that space moves to the
+            // next line, the break TeX would have made. (Reached only on the greedy fallback, when
+            // Knuth-Plass found no solution within the tolerance.)
+            if hbox.size == sizeBefore && !boxes.head.isSpace then
+              val carry = ArrayBuffer[Box]()
+              while hbox.nonEmpty && !hbox.last.isSpace do carry.prepend(hbox.removeLast())
+              if hbox.nonEmpty && hbox.last.isSpace && carry.nonEmpty then
+                hbox.removeLast()
+                boxes.insertAll(0, carry.toSeq)
+              else carry.foreach(hbox.add)
 
       line()
 
