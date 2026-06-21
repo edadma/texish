@@ -890,6 +890,7 @@ abstract class Typesetter:
       "exhyphenpenalty" -> 50.0,   // penalty for explicit hyphen break
       "linepenalty"     -> 10.0,   // penalty per line
       "adjdemerits"     -> 10000.0, // penalty for adjacent tight/loose lines
+      "emergencystretch" -> 0.0,   // extra per-line stretch in the final pass for paragraphs that won't justify
 
       // Page-break penalties between the lines of a paragraph. The page builder is first-fit, so values between
       // 0 and 9999 don't bias anything — what matters is 10000 (forbid) and -10000 (force). The defaults forbid

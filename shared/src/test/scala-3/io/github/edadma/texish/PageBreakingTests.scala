@@ -231,8 +231,8 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
 
   "the greedy fallback backs up to the last space instead of stranding a box" in {
     // A box that fits at a line's end, before a box that does not, must move to the next line with it —
-    // the greedy fallback (forced here by tolerance 0) backs up to the last interword space rather than
-    // leaving the fitting box (an opening "(", say) stranded at the line end.
+    // the greedy fallback (forced here by tolerance 0, with no \emergencystretch second pass) backs up to the
+    // last interword space rather than leaving the fitting box (an opening "(", say) stranded at the line end.
     class W(val width: Double) extends ContentBox:
       val xAdvance: Double = width
       val ascent: Double   = 8

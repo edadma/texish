@@ -88,8 +88,10 @@ built in a `\for` loop. See [`scripts/picture.script`](scripts/picture.script) f
 
 ## Command-line tool
 
-The Scala Native build links a standalone `texish` executable that turns a source document into a PDF
-(or one PNG per page) using the Cairo backend:
+The command-line tool lives in a separate native-only project, `texish-cli`, so the published `texish`
+library never carries the executable's entry point or its argument-parsing dependency. It links a
+standalone `texish` executable that turns a source document into a PDF (or one PNG per page) using the
+Cairo backend:
 
 ```
 texish [options] [input-file]
@@ -107,8 +109,9 @@ texish doc.texish -t png -r fhd         # writes doc.png (or doc_1.png, doc_2.pn
 cat doc.texish | texish -o doc          # read the source from standard input
 ```
 
-Build the binary with `sbt texishNative/nativeLink`; it is produced at
-`native/target/scala-3.8.4/texish`.
+Build the binary with `sbt texishCli/nativeLink`; it is produced at
+`cli/target/scala-3.8.4/texish-cli`. To run it straight from sbt during development:
+`sbt "texishCli/run doc.texish"`.
 
 ## In the browser
 
