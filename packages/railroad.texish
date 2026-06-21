@@ -316,7 +316,7 @@
   \rrPrimary
   \set pid {\rrRet}
   \rrPeek
-  \if {\= {\rrTk}{?}}\rrNext\rrWrap{Q}{\pid}
+  \if {\= {\rrTk}{?}}\rrNext\rrOptional{\pid}
   \else\if {\= {\rrTk}{*}}\rrNext\rrWrap{R}{\pid}
   \else\if {\= {\rrTk}{+}}\rrNext\rrWrap{P}{\pid}
   \else\global\set rrRet {\pid}\fi\fi\fi
@@ -326,6 +326,41 @@
   \global\mapset rrKind {\wid}{\kind}
   \global\mapset rrSub {\wid}{\child}
   \global\set rrRet {\wid}
+}}
+
+// An optional ( … )? whose body is a choice is the bottlecaps "optional choice": rather than
+// arch a bypass over a nested choice, fold the skip into the choice itself as an empty top
+// branch on the main line, with the real alternatives forked below it. Any other optional is
+// the ordinary bypass-over-the-item wrapper (Q).
+\def rrOptional pid {{
+  \set p {\pid}
+  \if {\= {\mapget rrKind {\p}}{C}}
+    \rrChoicePrependSkip{\p}
+    \global\set rrRet {\p}
+  \else
+    \rrWrap{Q}{\p}
+  \fi
+}}
+\def rrChoicePrependSkip cid {{
+  \set ck {\cid}
+  \set n {\mapget rrCount {\ck}}
+  \global\set rrId {\calc{rrId + 1}}\set eid {\rrId}
+  \global\mapset rrKind {\eid}{E}
+  \set top {\calc{\n - 1}}
+  \rrShiftUp{\ck}{\top}
+  \global\mapset rrChild {\calc{\ck * 1000}}{\eid}
+  \global\mapset rrCount {\ck}{\calc{\n + 1}}
+}}
+// Shift the choice's children up one index, from the top down, so index 0 is freed for the
+// skip branch.
+\def rrShiftUp cid k {{
+  \set nid {\cid}
+  \if {\> {\k}{-1}}
+    \set src {\mapget rrChild {\calc{\nid * 1000 + \k}}}
+    \global\mapset rrChild {\calc{\nid * 1000 + (\k + 1)}}{\src}
+    \set pk {\calc{\k - 1}}
+    \rrShiftUp{\nid}{\pk}
+  \fi
 }}
 
 // primary ::= '(' expr ')' | terminal | nonterminal. A group is transparent: it returns
@@ -364,7 +399,17 @@
   \else\if {\= {\k}{S}}\rrMeasSeq{\nid}
   \else\if {\= {\k}{C}}\rrMeasChoice{\nid}
   \else\if {\= {\k}{L}}\rrMeasL{\nid}
-  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi\fi\fi
+  \else\if {\= {\k}{E}}\rrMeasEmpty{\nid}
+  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi\fi\fi\fi
+}}
+
+// An empty branch (the skip of an optional choice): zero size, so as a choice's first branch
+// it is just the straight main-line rail the fork bypasses to.
+\def rrMeasEmpty id {{
+  \set nid {\id}
+  \global\mapset rrW {\nid}{0}
+  \global\mapset rrUp {\nid}{0}
+  \global\mapset rrDn {\nid}{0}
 }}
 
 // A separated list A (B A)*: the item A sits on the rail and the separator B rides a return
@@ -514,7 +559,8 @@
   \else\if {\= {\k}{Q}}\rrDrawOpt{\nid}{\bx}{\by}
   \else\if {\= {\k}{R}}\rrDrawStar{\nid}{\bx}{\by}
   \else\if {\= {\k}{L}}\rrDrawL{\nid}{\bx}{\by}
-  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi\fi
+  \else\if {\= {\k}{E}}
+  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi\fi\fi
 }}
 
 // A separated list: the item A on the main line, the separator B on a return loop above it,

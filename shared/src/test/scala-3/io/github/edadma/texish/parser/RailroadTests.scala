@@ -53,3 +53,9 @@ class RailroadTests extends AnyFreeSpec with Matchers:
     t.pictures should have size 1
     t.pictures.head.displayList should not be empty
   }
+
+  "an optional choice lays out (skip folded into the choice)" in {
+    val t = run("\\use{railroad}\\railroad{ factor ::= primary ( \"?\" | \"*\" | \"+\" )? }")
+    t.pictures should have size 1
+    t.pictures.head.displayList should not be empty
+  }
