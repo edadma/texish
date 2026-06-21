@@ -829,6 +829,24 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive("textsub", scriptPrimitive(drop = true))
   proc.registerPrimitive("textsup", scriptPrimitive(drop = false))
 
+  // \verb<delim>…<delim> - inline verbatim. The character right after \verb is the delimiter; everything up to its
+  // next occurrence is set literally in the typewriter face, with no comment, escape, active-character or macro
+  // processing — so \verb|a_b//c| reproduces those characters exactly. Like LaTeX's \verb, it must be written on the
+  // input directly (its text is read raw from the tokenizer), not produced by a macro.
+  proc.registerPrimitive(
+    "verb",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val s = proc.readVerb(pos)
+        handler.flushPendingSpace()
+        val saved = t.currentFont
+        t.mono()
+        val box = new CharBox(t, s, t.currentFont, t.currentColor)
+        t.currentFont = saved
+        handler.addBox(box)
+    },
+  )
+
   // underline - 1 body arg (wraps content in underline)
   proc.registerPrimitive(
     "underline",

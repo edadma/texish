@@ -323,6 +323,23 @@ class Processor(val handler: Handler):
       case None =>
         handler.error("expected a verbatim {…} argument (a URL must be given directly, not through a macro)", pos)
 
+  /** Read a `\verb`-style inline verbatim argument — the delimiter character, then the literal text up to its
+    * next occurrence. Like a raw brace argument, this works only over live top-level input; through a macro the
+    * text was already tokenized, so this errors rather than returning corrupted text. */
+  def readVerb(pos: CharReader): String =
+    tokenSources.top.readVerb() match
+      case Some(s) => s
+      case None =>
+        handler.error("\\verb needs a delimiter and verbatim text on the input directly (not through a macro)", pos)
+
+  /** Read source literally up to the matching `\end{name}` (consuming the sentinel) — the raw body of a verbatim
+    * environment. Works only over live top-level input, as the raw reads above do. */
+  def readRawUntilEnd(name: String, pos: CharReader): String =
+    tokenSources.top.readRawUntilEnd(name) match
+      case Some(s) => s
+      case None =>
+        handler.error(s"\\begin{$name} without a matching \\end{$name} (a verbatim environment cannot come from a macro)", pos)
+
   /** Read a single macro argument (brace-delimited or single token) */
   def readArgument(pos: CharReader): Vector[Token] =
     skipSpaces()
@@ -743,15 +760,19 @@ trait TokenSource:
   def peek: Token
   def next(): Token
   def atEnd: Boolean
-  // Verbatim read of a brace group, available only over live (untokenized) input — see Tokenizer.readRawGroup.
-  // A pre-tokenized list cannot offer it: its text was already tokenized, so any // is long gone.
+  // Verbatim reads, available only over live (untokenized) input — see Tokenizer.readRawGroup / readVerb /
+  // readRawUntilEnd. A pre-tokenized list cannot offer them: its text was already tokenized, so any // is long gone.
   def readRawGroup(): Option[String] = None
+  def readVerb(): Option[String] = None
+  def readRawUntilEnd(name: String): Option[String] = None
 
 class TokenizerSource(tokenizer: Tokenizer) extends TokenSource:
   def peek: Token = tokenizer.peek
   def next(): Token = tokenizer.next()
   def atEnd: Boolean = tokenizer.atEnd
   override def readRawGroup(): Option[String] = tokenizer.readRawGroup()
+  override def readVerb(): Option[String] = tokenizer.readVerb()
+  override def readRawUntilEnd(name: String): Option[String] = tokenizer.readRawUntilEnd(name)
 
 class TokenListSource(tokens: Vector[Token]) extends TokenSource:
   private var index = 0
@@ -1712,6 +1733,11 @@ object NewEnvironmentPrimitive extends Primitive:
 object BeginPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = readEnvName(proc, pos)
+    // A verbatim-style environment captures its body raw, straight from the input, and the matching \end is
+    // consumed by that read — so it never reaches the generic env machinery below and runs no end-code.
+    if proc.handler.rawEnvironment(name) then
+      proc.handler.rawEnvironmentBody(name, proc.readRawUntilEnd(name, pos))
+      return
     envCode(proc, name) match
       case Some((params, begin, _)) =>
         val expanded = proc.substituteNamedParams(begin, proc.readMacroArgs(params, pos))

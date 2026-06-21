@@ -40,6 +40,16 @@ trait Handler:
     * no paragraphs and does nothing. */
   def endParagraph(): Unit = ()
 
+  /** Whether `\begin{name}` names a verbatim-style environment whose body must be captured raw (no tokenizing)
+    * rather than run as ordinary `\begin`/`\end` code. A typesetting host overrides this for `verbatim`; the
+    * default host has none. */
+  def rawEnvironment(name: String): Boolean = false
+
+  /** Typeset the raw body of a verbatim-style environment (see [[rawEnvironment]]). The text is exactly the
+    * source between `\begin{name}` and `\end{name}`, with spaces and newlines preserved; the host lays it out
+    * line for line. Only called for a `name` it claims via [[rawEnvironment]]. */
+  def rawEnvironmentBody(name: String, body: String): Unit = ()
+
   /** Called when a command is executed that the handler should process.
     *
     * Returns the result value, or Value.Nil if the command produces no value.

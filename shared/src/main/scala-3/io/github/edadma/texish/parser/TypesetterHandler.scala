@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{Box, HorizontalMode, MathMode, MathStyle, Mode, PictureMode, Typesetter, VerticalMode}
+import io.github.edadma.texish.{Box, CharBox, HBox, HorizontalMode, MathMode, MathStyle, Mode, PictureMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -87,6 +87,37 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       case _ => typesetter.exit()
 
   override def endParagraph(): Unit = typesetter.paragraph()
+
+  /** `verbatim` is the one built-in raw-capture environment: its body is set line for line, exactly as written. */
+  override def rawEnvironment(name: String): Boolean = name == "verbatim"
+
+  /** Set a verbatim body. Each source line becomes its own line box in the typewriter face, with leading and
+    * interior spaces preserved (the mono cut is fixed-width, so they line up) and no line breaking — one source
+    * line is one output line. The block is dropped onto the vertical list between the surrounding paragraphs;
+    * the running text after `\end{verbatim}` opens a fresh paragraph as usual. */
+  override def rawEnvironmentBody(name: String, body: String): Unit =
+    if !suppressed then
+      val t = typesetter
+      t.paragraph()       // close any open paragraph: the block rides the vertical list
+      resetNewlineCount()
+      val saved = t.currentFont
+      t.mono()
+      for line <- verbatimLines(body) do
+        // an empty source line still occupies a line; a single space gives it the face's height
+        val text = if line.isEmpty then " " else line
+        t add new HBox(Seq(new CharBox(t, text, t.currentFont, t.currentColor)))
+      t.currentFont = saved
+
+  /** Split a raw verbatim body into its source lines: drop the newline that follows `\begin{verbatim}` and the
+    * one just before `\end{verbatim}` (neither is part of the content), keep every interior blank line, and
+    * tolerate CRLF endings. */
+  private def verbatimLines(body: String): Seq[String] =
+    var s = body
+    if s.startsWith("\r\n") then s = s.substring(2)
+    else if s.startsWith("\n") then s = s.substring(1)
+    if s.endsWith("\r\n") then s = s.dropRight(2)
+    else if s.endsWith("\n") then s = s.dropRight(1)
+    s.split("\n", -1).toIndexedSeq.map(l => if l.endsWith("\r") then l.dropRight(1) else l)
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
 

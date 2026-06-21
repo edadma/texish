@@ -60,6 +60,69 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
 
     if depth == 0 then Some(sb.toString) else None
 
+  /** Read a `\verb`-style inline argument: the next character is taken as the delimiter, then every character up
+    * to its next occurrence is captured literally (no comments, escapes or active characters) and the closing
+    * delimiter is consumed. This is how `\verb|a_b\c|` sets its text exactly as written. Returns None if a token
+    * has already been peeked (the delimiter would be lost), or if the input ends before the closing delimiter. */
+  def readVerb(): Option[String] =
+    if pendingToken.isDefined || reader.eoi then return None
+    val delim = reader.ch
+    reader = reader.next
+
+    val sb = new StringBuilder
+    while !reader.eoi && reader.ch != delim do
+      sb.append(reader.ch)
+      reader = reader.next
+
+    if reader.eoi then None
+    else
+      reader = reader.next // consume the closing delimiter
+      Some(sb.toString)
+
+  /** Read source literally up to the next `\end{<name>}`, consuming that sentinel, and return the raw text before
+    * it (spaces and newlines preserved). This is the raw-capture a verbatim environment needs: unlike a generic
+    * `\begin`/`\end` body, nothing between the delimiters is tokenized. The sentinel may carry spaces around its
+    * braces (`\end {name}`). Works only over live input — returns None if a token has already been peeked, or if
+    * the input ends before the matching `\end`. */
+  def readRawUntilEnd(name: String): Option[String] =
+    if pendingToken.isDefined then return None
+
+    val sb = new StringBuilder
+    while !reader.eoi do
+      if matchesEnd(name) then return Some(sb.toString)
+      sb.append(reader.ch)
+      reader = reader.next
+
+    None
+
+  /** Try to match `\end{name}` (with optional spaces around the braces) at the current reader position. On a
+    * match the reader is advanced past the closing brace and true is returned; on no match the reader is left
+    * exactly where it was. */
+  private def matchesEnd(name: String): Boolean =
+    var r = reader
+
+    def literal(s: String): Boolean =
+      var i = 0
+      while i < s.length do
+        if r.eoi || r.ch != s.charAt(i) then return false
+        r = r.next
+        i += 1
+      true
+
+    def skipBlanks(): Unit = while !r.eoi && (r.ch == ' ' || r.ch == '\t') do r = r.next
+
+    if !literal("\\end") then return false
+    skipBlanks()
+    if r.eoi || r.ch != '{' then return false
+    r = r.next
+    skipBlanks()
+    if !literal(name) then return false
+    skipBlanks()
+    if r.eoi || r.ch != '}' then return false
+    r = r.next
+    reader = r
+    true
+
   private def readToken(): Token =
     skipComments()
     if reader.eoi then Token.EOF(reader)
