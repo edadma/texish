@@ -42,7 +42,8 @@
 \set rrhgap {15}            // length of a connecting rail between items in a row
 \set rrvgap {11}            // vertical gap between stacked alternatives of a choice
 \set rrfork {18}            // lead-in / lead-out rail on each side of a choice fork
-\set rrloop {24}            // clearance of an optional / repetition bypass or loop from the box
+\set rrloop {16}            // vertical clearance of an optional / repetition bypass or loop
+\set rrloopx {12}           // how far a repeat loop's sides bow out past the box (<= rrfork)
 \set rrcr {6}               // radius of the rounded rail corners (the "railroad" curves)
 \set rrah {7}               // length of the entry / exit arrowheads
 \set rrahw {3.5}            // half-width of the arrowheads
@@ -612,20 +613,22 @@
 }}
 
 // A return rail under an item, leaving the main line at its entry (ax,y) and exit (bx,y),
-// bowing OUTWARD a corner-radius past each so the loop's sides clear the box, then down to
-// yb and back — the repeat loop.
+// running out along the line by rrloopx so the loop's vertical sides stand clear of the box,
+// then dropping to yb and back — the repeat loop.
 \def rrReturn ax bx y yb {{
-  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}\set g {\rrloopx}
   \nofill\stroke{\rrlinecolor}\linewidth{1pt}
   \path{
     \moveto{\ax \y}
-    \curveto{\calc{\ax - \kr} \y  \calc{\ax - \r} \calc{\y - \r + \kr}  \calc{\ax - \r} \calc{\y - \r}}
-    \lineto{\calc{\ax - \r} \calc{\yb + \r}}
-    \curveto{\calc{\ax - \r} \calc{\yb + \r - \kr}  \calc{\ax - \kr} \yb  \ax \yb}
-    \lineto{\bx \yb}
-    \curveto{\calc{\bx + \kr} \yb  \calc{\bx + \r} \calc{\yb + \r - \kr}  \calc{\bx + \r} \calc{\yb + \r}}
-    \lineto{\calc{\bx + \r} \calc{\y - \r}}
-    \curveto{\calc{\bx + \r} \calc{\y - \r + \kr}  \calc{\bx + \kr} \y  \bx \y}
+    \lineto{\calc{\ax - \g + \r} \y}
+    \curveto{\calc{\ax - \g + \r - \kr} \y  \calc{\ax - \g} \calc{\y - \r + \kr}  \calc{\ax - \g} \calc{\y - \r}}
+    \lineto{\calc{\ax - \g} \calc{\yb + \r}}
+    \curveto{\calc{\ax - \g} \calc{\yb + \r - \kr}  \calc{\ax - \g + \r - \kr} \yb  \calc{\ax - \g + \r} \yb}
+    \lineto{\calc{\bx + \g - \r} \yb}
+    \curveto{\calc{\bx + \g - \r + \kr} \yb  \calc{\bx + \g} \calc{\yb + \r - \kr}  \calc{\bx + \g} \calc{\yb + \r}}
+    \lineto{\calc{\bx + \g} \calc{\y - \r}}
+    \curveto{\calc{\bx + \g} \calc{\y - \r + \kr}  \calc{\bx + \g - \r + \kr} \y  \calc{\bx + \g - \r} \y}
+    \lineto{\bx \y}
   }
 }}
 
