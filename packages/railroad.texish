@@ -37,8 +37,8 @@
 \set rrface {jetbrains}     // typeface for the labels and titles (JetBrains Mono, a code face)
 \set rrfont {9}             // type size of the labels inside the boxes
 \set rrtitlefont {10}       // type size of the rule-name title above each diagram
-\set rrpadx {8}             // horizontal padding between a label and its box edge
-\set rrboxh {21}            // height of a box (the rail runs through its middle)
+\set rrboxh {20}            // height of a box (the rail runs through its middle)
+\set rrpadx {11}            // horizontal padding (>= rrboxh/2 so a terminal's caps fit inside it)
 \set rrhgap {15}            // length of a connecting rail between items in a row
 \set rrvgap {11}            // vertical gap between stacked alternatives of a choice
 \set rrfork {18}            // lead-in / lead-out rail on each side of a choice fork
@@ -314,8 +314,9 @@
   \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi
 }}
 
-// A box sizes to its label: a terminal stadium adds a full box-height for its two round
-// caps (term is 1), a nonterminal rectangle only its padding (term is 0).
+// A box sizes to its label, with the same width whether terminal or nonterminal: the label
+// plus rrpadx on each side. A terminal's rounded caps live inside that padding (rrpadx is at
+// least the cap radius), so a stadium tracks its content exactly as the rectangle does.
 \def rrMeasLeaf id term {{
   \set nid {\id}
   \set lbl {\mapget rrLabel {\nid}}
@@ -323,7 +324,7 @@
   \if {\= {\term}{1}}\global\set rrwt {bold}\fi
   \setbox rrbox \hbox{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
   \set tw {\wd rrbox}
-  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx + \term * rrboxh}}
+  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx}}
   \global\mapset rrUp {\nid}{\calc{rrboxh / 2}}
   \global\mapset rrDn {\nid}{\calc{rrboxh / 2}}
 }}
@@ -592,18 +593,21 @@
 // end, so the join is seamless.
 
 // A bypass rail from (ax,y) up to height yt and across to (bx,y) — the skip over an item.
+// Unlike the return loop, a bypass does not turn back on itself: it leaves the main line in
+// the direction of travel (an off-ramp), humps over, and merges back, so every corner curves
+// forward rather than reversing.
 \def rrBypass ax bx y yt {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
   \nofill\stroke{\rrlinecolor}\linewidth{1pt}
   \path{
-    \moveto{\calc{\ax + \r} \y}
-    \curveto{\calc{\ax + \r - \kr} \y  \ax \calc{\y + \r - \kr}  \ax \calc{\y + \r}}
-    \lineto{\ax \calc{\yt - \r}}
-    \curveto{\ax \calc{\yt - \r + \kr}  \calc{\ax + \r - \kr} \yt  \calc{\ax + \r} \yt}
-    \lineto{\calc{\bx - \r} \yt}
-    \curveto{\calc{\bx - \r + \kr} \yt  \bx \calc{\yt - \r + \kr}  \bx \calc{\yt - \r}}
-    \lineto{\bx \calc{\y + \r}}
-    \curveto{\bx \calc{\y + \r - \kr}  \calc{\bx - \r + \kr} \y  \calc{\bx - \r} \y}
+    \moveto{\ax \y}
+    \curveto{\calc{\ax + \kr} \y  \calc{\ax + \r} \calc{\y + \r - \kr}  \calc{\ax + \r} \calc{\y + \r}}
+    \lineto{\calc{\ax + \r} \calc{\yt - \r}}
+    \curveto{\calc{\ax + \r} \calc{\yt - \r + \kr}  \calc{\ax + 2 * \r - \kr} \yt  \calc{\ax + 2 * \r} \yt}
+    \lineto{\calc{\bx - 2 * \r} \yt}
+    \curveto{\calc{\bx - 2 * \r + \kr} \yt  \calc{\bx - \r} \calc{\yt - \r + \kr}  \calc{\bx - \r} \calc{\yt - \r}}
+    \lineto{\calc{\bx - \r} \calc{\y + \r}}
+    \curveto{\calc{\bx - \r} \calc{\y + \r - \kr}  \calc{\bx - \kr} \y  \bx \y}
   }
 }}
 
