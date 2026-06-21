@@ -577,7 +577,7 @@
   \rrRail{\bx}{\by}{\xin}{\by}
   \rrDraw{\c}{\xin}{\by}
   \rrRail{\xout}{\by}{\xr}{\by}
-  \rrReturn{\xout}{\xin}{\by}{\yb}
+  \rrReturn{\xin}{\xout}{\by}{\yb}
 }}
 
 // The rounded rails. Every bend is a quarter circle of radius rrcr, approximated by one
