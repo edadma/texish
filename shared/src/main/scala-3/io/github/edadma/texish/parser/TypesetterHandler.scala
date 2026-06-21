@@ -20,7 +20,8 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
   private var pendingNewlineMode: Mode | Null = null
 
   def text(s: String): Unit =
-    if !suppressed then
+    if captureSink != null then captureSink.nn.append(s)
+    else if !suppressed then
       typesetter.mode match
         case m: MathMode =>
           // in math, each character is a symbol classified into its own atom — not a string to shape
@@ -39,7 +40,8 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
           pendingNewlineMode = null
 
   def space(): Unit =
-    if !suppressed then
+    if captureSink != null then captureSink.nn.append(" ")
+    else if !suppressed then
       // spaces are ignored in math (atom spacing is computed, not typed) and in a picture body (drawing commands,
       // not prose); otherwise add a space unless in vertical mode (halign cells are not HorizontalMode but accept
       // spaces)
@@ -47,7 +49,8 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then typesetter.start add " "
 
   def newline(): Unit =
-    if !suppressed then
+    if captureSink != null then captureSink.nn.append("\n")
+    else if !suppressed then
       typesetter.mode match
         case _: HorizontalMode if newlineCount == 0 =>
           newlineCount += 1

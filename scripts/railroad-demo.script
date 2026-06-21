@@ -1,0 +1,59 @@
+\use{document}
+\use{railroad}
+
+\title{Railroad Diagrams from EBNF}
+\author{the \texttt{railroad} package}
+\maketitle
+
+The \texttt{railroad} package turns a grammar written in W3C-style EBNF into a railroad
+(syntax) diagram, one picture per rule. What better grammar to draw than the one the package
+itself reads? Each rule below is rendered straight from its EBNF text by \texttt{\\railroad}.
+
+\section{The shape of a grammar}
+
+A grammar is one or more rules; each rule names an expression. An expression is a choice of
+terms, a term is a row of factors, and a factor is an item with an optional repetition mark.
+
+\railroad{
+  grammar    ::= rule+
+}
+
+\railroad{
+  rule       ::= name "::=" expression
+}
+
+\railroad{
+  expression ::= term ("|" term)*
+}
+
+\railroad{
+  term       ::= factor+
+}
+
+\railroad{
+  factor     ::= primary ("?" | "*" | "+")?
+}
+
+\section{Items}
+
+A primary is a name (a nonterminal), a terminal, or a parenthesised expression. A terminal
+is a quoted literal or a character class.
+
+\railroad{
+  primary    ::= name | terminal | "(" expression ")"
+}
+
+\railroad{
+  terminal   ::= '"' chars '"' | "'" chars "'" | charclass
+}
+
+\section{All at once}
+
+A single \texttt{\\railroad} call may hold several rules; they are drawn in turn.
+
+\railroad{
+  digit  ::= [0-9]
+  number ::= digit+ ("." digit+)?
+  sign   ::= "+" | "-"
+  signed ::= sign? number
+}

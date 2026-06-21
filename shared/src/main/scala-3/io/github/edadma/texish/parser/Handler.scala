@@ -8,6 +8,21 @@ import io.github.edadma.char_reader.CharReader
   * delivered as they occur, not as a tree to walk.
   */
 trait Handler:
+  /** When non-null, [[text]]/[[space]]/[[newline]] append here instead of producing document output, so a caller
+    * can collect the expanded text of a token list (what `\message` writes, for instance) without disturbing the
+    * page. Hosts route their output methods through it; [[capture]] saves, installs and restores it. */
+  var captureSink: StringBuilder | Null = null
+
+  /** Run `thunk` with output diverted into a buffer and return the text it produced, restoring any previous sink so
+    * captures nest. The variable scope is untouched, so the captured text reflects the live document state. */
+  def capture(thunk: => Unit): String =
+    val prev = captureSink
+    val sb   = new StringBuilder
+    captureSink = sb
+    try thunk
+    finally captureSink = prev
+    sb.toString
+
   /** Called when text content should be output */
   def text(s: String): Unit
 
@@ -86,11 +101,17 @@ class StringHandler extends Handler:
 
   def result: String = output.toString
 
-  def text(s: String): Unit = if !suppressed then output.append(s)
+  def text(s: String): Unit =
+    if captureSink != null then captureSink.nn.append(s)
+    else if !suppressed then output.append(s)
 
-  def space(): Unit = if !suppressed then output.append(" ")
+  def space(): Unit =
+    if captureSink != null then captureSink.nn.append(" ")
+    else if !suppressed then output.append(" ")
 
-  def newline(): Unit = if !suppressed then output.append("\n")
+  def newline(): Unit =
+    if captureSink != null then captureSink.nn.append("\n")
+    else if !suppressed then output.append("\n")
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress
 

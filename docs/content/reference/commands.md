@@ -128,7 +128,7 @@ palette colour, and a label adds a legend entry.
 
 | Command | Effect |
 |---------|--------|
-| `\def name args {body}` | define a macro (`[name:default]` optional args) |
+| `\def name args {body}` | define a macro (`[name:default]` optional args, `<name>` a verbatim argument) |
 | `\newenvironment name {begin}{end}` | define a `\begin`/`\end` environment |
 | `\let` `\global` `\gdef` | aliasing and global definitions |
 | `\if` `\ifx` `\else` `\fi` | conditionals |
@@ -136,8 +136,22 @@ palette colour, and a label adds a legend entry.
 | `\round{value}{places}` | round a number to a fixed number of decimals |
 | `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |
 | `\for … \done` | iteration |
+| `\seq{…}` `\words{s}` `\head` `\tail` `\size` `\cat` | sequences; `\words` splits a string on whitespace |
+| `\map{…}` `\mapset` `\mapget` `\maphas` | keyed maps |
+| `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
 | `\newcounter` `\stepcounter` `\value` `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph` | counters and number formatting |
 | `\use{name}` `\include{path}` | load a format / include raw input |
+
+## Railroad diagrams *(`\use{railroad}`)*
+
+| Command | Effect |
+|---------|--------|
+| `\railroad{ <grammar> }` | draw a railroad (syntax) diagram per rule from W3C-style EBNF |
+
+The grammar is read verbatim. Rules are `name ::= expression`; an expression supports `\|`
+(alternation), juxtaposition (concatenation), `?`/`*`/`+` (optional / zero-or-more /
+one-or-more), `(…)` grouping, `"…"`/`'…'` terminals, `[…]` character classes, and bare
+names as nonterminals.
 
 ## Units
 

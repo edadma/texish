@@ -82,6 +82,8 @@ class Processor(val handler: Handler):
 
   // Sequence primitives
   registerPrimitive("seq", SeqPrimitive)
+  registerPrimitive("words", WordsPrimitive)
+  registerPrimitive("message", MessagePrimitive)
   registerPrimitive("range", RangePrimitive)
   registerPrimitive("cat", CatPrimitive)
   registerPrimitive("head", HeadPrimitive)
@@ -258,6 +260,7 @@ class Processor(val handler: Handler):
         case ParamKind.Mandatory       => readArgument(pos)
         case ParamKind.Optional(deflt) => readOptionalArg(pos).getOrElse(deflt)
         case ParamKind.Star            => readStarFlag(pos)
+        case ParamKind.Raw             => Vector(Token.Text(readRawArgument(pos), pos))
       p.name -> tokens
     }.toMap
 
@@ -865,6 +868,31 @@ private[parser] def readMacroParams(proc: Processor, pos: CharReader): Vector[Ma
         val rest = s.substring(1)
         if rest.nonEmpty then proc.pushBack(Vector(Token.Text(rest, sp)))
         out += MacroParam("star", ParamKind.Star)
+        proc.skipSpaces()
+
+      case Token.Text(s, sp) if s.startsWith("<") =>
+        // <name> declares a raw (verbatim) parameter: its argument is read literally at the call site. Read the
+        // name up to the closing `>`, which may sit mid-token, pushing back whatever follows it.
+        proc.nextToken()
+        val spec   = new StringBuilder
+        var closed = false
+
+        def takeText(str: String): Unit =
+          val idx = str.indexOf('>')
+          if idx < 0 then spec ++= str
+          else
+            spec ++= str.substring(0, idx)
+            val after = str.substring(idx + 1)
+            if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, sp)))
+            closed = true
+
+        takeText(s.substring(1))
+        while !closed && proc.hasMoreTokens do
+          proc.nextToken() match
+            case Token.Text(str, _) => takeText(str)
+            case Token.EOF(_)       => closed = true
+            case _                  => ()
+        out += MacroParam(spec.toString.trim, ParamKind.Raw)
         proc.skipSpaces()
 
       case Token.Text(s, _) if s.nonEmpty && s.head.isLetter =>
@@ -1517,6 +1545,27 @@ object SeqPrimitive extends Primitive:
     if tokens.nonEmpty then items += evalTokens(tokens, proc.handler)
 
     proc.setResult(Value.Seq(items.result()))
+
+/** \message{text} — expand the argument and write the resulting text to standard error at once, as TeX's \message
+  * does, for tracing what a document or a macro-heavy package is doing while it runs. The argument is processed like
+  * ordinary body text — literal characters pass through and control sequences expand — so \message{i=\i} or
+  * \message{got \head{\xs}} interleave labels with computed state. It adds nothing to the page; output is captured
+  * and diverted to the diagnostic channel only. */
+object MessagePrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val tokens = proc.readArgument(pos)
+    System.err.println(proc.handler.capture(proc.processTokenList(tokens)))
+
+/** \words{s} — split a string into the sequence of its whitespace-separated words, with runs of spaces, tabs and
+  * newlines all treated as one separator and leading/trailing whitespace dropped. Where \seq splits a token list on
+  * its space tokens, \words splits the *characters* of one string — the natural first step for parsing a verbatim
+  * argument (a grammar, a formula) captured with a `<name>` raw parameter, whose whitespace lives inside a single
+  * text value rather than between tokens. An empty or all-whitespace string yields the empty sequence. */
+object WordsPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val s     = Value.display(proc.evalArgumentExpr(pos))
+    val words = s.split("\\s+").iterator.filter(_.nonEmpty).map(w => Value.Text(w)).toVector
+    proc.setResult(Value.Seq(words))
 
 object RangePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =

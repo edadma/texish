@@ -1,0 +1,632 @@
+// railroad — railroad (syntax) diagrams drawn from a grammar, written entirely in the
+// document language over the \picture vector-graphics layer. Import it with:
+//
+//     \use{railroad}
+//
+// A diagram is produced from a grammar in W3C-style EBNF (the notation of the XML and
+// XPath specifications), one picture per rule:
+//
+//     \railroad{
+//       ifStatement ::= "if" "(" condition ")" statement ("else" statement)?
+//       condition   ::= expression
+//     }
+//
+// The grammar is read verbatim — the `<g>` raw parameter hands \railroad the literal
+// text, so the EBNF specials (::= | ? * + ( ) " ' [ ]) survive untouched — then it is
+// tokenized with \words and a small char-level lexer, parsed by recursive descent into a
+// tree held in maps, measured bottom-up, and drawn top-down into a \picture. There is no
+// railroad-specific engine primitive: the layout and the rails are all document language.
+//
+// Supported W3C EBNF:
+//   name ::= expr      a rule (a diagram); rules are separated by whitespace/newlines
+//   a | b              alternation         (a fork, the branches stacked)
+//   a b                concatenation       (a and b in a row)
+//   ( ... )            grouping
+//   x?                 optional            (x with a rail bypassing it)
+//   x*                 zero or more        (x with a bypass and a return loop)
+//   x+                 one or more         (x with a return loop)
+//   "literal" 'lit'    a terminal          (a rounded "stadium" box)
+//   [a-z] [^x] ...     a character class, drawn as a terminal box, its brackets kept
+//   name               a nonterminal       (a reference to another rule; a square box)
+//
+// A terminal may contain spaces ("end of file") — the lexer rejoins words across an open
+// quote. The difference operator (-) is treated as concatenation: A - B draws A then B.
+
+// ---- Configuration (override with \set after \use, before \railroad) ------------
+// All sizes are in points (72 per inch).
+\set rrfont {10}            // type size of the labels inside the boxes
+\set rrtitlefont {11}       // type size of the rule-name title above each diagram
+\set rrpadx {8}             // horizontal padding between a label and its box edge
+\set rrboxh {21}            // height of a box (the rail runs through its middle)
+\set rrhgap {15}            // length of a connecting rail between items in a row
+\set rrvgap {11}            // vertical gap between stacked alternatives of a choice
+\set rrfork {17}            // lead-in / lead-out rail on each side of a choice fork
+\set rrloop {15}            // vertical room for an optional / repetition bypass or loop
+\set rrtermr {3.5}          // radius of the start / end terminator bullets
+\set rrmargin {7}           // blank margin around the whole diagram
+\set rrlinecolor {black}    // ink for the rails and the box outlines
+\set rrtermfill {#eaf2ff}   // fill of a terminal (rounded) box
+\set rrnontermfill {#fff6df} // fill of a nonterminal (square) box
+
+// ================================================================================
+// Lexer — turn the raw grammar text into a token stream stored in maps:
+//   rrTok i -> the token's text       rrTy i -> its type (op | id | tm)   rrN -> count
+// op = ::= ( ) | ? * + ; id = a nonterminal name; tm = a terminal (quotes stripped, a
+// character class keeps its brackets). Whitespace separates tokens; \words splits the
+// characters of the verbatim argument (handling spaces, tabs and newlines uniformly),
+// then each word is char-lexed so glued operators (name*, (a|b)+) come apart.
+
+\def rrEmit s ty {
+  \global\mapset rrTok {\rrN}{\s}
+  \global\mapset rrTy {\rrN}{\ty}
+  \global\set rrN {\calc{rrN + 1}}}
+
+// Assemble words into balanced chunks, rejoining across an open quote so a terminal may
+// contain spaces, then char-lex each chunk. rrOpen / rrQc track an unterminated quote.
+\def rrLex g {
+  \global\set rrN {0}
+  \global\set rrAcc {}
+  \global\set rrOpen {0}
+  \global\set rrQc {}
+  \for\w{\words{\g}}{\rrFeed{\w}}
+  \if {\> {\size{\rrAcc}}{0}}\rrLexChunk{\rrAcc}\fi}
+
+\def rrFeed w {
+  \if {\= {\rrOpen}{1}}
+    \global\set rrAcc {\cat{\rrAcc}{\cat{ }{\w}}}
+  \else
+    \global\set rrAcc {\w}
+  \fi
+  \rrScanQuote{\rrAcc}
+  \if {\= {\rrOpen}{0}}\rrLexChunk{\rrAcc}\global\set rrAcc {}\fi}
+
+// Scan a chunk for quote toggles, leaving rrOpen=1 (and rrQc=the quote char) if a quote
+// is still open at its end. Only " and ' open a terminal; brackets never span spaces.
+\def rrScanQuote s {
+  \global\set rrOpen {0}\global\set rrQc {}
+  \rrScanQ{\s}}
+\def rrScanQ s {
+  \if {\size{\s}}
+    \set c {\head{\s}}
+    \if {\= {\rrOpen}{1}}
+      \if {\= {\c}{\rrQc}}\global\set rrOpen {0}\fi
+    \else
+      \if {\= {\c}{"}}\global\set rrOpen {1}\global\set rrQc {"}
+      \else\if {\= {\c}{'}}\global\set rrOpen {1}\global\set rrQc {'}\fi\fi
+    \fi
+    \rrScanQ{\tail{\s}}
+  \fi}
+
+// Char-lex one balanced chunk into tokens. The single-character operators ( ) | ? * +
+// are tested inline: a predicate macro that returned 1/0 through nested \if would read as
+// true in an \if condition even on a miss, so every comparison is made directly here.
+\def rrLexChunk s {
+  \if {\size{\s}}
+    \set c {\head{\s}}
+    \if {\= {\c}{"}}\rrReadQuoted{\tail{\s}}{"}
+    \else\if {\= {\c}{'}}\rrReadQuoted{\tail{\s}}{'}
+    \else\if {\= {\c}{[}}\rrReadBracket{\tail{\s}}
+    \else\if {\= {\c}{:}}\rrEmit{::=}{op}\rrLexChunk{\tail{\tail{\tail{\s}}}}
+    \else\if {\= {\c}{-}}\rrLexChunk{\tail{\s}}
+    \else\if {\= {\c}{(}}\rrEmit{(}{op}\rrLexChunk{\tail{\s}}
+    \else\if {\= {\c}{)}}\rrEmit{)}{op}\rrLexChunk{\tail{\s}}
+    \else\if {\= {\c}{|}}\rrEmit{|}{op}\rrLexChunk{\tail{\s}}
+    \else\if {\= {\c}{?}}\rrEmit{?}{op}\rrLexChunk{\tail{\s}}
+    \else\if {\= {\c}{*}}\rrEmit{*}{op}\rrLexChunk{\tail{\s}}
+    \else\if {\= {\c}{+}}\rrEmit{+}{op}\rrLexChunk{\tail{\s}}
+    \else\rrReadIdent{\s}
+    \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi
+  \fi}
+
+// Set rrStop to 1 if c ends an identifier run — an operator, a quote, or a bracket.
+\def rrClassify c {
+  \global\set rrStop {0}
+  \if {\= {\c}{(}}\global\set rrStop {1}\fi
+  \if {\= {\c}{)}}\global\set rrStop {1}\fi
+  \if {\= {\c}{|}}\global\set rrStop {1}\fi
+  \if {\= {\c}{?}}\global\set rrStop {1}\fi
+  \if {\= {\c}{*}}\global\set rrStop {1}\fi
+  \if {\= {\c}{+}}\global\set rrStop {1}\fi
+  \if {\= {\c}{[}}\global\set rrStop {1}\fi
+  \if {\= {\c}{]}}\global\set rrStop {1}\fi
+  \if {\= {\c}{:}}\global\set rrStop {1}\fi
+  \if {\= {\c}{"}}\global\set rrStop {1}\fi
+  \if {\= {\c}{'}}\global\set rrStop {1}\fi}
+
+// Accumulate \s into rrLacc until the character \d, leaving the remainder in rrLrem.
+\def rrScanTo s d {
+  \if {\size{\s}}
+    \set c {\head{\s}}
+    \if {\= {\c}{\d}}\global\set rrLrem {\tail{\s}}
+    \else\global\set rrLacc {\cat{\rrLacc}{\c}}\rrScanTo{\tail{\s}}{\d}\fi
+  \else\global\set rrLrem {}\fi}
+
+// A quoted terminal: read to the closing quote, emit the inside as a terminal, lex on.
+\def rrReadQuoted rest q {
+  \global\set rrLacc {}
+  \rrScanTo{\rest}{\q}
+  \rrEmit{\rrLacc}{tm}
+  \rrLexChunk{\rrLrem}}
+
+// A character class: read to ], emit with its brackets kept as a terminal, lex on.
+\def rrReadBracket rest {
+  \global\set rrLacc {}
+  \rrScanTo{\rest}{]}
+  \rrEmit{\cat{[}{\cat{\rrLacc}{]}}}{tm}
+  \rrLexChunk{\rrLrem}}
+
+// An identifier (a nonterminal): read up to a stop character, emit, lex on.
+\def rrReadIdent s {
+  \global\set rrLacc {}
+  \rrIdentScan{\s}
+  \rrEmit{\rrLacc}{id}
+  \rrLexChunk{\rrLrem}}
+\def rrIdentScan s {
+  \if {\size{\s}}
+    \set c {\head{\s}}
+    \rrClassify{\c}
+    \if {\= {\rrStop}{1}}\global\set rrLrem {\s}
+    \else\global\set rrLacc {\cat{\rrLacc}{\c}}\rrIdentScan{\tail{\s}}\fi
+  \else\global\set rrLrem {}\fi}
+
+// ================================================================================
+// Parser — recursive descent over the token stream (cursor rrP), building a tree in
+// maps keyed by a node id (counter rrId). Each parse routine leaves the id of the node
+// it built in rrRet. Node kinds: T terminal, N nonterminal, S sequence, C choice,
+// Q optional (?), R star (*), P plus (+). A child of a seq/choice is stored under the
+// numeric key id*1000+index; a wrapper's single child under rrSub.
+//   rrKind id -> kind   rrLabel id -> text (T/N)   rrCount id -> #children (S/C)
+//   rrChild id*1000+i -> child id   rrSub id -> child id (Q/R/P)
+
+// Load the current token into rrTk (text) and rrTt (type); empty past the end.
+\def rrPeek {
+  \if {\< {\rrP}{\rrN}}
+    \global\set rrTk {\mapget rrTok {\rrP}}
+    \global\set rrTt {\mapget rrTy {\rrP}}
+  \else\global\set rrTk {}\global\set rrTt {}\fi}
+\def rrNext {\global\set rrP {\calc{rrP + 1}}}
+
+// rrRS = 1 when the cursor sits on a rule start (an id immediately followed by ::=).
+\def rrRuleStart {
+  \global\set rrRS {0}
+  \if {\= {\rrTt}{id}}
+    \if {\< {\calc{rrP + 1}}{\rrN}}
+      \if {\= {\mapget rrTok {\calc{rrP + 1}}}{::=}}\global\set rrRS {1}\fi
+    \fi
+  \fi}
+
+// rrFS = 1 when a factor can start here: not at end, |, ) or the next rule.
+\def rrFactorStart {
+  \rrPeek\rrRuleStart
+  \if {\< {\size{\rrTk}}{1}}\global\set rrFS {0}
+  \else\if {\= {\rrTk}{|}}\global\set rrFS {0}
+  \else\if {\= {\rrTk}{)}}\global\set rrFS {0}
+  \else\if {\= {\rrRS}{1}}\global\set rrFS {0}
+  \else\global\set rrFS {1}\fi\fi\fi\fi}
+
+// expr ::= term ( '|' term )* — a single term passes through; two or more make a choice.
+\def rrExpr {{
+  \rrTerm
+  \set first {\rrRet}
+  \rrPeek
+  \if {\= {\rrTk}{|}}
+    \global\set rrId {\calc{rrId + 1}}\set cid {\rrId}
+    \global\mapset rrKind {\cid}{C}
+    \global\mapset rrChild {\calc{\cid * 1000}}{\first}
+    \rrChoiceLoop{\cid}{1}
+  \else
+    \global\set rrRet {\first}
+  \fi
+}}
+\def rrChoiceLoop cid k {{
+  \rrPeek
+  \if {\= {\rrTk}{|}}
+    \rrNext\rrTerm
+    \global\mapset rrChild {\calc{\cid * 1000 + \k}}{\rrRet}
+    \set nk {\calc{\k + 1}}
+    \rrChoiceLoop{\cid}{\nk}
+  \else
+    \global\mapset rrCount {\cid}{\k}
+    \global\set rrRet {\cid}
+  \fi
+}}
+
+// term ::= factor+ — one factor passes through; two or more make a sequence.
+\def rrTerm {{
+  \rrFactor
+  \set first {\rrRet}
+  \rrFactorStart
+  \if {\= {\rrFS}{1}}
+    \global\set rrId {\calc{rrId + 1}}\set sid {\rrId}
+    \global\mapset rrKind {\sid}{S}
+    \global\mapset rrChild {\calc{\sid * 1000}}{\first}
+    \rrSeqLoop{\sid}{1}
+  \else
+    \global\set rrRet {\first}
+  \fi
+}}
+\def rrSeqLoop sid k {{
+  \rrFactorStart
+  \if {\= {\rrFS}{1}}
+    \rrFactor
+    \global\mapset rrChild {\calc{\sid * 1000 + \k}}{\rrRet}
+    \set nk {\calc{\k + 1}}
+    \rrSeqLoop{\sid}{\nk}
+  \else
+    \global\mapset rrCount {\sid}{\k}
+    \global\set rrRet {\sid}
+  \fi
+}}
+
+// factor ::= primary ( '?' | '*' | '+' )?
+\def rrFactor {{
+  \rrPrimary
+  \set pid {\rrRet}
+  \rrPeek
+  \if {\= {\rrTk}{?}}\rrNext\rrWrap{Q}{\pid}
+  \else\if {\= {\rrTk}{*}}\rrNext\rrWrap{R}{\pid}
+  \else\if {\= {\rrTk}{+}}\rrNext\rrWrap{P}{\pid}
+  \else\global\set rrRet {\pid}\fi\fi\fi
+}}
+\def rrWrap kind child {{
+  \global\set rrId {\calc{rrId + 1}}\set wid {\rrId}
+  \global\mapset rrKind {\wid}{\kind}
+  \global\mapset rrSub {\wid}{\child}
+  \global\set rrRet {\wid}
+}}
+
+// primary ::= '(' expr ')' | terminal | nonterminal. A group is transparent: it returns
+// the inner expression's id with no node of its own.
+\def rrPrimary {{
+  \rrPeek
+  \if {\= {\rrTk}{(}}
+    \rrNext\rrExpr\rrPeek
+    \if {\= {\rrTk}{)}}\rrNext\fi
+  \else
+    \global\set rrId {\calc{rrId + 1}}\set lid {\rrId}
+    \if {\= {\rrTt}{tm}}\global\mapset rrKind {\lid}{T}
+    \else\global\mapset rrKind {\lid}{N}\fi
+    \global\mapset rrLabel {\lid}{\rrTk}
+    \rrNext
+    \global\set rrRet {\lid}
+  \fi
+}}
+
+// ================================================================================
+// Measure — bottom-up, storing each node's width and its extents above (rrUp) and below
+// (rrDn) the rail it sits on, so the rail of any item lines up with its neighbours'.
+//   rrW id -> width   rrUp id -> height above the rail   rrDn id -> height below
+
+// Every walking routine binds its node id into a fresh local (nid) on its first line,
+// before touching the shared child variable. A macro argument is a name, not a value, so a
+// later \set of that same name inside the body would otherwise change the argument under
+// it; capturing first pins the id for the whole routine, recursion included.
+\def rrMeasure id {{
+  \set nid {\id}
+  \set k {\mapget rrKind {\nid}}
+  \if {\= {\k}{T}}\rrMeasLeaf{\nid}{1}
+  \else\if {\= {\k}{N}}\rrMeasLeaf{\nid}{0}
+  \else\if {\= {\k}{S}}\rrMeasSeq{\nid}
+  \else\if {\= {\k}{C}}\rrMeasChoice{\nid}
+  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi
+}}
+
+// A box sizes to its label: a terminal stadium adds a full box-height for its two round
+// caps (term is 1), a nonterminal rectangle only its padding (term is 0).
+\def rrMeasLeaf id term {{
+  \set nid {\id}
+  \set lbl {\mapget rrLabel {\nid}}
+  \setbox rrbox \hbox{{\font {lmroman} {\rrfont} {regular}\lbl}}
+  \set tw {\wd rrbox}
+  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx + \term * rrboxh}}
+  \global\mapset rrUp {\nid}{\calc{rrboxh / 2}}
+  \global\mapset rrDn {\nid}{\calc{rrboxh / 2}}
+}}
+
+// A sequence is as wide as its children plus the connecting rails, and as tall as the
+// tallest child on each side of the rail. Children are measured first (filling the maps),
+// then summed without any further descent.
+\def rrMeasSeq id {{
+  \set nid {\id}
+  \set n {\mapget rrCount {\nid}}
+  \rrMeasKids{\nid}{0}{\n}
+  \global\set rrAw {0}\global\set rrAu {0}\global\set rrAd {0}
+  \rrSeqSum{\nid}{0}{\n}
+  \global\mapset rrW {\nid}{\calc{rrAw + (\n - 1) * rrhgap}}
+  \global\mapset rrUp {\nid}{\rrAu}
+  \global\mapset rrDn {\nid}{\rrAd}
+}}
+\def rrMeasKids id i n {{
+  \set nid {\id}
+  \if {\< {\i}{\n}}
+    \set c {\mapget rrChild {\calc{\nid * 1000 + \i}}}
+    \rrMeasure{\c}
+    \set ni {\calc{\i + 1}}
+    \rrMeasKids{\nid}{\ni}{\n}
+  \fi
+}}
+\def rrSeqSum id i n {{
+  \set nid {\id}
+  \if {\< {\i}{\n}}
+    \set c {\mapget rrChild {\calc{\nid * 1000 + \i}}}
+    \set cw {\mapget rrW {\c}}\set cu {\mapget rrUp {\c}}\set cd {\mapget rrDn {\c}}
+    \global\set rrAw {\calc{rrAw + \cw}}
+    \if {\> {\cu}{\rrAu}}\global\set rrAu {\cu}\fi
+    \if {\> {\cd}{\rrAd}}\global\set rrAd {\cd}\fi
+    \set ni {\calc{\i + 1}}
+    \rrSeqSum{\nid}{\ni}{\n}
+  \fi
+}}
+
+// A choice stacks its alternatives. The main rail enters on the first one, so the choice
+// reaches up by the first alternative's height and down by the first's lower half plus
+// every later alternative's full height and the gaps between. It is as wide as the widest
+// alternative plus a fork lead-in and lead-out on each side.
+\def rrMeasChoice id {{
+  \set nid {\id}
+  \set n {\mapget rrCount {\nid}}
+  \rrMeasKids{\nid}{0}{\n}
+  \global\set rrAw {0}
+  \rrChoiceMaxW{\nid}{0}{\n}
+  \set cz {\mapget rrChild {\calc{\nid * 1000}}}
+  \set uz {\mapget rrUp {\cz}}
+  \set dz {\mapget rrDn {\cz}}
+  \global\mapset rrUp {\nid}{\uz}
+  \global\set rrAd {\dz}
+  \rrChoiceSumDn{\nid}{1}{\n}
+  \global\mapset rrDn {\nid}{\rrAd}
+  \global\mapset rrW {\nid}{\calc{rrAw + 2 * rrfork}}
+}}
+\def rrChoiceMaxW id i n {{
+  \set nid {\id}
+  \if {\< {\i}{\n}}
+    \set c {\mapget rrChild {\calc{\nid * 1000 + \i}}}
+    \set cw {\mapget rrW {\c}}
+    \if {\> {\cw}{\rrAw}}\global\set rrAw {\cw}\fi
+    \set ni {\calc{\i + 1}}
+    \rrChoiceMaxW{\nid}{\ni}{\n}
+  \fi
+}}
+\def rrChoiceSumDn id i n {{
+  \set nid {\id}
+  \if {\< {\i}{\n}}
+    \set c {\mapget rrChild {\calc{\nid * 1000 + \i}}}
+    \set cu {\mapget rrUp {\c}}\set cd {\mapget rrDn {\c}}
+    \global\set rrAd {\calc{rrAd + rrvgap + \cu + \cd}}
+    \set ni {\calc{\i + 1}}
+    \rrChoiceSumDn{\nid}{\ni}{\n}
+  \fi
+}}
+
+// An optional / repetition wrapper is its child plus room on each side for the bypass
+// arcs, and extra height for a bypass above (? and *) and a return loop below (* and +).
+\def rrMeasWrap id k {{
+  \set nid {\id}
+  \set c {\mapget rrSub {\nid}}
+  \rrMeasure{\c}
+  \set cu {\mapget rrUp {\c}}\set cd {\mapget rrDn {\c}}\set cw {\mapget rrW {\c}}
+  \global\mapset rrW {\nid}{\calc{\cw + 2 * rrfork}}
+  \if {\= {\k}{Q}}
+    \global\mapset rrUp {\nid}{\calc{\cu + rrloop}}\global\mapset rrDn {\nid}{\cd}
+  \else\if {\= {\k}{R}}
+    \global\mapset rrUp {\nid}{\calc{\cu + rrloop}}\global\mapset rrDn {\nid}{\calc{\cd + rrloop}}
+  \else
+    \global\mapset rrUp {\nid}{\cu}\global\mapset rrDn {\nid}{\calc{\cd + rrloop}}
+  \fi\fi
+}}
+
+// ================================================================================
+// Draw — top-down. Each node is drawn with its rail entering at (x, y) on the left and
+// leaving at (x + width, y) on the right; children get their own (x, y) computed from the
+// measured sizes. All coordinates are absolute within the \picture.
+
+\def rrRail ax ay bx by {\nofill\stroke{\rrlinecolor}\linewidth{1pt}\line{\ax \ay \bx \by}}
+
+// Every draw routine captures its node id and coordinates into fresh locals (nid, bx, by,
+// and bw for a width) on its first lines, before computing any others. A macro argument is
+// a name, so a later \set of a name a coordinate was passed under would change it mid-draw;
+// capturing pins them for the whole routine and its recursion.
+\def rrDraw id x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set k {\mapget rrKind {\nid}}
+  \if {\= {\k}{T}}\rrDrawLeaf{\nid}{\bx}{\by}{1}
+  \else\if {\= {\k}{N}}\rrDrawLeaf{\nid}{\bx}{\by}{0}
+  \else\if {\= {\k}{S}}\rrDrawSeq{\nid}{\bx}{\by}
+  \else\if {\= {\k}{C}}\rrDrawChoice{\nid}{\bx}{\by}
+  \else\if {\= {\k}{Q}}\rrDrawOpt{\nid}{\bx}{\by}
+  \else\if {\= {\k}{R}}\rrDrawStar{\nid}{\bx}{\by}
+  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi
+}}
+
+// A terminal is a rounded stadium, a nonterminal a rectangle; the label is centred on it.
+\def rrDrawLeaf id x y term {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set bw {\mapget rrW {\nid}}
+  \set lbl {\mapget rrLabel {\nid}}
+  \set top {\calc{\by + rrboxh / 2}}\set bot {\calc{\by - rrboxh / 2}}
+  \if {\= {\term}{1}}
+    \set r {\calc{rrboxh / 2}}
+    \set xl {\calc{\bx + \r}}\set xr {\calc{\bx + \bw - \r}}
+    \fill{\rrtermfill}\nostroke
+    \rect{\xl \bot \calc{\xr - \xl} \rrboxh}
+    \stroke{\rrlinecolor}\linewidth{1pt}\nofill
+    \line{\xl \top \xr \top}\line{\xl \bot \xr \bot}
+    \arc{\xl \by \r 90 270}\arc{\xr \by \r 270 90}
+  \else
+    \fill{\rrnontermfill}\stroke{\rrlinecolor}\linewidth{1pt}
+    \rect{\bx \bot \bw \rrboxh}
+  \fi
+  \at anchor:center {\calc{\bx + \bw / 2} \by}{{\font {lmroman} {\rrfont} {regular}\lbl}}
+}}
+
+// A sequence draws each child in turn with a connecting rail between neighbours.
+\def rrDrawSeq id x y {{\set nid {\id}\set n {\mapget rrCount {\nid}}\rrSeqDraw{\nid}{0}{\n}{\x}{\y}}}
+\def rrSeqDraw id i n x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \if {\< {\i}{\n}}
+    \set c {\mapget rrChild {\calc{\nid * 1000 + \i}}}
+    \set cw {\mapget rrW {\c}}
+    \rrDraw{\c}{\bx}{\by}
+    \set ni {\calc{\i + 1}}
+    \if {\< {\ni}{\n}}
+      \set xe {\calc{\bx + \cw}}
+      \set nx {\calc{\bx + \cw + rrhgap}}
+      \rrRail{\xe}{\by}{\nx}{\by}
+      \rrSeqDraw{\nid}{\ni}{\n}{\nx}{\by}
+    \fi
+  \fi
+}}
+
+// A choice: lay out the rail height of each alternative (rrYof), draw the two vertical
+// fork buses joining them at the left and right, then each alternative with its lead-in
+// and lead-out rails.
+\def rrDrawChoice id x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set n {\mapget rrCount {\nid}}
+  \set bw {\mapget rrW {\nid}}
+  \global\mapset rrYof {\calc{\nid * 1000}}{\by}
+  \rrChoiceLayout{\nid}{1}{\n}{\by}
+  \set ylast {\mapget rrYof {\calc{\nid * 1000 + (\n - 1)}}}
+  \set xrt {\calc{\bx + \bw}}
+  \rrRail{\bx}{\by}{\bx}{\ylast}
+  \rrRail{\xrt}{\by}{\xrt}{\ylast}
+  \rrChoiceDraw{\nid}{0}{\n}{\bx}{\bw}
+}}
+\def rrChoiceLayout id k n yprev {{
+  \set nid {\id}\set byp {\yprev}
+  \set cprev {\mapget rrChild {\calc{\nid * 1000 + (\k - 1)}}}
+  \set ccur {\mapget rrChild {\calc{\nid * 1000 + \k}}}
+  \set dnprev {\mapget rrDn {\cprev}}
+  \set upc {\mapget rrUp {\ccur}}
+  \set yk {\calc{\byp - \dnprev - rrvgap - \upc}}
+  \global\mapset rrYof {\calc{\nid * 1000 + \k}}{\yk}
+  \set nk {\calc{\k + 1}}
+  \if {\< {\nk}{\n}}\rrChoiceLayout{\nid}{\nk}{\n}{\yk}\fi
+}}
+\def rrChoiceDraw id k n x w {{
+  \set nid {\id}\set bx {\x}\set bw {\w}
+  \if {\< {\k}{\n}}
+    \set c {\mapget rrChild {\calc{\nid * 1000 + \k}}}
+    \set yk {\mapget rrYof {\calc{\nid * 1000 + \k}}}
+    \set cw {\mapget rrW {\c}}
+    \set xin {\calc{\bx + rrfork}}
+    \set xout {\calc{\bx + rrfork + \cw}}
+    \set xr {\calc{\bx + \bw}}
+    \rrRail{\bx}{\yk}{\xin}{\yk}
+    \rrDraw{\c}{\xin}{\yk}
+    \rrRail{\xout}{\yk}{\xr}{\yk}
+    \set nk {\calc{\k + 1}}
+    \rrChoiceDraw{\nid}{\nk}{\n}{\bx}{\bw}
+  \fi
+}}
+
+// An optional item sits on the main line with a rail bypassing it above.
+\def rrDrawOpt id x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set c {\mapget rrSub {\nid}}
+  \set cw {\mapget rrW {\c}}
+  \set cu {\mapget rrUp {\c}}
+  \set xin {\calc{\bx + rrfork}}
+  \set xout {\calc{\bx + rrfork + \cw}}
+  \set xr {\calc{\xout + rrfork}}
+  \set yt {\calc{\by + \cu + rrloop / 2}}
+  \rrRail{\bx}{\by}{\xin}{\by}
+  \rrDraw{\c}{\xin}{\by}
+  \rrRail{\xout}{\by}{\xr}{\by}
+  \rrBypass{\bx}{\xr}{\by}{\yt}
+}}
+
+// Zero or more: a bypass above (skip) and a return loop below (repeat).
+\def rrDrawStar id x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set c {\mapget rrSub {\nid}}
+  \set cw {\mapget rrW {\c}}
+  \set cu {\mapget rrUp {\c}}
+  \set cd {\mapget rrDn {\c}}
+  \set xin {\calc{\bx + rrfork}}
+  \set xout {\calc{\bx + rrfork + \cw}}
+  \set xr {\calc{\xout + rrfork}}
+  \set yt {\calc{\by + \cu + rrloop / 2}}
+  \set yb {\calc{\by - \cd - rrloop / 2}}
+  \rrRail{\bx}{\by}{\xin}{\by}
+  \rrDraw{\c}{\xin}{\by}
+  \rrRail{\xout}{\by}{\xr}{\by}
+  \rrBypass{\bx}{\xr}{\by}{\yt}
+  \rrReturn{\xin}{\xout}{\by}{\yb}
+}}
+
+// One or more: a return loop below, no skip.
+\def rrDrawPlus id x y {{
+  \set nid {\id}\set bx {\x}\set by {\y}
+  \set c {\mapget rrSub {\nid}}
+  \set cw {\mapget rrW {\c}}
+  \set cd {\mapget rrDn {\c}}
+  \set xin {\calc{\bx + rrfork}}
+  \set xout {\calc{\bx + rrfork + \cw}}
+  \set xr {\calc{\xout + rrfork}}
+  \set yb {\calc{\by - \cd - rrloop / 2}}
+  \rrRail{\bx}{\by}{\xin}{\by}
+  \rrDraw{\c}{\xin}{\by}
+  \rrRail{\xout}{\by}{\xr}{\by}
+  \rrReturn{\xout}{\xin}{\by}{\yb}
+}}
+
+// A bypass rail from (ax,y) up to height yt and across to (bx,y) — the skip path.
+\def rrBypass ax bx y yt {
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{\moveto{\ax \y}\lineto{\ax \yt}\lineto{\bx \yt}\lineto{\bx \y}}}
+
+// A return rail under an item, from its exit (bx) down to yb and back to its entry (ax).
+\def rrReturn ax bx y yb {
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{\moveto{\bx \y}\lineto{\bx \yb}\lineto{\ax \yb}\lineto{\ax \y}}}
+
+// ================================================================================
+// \railroad{ <grammar> } — lex, then parse and render each rule as its own diagram.
+\def railroad <g> {
+  \rrLex{\g}
+  \global\set rrId {0}
+  \global\set rrP {0}
+  \rrRules}
+
+\def rrRules {{
+  \rrPeek
+  \if {\< {\rrP}{\rrN}}
+    \set rname {\rrTk}
+    \rrNext\rrPeek
+    \if {\= {\rrTk}{::=}}\rrNext\fi
+    \rrExpr
+    \set root {\rrRet}
+    \rrRender{\rname}{\root}
+    \rrRules
+  \fi
+}}
+
+// Measure a rule's tree, then draw it as one self-contained picture: a bold rule-name
+// title in a band across the top, and below it the diagram between two terminator bullets
+// with the rail running through the middle. Keeping the title inside the picture means a
+// diagram needs no paragraph or spacing commands from a document format — it is just a box.
+\def rrRender rname root {{
+  \rrMeasure{\root}
+  \set up {\mapget rrUp {\root}}
+  \set dn {\mapget rrDn {\root}}
+  \set rw {\mapget rrW {\root}}
+  \set titleh {\calc{rrtitlefont + 8}}
+  \set pw {\calc{2 * rrmargin + 4 * rrtermr + 2 * rrhgap + \rw}}
+  \set ph {\calc{\up + \dn + 2 * rrmargin + \titleh}}
+  \set ry {\calc{rrmargin + \dn}}
+  \set yt {\calc{rrmargin + \dn + \up + \titleh / 2}}
+  \picture width:{\pw} height:{\ph} {
+    \at anchor:west {\rrmargin \yt}{{\font {lmroman} {\rrtitlefont} {bold}\rname}}
+    \set xa {\calc{rrmargin + rrtermr}}
+    \fill{\rrlinecolor}\nostroke\circle{\xa \ry \rrtermr}
+    \set xb {\calc{\xa + rrtermr}}
+    \set xstart {\calc{\xb + rrhgap}}
+    \rrRail{\xb}{\ry}{\xstart}{\ry}
+    \rrDraw{\root}{\xstart}{\ry}
+    \set xc {\calc{\xstart + \rw}}
+    \set xend {\calc{\xc + rrhgap}}
+    \rrRail{\xc}{\ry}{\xend}{\ry}
+    \fill{\rrlinecolor}\nostroke\circle{\calc{\xend + rrtermr} \ry \rrtermr}
+  }
+}}

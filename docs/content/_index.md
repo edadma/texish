@@ -52,5 +52,7 @@ coherent family across prose, equations, and code.
   same pipeline as the text.
 - **Chemistry and plotting** — `\use{chem}` sets reaction equations and structures;
   `\use{plot}` draws line, scatter, bar, and function plots with labelled axes.
+- **Railroad diagrams** — `\use{railroad}` turns a W3C-style EBNF grammar into a railroad
+  (syntax) diagram, one picture per rule.
 - **Three platforms** — the JVM (Graphics2D raster), Scala Native (Cairo PDF + image), and
   Scala.js.
