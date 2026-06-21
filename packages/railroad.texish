@@ -42,7 +42,7 @@
 \set rrhgap {15}            // length of a connecting rail between items in a row
 \set rrvgap {11}            // vertical gap between stacked alternatives of a choice
 \set rrfork {18}            // lead-in / lead-out rail on each side of a choice fork
-\set rrloop {16}            // vertical room for an optional / repetition bypass or loop
+\set rrloop {24}            // clearance of an optional / repetition bypass or loop from the box
 \set rrcr {6}               // radius of the rounded rail corners (the "railroad" curves)
 \set rrah {7}               // length of the entry / exit arrowheads
 \set rrahw {3.5}            // half-width of the arrowheads
