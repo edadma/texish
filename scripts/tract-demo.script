@@ -2,6 +2,9 @@
 \set hsize {612}\set vsize {792}
 \set raggedbottom {1}
 \use{tract}
+// Duplex registration correction, PRINTER-SPECIFIC. On the test printer the front prints ~1mm low,
+// so the front is lifted ~1mm (2.835pt). Recalibrate with scripts/tract-calibration.script for yours.
+\set tractfrontdy {2.835}
 \tract{
 \bold{God Loves You}
 

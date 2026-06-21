@@ -19,6 +19,16 @@
 \set tractguides {1}             // draw fold (vertical) and cut (horizontal) guide lines
 \set tractguidecolor {#b0b0b0}
 
+// Duplex registration: real duplex printing rarely lands the back exactly over the front, and the
+// cut must fall on the sheet's true middle. Fold the calibration sheet in half to find that middle,
+// see which side's cut guide sits on it (that side is correct) and how far the other side is off,
+// then nudge the off side onto the middle with these. Positive dy moves a side UP, positive dx moves
+// it RIGHT; about 2.835 points per millimetre. All default to 0 and are printer-specific.
+\set tractfrontdx {0}
+\set tractfrontdy {0}
+\set tractbackdx {0}
+\set tractbackdy {0}
+
 // ---- fixed sheet geometry ----
 \set trSheetW {612}
 \set trSheetH {792}
@@ -61,11 +71,13 @@
   \at anchor:northwest {\trXc \y}{\pc}
 }
 
-// One side of the sheet: the guides, then the three given columns set into both the upper and the
-// lower tract. Each column argument is re-evaluated for each tract, so pass \copy (not \box) to keep
-// the register alive for the second placement.
-\def trSide ca cb cc {
+// One side of the sheet: a registration offset (dx, dy) for the whole side, the guides, then the
+// three given columns set into both the upper and the lower tract. Each column argument is
+// re-evaluated for each tract, so pass \copy (not \box) to keep the register alive for the second
+// placement.
+\def trSide dx dy ca cb cc {
   \noindent\picture width:{\trSheetW} height:{\trSheetH} {
+    \translate{\dx \dy}
     \trGuides
     \trPlace{\ca}{\cb}{\cc}{\trYup}
     \trPlace{\ca}{\cb}{\cc}{\trYdn}
@@ -86,8 +98,9 @@
   \setbox trB1 \vsplit trB to:{\trCH}
   \setbox trB2 \vsplit trB to:{\trCH}
   // FRONT: language A, columns A1 A2 A3 left to right.
-  \trSide{\copy trA1}{\copy trA2}{\copy trA}
+  \trSide{\tractfrontdx}{\tractfrontdy}{\copy trA1}{\copy trA2}{\copy trA}
   \newpage
-  // BACK: language B, reversed to B3 B2 B1 so the long-edge duplex flip lands each behind its A.
-  \trSide{\copy trB}{\copy trB2}{\copy trB1}
+  // BACK: language B in the SAME column order as the front. On this duplex path the back is not
+  // mirrored relative to the front, so B1 B2 B3 land behind A1 A2 A3 directly.
+  \trSide{\tractbackdx}{\tractbackdy}{\copy trB1}{\copy trB2}{\copy trB}
 }}
