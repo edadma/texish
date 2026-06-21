@@ -578,6 +578,77 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   phantomPrimitive("vphantom", keepWidth = false, keepHeight = true, visible = false)
   phantomPrimitive("smash", keepWidth = true, keepHeight = false, visible = true)
 
+  // columns - [gap:<dim>] {n} {body}: set the body as n balanced side-by-side columns. The body is typeset once
+  // into a vbox at the column width — the current \hsize less the gutters, divided by n — then divided into n
+  // pieces of roughly equal height with \vsplit's page-style breaking, and the pieces are set side by side with
+  // the gutter between them. This is column balancing (the columns come out level), as opposed to filling one
+  // column to the bottom before starting the next. The whole thing enters the current list as a single
+  // horizontal box, so it sits within the ordinary page; a balanced block taller than the page is not yet split
+  // across pages. The gutter defaults to one em, overridable with [gap:<dim>].
+  proc.registerPrimitive(
+    "columns",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts = proc.readOptionalParams(pos)
+        val gap  = opts.get("gap").flatMap(points).getOrElse(t.currentFont.size)
+        val n    = math.max(1, argInt(proc, pos))
+        val body = proc.readArgument(pos)
+
+        val hsize    = t.getNumber("hsize")
+        val colWidth = (hsize - (n - 1) * gap) / n
+
+        // typeset the body once into a vbox at the column width, then restore the page measure
+        t.set("hsize", colWidth)
+        t.vbox()
+        proc.processTokenList(body)
+        t.paragraph()
+        val full = t.mode.exit
+        t.set("hsize", hsize)
+
+        full match
+          case vb: VerticalBox =>
+            // Balancing minimizes the height of the tallest column: find the smallest column height that still
+            // packs the material into n columns. An equal share (total / n) is the floor; the whole height
+            // trivially fits in one column, so it is a feasible ceiling. Binary search between them — feasibility
+            // is monotonic in the height — converges on the tight balance point, much closer to level than
+            // simply aiming each column at total / n (which lets first-fit under-fill the early columns and dump
+            // the slack into the last).
+            def fits(h: Double): Boolean =
+              var rest  = vb.boxes
+              var count = 0
+              while rest.nonEmpty && count < n do
+                rest = splitVList(rest, h)._2
+                count += 1
+              rest.isEmpty
+
+            var lo = vb.height / n
+            var hi = vb.height
+            var i  = 0
+            while i < 40 && hi - lo > 0.01 do
+              val mid = (lo + hi) / 2
+              if fits(mid) then hi = mid else lo = mid
+              i += 1
+            val target = hi // the smallest feasible column height
+
+            // peel off n-1 balanced pieces with \vsplit's breaking; the last column keeps whatever remains
+            var rest = vb.boxes
+            val cols = Vector.newBuilder[Box]
+            for _ <- 0 until n - 1 do
+              val (top, remainder) = splitVList(rest, target)
+              cols += new VBox(top)
+              rest = remainder
+            cols += new VBox(rest)
+
+            // lay the columns out left to right with the gutter between adjacent pairs
+            val laid = cols.result().zipWithIndex.flatMap {
+              case (c, 0) => Seq(c)
+              case (c, _) => Seq(HSpaceBox(gap), c)
+            }
+            t.add(new HBox(laid))
+          case _ =>
+    },
+  )
+
   // setbox name \hbox{...} (or \vbox / \vtop) - typeset a box now and save it in a register under `name`, for
   // later measurement (\wd / \ht / \dp) and placement (\box / \copy). Like \set, the assignment is local to the
   // current group. The box's contents are typeset at this point, not when the register is later used.
