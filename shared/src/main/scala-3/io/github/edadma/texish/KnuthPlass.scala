@@ -9,6 +9,9 @@ object KnuthPlass:
     case BoxItem(box: Box, index: Int)
     case GlueItem(glue: Glue, index: Int)
     case PenaltyItem(penalty: Double, flagged: Boolean, width: Double, index: Int)
+    // An author discretionary break. `noBreak` is its width-bearing inline form; breaking here ends the line
+    // with `pre` and opens the next with `post` (see DiscretionaryBox).
+    case DiscItem(pre: Seq[Box], post: Seq[Box], noBreak: Seq[Box], penalty: Double, index: Int)
 
   import Item.*
 
@@ -119,6 +122,11 @@ object KnuthPlass:
           cumWidth(i + 1) = cumWidth(i) + w
           cumStretch(i + 1) = cumStretch(i)
           cumShrink(i + 1) = cumShrink(i)
+        case DiscItem(_, _, noBreak, _, _) =>
+          // unbroken, a discretionary occupies its no-break width; breaking trades it for `pre`+`post`
+          cumWidth(i + 1) = cumWidth(i) + noBreak.map(_.width).sum
+          cumStretch(i + 1) = cumStretch(i)
+          cumShrink(i + 1) = cumShrink(i)
 
     // Process each potential break point
     for i <- items.indices do
@@ -131,6 +139,8 @@ object KnuthPlass:
           i > 0 && !items(i - 1).isInstanceOf[GlueItem]
         case PenaltyItem(p, _, _, _) =>
           p < 10000 // Can break at penalty if not infinite
+        case DiscItem(_, _, _, p, _) =>
+          p < 10000 // a discretionary is a break opportunity unless its penalty forbids it
         case _ => false
 
       if canBreak then
@@ -143,6 +153,9 @@ object KnuthPlass:
             case GlueItem(_, _) => cumWidth(i) - cumWidth(math.max(0, startPos))
             case PenaltyItem(_, _, w, _) =>
               cumWidth(i) - cumWidth(math.max(0, startPos)) + w
+            case DiscItem(pre, _, _, _, _) =>
+              // breaking here ends the line with `pre` instead of the disc's inline material
+              cumWidth(i) - cumWidth(math.max(0, startPos)) + pre.map(_.width).sum
             case _ => cumWidth(i + 1) - cumWidth(math.max(0, startPos))
 
           val lineStretch = cumStretch(i) - cumStretch(math.max(0, startPos)) + marginStr
@@ -154,6 +167,7 @@ object KnuthPlass:
           if badness <= tolerance then
             val penalty = item match
               case PenaltyItem(p, _, _, _) => p
+              case DiscItem(_, _, _, p, _) => p
               case _                       => 0.0
 
             val demerits = computeDemerits(badness, penalty, linepenalty)
@@ -221,32 +235,40 @@ object KnuthPlass:
       breakPositions.prepend(best.position)
       best = best.previous
 
-    // Now build lines from items using break positions
+    // Now build lines from items using break positions. A discretionary broken at the end of one line opens
+    // the next with its `post` material; `pendingPost` carries that across the line boundary.
     val lines      = ArrayBuffer[Seq[Box]]()
     var startIdx   = 0
+    var pendingPost: Seq[Box] = Seq.empty
+
+    // Emit an item that falls strictly inside a line (never a break point): a discretionary shows its
+    // unbroken form here, a penalty contributes nothing.
+    def emitInterior(item: Item, lineBoxes: ArrayBuffer[Box]): Unit =
+      item match
+        case BoxItem(box, _)              => lineBoxes += box
+        case GlueItem(glue, _)            => lineBoxes += glue
+        case DiscItem(_, _, noBreak, _, _) => lineBoxes ++= noBreak
+        case PenaltyItem(_, _, _, _)      => ()
 
     for breakPos <- breakPositions do
-      val lineItems = items.slice(startIdx, breakPos)
       val lineBoxes = ArrayBuffer[Box]()
+      lineBoxes ++= pendingPost
+      pendingPost = Seq.empty
 
-      for item <- lineItems do
-        item match
-          case BoxItem(box, _) => lineBoxes += box
-          case GlueItem(glue, _) => lineBoxes += glue
-          case PenaltyItem(_, flagged, width, _) =>
-            // If breaking at a penalty and it's flagged (hyphenation), add the hyphen
-            // But only if this is the break point
-            ()
+      for item <- items.slice(startIdx, breakPos) do emitInterior(item, lineBoxes)
 
-      // Check if we broke at a hyphenation point
+      // Resolve the break item itself
       if breakPos < items.length then
         items(breakPos) match
           case PenaltyItem(_, true, _, idx) =>
-            // Breaking at hyphenation - add hyphen to end of line
-            // Find the last CharBox to get font info
+            // Breaking at a flagged (hyphenation) penalty: end the line with a hyphen in the run's font
             lineBoxes.lastOption match
               case Some(cb: CharBox) => lineBoxes += cb.newCharBox("-")
               case _ => // can't add hyphen without font info
+          case DiscItem(pre, post, _, _, _) =>
+            // Breaking at a discretionary: `pre` ends this line, `post` opens the next
+            lineBoxes ++= pre
+            pendingPost = post
           case GlueItem(_, _) =>
             // Breaking at glue - remove trailing glue from line
             if lineBoxes.nonEmpty && lineBoxes.last.isSpace then
@@ -254,19 +276,13 @@ object KnuthPlass:
           case _ =>
 
       lines += lineBoxes.toSeq
-      startIdx = breakPos + 1  // Skip the break item (glue or penalty)
+      startIdx = breakPos + 1  // Skip the break item (glue, penalty, or discretionary)
 
     // Handle the last line (from last break to end)
-    if startIdx < items.length then
-      val lineItems = items.slice(startIdx, items.length)
+    if startIdx < items.length || pendingPost.nonEmpty then
       val lineBoxes = ArrayBuffer[Box]()
-
-      for item <- lineItems do
-        item match
-          case BoxItem(box, _) => lineBoxes += box
-          case GlueItem(glue, _) => lineBoxes += glue
-          case PenaltyItem(_, _, _, _) => () // Don't add penalties to final line
-
+      lineBoxes ++= pendingPost
+      for item <- items.slice(startIdx, items.length) do emitInterior(item, lineBoxes)
       lines += lineBoxes.toSeq
 
     Some(lines.toSeq)
@@ -278,6 +294,8 @@ object KnuthPlass:
       box match
         case g: Glue =>
           items += GlueItem(g, idx)
+        case d: DiscretionaryBox =>
+          items += DiscItem(d.pre, d.post, d.noBreak, hyphenpenalty, idx)
         case cb: CharBox =>
           // Check for hyphenation opportunities
           Hyphenation(cb.text) match

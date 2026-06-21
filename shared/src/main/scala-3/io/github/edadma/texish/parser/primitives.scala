@@ -571,6 +571,31 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // \discretionary{pre}{post}{no-break} — the author's break point. If the line breaker breaks here, `pre` ends
+  // the line and `post` opens the next; otherwise `no-break` shows in place. Compound words, breakable URLs, and
+  // respelled hyphenations all reduce to this.
+  proc.registerPrimitive(
+    "discretionary",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val pre     = typesetGroupBoxes(proc, t, pos)
+        val post    = typesetGroupBoxes(proc, t, pos)
+        val noBreak = typesetGroupBoxes(proc, t, pos)
+        t.add(new DiscretionaryBox(pre, post, noBreak))
+    },
+  )
+
+  // \softhyphen — a discretionary hyphen: a break point that, if taken, ends the line with a hyphen in the
+  // current font and nothing on the next line. It is \discretionary{-}{}{} with the hyphen drawn from the active
+  // face. (TeX spells this \-, but texish reserves \- for subtraction, so the command is named in full.)
+  proc.registerPrimitive(
+    "softhyphen",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.add(new DiscretionaryBox(Seq(new CharBox(t, "-")), Seq.empty, Seq.empty))
+    },
+  )
+
   // The TeX math-spacing commands: \, thin (3mu), \: medium (4mu), \; thick (5mu), \! negative thin (-3mu).
   // A mu is 1/18 em and em is the current font size, so these scale with the font. Rigid horizontal spaces that
   // work in math or text — the manual spaces you reach for between a coefficient and a species, around an
@@ -1019,6 +1044,19 @@ private[parser] def readBoxArg(proc: Processor, t: Typesetter, pos: CharReader):
         proc.nextToken() // consume the box command
         buildBox(proc, t, vertical = name != "hbox", top = name == "vtop", pos)
       case _ => null
+
+// Typeset a braced `{…}` argument as horizontal material and return its boxes — used for the three parts of a
+// \discretionary. The content is set in a throwaway \hbox so it goes through the normal text path (font, kerning,
+// ligatures); the resulting boxes are handed back individually so the line breaker can place them on either side
+// of a break. An empty group yields no boxes.
+private[parser] def typesetGroupBoxes(proc: Processor, t: Typesetter, pos: CharReader): Seq[Box] =
+  val body = proc.readArgument(pos)
+  t.hbox()
+  proc.processTokenList(body)
+  t.mode.exit match
+    case null    => Seq.empty
+    case h: HBox => h.boxes
+    case b: Box  => Seq(b)
 
 // Fetch a box stored in a register by \setbox. Errors (rather than returning a sentinel) when the register
 // is empty or holds a non-box, so a misused box command points at the offending name.

@@ -109,7 +109,13 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       @tailrec
       def line(): Unit =
         if boxes.nonEmpty then
-          if boxes.head.isInstanceOf[MigratingBox] then
+          if boxes.head.isInstanceOf[DiscretionaryBox] then
+            // The greedy fallback does not break at author discretionaries; it lays down their unbroken form
+            // and carries on. (The optimal path handles the break opportunities.)
+            val d = boxes.remove(0).asInstanceOf[DiscretionaryBox]
+            boxes.insertAll(0, d.noBreak)
+            line()
+          else if boxes.head.isInstanceOf[MigratingBox] then
             // marks and inserts migrate out of the line to the vertical list, where the page builder can see them
             migrating += boxes.remove(0).asInstanceOf[MigratingBox]
             line()
