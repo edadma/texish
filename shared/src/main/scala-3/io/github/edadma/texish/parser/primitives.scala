@@ -551,6 +551,33 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // phantom / hphantom / vphantom / smash - 1 body arg: reserve the size of the argument along selected axes
+  // without its full ink. \phantom leaves an invisible box the exact size of its argument; \hphantom keeps only
+  // its width; \vphantom only its height and depth (the classic way to make a row of fractions share a baseline,
+  // or align \sqrt signs); \smash draws the argument but reports zero height and depth, so tall material overlaps
+  // its neighbours instead of spreading the line. The argument is set in the current mode — as a math sub-formula
+  // inside a formula, as ordinary horizontal material otherwise — so a phantom matches what it stands in for.
+  def phantomPrimitive(name: String, keepWidth: Boolean, keepHeight: Boolean, visible: Boolean): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              handler.mathSubFormula(proc, parent.style, proc.readArgument(pos)) match
+                case inner: Box => parent.add(new PhantomBox(inner, keepWidth, keepHeight, visible))
+                case null       =>
+            case _ =>
+              val inner = HBox(typesetGroupBoxes(proc, t, pos).toVector)
+              t.add(new PhantomBox(inner, keepWidth, keepHeight, visible))
+      },
+    )
+
+  phantomPrimitive("phantom", keepWidth = true, keepHeight = true, visible = false)
+  phantomPrimitive("hphantom", keepWidth = true, keepHeight = false, visible = false)
+  phantomPrimitive("vphantom", keepWidth = false, keepHeight = true, visible = false)
+  phantomPrimitive("smash", keepWidth = true, keepHeight = false, visible = true)
+
   // setbox name \hbox{...} (or \vbox / \vtop) - typeset a box now and save it in a register under `name`, for
   // later measurement (\wd / \ht / \dp) and placement (\box / \copy). Like \set, the assignment is local to the
   // current group. The box's contents are typeset at this point, not when the register is later used.
