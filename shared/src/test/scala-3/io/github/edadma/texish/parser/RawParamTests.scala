@@ -47,3 +47,19 @@ class RawParamTests extends AnyFreeSpec with Matchers:
   "\\message produces no typeset output" in {
     run("a\\message{tracing here}b").result shouldBe "ab"
   }
+
+  "\\oklch builds a hex colour from L C h" in {
+    run("\\oklch{0.7}{0.1}{260}").result should fullyMatch regex "#[0-9a-f]{6}"
+  }
+
+  "\\oklchof then \\oklch round-trips a colour" in {
+    val s = "\\set lch {\\oklchof{#336699}}" +
+      "\\oklch{\\head{\\lch}}{\\head{\\tail{\\lch}}}{\\head{\\tail{\\tail{\\lch}}}}"
+    run(s).result shouldBe "#336699"
+  }
+
+  "a darker shade keeps the hue: lower the Oklch lightness" in {
+    val s = "\\set lch {\\oklchof{#6699cc}}\\set l {\\head{\\lch}}" +
+      "\\oklch{\\calc{\\l - 0.15}}{\\head{\\tail{\\lch}}}{\\head{\\tail{\\tail{\\lch}}}}"
+    run(s).result should fullyMatch regex "#[0-9a-f]{6}"
+  }

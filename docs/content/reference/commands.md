@@ -139,6 +139,7 @@ palette colour, and a label adds a legend entry.
 | `\seq{…}` `\words{s}` `\head` `\tail` `\size` `\cat` | sequences; `\words` splits a string on whitespace |
 | `\map{…}` `\mapset` `\mapget` `\maphas` | keyed maps |
 | `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
+| `\oklch{L}{C}{h}` `\oklchof{color}` | build / read a colour in the Oklch space (lightness, chroma, hue) — derive shades by varying L |
 | `\newcounter` `\stepcounter` `\value` `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph` | counters and number formatting |
 | `\use{name}` `\include{path}` | load a format / include raw input |
 

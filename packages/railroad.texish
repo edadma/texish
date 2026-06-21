@@ -49,9 +49,9 @@
 \set rrahw {3.5}            // half-width of the arrowheads
 \set rrmargin {7}           // blank margin around the whole diagram
 \set rrlinecolor {black}    // ink for the rails and the box outlines
-\set rrtermfill {#eaf2ff}   // fill of a terminal (rounded) box
-\set rrnontermfill {#fff6df} // fill of a nonterminal (square) box
-\set rrccfill {#c9f0ee}     // fill of a character-class (hexagon) box
+\set rrbase {#dde8fb}       // base fill colour; terminals and classes are darker shades of it
+\set rrtermdark {0.08}      // how far to lower the Oklch lightness for a terminal box
+\set rrccdark {0.17}        // how far to lower the Oklch lightness for a character-class box
 \set rrccpt {6}             // depth of a character class's pointed ends
 
 // ================================================================================
@@ -319,10 +319,9 @@
   \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi\fi
 }}
 
-// A box sizes to its label, the label plus rrpadx on each side, whatever its shape: a square
-// nonterminal (shape 0), a rounded terminal whose caps fit inside the padding (shape 1), or a
-// pointed character-class hexagon, which adds its point depth on each side (shape 2). So every
-// box tracks its content the same way.
+// A box sizes to its label — the label plus rrpadx on each side — the same for every shape: a
+// square nonterminal (shape 0), a rounded terminal whose caps fit inside the padding (shape 1),
+// or a pointed character-class hexagon whose points sit inside the padding too (shape 2).
 \def rrMeasLeaf id shape {{
   \set nid {\id}
   \set lbl {\mapget rrLabel {\nid}}
@@ -330,9 +329,7 @@
   \if {\> {\shape}{0}}\global\set rrwt {bold}\fi
   \setbox rrbox \hbox{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
   \set tw {\wd rrbox}
-  \global\set rrextra {0}
-  \if {\= {\shape}{2}}\global\set rrextra {\calc{2 * rrccpt}}\fi
-  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx + rrextra}}
+  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx}}
   \global\mapset rrUp {\nid}{\calc{rrboxh / 2}}
   \global\mapset rrDn {\nid}{\calc{rrboxh / 2}}
 }}
@@ -419,7 +416,7 @@
   \set c {\mapget rrSub {\nid}}
   \rrMeasure{\c}
   \set cu {\mapget rrUp {\c}}\set cd {\mapget rrDn {\c}}\set cw {\mapget rrW {\c}}
-  \global\mapset rrW {\nid}{\calc{\cw + 2 * rrfork}}
+  \global\mapset rrW {\nid}{\calc{\cw + 2 * rrloopx}}
   \if {\= {\k}{Q}}
     \global\mapset rrUp {\nid}{\calc{\cu + rrloop}}\global\mapset rrDn {\nid}{\cd}
   \else\if {\= {\k}{R}}
@@ -463,17 +460,21 @@
   \if {\> {\shape}{0}}\global\set rrwt {bold}\fi
   \set top {\calc{\by + rrboxh / 2}}\set bot {\calc{\by - rrboxh / 2}}
   \if {\= {\shape}{1}}
-    \set r {\calc{rrboxh / 2}}
+    // the stadium as ONE closed path — top edge, right cap (two quarter Béziers), bottom edge,
+    // left cap — filled and stroked in a single paint, so there are no seams between sections.
+    \set r {\calc{rrboxh / 2}}\set kr {\calc{0.5523 * \r}}
     \set xl {\calc{\bx + \r}}\set xr {\calc{\bx + \bw - \r}}
-    // fill the whole stadium: the rectangular middle, then each rounded cap. A filled
-    // half-circle arc fills the segment up to its chord — the cap's flat side — so the two
-    // caps meet the middle rect exactly with no seam.
-    \fill{\rrtermfill}\nostroke
-    \rect{\xl \bot \calc{\xr - \xl} \rrboxh}
-    \arc{\xl \by \r 90 270}\arc{\xr \by \r 270 90}
-    \stroke{\rrlinecolor}\linewidth{1pt}\nofill
-    \line{\xl \top \xr \top}\line{\xl \bot \xr \bot}
-    \arc{\xl \by \r 90 270}\arc{\xr \by \r 270 90}
+    \fill{\rrtermfill}\stroke{\rrlinecolor}\linewidth{1pt}
+    \path{
+      \moveto{\xl \top}
+      \lineto{\xr \top}
+      \curveto{\calc{\xr + \kr} \top  \calc{\xr + \r} \calc{\by + \kr}  \calc{\xr + \r} \by}
+      \curveto{\calc{\xr + \r} \calc{\by - \kr}  \calc{\xr + \kr} \bot  \xr \bot}
+      \lineto{\xl \bot}
+      \curveto{\calc{\xl - \kr} \bot  \calc{\xl - \r} \calc{\by - \kr}  \calc{\xl - \r} \by}
+      \curveto{\calc{\xl - \r} \calc{\by + \kr}  \calc{\xl - \kr} \top  \xl \top}
+      \close
+    }
   \else\if {\= {\shape}{2}}
     // a character class: a hexagon with pointed left/right ends, where the rail meets it.
     \set d {\rrccpt}
@@ -556,9 +557,9 @@
   \set c {\mapget rrSub {\nid}}
   \set cw {\mapget rrW {\c}}
   \set cu {\mapget rrUp {\c}}
-  \set xin {\calc{\bx + rrfork}}
-  \set xout {\calc{\bx + rrfork + \cw}}
-  \set xr {\calc{\xout + rrfork}}
+  \set xin {\calc{\bx + rrloopx}}
+  \set xout {\calc{\bx + rrloopx + \cw}}
+  \set xr {\calc{\xout + rrloopx}}
   \set yt {\calc{\by + \cu + rrloop}}
   \rrRail{\bx}{\by}{\xin}{\by}
   \rrDraw{\c}{\xin}{\by}
@@ -573,9 +574,9 @@
   \set cw {\mapget rrW {\c}}
   \set cu {\mapget rrUp {\c}}
   \set cd {\mapget rrDn {\c}}
-  \set xin {\calc{\bx + rrfork}}
-  \set xout {\calc{\bx + rrfork + \cw}}
-  \set xr {\calc{\xout + rrfork}}
+  \set xin {\calc{\bx + rrloopx}}
+  \set xout {\calc{\bx + rrloopx + \cw}}
+  \set xr {\calc{\xout + rrloopx}}
   \set yt {\calc{\by + \cu + rrloop}}
   \set yb {\calc{\by - \cd - rrloop}}
   \rrRail{\bx}{\by}{\xin}{\by}
@@ -591,9 +592,9 @@
   \set c {\mapget rrSub {\nid}}
   \set cw {\mapget rrW {\c}}
   \set cd {\mapget rrDn {\c}}
-  \set xin {\calc{\bx + rrfork}}
-  \set xout {\calc{\bx + rrfork + \cw}}
-  \set xr {\calc{\xout + rrfork}}
+  \set xin {\calc{\bx + rrloopx}}
+  \set xout {\calc{\bx + rrloopx + \cw}}
+  \set xr {\calc{\xout + rrloopx}}
   \set yb {\calc{\by - \cd - rrloop}}
   \rrRail{\bx}{\by}{\xin}{\by}
   \rrDraw{\c}{\xin}{\by}
@@ -677,10 +678,23 @@
 // A rightward arrowhead (a filled triangle) with its tip at (x,y) — the entry / exit marker.
 \def rrArrow x y {\fill{\rrlinecolor}\nostroke\polygon{\calc{\x - rrah} \calc{\y - rrahw}  \calc{\x - rrah} \calc{\y + rrahw}  \x \y}}
 
+// Derive the box fills from the base colour: a terminal and a character class are the base at a
+// lower Oklch lightness, keeping its hue and chroma, so the three shades read as one palette.
+\def rrColors {{
+  \set lch {\oklchof{\rrbase}}
+  \set bL {\head{\lch}}
+  \set bC {\head{\tail{\lch}}}
+  \set bH {\head{\tail{\tail{\lch}}}}
+  \global\set rrnontermfill {\rrbase}
+  \global\set rrtermfill {\oklch{\calc{\bL - rrtermdark}}{\bC}{\bH}}
+  \global\set rrccfill {\oklch{\calc{\bL - rrccdark}}{\bC}{\bH}}
+}}
+
 // ================================================================================
 // \railroad{ <grammar> } — lex, then parse and render each rule as its own diagram.
 \def railroad <g> {
   \rrLex{\g}
+  \rrColors
   \global\set rrId {0}
   \global\set rrP {0}
   \rrRules}
