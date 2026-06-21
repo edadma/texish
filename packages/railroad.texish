@@ -40,9 +40,11 @@
 \set rrboxh {21}            // height of a box (the rail runs through its middle)
 \set rrhgap {15}            // length of a connecting rail between items in a row
 \set rrvgap {11}            // vertical gap between stacked alternatives of a choice
-\set rrfork {17}            // lead-in / lead-out rail on each side of a choice fork
-\set rrloop {15}            // vertical room for an optional / repetition bypass or loop
-\set rrtermr {3.5}          // radius of the start / end terminator bullets
+\set rrfork {18}            // lead-in / lead-out rail on each side of a choice fork
+\set rrloop {16}            // vertical room for an optional / repetition bypass or loop
+\set rrcr {6}               // radius of the rounded rail corners (the "railroad" curves)
+\set rrah {7}               // length of the entry / exit arrowheads
+\set rrahw {3.5}            // half-width of the arrowheads
 \set rrmargin {7}           // blank margin around the whole diagram
 \set rrlinecolor {black}    // ink for the rails and the box outlines
 \set rrtermfill {#eaf2ff}   // fill of a terminal (rounded) box
@@ -490,11 +492,7 @@
   \set bw {\mapget rrW {\nid}}
   \global\mapset rrYof {\calc{\nid * 1000}}{\by}
   \rrChoiceLayout{\nid}{1}{\n}{\by}
-  \set ylast {\mapget rrYof {\calc{\nid * 1000 + (\n - 1)}}}
-  \set xrt {\calc{\bx + \bw}}
-  \rrRail{\bx}{\by}{\bx}{\ylast}
-  \rrRail{\xrt}{\by}{\xrt}{\ylast}
-  \rrChoiceDraw{\nid}{0}{\n}{\bx}{\bw}
+  \rrChoiceDraw{\nid}{0}{\n}{\bx}{\bw}{\by}
 }}
 \def rrChoiceLayout id k n yprev {{
   \set nid {\id}\set byp {\yprev}
@@ -507,8 +505,10 @@
   \set nk {\calc{\k + 1}}
   \if {\< {\nk}{\n}}\rrChoiceLayout{\nid}{\nk}{\n}{\yk}\fi
 }}
-\def rrChoiceDraw id k n x w {{
-  \set nid {\id}\set bx {\x}\set bw {\w}
+// The first alternative sits on the main line (straight lead-in / lead-out); every later one
+// is reached by a rounded fork branch dropping from the main line and rising back to it.
+\def rrChoiceDraw id k n x w ey {{
+  \set nid {\id}\set bx {\x}\set bw {\w}\set bey {\ey}
   \if {\< {\k}{\n}}
     \set c {\mapget rrChild {\calc{\nid * 1000 + \k}}}
     \set yk {\mapget rrYof {\calc{\nid * 1000 + \k}}}
@@ -516,11 +516,16 @@
     \set xin {\calc{\bx + rrfork}}
     \set xout {\calc{\bx + rrfork + \cw}}
     \set xr {\calc{\bx + \bw}}
-    \rrRail{\bx}{\yk}{\xin}{\yk}
+    \if {\= {\k}{0}}
+      \rrRail{\bx}{\yk}{\xin}{\yk}
+      \rrRail{\xout}{\yk}{\xr}{\yk}
+    \else
+      \rrForkDown{\bx}{\bey}{\xin}{\yk}
+      \rrForkUp{\xout}{\yk}{\xr}{\bey}
+    \fi
     \rrDraw{\c}{\xin}{\yk}
-    \rrRail{\xout}{\yk}{\xr}{\yk}
     \set nk {\calc{\k + 1}}
-    \rrChoiceDraw{\nid}{\nk}{\n}{\bx}{\bw}
+    \rrChoiceDraw{\nid}{\nk}{\n}{\bx}{\bw}{\bey}
   \fi
 }}
 
@@ -575,15 +580,74 @@
   \rrReturn{\xout}{\xin}{\by}{\yb}
 }}
 
-// A bypass rail from (ax,y) up to height yt and across to (bx,y) — the skip path.
-\def rrBypass ax bx y yt {
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
-  \path{\moveto{\ax \y}\lineto{\ax \yt}\lineto{\bx \yt}\lineto{\bx \y}}}
+// The rounded rails. Every bend is a quarter circle of radius rrcr, approximated by one
+// cubic Bézier (control handles at 0.5523·r along the tangents) so a bend joins its straight
+// segments smoothly — the curves that give a railroad diagram its name. Each rail is a single
+// \path; the bumps leave and rejoin the main line tangentially, a corner-radius in from each
+// end, so the join is seamless.
 
-// A return rail under an item, from its exit (bx) down to yb and back to its entry (ax).
-\def rrReturn ax bx y yb {
+// A bypass rail from (ax,y) up to height yt and across to (bx,y) — the skip over an item.
+\def rrBypass ax bx y yt {{
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
   \nofill\stroke{\rrlinecolor}\linewidth{1pt}
-  \path{\moveto{\bx \y}\lineto{\bx \yb}\lineto{\ax \yb}\lineto{\ax \y}}}
+  \path{
+    \moveto{\calc{\ax + \r} \y}
+    \curveto{\calc{\ax + \r - \kr} \y  \ax \calc{\y + \r - \kr}  \ax \calc{\y + \r}}
+    \lineto{\ax \calc{\yt - \r}}
+    \curveto{\ax \calc{\yt - \r + \kr}  \calc{\ax + \r - \kr} \yt  \calc{\ax + \r} \yt}
+    \lineto{\calc{\bx - \r} \yt}
+    \curveto{\calc{\bx - \r + \kr} \yt  \bx \calc{\yt - \r + \kr}  \bx \calc{\yt - \r}}
+    \lineto{\bx \calc{\y + \r}}
+    \curveto{\bx \calc{\y + \r - \kr}  \calc{\bx - \r + \kr} \y  \calc{\bx - \r} \y}
+  }
+}}
+
+// A return rail under an item, from (bx,y) down to yb and across to (ax,y) — the repeat loop.
+\def rrReturn ax bx y yb {{
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{
+    \moveto{\calc{\ax + \r} \y}
+    \curveto{\calc{\ax + \r - \kr} \y  \ax \calc{\y - \r + \kr}  \ax \calc{\y - \r}}
+    \lineto{\ax \calc{\yb + \r}}
+    \curveto{\ax \calc{\yb + \r - \kr}  \calc{\ax + \r - \kr} \yb  \calc{\ax + \r} \yb}
+    \lineto{\calc{\bx - \r} \yb}
+    \curveto{\calc{\bx - \r + \kr} \yb  \bx \calc{\yb + \r - \kr}  \bx \calc{\yb + \r}}
+    \lineto{\bx \calc{\y - \r}}
+    \curveto{\bx \calc{\y - \r + \kr}  \calc{\bx - \r + \kr} \y  \calc{\bx - \r} \y}
+  }
+}}
+
+// A fork branch curving DOWN from the main line at (ex,ey) to an alternative's left at
+// (tx,ty): out along the line, a rounded drop, then in to the alternative.
+\def rrForkDown ex ey tx ty {{
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{
+    \moveto{\ex \ey}
+    \curveto{\calc{\ex + \kr} \ey  \calc{\ex + \r} \calc{\ey - \r + \kr}  \calc{\ex + \r} \calc{\ey - \r}}
+    \lineto{\calc{\ex + \r} \calc{\ty + \r}}
+    \curveto{\calc{\ex + \r} \calc{\ty + \r - \kr}  \calc{\ex + 2 * \r - \kr} \ty  \calc{\ex + 2 * \r} \ty}
+    \lineto{\tx \ty}
+  }
+}}
+
+// The mirror of rrForkDown on the right: from an alternative's right (sx,sy) curving UP to
+// the main line at (ex,ey).
+\def rrForkUp sx sy ex ey {{
+  \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
+  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \path{
+    \moveto{\sx \sy}
+    \lineto{\calc{\ex - 2 * \r} \sy}
+    \curveto{\calc{\ex - 2 * \r + \kr} \sy  \calc{\ex - \r} \calc{\sy + \r - \kr}  \calc{\ex - \r} \calc{\sy + \r}}
+    \lineto{\calc{\ex - \r} \calc{\ey - \r}}
+    \curveto{\calc{\ex - \r} \calc{\ey - \r + \kr}  \calc{\ex - \kr} \ey  \ex \ey}
+  }
+}}
+
+// A rightward arrowhead (a filled triangle) with its tip at (x,y) — the entry / exit marker.
+\def rrArrow x y {\fill{\rrlinecolor}\nostroke\polygon{\calc{\x - rrah} \calc{\y - rrahw}  \calc{\x - rrah} \calc{\y + rrahw}  \x \y}}
 
 // ================================================================================
 // \railroad{ <grammar> } — lex, then parse and render each rule as its own diagram.
@@ -616,21 +680,21 @@
   \set dn {\mapget rrDn {\root}}
   \set rw {\mapget rrW {\root}}
   \set titleh {\calc{rrtitlefont + 8}}
-  \set pw {\calc{2 * rrmargin + 4 * rrtermr + 2 * rrhgap + \rw}}
+  \set pw {\calc{2 * rrmargin + 2 * rrah + 2 * rrhgap + \rw}}
   \set ph {\calc{\up + \dn + 2 * rrmargin + \titleh}}
   \set ry {\calc{rrmargin + \dn}}
   \set yt {\calc{rrmargin + \dn + \up + \titleh / 2}}
   \picture width:{\pw} height:{\ph} {
     \at anchor:west {\rrmargin \yt}{{\font {lmroman} {\rrtitlefont} {bold}\rname}}
-    \set xa {\calc{rrmargin + rrtermr}}
-    \fill{\rrlinecolor}\nostroke\circle{\xa \ry \rrtermr}
-    \set xb {\calc{\xa + rrtermr}}
-    \set xstart {\calc{\xb + rrhgap}}
-    \rrRail{\xb}{\ry}{\xstart}{\ry}
+    \set xa {\calc{rrmargin + rrah}}
+    \rrArrow{\xa}{\ry}
+    \set xstart {\calc{\xa + rrhgap}}
+    \rrRail{\xa}{\ry}{\xstart}{\ry}
     \rrDraw{\root}{\xstart}{\ry}
     \set xc {\calc{\xstart + \rw}}
     \set xend {\calc{\xc + rrhgap}}
     \rrRail{\xc}{\ry}{\xend}{\ry}
-    \fill{\rrlinecolor}\nostroke\circle{\calc{\xend + rrtermr} \ry \rrtermr}
+    \set xea {\calc{\xend + rrah}}
+    \rrArrow{\xea}{\ry}
   }
 }}
