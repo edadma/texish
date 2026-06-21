@@ -51,6 +51,29 @@ A second paragraph opens with the usual first-line indent.
 Numbered 1.1, 1.2, and so on.
 ```
 
+## Cross-references and a table of contents
+
+`\label` binds a name to the number of the section (or figure or table) it follows; `\ref` prints
+that number later and `\pageref` prints the page it landed on. Forward references work because the
+document is typeset twice over a shared label table — the first pass learns every number and page,
+the second fills them in.
+
+```texish
+\section{Results}
+\label{sec:results}
+...
+
+As shown in section~\ref{sec:results} on page~\pageref{sec:results}, ...
+```
+
+`\tableofcontents` (or `\contents`, which adds an unnumbered heading) lists the sections with their
+page numbers and a dotted leader between, built from the headings that have been recorded:
+
+```texish
+\maketitle
+\contents
+```
+
 ## Lists
 
 Lists nest, and the markers hang to the left of the text so wrapped lines align under the
@@ -99,6 +122,29 @@ The result was first noted by Gauss\footnote{In a letter of 1809.} and later ref
 \vfill                                  % stretchable fill to the page bottom
 \eject                                  % force a page break (\vfill\eject to flush)
 ```
+
+Page breaks are chosen by cost, as in TeX: the break of least badness-plus-penalty wins, so a
+positive `\penalty` steers a break away from a spot that would strand material at the foot of a
+page. On an ordinary page (rigid interline glue) this comes to the same thing as filling each page
+as far as it will go.
+
+## Multiple columns
+
+`\columns{n}{…}` sets its body as *n* balanced columns — typeset once at the column measure, then
+divided into pieces of nearly equal height and stood side by side. An optional `gap:` sets the
+gutter (one em by default).
+
+```texish
+\columns{2}{
+A long passage that the engine pours into two columns of equal height, the way a newspaper or a
+two-column paper reads: down the first column, then back up to the top of the second.
+}
+
+\columns gap:24pt {3}{ ... three columns with a wider gutter ... }
+```
+
+A balanced block is set as a single unit, so it sits within one page rather than flowing across a
+page break.
 
 ## Running heads and feet
 

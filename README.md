@@ -6,11 +6,13 @@ Latin Modern Math through an OpenType `MATH` table. Math covers inline `$…$` a
 `$$…$$` (with `\eqno` equation numbers): atoms and spacing, super/subscripts, fractions (`\frac` and
 the infix `\over`/`\atop`), radicals (including higher roots), stretchy delimiters, accents, big
 operators whose limits stack in display style, and matrices (`\matrix`, `\pmatrix`, `\bmatrix`,
-`\cases`).
+`\cases`). The standard math alphabets (`\mathbf`, `\mathit`, `\mathrm`, `\mathsf`, `\mathtt`,
+`\mathbb`, `\mathfrak`, `\mathcal`) and the phantom/`\smash` spacing boxes round out the math surface.
 
 It breaks paragraphs into lines and lines into pages the way TeX does — Knuth-Plass line breaking,
-Liang hyphenation, legal page breaks with widow/orphan control, footnotes, and glue/kern spacing in
-a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
+Liang hyphenation, author break control (`\discretionary` and leaders for dotted contents lines),
+and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout
+(`\columns`), and glue/kern spacing in a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
 layer over the engine's primitives, with macros, a standard prelude/"format", `\hbox`/`\vbox`,
 `\kern`, `\lower`/`\raise`, the `\TeX` and `\TeXish` logos, units like `pt`/`in`/`em`/`ex`, and
 more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM, a
@@ -21,7 +23,9 @@ It also has a vector-graphics mode (see below) for figures drawn inline in the d
 freeform paths, transforms, and placed type — built on the same rendering pipeline as the text.
 
 A document format (`\use{document}`) supplies the article furniture — title blocks, numbered
-sections, lists, quotations, figures and tables with captions, and footnotes — and bundled packages
+sections, cross-references and a table of contents (`\label`/`\ref`/`\pageref`, `\tableofcontents`,
+resolved by typesetting the document twice over a shared label table), lists, quotations, figures
+and tables with captions, and footnotes — and bundled packages
 add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), text
 sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), and data
 plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes).

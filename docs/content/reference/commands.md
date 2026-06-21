@@ -19,6 +19,17 @@ are engine primitives available in any document.
 | `\footnote{…}` | a numbered footnote |
 | `\figure[htb]{…}` `\table[htb]{…}` `\caption{…}` | floats with numbered captions |
 
+## Cross-references and contents *(format)*
+
+The document is typeset twice over a shared label table, so forward references resolve.
+
+| Command | Effect |
+|---------|--------|
+| `\label{name}` | bind a name to the current section/figure number and its page |
+| `\ref{name}` | print that number (`??` until resolved) |
+| `\pageref{name}` | print the page the label landed on |
+| `\tableofcontents` `\contents` | a contents list built from the section headings |
+
 ## Text and markup
 
 | Command | Effect |
@@ -44,6 +55,9 @@ are engine primitives available in any document.
 | `\left( … \right)` | stretchy delimiters |
 | `\hat` `\vec` `\widehat` | accents |
 | `\text{…}` `\mathcal{…}` | upright / calligraphic |
+| `\mathbf` `\mathit` `\mathrm` `\mathsf` `\mathtt` `\mathbb` `\mathfrak` | math alphabets (bold, italic, roman, sans, mono, blackboard, fraktur) |
+| `\phantom` `\hphantom` `\vphantom` | reserve a box's size without drawing it |
+| `\smash{…}` | draw a box but report zero height and depth |
 | `\longrightarrow` `\rightleftharpoons` | long / equilibrium arrows |
 | `\,` `\:` `\;` `\!` | thin / medium / thick / negative-thin space |
 | `\matrix` `\pmatrix` `\bmatrix` `\cases` | matrices |
@@ -60,7 +74,13 @@ are engine primitives available in any document.
 | `\smallskip` `\medskip` `\bigskip` | named vertical gaps |
 | `\vfil` `\vfill` `\hfil` `\hss` | stretchable fill |
 | `\lower` `\raise` | shift a box vertically |
-| `\penalty` `\nobreak` `\eject` | page-break control |
+| `\setbox` `\box` `\copy` `\wd`/`\ht`/`\dp` | box registers and their dimensions |
+| `\vsplit name to:<dim>` | cut a saved vbox at a page-style breakpoint |
+| `\columns {n} {…}` | set the body as *n* balanced columns (`gap:<dim>` before `{n}` sets the gutter) |
+| `\leaders` `\cleaders` `\xleaders` | fill space by tiling a box |
+| `\dotfill` `\hrulefill` | a dotted / ruled leader (e.g. contents lines) |
+| `\discretionary{pre}{post}{no}` `\softhyphen` | author-controlled break points |
+| `\penalty` `\nobreak` `\eject` | page-break control (breaks are chosen by cost) |
 
 ## Images and graphics
 

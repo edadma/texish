@@ -57,12 +57,52 @@ $\left[ \sum_{i} x_i \right]$
 $\hat{x}$    $\vec{v}$    $\widehat{abc}$
 ```
 
-## Roman text and calligraphic letters
+## Roman text and the math alphabets
 
-`\text` sets upright words inside a formula; `\mathcal` sets calligraphic capitals.
+`\text` sets upright words inside a formula, through the normal text path:
 
 ```texish
-$V = \text{volume}$        $\mathcal{C}$        $\mathcal{P}(S)$
+$V = \text{volume}$        $x \text{ for } x > 0$
+```
+
+The math alphabets remap their letters into the corresponding Unicode Mathematical Alphanumeric
+block, so the same letter can be set in any of the standard math typefaces:
+
+| Command | Alphabet |
+|---------|----------|
+| `\mathbf{…}` | bold |
+| `\mathit{…}` | italic |
+| `\mathrm{…}` | upright roman |
+| `\mathsf{…}` | sans-serif |
+| `\mathtt{…}` | monospace |
+| `\mathbb{…}` | blackboard bold |
+| `\mathfrak{…}` | fraktur |
+| `\mathcal{…}` | calligraphic (script) |
+
+```texish
+$\mathbb{N} \subset \mathbb{Z} \subset \mathbb{R} \subset \mathbb{C}$
+$\mathcal{F} : \mathfrak{A} \to \mathfrak{B}$        $\mathbf{x} \in \mathbb{R}^n$
+```
+
+A character an alphabet has no shape for — a digit in italic or fraktur, say — falls back to its
+ordinary form.
+
+## Phantoms and smash
+
+A *phantom* reserves the size of its argument without printing it; `\smash` does the opposite,
+printing the argument but reporting zero height and depth. They line things up that would not
+otherwise align.
+
+| Command | Effect |
+|---------|--------|
+| `\phantom{…}` | an invisible box the full size of its argument |
+| `\hphantom{…}` | reserve only the width |
+| `\vphantom{…}` | reserve only the height and depth |
+| `\smash{…}` | draw the argument, but report zero height and depth |
+
+```texish
+$a \phantom{=} b$           % a gap exactly as wide as "="
+$\smash{\frac{p}{q}} + r$   % a fraction that no longer spreads the line's spacing
 ```
 
 ## Matrices

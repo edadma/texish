@@ -38,12 +38,14 @@ coherent family across prose, equations, and code.
 
 ## What it does
 
-- **Knuth-Plass line breaking** with Liang hyphenation, legal page breaks, and
-  widow/orphan control, all in a point-space coordinate system.
+- **Knuth-Plass line breaking** with Liang hyphenation, cost-based page breaks with
+  widow/orphan control, and balanced multi-column layout, all in a point-space coordinate system.
 - **TeX math mode** — inline `$…$` and centered display `$$…$$`: fractions, radicals,
-  scripts, stretchy delimiters, accents, big operators, and matrices.
-- **A document format** (`\use{document}`) — title blocks, numbered sections, lists,
-  quotations, figures and tables with captions, and footnotes.
+  scripts, stretchy delimiters, accents, big operators, matrices, the math alphabets
+  (`\mathbf`, `\mathbb`, `\mathfrak`, …), and phantom/`\smash` spacing.
+- **A document format** (`\use{document}`) — title blocks, numbered sections,
+  cross-references and a table of contents, lists, quotations, figures and tables with
+  captions, and footnotes.
 - **Clickable links and images** — `\href`/`\url` become real PDF link annotations;
   `\includegraphics` places PNG and JPEG images.
 - **Vector graphics** — `\picture` draws shapes, paths, and placed type inline, through the
