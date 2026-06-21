@@ -150,8 +150,9 @@ palette colour, and a label adds a legend entry.
 
 The grammar is read verbatim. Rules are `name ::= expression`; an expression supports `\|`
 (alternation), juxtaposition (concatenation), `?`/`*`/`+` (optional / zero-or-more /
-one-or-more), `(…)` grouping, `"…"`/`'…'` terminals, `[…]` character classes, and bare
-names as nonterminals.
+one-or-more), `(…)` grouping, `"…"`/`'…'` terminals (rounded boxes), `[…]` character classes
+(pointed hexagons), and bare names as nonterminals (square boxes). Labels are set in JetBrains
+Mono with terminals in bold.
 
 ## Units
 

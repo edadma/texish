@@ -48,7 +48,8 @@ class RailroadTests extends AnyFreeSpec with Matchers:
     t.pictures.head.displayList should not be empty
   }
 
-  "a character class is accepted as a terminal" in {
+  "a character class lays out (as a hexagon)" in {
     val t = run("\\use{railroad}\\railroad{ digit ::= [0-9]+ }")
     t.pictures should have size 1
+    t.pictures.head.displayList should not be empty
   }

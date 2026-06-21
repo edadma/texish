@@ -26,7 +26,7 @@
 //   x*                 zero or more        (x with a bypass and a return loop)
 //   x+                 one or more         (x with a return loop)
 //   "literal" 'lit'    a terminal          (a rounded "stadium" box)
-//   [a-z] [^x] ...     a character class, drawn as a terminal box, its brackets kept
+//   [a-z] [^x] ...     a character class   (a pointed hexagon, its brackets kept)
 //   name               a nonterminal       (a reference to another rule; a square box)
 //
 // A terminal may contain spaces ("end of file") — the lexer rejoins words across an open
@@ -42,7 +42,7 @@
 \set rrhgap {15}            // length of a connecting rail between items in a row
 \set rrvgap {11}            // vertical gap between stacked alternatives of a choice
 \set rrfork {18}            // lead-in / lead-out rail on each side of a choice fork
-\set rrloop {16}            // vertical clearance of an optional / repetition bypass or loop
+\set rrloop {11}            // vertical clearance of an optional / repetition bypass or loop
 \set rrloopx {12}           // how far a repeat loop's sides bow out past the box (<= rrfork)
 \set rrcr {6}               // radius of the rounded rail corners (the "railroad" curves)
 \set rrah {7}               // length of the entry / exit arrowheads
@@ -51,6 +51,8 @@
 \set rrlinecolor {black}    // ink for the rails and the box outlines
 \set rrtermfill {#eaf2ff}   // fill of a terminal (rounded) box
 \set rrnontermfill {#fff6df} // fill of a nonterminal (square) box
+\set rrccfill {#c9f0ee}     // fill of a character-class (hexagon) box
+\set rrccpt {6}             // depth of a character class's pointed ends
 
 // ================================================================================
 // Lexer — turn the raw grammar text into a token stream stored in maps:
@@ -152,11 +154,11 @@
   \rrEmit{\rrLacc}{tm}
   \rrLexChunk{\rrLrem}}
 
-// A character class: read to ], emit with its brackets kept as a terminal, lex on.
+// A character class: read to ], emit (brackets kept) as a character class, lex on.
 \def rrReadBracket rest {
   \global\set rrLacc {}
   \rrScanTo{\rest}{]}
-  \rrEmit{\cat{[}{\cat{\rrLacc}{]}}}{tm}
+  \rrEmit{\cat{[}{\cat{\rrLacc}{]}}}{cc}
   \rrLexChunk{\rrLrem}}
 
 // An identifier (a nonterminal): read up to a stop character, emit, lex on.
@@ -289,7 +291,8 @@
   \else
     \global\set rrId {\calc{rrId + 1}}\set lid {\rrId}
     \if {\= {\rrTt}{tm}}\global\mapset rrKind {\lid}{T}
-    \else\global\mapset rrKind {\lid}{N}\fi
+    \else\if {\= {\rrTt}{cc}}\global\mapset rrKind {\lid}{X}
+    \else\global\mapset rrKind {\lid}{N}\fi\fi
     \global\mapset rrLabel {\lid}{\rrTk}
     \rrNext
     \global\set rrRet {\lid}
@@ -310,22 +313,26 @@
   \set k {\mapget rrKind {\nid}}
   \if {\= {\k}{T}}\rrMeasLeaf{\nid}{1}
   \else\if {\= {\k}{N}}\rrMeasLeaf{\nid}{0}
+  \else\if {\= {\k}{X}}\rrMeasLeaf{\nid}{2}
   \else\if {\= {\k}{S}}\rrMeasSeq{\nid}
   \else\if {\= {\k}{C}}\rrMeasChoice{\nid}
-  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi
+  \else\rrMeasWrap{\nid}{\k}\fi\fi\fi\fi\fi
 }}
 
-// A box sizes to its label, with the same width whether terminal or nonterminal: the label
-// plus rrpadx on each side. A terminal's rounded caps live inside that padding (rrpadx is at
-// least the cap radius), so a stadium tracks its content exactly as the rectangle does.
-\def rrMeasLeaf id term {{
+// A box sizes to its label, the label plus rrpadx on each side, whatever its shape: a square
+// nonterminal (shape 0), a rounded terminal whose caps fit inside the padding (shape 1), or a
+// pointed character-class hexagon, which adds its point depth on each side (shape 2). So every
+// box tracks its content the same way.
+\def rrMeasLeaf id shape {{
   \set nid {\id}
   \set lbl {\mapget rrLabel {\nid}}
   \global\set rrwt {regular}
-  \if {\= {\term}{1}}\global\set rrwt {bold}\fi
+  \if {\> {\shape}{0}}\global\set rrwt {bold}\fi
   \setbox rrbox \hbox{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
   \set tw {\wd rrbox}
-  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx}}
+  \global\set rrextra {0}
+  \if {\= {\shape}{2}}\global\set rrextra {\calc{2 * rrccpt}}\fi
+  \global\mapset rrW {\nid}{\calc{\tw + 2 * rrpadx + rrextra}}
   \global\mapset rrUp {\nid}{\calc{rrboxh / 2}}
   \global\mapset rrDn {\nid}{\calc{rrboxh / 2}}
 }}
@@ -438,22 +445,24 @@
   \set k {\mapget rrKind {\nid}}
   \if {\= {\k}{T}}\rrDrawLeaf{\nid}{\bx}{\by}{1}
   \else\if {\= {\k}{N}}\rrDrawLeaf{\nid}{\bx}{\by}{0}
+  \else\if {\= {\k}{X}}\rrDrawLeaf{\nid}{\bx}{\by}{2}
   \else\if {\= {\k}{S}}\rrDrawSeq{\nid}{\bx}{\by}
   \else\if {\= {\k}{C}}\rrDrawChoice{\nid}{\bx}{\by}
   \else\if {\= {\k}{Q}}\rrDrawOpt{\nid}{\bx}{\by}
   \else\if {\= {\k}{R}}\rrDrawStar{\nid}{\bx}{\by}
-  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi
+  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi
 }}
 
-// A terminal is a rounded stadium, a nonterminal a rectangle; the label is centred on it.
-\def rrDrawLeaf id x y term {{
+// A leaf box, the label centred on it: a rounded stadium for a terminal (shape 1), a pointed
+// hexagon for a character class (shape 2), or a plain rectangle for a nonterminal (shape 0).
+\def rrDrawLeaf id x y shape {{
   \set nid {\id}\set bx {\x}\set by {\y}
   \set bw {\mapget rrW {\nid}}
   \set lbl {\mapget rrLabel {\nid}}
   \global\set rrwt {regular}
-  \if {\= {\term}{1}}\global\set rrwt {bold}\fi
+  \if {\> {\shape}{0}}\global\set rrwt {bold}\fi
   \set top {\calc{\by + rrboxh / 2}}\set bot {\calc{\by - rrboxh / 2}}
-  \if {\= {\term}{1}}
+  \if {\= {\shape}{1}}
     \set r {\calc{rrboxh / 2}}
     \set xl {\calc{\bx + \r}}\set xr {\calc{\bx + \bw - \r}}
     // fill the whole stadium: the rectangular middle, then each rounded cap. A filled
@@ -465,10 +474,15 @@
     \stroke{\rrlinecolor}\linewidth{1pt}\nofill
     \line{\xl \top \xr \top}\line{\xl \bot \xr \bot}
     \arc{\xl \by \r 90 270}\arc{\xr \by \r 270 90}
+  \else\if {\= {\shape}{2}}
+    // a character class: a hexagon with pointed left/right ends, where the rail meets it.
+    \set d {\rrccpt}
+    \fill{\rrccfill}\stroke{\rrlinecolor}\linewidth{1pt}
+    \polygon{\bx \by  \calc{\bx + \d} \top  \calc{\bx + \bw - \d} \top  \calc{\bx + \bw} \by  \calc{\bx + \bw - \d} \bot  \calc{\bx + \d} \bot}
   \else
     \fill{\rrnontermfill}\stroke{\rrlinecolor}\linewidth{1pt}
     \rect{\bx \bot \bw \rrboxh}
-  \fi
+  \fi\fi
   \at anchor:center {\calc{\bx + \bw / 2} \by}{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
 }}
 
