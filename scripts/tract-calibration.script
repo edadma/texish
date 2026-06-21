@@ -20,11 +20,10 @@
 \set hoffset {0}\set voffset {0}\set hsize {612}\set vsize {792}\set raggedbottom {1}
 
 \def lbl t {\font lmroman 30 bold \t}
-\def tag t {\font lmroman 11 regular \t}
 
 // One side: dashed fold guides (x=204, x=408) and cut guide (y=396), then the three column labels in
 // both the upper and the lower tract.
-\def side a b c k {
+\def side a b c {
   \noindent\picture width:612 height:792 {
     \nofill\stroke{#b0b0b0}\linewidth{0.5}\dash{3 3}
     \line{204 0 204 792}\line{408 0 408 792}\line{0 396 612 396}
@@ -35,9 +34,8 @@
     \at anchor:center {102 204}{\lbl{\a}}
     \at anchor:center {306 204}{\lbl{\b}}
     \at anchor:center {510 204}{\lbl{\c}}
-    \at anchor:northwest {6 786}{\tag{\k}}
   }
 }
 
-\side{EN 1}{EN 2}{EN 3}{FRONT - language A}\newpage
-\side{ES 1}{ES 2}{ES 3}{BACK - language B (same column order)}
+\side{EN 1}{EN 2}{EN 3}\newpage
+\side{ES 1}{ES 2}{ES 3}
