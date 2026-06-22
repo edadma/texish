@@ -1872,6 +1872,9 @@ object BeginPrimitive extends Primitive:
     if proc.handler.rawEnvironment(name) then
       proc.handler.rawEnvironmentBody(name, proc.readRawUntilEnd(name, pos))
       return
+    // A math-array environment (matrix family, \cases, aligned/split) captures its body raw and builds an array
+    // box directly, the same as the brace matrix primitives — it runs no begin/end code.
+    if tryMathArrayEnv(proc, name, pos) then return
     envCode(proc, name) match
       case Some((params, begin, _)) =>
         val expanded = proc.substituteNamedParams(begin, proc.readMacroArgs(params, pos))

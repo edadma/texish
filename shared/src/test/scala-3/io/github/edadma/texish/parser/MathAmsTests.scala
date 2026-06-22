@@ -1,6 +1,17 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, FractionBox, HeadlessTypesetter, MathFont, MathMode, MathStyle}
+import io.github.edadma.texish.{
+  Box,
+  ColumnAlign,
+  FractionBox,
+  GlyphBox,
+  HBox,
+  HeadlessTypesetter,
+  MathFont,
+  MathMode,
+  MathStyle,
+  MatrixBox,
+}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -88,4 +99,65 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
       val (_, p) = fixture()
       p.process("\\binom{n}{k}")
     }
+  }
+
+  "a right-aligned column sits flush right, and a zero-gap seam butts the next column against it" in {
+    val rec = new io.github.edadma.texish.RecordingGlyphTypesetter
+    def glyph(c: Char): Box = new GlyphBox(rec, c.toInt, rec.currentFont, rec.currentColor)
+    // column 0 is right-aligned: a narrow cell (6 wide) over a wide one (12), so the column is 12 wide; column 1
+    // is left-aligned and the seam between them is closed up to zero.
+    val rows = Vector(
+      Vector(glyph('a'), glyph('p')),
+      Vector(HBox(Vector(glyph('b'), glyph('c'))), glyph('q')),
+    )
+    val m = new MatrixBox(rows, axisHeight = 3.5, rowSep = 0.0, Vector(ColumnAlign.Right, ColumnAlign.Left), Vector(0.0))
+    rec.draw(m)
+    def xOf(c: Char): Double = rec.drawn.collectFirst { case (g, x, _) if g == c.toInt => x }.get
+
+    xOf('a') shouldBe (6.0 +- 1e-9)  // narrow cell pushed flush right under the 12-wide column
+    xOf('b') shouldBe (0.0 +- 1e-9)  // the wide cell fills its column
+    xOf('p') shouldBe (12.0 +- 1e-9) // column 1 begins right at column 0's right edge — no inter-column gap
+  }
+
+  "makeArray lays an aligned block out right-then-left with a wide gap between pairs" in {
+    val t  = new HeadlessTypesetter
+    val bf = base(t)
+    val m  = new MathMode(t, bf, MathStyle.Display)
+    val cell = part(t, bf, MathStyle.Text, 'x')
+    // two equations, each a right column and a left column: the box is wider than four bare cells because a wide
+    // gap opens between the pairs, while the within-pair seam adds nothing.
+    val rows  = Vector(Vector(cell, cell, cell, cell))
+    val block = m.makeArray(rows, io.github.edadma.texish.MathArrayAlign.Aligned)
+    block.width should be > (4 * cell.width)
+  }
+
+  "the over/under, substack, boxed and operatorname primitives parse inside math" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\overset{*}{=} \\underset{n}{\\min}$")
+    noException should be thrownBy {
+      val (_, p) = fixture()
+      p.process("$\\sum_{\\substack{0 < i \\\\ i < n}} i + \\boxed{x} + \\operatorname{argmax}$")
+    }
+  }
+
+  "the aligned-equation and matrix array environments parse inside math" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\begin{aligned} a &= b \\\\ c &= d \\end{aligned}$")
+    noException should be thrownBy {
+      val (_, p) = fixture()
+      p.process("$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$")
+    }
+    noException should be thrownBy {
+      val (_, p) = fixture()
+      p.process("$\\begin{smallmatrix} a & b \\\\ c & d \\end{smallmatrix}$")
+    }
+    noException should be thrownBy {
+      val (_, p) = fixture()
+      p.process("$\\begin{cases} a & x > 0 \\\\ b & x < 0 \\end{cases}$")
+    }
+  }
+
+  "an array environment outside math is an error" in {
+    val (_, proc) = fixture()
+    the[ParserException] thrownBy proc.process("\\begin{pmatrix} a & b \\end{pmatrix}")
   }
