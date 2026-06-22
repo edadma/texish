@@ -26,6 +26,43 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // The amsmath fraction and binomial family - 2 body args each, the numerator and denominator. They differ
+  // from \frac only in whether they force a style and whether they draw a rule: \dfrac sets the fraction in
+  // display style (taller, full-size parts) and \tfrac in text style, regardless of where they sit, so a
+  // fraction in running text can be made big or a fraction in a display kept small. \binom stacks the parts
+  // with no rule inside parentheses (a binomial coefficient), and \dbinom/\tbinom force its style likewise.
+  // `force` is Some(true) for a display-forced form, Some(false) for text-forced, None to inherit the current
+  // style; `bar` draws the fraction rule; an optional fence pair wraps the result.
+  def fractionPrimitive(name: String, force: Option[Boolean], bar: Boolean, left: Option[Int], right: Option[Int]): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val style = force match
+                case Some(true)  => MathStyle.Display
+                case Some(false) => MathStyle.Text
+                case None        => parent.style
+              val numTokens   = proc.readArgument(pos)
+              val denomTokens = proc.readArgument(pos)
+              val numBox      = handler.mathSubFormula(proc, style.num, numTokens)
+              val denomBox    = handler.mathSubFormula(proc, style.denom, denomTokens)
+
+              if (numBox ne null) && (denomBox ne null) then
+                val frac = parent.makeFractionAt(numBox, denomBox, style.isDisplay, bar)
+                val box  = if left.isEmpty && right.isEmpty then frac else parent.makeDelimited(left, frac, right)
+                parent.addNode(MathAtom(MathClass.Inner, box))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  fractionPrimitive("dfrac", Some(true), bar = true, None, None)
+  fractionPrimitive("tfrac", Some(false), bar = true, None, None)
+  fractionPrimitive("binom", None, bar = false, Some(0x28), Some(0x29))
+  fractionPrimitive("dbinom", Some(true), bar = false, Some(0x28), Some(0x29))
+  fractionPrimitive("tbinom", Some(false), bar = false, Some(0x28), Some(0x29))
+
   // sqrt - an optional [degree] then 1 body arg: a square root, or a higher root when the degree is given
   // (\sqrt[3]{x} is a cube root). Math-mode only; the radicand is typeset by a nested math mode in the cramped
   // current style and the degree, if any, in scriptscript; a surd glyph tall enough to span the radicand is
@@ -270,6 +307,9 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("pmatrix", matrixPrimitive(Some(0x28), Some(0x29), leftAlign = false))
   proc.registerPrimitive("bmatrix", matrixPrimitive(Some(0x5B), Some(0x5D), leftAlign = false))
   proc.registerPrimitive("cases", matrixPrimitive(Some(0x7B), None, leftAlign = true))
+  proc.registerPrimitive("vmatrix", matrixPrimitive(Some(0x7C), Some(0x7C), leftAlign = false))   // | … |
+  proc.registerPrimitive("Vmatrix", matrixPrimitive(Some(0x2016), Some(0x2016), leftAlign = false)) // ‖ … ‖
+  proc.registerPrimitive("Bmatrix", matrixPrimitive(Some(0x7B), Some(0x7D), leftAlign = false))   // { … }
 
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(

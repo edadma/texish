@@ -103,6 +103,15 @@ class MathMode(
   def makeFraction(numerator: Box, denominator: Box): Box =
     new FractionBox(t, numerator, denominator, mathFont.fractionParams(style.isDisplay))
 
+  /** Build a fraction-like stack at an explicitly chosen display-ness, rather than inheriting it from this
+    * list's style: `\dfrac`/`\tfrac` force the display (or text) gaps and shifts on, regardless of where the
+    * fraction sits, and `\binom` stacks the operands with no rule (the parentheses are added by the caller).
+    * The numerator and denominator are expected to have been set at the matching `num`/`denom` styles for the
+    * forced style. The font for the bar thickness, axis and shifts is this list's own, as in TeX. */
+  def makeFractionAt(numerator: Box, denominator: Box, display: Boolean, bar: Boolean): Box =
+    val params = mathFont.fractionParams(display)
+    new FractionBox(t, numerator, denominator, if bar then params else params.copy(ruleThickness = 0.0))
+
   /** Build a radical (`\sqrt`) over an already-laid-out radicand, using this list's font and style. The
     * radicand is expected to have been set in [[style]]`.cramp`. The surd glyph is chosen tall enough to
     * span the radicand plus the bar and its clearance. An optional `degree` (the index of a higher root,
