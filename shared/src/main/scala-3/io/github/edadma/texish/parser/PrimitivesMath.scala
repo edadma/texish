@@ -208,6 +208,23 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
       },
     )
 
+  // overline - 1 body arg: a rule across the full width of the argument, the bar of \overline{x + y}. Math-mode
+  // only; the content is typeset by a nested math mode in the cramped current style (nothing rises above the
+  // bar) and a default-thickness rule is set over it with a small gap. Enters as an Ord atom. Its companion
+  // \underline (which also works in text) lives with the other box-wrapping primitives.
+  proc.registerPrimitive(
+    "overline",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val inner = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+
+            if inner ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeBar(inner, over = true)))
+          case _ => handler.error("\\overline is only allowed in math mode", pos)
+    },
+  )
+
   // text - 1 body arg: a run of ordinary text set inside a formula. Math-mode only; the argument is typeset
   // through the normal text path (the string seam, in the surrounding body font) into a horizontal box, which
   // enters the math list as an Ord atom. This is how words appear in a formula upright — \text{E}[X], the

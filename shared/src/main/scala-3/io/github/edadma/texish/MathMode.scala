@@ -142,6 +142,14 @@ class MathMode(
 
     new AccentBox(nucleus, accent, shift, nucleusAttach - accentAttach)
 
+  /** Build an `\overline` (`over` = true) or `\underline` (`over` = false): a rule across the full width of an
+    * already-laid-out sub-formula, set off from it by a gap. The rule is the font's default (fraction) rule
+    * thickness and the gap is three times that, as in plain TeX's `\overline`/`\underline`. The radicand of an
+    * overline is expected to have been set cramped (nothing rises above the bar). */
+  def makeBar(inner: Box, over: Boolean): Box =
+    val thickness = mathFont.fractionParams(style.isDisplay).ruleThickness
+    new MathBarBox(t, inner, gap = 3 * thickness, thickness, over)
+
   /** The style a matrix's cells are set in: a matrix sets its entries in text (or smaller) style, never the
     * enlarged display style, so a matrix inside a display does not blow its entries up. */
   def cellStyle: MathStyle = if style.isDisplay then MathStyle.Text else style
