@@ -189,3 +189,75 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
     rel should be > bin
     forcedOrd shouldBe (ord +- 0.001)
   }
+
+  // Tokenize with `&` active (as the processor does), so a matrix body splits on the column separator.
+  private def tokenize(s: String): Vector[Token] =
+    val tz   = Tokenizer(s, Set('~', '&'))
+    val out  = Vector.newBuilder[Token]
+    var done = false
+    while !done do
+      tz.next() match
+        case Token.EOF(_) => done = true
+        case other        => out += other
+    out.result()
+
+  "an array environment composes inside \\left…\\right" in {
+    // the headline of the token-level body collector: stretchy delimiters around a \begin{matrix}, which the
+    // earlier raw-capture implementation could not do (\left pre-collects its body into tokens)
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\left(\\begin{matrix} a & b \\\\ c & d \\end{matrix}\\right)$")
+  }
+
+  "an array environment reached through a macro expands" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("\\def m {\\begin{aligned} a &= b \\\\ c &= d \\end{aligned}}$\\m$")
+  }
+
+  "a nested environment inside a cell does not split the outer array" in {
+    // the inner matrix's own & and \\ must stay inside the one cell that holds it, so the outer body is still a
+    // 2×2 array: row 0 = [ a , <a whole matrix> ], row 1 = [ b , c ]
+    val rows = splitMatrixBody(tokenize("a & \\begin{matrix} x & y \\end{matrix} \\\\ b & c"))
+    rows should have length 2
+    rows(0) should have length 2
+    rows(1) should have length 2
+  }
+
+  "a nested matrix inside an aligned cell parses end to end" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy
+      proc.process("$\\begin{aligned} a &= \\begin{matrix} 1 & 2 \\\\ 3 & 4 \\end{matrix} \\\\ b &= c \\end{aligned}$")
+  }
+
+  "\\overline raises the top by a rule and gap; \\underline lowers the bottom; each draws one rule" in {
+    val t     = new HeadlessTypesetter
+    val bf    = base(t)
+    val m     = new MathMode(t, bf, MathStyle.Text)
+    val inner = part(t, bf, MathStyle.Text, 'x')
+
+    val over  = m.makeBar(inner, over = true)
+    val under = m.makeBar(inner, over = false)
+
+    over.ascent should be > inner.ascent          // the bar and its gap sit above the content
+    over.descent shouldBe (inner.descent +- 1e-9) // the bottom is unchanged
+    under.descent should be > inner.descent       // the bar and its gap sit below the content
+    under.ascent shouldBe (inner.ascent +- 1e-9)  // the top is unchanged
+    over.width shouldBe (inner.width +- 1e-9)     // the rule spans exactly the content's width
+
+    val rec = new io.github.edadma.texish.RuleRecordingTypesetter
+    rec.draw(over)
+    rec.rules shouldBe 1
+  }
+
+  "\\overline and \\underline parse inside math" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("$\\overline{x + y} + \\underline{a + b}$")
+  }
+
+  "\\underline still wraps text outside math, and \\overline is math-only" in {
+    val (_, proc) = fixture()
+    noException should be thrownBy proc.process("\\underline{hello}") // the text path is preserved
+    the[ParserException] thrownBy {
+      val (_, p) = fixture()
+      p.process("\\overline{x}")
+    }
+  }

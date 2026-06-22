@@ -74,6 +74,15 @@ $$\arctan x = \int_0^x \frac{dt}{1 + t^2}
 Here \texttt{\\bmod} is a true binary operator (a medium space on each side),
 while \texttt{\\pmod} parenthesises the modulus at the end of a congruence.
 
+A rule may be drawn across a whole sub-formula with \texttt{\\overline} or
+\texttt{\\underline} (distinct from the short \texttt{\\bar} accent):
+
+$$\overline{a + b} = \overline{a} + \overline{b}
+  \qquad
+  \underline{x + y}
+  \qquad
+  \overline{\overline{z}}.$$
+
 The \texttt{\\overset} and \texttt{\\underset} commands stack an annotation on a
 base, \texttt{\\substack} stacks the lines of a many-line subscript, and
 \texttt{\\boxed} rings a result:

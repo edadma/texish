@@ -1273,18 +1273,25 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
-  // underline - 1 body arg (wraps content in underline)
+  // underline - 1 body arg. In math mode it draws a full-width rule under a math sub-formula (the companion of
+  // \overline); in text it wraps the content in an underlined hbox. The rule case keeps the content's class
+  // spacing by entering as an Ord atom.
   proc.registerPrimitive(
     "underline",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        // Create an hbox to capture the content
-        handler.flushPendingSpace()
-        t.hbox(null)
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        val box = t.mode.exit
-        if box ne null then handler.addBox(new UnderlineBox(t, box))
+        t.mode match
+          case parent: MathMode =>
+            val inner = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+            if inner ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeBar(inner, over = false)))
+          case _ =>
+            val body = proc.readArgument(pos)
+            // Create an hbox to capture the content
+            handler.flushPendingSpace()
+            t.hbox(null)
+            proc.processTokenList(body) // scoping happens automatically from { } tokens
+            val box = t.mode.exit
+            if box ne null then handler.addBox(new UnderlineBox(t, box))
     },
   )
 

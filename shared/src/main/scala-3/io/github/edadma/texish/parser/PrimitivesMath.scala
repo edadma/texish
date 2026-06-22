@@ -208,6 +208,23 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
       },
     )
 
+  // overline - 1 body arg: a rule across the full width of the argument, the bar of \overline{x + y}. Math-mode
+  // only; the content is typeset by a nested math mode in the cramped current style (nothing rises above the
+  // bar) and a default-thickness rule is set over it with a small gap. Enters as an Ord atom. Its companion
+  // \underline (which also works in text) lives with the other box-wrapping primitives.
+  proc.registerPrimitive(
+    "overline",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val inner = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+
+            if inner ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeBar(inner, over = true)))
+          case _ => handler.error("\\overline is only allowed in math mode", pos)
+    },
+  )
+
   // text - 1 body arg: a run of ordinary text set inside a formula. Math-mode only; the argument is typeset
   // through the normal text path (the string seam, in the surrounding body font) into a horizontal box, which
   // enters the math list as an Ord atom. This is how words appear in a formula upright — \text{E}[X], the
@@ -554,6 +571,8 @@ private[parser] def splitMatrixBody(body: Vector[Token]): Vector[Vector[Vector[T
     tok match
       case Token.BeginGroup(_)                     => depth += 1; cell += tok
       case Token.EndGroup(_)                       => depth -= 1; cell += tok
+      case Token.ControlSeq("begin", _)            => depth += 1; cell += tok // a nested environment's cells
+      case Token.ControlSeq("end", _)              => depth -= 1; cell += tok // are not the array's own cells
       case Token.Active('&', _) if depth == 0      => endCell()
       case Token.ControlSeq("cr", _) if depth == 0 => endRow()
       case Token.ControlSeq("\\", _) if depth == 0 => endRow()
@@ -593,33 +612,19 @@ private[parser] val mathArrayEnvs: Map[String, MathArrayEnv] = Map(
   "split"       -> MathArrayEnv(MathArrayAlign.Aligned, None, None, tight = false),
 )
 
-// Drain a string through the tokenizer into a token vector, using the processor's active characters so the
-// column separator `&` tokenizes as an active character (and `\\` as a control sequence) exactly as it does in
-// live input. Used to re-tokenize an array environment's raw body before splitting it into cells.
-private def tokenizeAll(input: String, activeChars: Set[Char]): Vector[Token] =
-  val tz  = Tokenizer(input, activeChars)
-  val out = Vector.newBuilder[Token]
-  var done = false
-  while !done do
-    tz.next() match
-      case Token.EOF(_) => done = true
-      case other        => out += other
-  out.result()
-
 /** Handle a `\begin{name}` whose name is a math-array environment, returning true when it did. The body up to
-  * the matching `\end{name}` is captured raw from the input (so the cells keep their `&`/`\\` structure), then
-  * re-tokenized, split into cells, and each cell typeset by a nested math mode at the array's cell style — the
-  * same path the brace matrix primitives take. The finished array, fenced when the environment carries
-  * delimiters, enters the current math list as an Inner atom. An array environment outside math is an error.
-  * Like other raw-capturing environments it must read from live input; a nested matrix should use a brace form
-  * (`\pmatrix{…}`) inside a cell rather than another `\begin{…}`. */
+  * the matching `\end{name}` is collected at the token level (so the cells keep their `&`/`\\` structure and the
+  * environment composes inside `\left…\right`, inside macros, and inside another array's cell), split into
+  * cells, and each cell typeset by a nested math mode at the array's cell style — the same path the brace matrix
+  * primitives take. The finished array, fenced when the environment carries delimiters, enters the current math
+  * list as an Inner atom. An array environment outside math is an error. */
 private[parser] def tryMathArrayEnv(proc: Processor, name: String, pos: CharReader): Boolean =
   (proc.handler, mathArrayEnvs.get(name)) match
     case (_, None) => false
     case (handler: TypesetterHandler, Some(cfg)) =>
       handler.typesetter.mode match
         case parent: MathMode =>
-          val body      = tokenizeAll(proc.readRawUntilEnd(name, pos), proc.activeChars)
+          val body      = proc.collectEnvBody(name, pos)
           val cellStyle = if cfg.tight then MathStyle(MathSize.Script, parent.style.cramped) else parent.cellStyle
           val rows = splitMatrixBody(body).map(_.map { cellTokens =>
             handler.mathSubFormula(proc, cellStyle, cellTokens) match
