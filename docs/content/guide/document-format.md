@@ -53,10 +53,10 @@ Numbered 1.1, 1.2, and so on.
 
 ## Cross-references and a table of contents
 
-`\label` binds a name to the number of the section (or figure or table) it follows; `\ref` prints
-that number later and `\pageref` prints the page it landed on. Forward references work because the
-document is typeset twice over a shared label table — the first pass learns every number and page,
-the second fills them in.
+`\label` binds a name to the section (or figure or table) it follows — its number, its kind, its
+title and its page. `\ref` prints that number later and `\pageref` prints the page it landed on.
+Forward references work because the document is typeset twice over a shared label table — the first
+pass learns every number and page, the second fills them in.
 
 ```texish
 \section{Results}
@@ -66,12 +66,23 @@ the second fills them in.
 As shown in section~\ref{sec:results} on page~\pageref{sec:results}, ...
 ```
 
+Three more references read the other things `\label` recorded: `\autoref` prints the number with
+its kind word in front (`Section 3`, `Figure 1`), `\nameref` prints the title, and `\eqref` prints
+the number in parentheses for an equation.
+
+```texish
+\autoref{sec:results} confirms the bound; see also ``\nameref{sec:results}''.
+```
+
 `\tableofcontents` (or `\contents`, which adds an unnumbered heading) lists the sections with their
-page numbers and a dotted leader between, built from the headings that have been recorded:
+page numbers and a dotted leader between, built from the headings that have been recorded.
+`\listoffigures` and `\listoftables` do the same for captioned floats — each `\caption` files itself
+into the matching list — and `\listoffigs` / `\listoftabs` add an unnumbered heading above them:
 
 ```texish
 \maketitle
 \contents
+\listoffigs
 ```
 
 ## Lists
@@ -145,6 +156,48 @@ two-column paper reads: down the first column, then back up to the top of the se
 
 A balanced block is set as a single unit, so it sits within one page rather than flowing across a
 page break.
+
+## Boxes, minipages, and lengths
+
+`\mbox` keeps a phrase on one line; `\makebox` gives a box an explicit width, with its content
+flush left, centred, flush right, or stretched (`l` / `c` / `r` / `s`); and `\parbox` sets a whole
+paragraph into a box of a chosen width, so two columns of text can sit side by side. The width may
+be a dimension or a fraction of `\linewidth`.
+
+```texish
+\mbox{Newton--Raphson}                       % never breaks across a line
+\makebox[0.5\linewidth][r]{flush right}
+\parbox{0.3\linewidth}{A paragraph set in a narrow box.}
+```
+
+`minipage` is the environment form of `\parbox`, which reads better for more than a few words. The
+optional `[t]` / `[c]` / `[b]` aligns the box on the surrounding baseline by its first line, centre,
+or last line:
+
+```texish
+\begin{minipage}[t]{0.45\linewidth}
+The left column of a two-column row.
+\end{minipage}\hskip 24pt \begin{minipage}[t]{0.45\linewidth}
+The right column, top-aligned with the left.
+\end{minipage}
+```
+
+A *length* is a dimension variable. `\newlength` declares one, `\setlength` assigns it, and
+`\addtolength` adjusts it; the result is read back as `\name` and drives real spacing:
+
+```texish
+\newlength{gutter}
+\setlength{gutter}{20pt}
+\addtolength{gutter}{1em}
+\hskip\gutter
+```
+
+`\ifthenelse{test}{then}{else}` chooses a branch on a boolean test, and `\equal{a}{b}` is true when
+the two expand to the same string; numeric tests use the comparison operators (`\>`, `\<`, `\=`).
+
+```texish
+\ifthenelse{\> {\the\pageno} {1}}{not the first page}{the first page}
+```
 
 ## Running heads and feet
 

@@ -25,10 +25,14 @@ The document is typeset twice over a shared label table, so forward references r
 
 | Command | Effect |
 |---------|--------|
-| `\label{name}` | bind a name to the current section/figure number and its page |
+| `\label{name}` | bind a name to the current section/figure number, kind, title and page |
 | `\ref{name}` | print that number (`??` until resolved) |
 | `\pageref{name}` | print the page the label landed on |
+| `\eqref{name}` | print the number in parentheses, as for an equation |
+| `\autoref{name}` | print the number with its kind in front (e.g. `Section 3`, `Figure 1`) |
+| `\nameref{name}` | print the title of the labelled section or caption |
 | `\tableofcontents` `\contents` | a contents list built from the section headings |
+| `\listoffigures` `\listoftables` | lists of captioned figures / tables (`\listoffigs` `\listoftabs` add the heading) |
 
 ## Text and markup
 
@@ -50,24 +54,46 @@ The document is typeset twice over a shared label table, so forward references r
 | `$…$` `$$…$$` | inline and display math |
 | `^` `_` | super/subscript |
 | `\frac{a}{b}` `a \over b` | fractions |
+| `\dfrac{a}{b}` `\tfrac{a}{b}` | forced display-style / text-style fractions |
+| `\binom{n}{k}` `\dbinom` `\tbinom` | binomial coefficients |
 | `\sqrt{x}` `\sqrt[3]{x}` | roots |
 | `\sum` `\int` `\prod` `\limits` | big operators |
+| `\operatorname{…}` | an upright custom operator (like `\sin`, with operator spacing) |
 | `\left( … \right)` | stretchy delimiters |
 | `\hat` `\vec` `\widehat` | accents |
+| `\overset{a}{b}` `\underset{a}{b}` `\substack{a \\ b}` | stack material above / below / in a script pile |
+| `\boxed{…}` | a framed formula |
 | `\text{…}` `\mathcal{…}` | upright / calligraphic |
 | `\mathbf` `\mathit` `\mathrm` `\mathsf` `\mathtt` `\mathbb` `\mathfrak` | math alphabets (bold, italic, roman, sans, mono, blackboard, fraktur) |
 | `\phantom` `\hphantom` `\vphantom` | reserve a box's size without drawing it |
 | `\smash{…}` | draw a box but report zero height and depth |
 | `\longrightarrow` `\rightleftharpoons` | long / equilibrium arrows |
 | `\,` `\:` `\;` `\!` | thin / medium / thick / negative-thin space |
-| `\matrix` `\pmatrix` `\bmatrix` `\cases` | matrices |
+| `\matrix` `\pmatrix` `\bmatrix` `\vmatrix` `\Vmatrix` `\Bmatrix` `\smallmatrix` `\cases` | matrices |
+| `\begin{aligned}…\end{aligned}` | equations aligned on their `&` relations (`\\` between rows) |
 | `\eqno(…)` | display equation number |
+
+## More mathematics *(`\use{math}`)*
+
+The amsmath operator and connective names, on top of the built-in math above.
+
+| Command | Effect |
+|---------|--------|
+| `\arcsin` `\arccos` `\arctan` `\Pr` | further upright operators |
+| `\bmod` `\pmod{m}` `\mod{m}` `\pod{m}` | modular-arithmetic forms |
+| `\implies` `\impliedby` `\iff` | spaced implication arrows |
+| `\dots` | low ellipsis (alias for `\ldots`) |
 
 ## Boxes, spacing, and pages
 
 | Command | Effect |
 |---------|--------|
 | `\hbox` `\vbox` `\vtop` | explicit boxes |
+| `\mbox{…}` | an unbreakable horizontal box of its natural width |
+| `\makebox[width][l\|c\|r\|s]{…}` | a box of a set width, content aligned (width = a dimension or a `\linewidth` factor) |
+| `\parbox[t\|c\|b]{width}{…}` | set a paragraph in a box of the given width, aligned on the baseline |
+| `\begin{minipage}[t\|c\|b]{width}…\end{minipage}` | the environment form of `\parbox` *(format)* |
+| `\newlength{name}` `\setlength{name}{d}` `\addtolength{name}{d}` | declare / set / adjust a length (a dimension variable, read back as `\name`) |
 | `\centerline` `\leftline` `\rightline` `\centering` | alignment |
 | `\rlap` `\llap` | zero-width overlap boxes |
 | `\kern` `\hskip` `\vskip` | rigid / glue spacing |
@@ -132,6 +158,7 @@ palette colour, and a label adds a legend entry.
 | `\newenvironment name {begin}{end}` | define a `\begin`/`\end` environment |
 | `\let` `\global` `\gdef` | aliasing and global definitions |
 | `\if` `\ifx` `\else` `\fi` | conditionals |
+| `\ifthenelse{test}{then}{else}` `\equal{a}{b}` | LaTeX-style branch on a boolean test / string comparison *(format)* |
 | `\calc{…}` `\+ \- \* \/` | arithmetic |
 | `\round{value}{places}` | round a number to a fixed number of decimals |
 | `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |

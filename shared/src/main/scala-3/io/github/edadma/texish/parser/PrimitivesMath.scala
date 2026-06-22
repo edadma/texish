@@ -26,6 +26,43 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // The amsmath fraction and binomial family - 2 body args each, the numerator and denominator. They differ
+  // from \frac only in whether they force a style and whether they draw a rule: \dfrac sets the fraction in
+  // display style (taller, full-size parts) and \tfrac in text style, regardless of where they sit, so a
+  // fraction in running text can be made big or a fraction in a display kept small. \binom stacks the parts
+  // with no rule inside parentheses (a binomial coefficient), and \dbinom/\tbinom force its style likewise.
+  // `force` is Some(true) for a display-forced form, Some(false) for text-forced, None to inherit the current
+  // style; `bar` draws the fraction rule; an optional fence pair wraps the result.
+  def fractionPrimitive(name: String, force: Option[Boolean], bar: Boolean, left: Option[Int], right: Option[Int]): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val style = force match
+                case Some(true)  => MathStyle.Display
+                case Some(false) => MathStyle.Text
+                case None        => parent.style
+              val numTokens   = proc.readArgument(pos)
+              val denomTokens = proc.readArgument(pos)
+              val numBox      = handler.mathSubFormula(proc, style.num, numTokens)
+              val denomBox    = handler.mathSubFormula(proc, style.denom, denomTokens)
+
+              if (numBox ne null) && (denomBox ne null) then
+                val frac = parent.makeFractionAt(numBox, denomBox, style.isDisplay, bar)
+                val box  = if left.isEmpty && right.isEmpty then frac else parent.makeDelimited(left, frac, right)
+                parent.addNode(MathAtom(MathClass.Inner, box))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  fractionPrimitive("dfrac", Some(true), bar = true, None, None)
+  fractionPrimitive("tfrac", Some(false), bar = true, None, None)
+  fractionPrimitive("binom", None, bar = false, Some(0x28), Some(0x29))
+  fractionPrimitive("dbinom", Some(true), bar = false, Some(0x28), Some(0x29))
+  fractionPrimitive("tbinom", Some(false), bar = false, Some(0x28), Some(0x29))
+
   // sqrt - an optional [degree] then 1 body arg: a square root, or a higher root when the degree is given
   // (\sqrt[3]{x} is a cube root). Math-mode only; the radicand is typeset by a nested math mode in the cramped
   // current style and the degree, if any, in scriptscript; a surd glyph tall enough to span the radicand is
@@ -171,6 +208,23 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
       },
     )
 
+  // overline - 1 body arg: a rule across the full width of the argument, the bar of \overline{x + y}. Math-mode
+  // only; the content is typeset by a nested math mode in the cramped current style (nothing rises above the
+  // bar) and a default-thickness rule is set over it with a small gap. Enters as an Ord atom. Its companion
+  // \underline (which also works in text) lives with the other box-wrapping primitives.
+  proc.registerPrimitive(
+    "overline",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val inner = handler.mathSubFormula(proc, parent.style.cramp, proc.readArgument(pos))
+
+            if inner ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeBar(inner, over = true)))
+          case _ => handler.error("\\overline is only allowed in math mode", pos)
+    },
+  )
+
   // text - 1 body arg: a run of ordinary text set inside a formula. Math-mode only; the argument is typeset
   // through the normal text path (the string seam, in the surrounding body font) into a horizontal box, which
   // enters the math list as an Ord atom. This is how words appear in a formula upright — \text{E}[X], the
@@ -270,6 +324,118 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("pmatrix", matrixPrimitive(Some(0x28), Some(0x29), leftAlign = false))
   proc.registerPrimitive("bmatrix", matrixPrimitive(Some(0x5B), Some(0x5D), leftAlign = false))
   proc.registerPrimitive("cases", matrixPrimitive(Some(0x7B), None, leftAlign = true))
+  proc.registerPrimitive("vmatrix", matrixPrimitive(Some(0x7C), Some(0x7C), leftAlign = false))   // | … |
+  proc.registerPrimitive("Vmatrix", matrixPrimitive(Some(0x2016), Some(0x2016), leftAlign = false)) // ‖ … ‖
+  proc.registerPrimitive("Bmatrix", matrixPrimitive(Some(0x7B), Some(0x7D), leftAlign = false))   // { … }
+
+  // overset / underset - 2 body args, an annotation and a base: the annotation set small (script style) above
+  // (overset) or below (underset) the base, centred on it, as \overset{*}{=} sets a star over an equals or
+  // \underset{n\to\infty}{\lim} writes a bound under a name. Math-mode only; the two parts are typeset by nested
+  // math modes (the base in the current style, the annotation one step smaller) and stacked by the same limits
+  // box a large operator uses for its bounds. Enters as an Ord atom.
+  def overUnderPrimitive(name: String, over: Boolean): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val annotation = handler.mathSubFormula(proc, parent.style.sup, proc.readArgument(pos))
+              val base       = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+
+              if (annotation ne null) && (base ne null) then
+                val stacked =
+                  if over then new LimitsBox(t, base, Some(annotation), None, parent.mathFont.limitParams)
+                  else new LimitsBox(t, base, None, Some(annotation), parent.mathFont.limitParams)
+                parent.addNode(MathAtom(MathClass.Ord, stacked))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  overUnderPrimitive("overset", over = true)
+  overUnderPrimitive("underset", over = false)
+
+  // substack - 1 body arg: a stack of lines separated by \\, set small and centred, for a multi-line subscript
+  // or superscript such as \sum_{\substack{0 \le i \le n \\ i \ne j}}. Math-mode only; each line is typeset by a
+  // nested math mode in the current style (already script size when this sits in a subscript) and the lines are
+  // stacked as a tight, single-column centred array. Enters as an Ord atom.
+  proc.registerPrimitive(
+    "substack",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val body = stripOuterBraces(proc.readArgument(pos))
+            val rows = splitMatrixBody(body).map(_.map { cellTokens =>
+              handler.mathSubFormula(proc, parent.style, cellTokens) match
+                case b: Box => b
+                case null   => HBox(Vector.empty)
+            })
+            parent.addNode(MathAtom(MathClass.Ord, parent.makeArray(rows, MathArrayAlign.Center, tight = true)))
+          case _ => handler.error("\\substack is only allowed in math mode", pos)
+    },
+  )
+
+  // boxed - 1 body arg: a formula drawn inside a rectangular frame, as \boxed{x = y} rings a result. Math-mode
+  // only; the body is typeset by a nested math mode in the current style and wrapped in a framed box padded by
+  // \fboxsep and ruled \fboxrule thick (the same defaults \fbox uses). Enters as an Ord atom.
+  proc.registerPrimitive(
+    "boxed",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val inner = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+
+            if inner ne null then
+              parent.addNode(MathAtom(MathClass.Ord, new FrameBox(inner, 3.0, 0.4, t.currentColor, null)))
+          case _ => handler.error("\\boxed is only allowed in math mode", pos)
+    },
+  )
+
+  // operatorname - 1 body arg: a custom upright multi-letter operator, as \operatorname{argmax} sets argmax in
+  // roman like the built-in \sin or \log. Math-mode only; the argument's letters are set upright through the
+  // math font (not italicised as variables would be) into a single Op-class atom, so the name gets the
+  // inter-atom spacing of an operator.
+  proc.registerPrimitive(
+    "operatorname",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val text = stripOuterBraces(proc.readArgument(pos)).collect { case Token.Text(s, _) => s }.mkString
+            val glyphs = text.iterator.filterNot(_.isWhitespace).map(ch => parent.mathFont.glyphBox(ch.toInt)).toVector
+            parent.addNode(MathAtom(MathClass.Op, HBox(glyphs)))
+          case _ => handler.error("\\operatorname is only allowed in math mode", pos)
+    },
+  )
+
+  // The math-class forcing commands - 1 body arg each: typeset the argument as a sub-formula and enter it into
+  // the list as a single atom of the named class, so it takes that class's inter-atom spacing regardless of what
+  // it contains. \mathbin{\operatorname{mod}} makes a binary "mod" (medium space on either side); \mathrel makes
+  // a relation; \mathopen/\mathclose make fences; and so on across TeX's eight classes. Math-mode only.
+  def mathClassPrimitive(name: String, cls: MathClass): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val box = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+
+              if box ne null then parent.addNode(MathAtom(cls, box))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  mathClassPrimitive("mathord", MathClass.Ord)
+  mathClassPrimitive("mathop", MathClass.Op)
+  mathClassPrimitive("mathbin", MathClass.Bin)
+  mathClassPrimitive("mathrel", MathClass.Rel)
+  mathClassPrimitive("mathopen", MathClass.Open)
+  mathClassPrimitive("mathclose", MathClass.Close)
+  mathClassPrimitive("mathpunct", MathClass.Punct)
+  mathClassPrimitive("mathinner", MathClass.Inner)
 
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
@@ -405,6 +571,8 @@ private[parser] def splitMatrixBody(body: Vector[Token]): Vector[Vector[Vector[T
     tok match
       case Token.BeginGroup(_)                     => depth += 1; cell += tok
       case Token.EndGroup(_)                       => depth -= 1; cell += tok
+      case Token.ControlSeq("begin", _)            => depth += 1; cell += tok // a nested environment's cells
+      case Token.ControlSeq("end", _)              => depth -= 1; cell += tok // are not the array's own cells
       case Token.Active('&', _) if depth == 0      => endCell()
       case Token.ControlSeq("cr", _) if depth == 0 => endRow()
       case Token.ControlSeq("\\", _) if depth == 0 => endRow()
@@ -419,6 +587,56 @@ private[parser] def splitMatrixBody(body: Vector[Token]): Vector[Vector[Vector[T
 
   val all = rows.result()
   if all.nonEmpty && all.last.forall(cellEmpty) then all.init else all
+
+// A math-array environment: the column alignment pattern, an optional pair of fences sized around the array,
+// and whether to set the cells small and tight (for \begin{smallmatrix}). The LaTeX `\begin{name}` forms map
+// onto the same array engine the brace primitives use, so `\begin{pmatrix}…\end{pmatrix}` and `\pmatrix{…}`
+// build identical boxes.
+private[parser] case class MathArrayEnv(align: MathArrayAlign, left: Option[Int], right: Option[Int], tight: Boolean)
+
+// The array environments recognised inside math: the matrix family (centred, with their fences), \cases (flush
+// left under a single brace), and the aligned-equation blocks (aligned/split). These are used inside `$…$` or a
+// display, exactly as LaTeX's `aligned` sits inside an equation; they are matched before any user environment of
+// the same name, and outside math mode they report a clear error.
+private[parser] val mathArrayEnvs: Map[String, MathArrayEnv] = Map(
+  "matrix"      -> MathArrayEnv(MathArrayAlign.Center, None, None, tight = false),
+  "pmatrix"     -> MathArrayEnv(MathArrayAlign.Center, Some(0x28), Some(0x29), tight = false),
+  "bmatrix"     -> MathArrayEnv(MathArrayAlign.Center, Some(0x5B), Some(0x5D), tight = false),
+  "vmatrix"     -> MathArrayEnv(MathArrayAlign.Center, Some(0x7C), Some(0x7C), tight = false),
+  "Vmatrix"     -> MathArrayEnv(MathArrayAlign.Center, Some(0x2016), Some(0x2016), tight = false),
+  "Bmatrix"     -> MathArrayEnv(MathArrayAlign.Center, Some(0x7B), Some(0x7D), tight = false),
+  "smallmatrix" -> MathArrayEnv(MathArrayAlign.Center, None, None, tight = true),
+  "cases"       -> MathArrayEnv(MathArrayAlign.Left, Some(0x7B), None, tight = false),
+  "aligned"     -> MathArrayEnv(MathArrayAlign.Aligned, None, None, tight = false),
+  "gathered"    -> MathArrayEnv(MathArrayAlign.Center, None, None, tight = false),
+  "split"       -> MathArrayEnv(MathArrayAlign.Aligned, None, None, tight = false),
+)
+
+/** Handle a `\begin{name}` whose name is a math-array environment, returning true when it did. The body up to
+  * the matching `\end{name}` is collected at the token level (so the cells keep their `&`/`\\` structure and the
+  * environment composes inside `\left…\right`, inside macros, and inside another array's cell), split into
+  * cells, and each cell typeset by a nested math mode at the array's cell style — the same path the brace matrix
+  * primitives take. The finished array, fenced when the environment carries delimiters, enters the current math
+  * list as an Inner atom. An array environment outside math is an error. */
+private[parser] def tryMathArrayEnv(proc: Processor, name: String, pos: CharReader): Boolean =
+  (proc.handler, mathArrayEnvs.get(name)) match
+    case (_, None) => false
+    case (handler: TypesetterHandler, Some(cfg)) =>
+      handler.typesetter.mode match
+        case parent: MathMode =>
+          val body      = proc.collectEnvBody(name, pos)
+          val cellStyle = if cfg.tight then MathStyle(MathSize.Script, parent.style.cramped) else parent.cellStyle
+          val rows = splitMatrixBody(body).map(_.map { cellTokens =>
+            handler.mathSubFormula(proc, cellStyle, cellTokens) match
+              case b: Box => b
+              case null   => HBox(Vector.empty)
+          })
+          val array = parent.makeArray(rows, cfg.align, cfg.tight)
+          val box   = if cfg.left.isEmpty && cfg.right.isEmpty then array else parent.makeDelimited(cfg.left, array, cfg.right)
+          parent.addNode(MathAtom(MathClass.Inner, box))
+          true
+        case _ => handler.error(s"the $name environment is only allowed in math mode", pos)
+    case _ => false
 
 // Read the delimiter that follows \left or \right: a single character (the first of the next text run, with
 // the rest pushed back) or a control sequence, resolved through MathDelimiters. `.` and any unrecognized

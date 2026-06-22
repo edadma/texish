@@ -403,6 +403,43 @@ class Processor(val handler: Handler):
     if depth > 0 then handler.error("\\left without matching \\right", pos)
     tokens.result()
 
+  /** Collect the body of an environment up to its matching `\end{name}`, working at the token level — so it
+    * reads from whatever source is current, a live tokenizer or an already-tokenized macro body or argument,
+    * unlike the raw character scan a verbatim environment needs. Nested `\begin{name}`/`\end{name}` of the same
+    * name are balanced; the closing `\end{name}` is consumed and dropped. A `\begin`/`\end` of any other name
+    * passes into the body verbatim, its name re-emitted as a braced group, to be handled when the body is
+    * re-processed (so a matrix environment can sit inside an aligned cell). This is what lets the math-array
+    * environments compose inside `\left…\right`, inside macros, and inside one another. */
+  def collectEnvBody(name: String, pos: CharReader): Vector[Token] =
+    val body  = Vector.newBuilder[Token]
+    var depth = 1
+
+    def nameGroup(n: String, p: CharReader): Unit =
+      body += Token.BeginGroup(p)
+      body += Token.Text(n, p)
+      body += Token.EndGroup(p)
+
+    while depth > 0 && hasMoreTokens do
+      nextToken() match
+        case t @ Token.ControlSeq("begin", p) =>
+          val inner = readEnvName(this, p)
+          if inner == name then depth += 1
+          body += t
+          nameGroup(inner, p)
+        case t @ Token.ControlSeq("end", p) =>
+          val inner = readEnvName(this, p)
+          if inner == name then
+            depth -= 1
+            if depth > 0 then { body += t; nameGroup(inner, p) }
+          else
+            body += t
+            nameGroup(inner, p)
+        case Token.EOF(p) => handler.error(s"\\begin{$name} without a matching \\end{$name}", p)
+        case t            => body += t
+
+    if depth > 0 then handler.error(s"\\begin{$name} without a matching \\end{$name}", pos)
+    body.result()
+
   /** Read tokens until matching } */
   private def readBalancedGroup(): Vector[Token] =
     val tokens = Vector.newBuilder[Token]
@@ -1876,6 +1913,9 @@ object BeginPrimitive extends Primitive:
     if proc.handler.rawEnvironment(name) then
       proc.handler.rawEnvironmentBody(name, proc.readRawUntilEnd(name, pos))
       return
+    // A math-array environment (matrix family, \cases, aligned/split) captures its body raw and builds an array
+    // box directly, the same as the brace matrix primitives — it runs no begin/end code.
+    if tryMathArrayEnv(proc, name, pos) then return
     envCode(proc, name) match
       case Some((params, begin, _)) =>
         val expanded = proc.substituteNamedParams(begin, proc.readMacroArgs(params, pos))

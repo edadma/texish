@@ -180,15 +180,23 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     t.set("firstmark", marks.headOption.getOrElse(top))
     t.set("botmark", marks.lastOption.getOrElse(top))
 
-    // cross-references resolve here too: a label or a table-of-contents entry learns its folio from the page it
-    // ships on. pageno is still the shipping page's number at this point (DocumentMode advances it after the add).
+    // cross-references resolve here too: a label or a contents entry learns its folio from the page it ships on.
+    // pageno is still the shipping page's number at this point (DocumentMode advances it after the add). The walk
+    // descends through the page's boxes: a label or \addcontentsline inside a float or footnote (e.g. the
+    // \caption/\label of a figure, which ride a \centerline hbox inside the float's vbox rather than migrating to
+    // the page's vertical list) ships on this page too and must learn the same folio.
     val folio = t.getNumber("pageno").toInt
 
-    boxes.foreach {
+    def resolve(box: Box): Unit = box match
       case l: LabelBox    => t.references.setPage(l.name, folio)
-      case e: TocMarkBox  => t.references.recordToc(e.level, e.number, e.title, folio)
+      case e: TocMarkBox  => t.references.recordList(e.list, e.level, e.number, e.title, folio)
+      case f: FloatBox    => resolve(f.content)
+      case ins: InsertBox => resolve(ins.content)
+      case v: VerticalBox => v.boxes.foreach(resolve)
+      case h: HBox        => h.boxes.foreach(resolve)
       case _              =>
-    }
+
+    boxes.foreach(resolve)
 
     t.getDocument add result
     clear()
