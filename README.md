@@ -99,7 +99,7 @@ texish [options] [input-file]
   input-file                    texish source to typeset; reads standard input if omitted
   -o, --output <file>           output path (default: beside the input file, or out)
   -t, --type <pdf | png>        output type (default: pdf)
-  -p, --paper <a4 | letter>     paper size (default: letter)
+  -p, --paper <letter|legal|a3|a4|a5>  paper size (default: letter)
   -r, --resolution <sd|hd|fhd>  PNG device resolution (default: hd)
 ```
 

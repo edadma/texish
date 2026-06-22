@@ -50,11 +50,11 @@ private def fail(msg: String): Nothing =
         }
         .text("output type (default: pdf)"),
       opt[String]('p', "paper")
-        .valueName("<a4 | letter>")
+        .valueName("<letter | legal | a3 | a4 | a5>")
         .action((x, c) => c.copy(paper = x))
         .validate {
-          case "a4" | "letter" => success
-          case _               => failure("only 'a4' or 'letter' are allowed as paper sizes")
+          case "letter" | "legal" | "a3" | "a4" | "a5" => success
+          case _ => failure("paper size must be one of: letter, legal, a3, a4, a5")
         }
         .text("paper size (default: letter)"),
       opt[String]('r', "resolution")
@@ -159,7 +159,11 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
 private def paperDimensions(paper: String, t: Typesetter): (Double, Double) =
   paper match
     case "letter" => (8.5 * t.in, 11 * t.in)
+    case "legal"  => (8.5 * t.in, 14 * t.in)
+    case "a3"     => (297 * t.mm, 420 * t.mm)
     case "a4"     => (210 * t.mm, 297 * t.mm)
+    case "a5"     => (148 * t.mm, 210 * t.mm)
+    case other    => sys.error(s"unknown paper size: $other") // unreachable: the CLI validates --paper
 
 /** The output base path: an explicit `-o` wins; otherwise the input file's own path with its extension dropped
   * but its directory kept, so the result lands beside the source rather than in the current directory; with no
