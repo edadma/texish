@@ -19,10 +19,11 @@
 \def arctan {\operatorname{arctan}}//
 \def Pr {\operatorname{Pr}}//
 
-// The modular arithmetic forms. \bmod is the binary operator in "a mod b"; \pmod sets a parenthesised "(mod m)"
-// after a quad of space, the way a congruence is closed off; \mod and \pod are its unparenthesised and
+// The modular arithmetic forms. \bmod is the binary operator in "a mod b" --- \mathbin makes the upright "mod"
+// a true binary operator, so it takes a medium space on either side; \pmod sets a parenthesised "(mod m)" after
+// a quad of space, the way a congruence is closed off; \mod and \pod are its unparenthesised and
 // bare-parenthesised cousins.
-\def bmod {\operatorname{mod}}//
+\def bmod {\mathbin{\operatorname{mod}}}//
 \def pmod m {\quad(\operatorname{mod}\,\m)}//
 \def mod m {\quad\operatorname{mod}\,\m}//
 \def pod m {\quad(\m)}//
