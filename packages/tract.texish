@@ -20,8 +20,9 @@
 
 // ---- configuration ----
 \set tractmargin {18}            // inset from each panel edge to its content (0.25in)
-\set tractguides {1}             // draw fold (vertical) and cut (horizontal) guide lines
-\set tractguidecolor {#b0b0b0}
+\set tractguides {1}             // draw fold and cut tick marks in the margins (0 = clean sheet)
+\set tractguidecolor {gray}      // any CSS colour name or #RRGGBB hex
+\set tracttick {14}              // length of each fold/cut tick mark in points
 \set tractpaper {letter}         // letter: two tracts per US Letter sheet, cut in half. a5: one
                                  //   tract per A5 sheet (landscape), no cut.
 
@@ -72,17 +73,37 @@
   \global\set trXc {\calc{2 * trColW + tractmargin}}
   \global\set trYup {\calc{trSheetH - tractmargin}}
   \global\set trYdn {\calc{trTractH - tractmargin}}
+  // Tick-mark endpoints: folds get a tick at the top and bottom of every tract; the cut (two-up only)
+  // gets a tick at the left and right sheet edges. The cut-straddling tick runs from trTickLo to
+  // trTickHi so a horizontal cut severs it into one fold mark for each of the two tracts.
+  \global\set trTickTop {\calc{trSheetH - tracttick}}
+  \global\set trTickLo {\calc{trCut - tracttick}}
+  \global\set trTickHi {\calc{trCut + tracttick}}
+  \global\set trTickR {\calc{trSheetW - tracttick}}
 }
 
-// The fold and cut guides, drawn light and dashed so they are easy to see on a proof yet unobtrusive.
-// Turn them off with \set tractguides {0} for the final run if your trimmer prefers a clean sheet.
+// The fold ticks for one vertical fold at x: a short mark at the bottom and top of the sheet, and (two
+// up) one straddling the cut so each half-tract keeps a fold mark after the cut. The fold position
+// arrives as a value, so it is safe to drop straight into \line.
+\def trFoldTicks fx {
+  \line{\fx 0 \fx \tracttick}
+  \line{\fx \trTickTop \fx \trSheetH}
+  \if {\> {\trNup}{1}}\line{\fx \trTickLo \fx \trTickHi}\fi
+}
+
+// Fold and cut marks as short ticks in the margins rather than full lines across the artwork: the
+// folder and trimmer line a straightedge up to the ticks, leaving the printed faces clean. Turn them
+// off entirely with \set tractguides {0}.
 \def trGuides {
   \if {\tractguides}
-    \nofill\stroke{\tractguidecolor}\linewidth{0.5}\dash{3 3}
-    \line{\trFoldA 0 \trFoldA \trSheetH}
-    \line{\trFoldB 0 \trFoldB \trSheetH}
-    \if {\> {\trNup}{1}}\line{0 \trCut \trSheetW \trCut}\fi
-    \dash{}\stroke{black}\linewidth{1}
+    \nofill\stroke{\tractguidecolor}\linewidth{0.5}
+    \trFoldTicks{\trFoldA}
+    \trFoldTicks{\trFoldB}
+    \if {\> {\trNup}{1}}
+      \line{0 \trCut \tracttick \trCut}
+      \line{\trTickR \trCut \trSheetW \trCut}
+    \fi
+    \stroke{black}\linewidth{1}
   \fi
 }
 
