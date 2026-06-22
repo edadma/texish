@@ -31,6 +31,28 @@ class TokenizerTests extends AnyFreeSpec with Matchers:
       tok.next().asInstanceOf[Token.ControlSeq].name shouldBe "}"
     }
 
+    "reads the comparison operators as one symbolic control sequence" in {
+      def name(s: String): String = Tokenizer(s).next().asInstanceOf[Token.ControlSeq].name
+      name("\\!=") shouldBe "!="
+      name("\\<=") shouldBe "<="
+      name("\\>=") shouldBe ">="
+      name("\\<") shouldBe "<"  // a bare comparison char, with no '=' following, stays one char
+    }
+
+    "never lets a comma join a symbolic control sequence" in {
+      // `\,` is the lone thin-space control symbol; the comma must not absorb a following symbolic character
+      // (so `\,(` is `\,` then `(`), and a comma after another symbolic char ends the control sequence.
+      val tok = Tokenizer("\\,(")
+      tok.next().asInstanceOf[Token.ControlSeq].name shouldBe ","
+      tok.next().asInstanceOf[Token.Text].s shouldBe "("
+
+      Tokenizer("\\,").next().asInstanceOf[Token.ControlSeq].name shouldBe ","
+
+      val pair = Tokenizer("\\;,") // a comma ends a run begun by another symbolic char
+      pair.next().asInstanceOf[Token.ControlSeq].name shouldBe ";"
+      pair.next().asInstanceOf[Token.Text].s shouldBe ","
+    }
+
     "should tokenize groups" in {
       val tok = Tokenizer("{hello}")
       tok.next() shouldBe a[Token.BeginGroup]

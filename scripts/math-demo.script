@@ -1,0 +1,83 @@
+\use{document}
+\use{math}
+
+\title {Mathematics with the \texttt{math} package}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+The \texttt{math} package collects the amsmath constructions a working document
+needs. Most are built into the engine and need no package; loading \texttt{math}
+adds the operator and connective names amsmath defines on top.
+
+\section {Aligned equations}
+
+The \texttt{aligned} environment lines a block of equations up on their relation
+symbols. The \texttt{\\&} marks the alignment column, just before the relation:
+
+$$\begin{aligned}
+  (a + b)^2 &= a^2 + 2ab + b^2 \\
+            &= a^2 + b^2 + 2ab.
+\end{aligned}$$
+
+A chain of reasoning reads naturally with the implication arrows:
+
+$$x^2 = 4 \implies x = 2 \;\text{or}\; x = -2 \iff |x| = 2.$$
+
+\section {Fractions and binomials}
+
+The display fractions \texttt{\\dfrac} and \texttt{\\tfrac} fix the size of a
+fraction regardless of where it sits, and \texttt{\\binom} stacks a binomial
+coefficient:
+
+$$\dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{x}}}
+  \qquad
+  \binom{n}{k} = \dfrac{n!}{k!\,(n - k)!}
+  \qquad
+  \tfrac{1}{2}.$$
+
+\section {Matrices}
+
+The matrix environments differ only in their fences --- parentheses, brackets,
+bars or braces:
+
+$$A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
+  \qquad
+  \det A = \begin{vmatrix} 1 & 2 \\ 3 & 4 \end{vmatrix} = -2
+  \qquad
+  \begin{Bmatrix} x \\ y \end{Bmatrix}.$$
+
+A \texttt{smallmatrix} such as $\begin{smallmatrix} a & b \\ c & d \end{smallmatrix}$
+sets compactly inside a line of text.
+
+\section {Cases}
+
+A piecewise definition uses the \texttt{cases} environment, whose rows are set
+flush left under a single brace:
+
+$$|x| = \begin{cases} \phantom{-}x & x \ge 0, \\ -x & x < 0. \end{cases}$$
+
+\section {Operators, stacks and boxes}
+
+Custom operators are set upright with \texttt{\\operatorname}, while the inverse
+and modular forms come ready-made:
+
+$$\arctan x = \int_0^x \frac{dt}{1 + t^2}
+  \qquad
+  17 \equiv 2 \pmod{5}
+  \qquad
+  \operatorname{argmax}_{x} f(x).$$
+
+The \texttt{\\overset} and \texttt{\\underset} commands stack an annotation on a
+base, \texttt{\\substack} stacks the lines of a many-line subscript, and
+\texttt{\\boxed} rings a result:
+
+$$A \overset{\text{def}}{=} B
+  \qquad
+  \sum_{\substack{0 < i < n \\ i \ne k}} a_i
+  \qquad
+  \underset{n \to \infty}{\lim} \frac{1}{n} = 0
+  \qquad
+  \boxed{\,E = mc^2\,}.$$
+
+\vfill\eject
