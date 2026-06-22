@@ -403,3 +403,15 @@
 \addcontentsline{\captionlist}{1}{\arabic{\value \captioncounter}}{\text}//
 \the\captionkind \arabic{\value \captioncounter}: \text//
 }}//
+
+// ---- Boxes and conditionals ----------------------------------------------------
+// \begin{minipage}[pos]{width} … \end{minipage} sets its body as a paragraph in a box of the given width, the
+// environment form of \parbox, over the engine's \beginminipage / \endminipage pair. [pos] (t / c / b) aligns the
+// box on the surrounding baseline, defaulting to centred as in LaTeX.
+\newenvironment minipage [pos:c] w {\beginminipage[\pos]{\w}} {\endminipage}
+
+// \ifthenelse{test}{then}{else} chooses one of two branches on a boolean test, over the engine's \if. The test is
+// an ordinary expression — a comparison such as \> {\x} {3}, or \equal for strings; compound tests use the
+// expression operators. \equal{a}{b} is true when the two expand to the same string, the common ifthen test.
+\def equal a b {\={\a}{\b}}
+\def ifthenelse c a b {\if {\c} \a \else \b \fi}

@@ -1,0 +1,69 @@
+\use{document}
+
+\title {Boxes, Minipages and Lengths}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+\section {Horizontal boxes}
+
+An \texttt{mbox} keeps its content on one line, so a phrase like
+\mbox{Newton--Raphson} never breaks across a line end. A \texttt{makebox} gives
+that box an explicit width and aligns its content inside.
+
+\medskip
+\noindent\fbox{\makebox[0.5\linewidth][l]{flush left}}
+
+\noindent\fbox{\makebox[0.5\linewidth]{centred}}
+
+\noindent\fbox{\makebox[0.5\linewidth][r]{flush right}}
+
+\section {Paragraph boxes}
+
+A \texttt{parbox} sets a whole paragraph into a box of a chosen width, so two
+columns of text can sit side by side on one line. Here are two parboxes, each a
+third of the line wide, with a gap between them:
+
+\medskip
+\noindent\parbox{0.3\linewidth}{This is the left parbox. Its lines wrap inside the box width, and the box sits in the running text as a single object.}\hskip 24pt \parbox{0.3\linewidth}{This is the right parbox, the same width. Both are aligned on their vertical centres, the default for a parbox.}
+
+\section {Minipages}
+
+The \texttt{minipage} environment is the same idea written as a block. The two
+below are top-aligned so their first lines share a baseline:
+
+\medskip
+\noindent\begin{minipage}[t]{0.44\linewidth}
+A minipage is a parbox you write as an environment, which reads better when the
+content is more than a few words --- a sidebar, a boxed note, one column of a
+two-column row.
+\end{minipage}\hskip 24pt\begin{minipage}[t]{0.44\linewidth}
+This second minipage is top-aligned with the first, so the two blocks start on
+the same line even though they have different amounts of text.
+\end{minipage}
+
+\section {Lengths}
+
+A length is a dimension variable. \texttt{newlength} declares one, \texttt{setlength}
+assigns it, and \texttt{addtolength} adjusts it --- and the result drives real
+spacing.
+
+\newlength{myindent}
+\setlength{myindent}{20pt}
+\addtolength{myindent}{20pt}
+
+\noindent\hskip\myindent This line is indented by \texttt{myindent}, which was set
+to 20pt and then grown by another 20pt, so the indent is 40pt.
+
+\section {Conditionals}
+
+\texttt{ifthenelse} chooses a branch on a test. \texttt{equal} compares strings,
+and the comparison operators compare numbers:
+
+\medskip
+\noindent Three is \ifthenelse{\> {3} {2}}{greater}{not greater} than two.
+
+\noindent The words match: ``yes'' is \ifthenelse{\equal{yes}{yes}}{equal}{unequal}
+to ``yes''.
+
+\vfill\eject

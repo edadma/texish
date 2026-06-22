@@ -619,6 +619,154 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // mbox - 1 body arg: an unbreakable horizontal box of its content's natural width, the LaTeX name for a bare
+  // \hbox. Inside a paragraph it keeps its content on one line; nothing inside it can break.
+  proc.registerPrimitive(
+    "mbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        captureHBox(proc, t, handler, pos) match
+          case b: Box => t.add(b)
+          case null   =>
+    },
+  )
+
+  // makebox - optional [width] then [pos], then 1 body arg: an hbox of an explicit width with its content aligned
+  // inside. With no [width] it is exactly \mbox (natural width). [pos] is l (flush left), r (flush right), c
+  // (centred, the default) or s (stretch the content's own glue to fill); the width is a dimension or a factor of
+  // \linewidth. Built by padding the content with fil glue on the empty side(s) inside an hbox set to the width.
+  proc.registerPrimitive(
+    "makebox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val widthSpec = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty)
+        val alignSpec = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty)
+        val body      = proc.readArgument(pos)
+
+        handler.flushPendingSpace()
+
+        widthSpec match
+          case None =>
+            t.hbox(null)
+            proc.processTokenList(body)
+          case Some(ws) =>
+            val w     = resolveLength(proc, t, ws, pos, "\\makebox")
+            val align = alignSpec.map(_.charAt(0)).getOrElse('c')
+
+            t.hbox(w)
+            if align == 'c' || align == 'r' then t.fil
+            proc.processTokenList(body)
+            if align == 'c' || align == 'l' then t.fil
+
+        t.mode.exit match
+          case b: Box => t.add(b)
+          case null   =>
+    },
+  )
+
+  // parbox - optional [pos] then {width} and {body}: typeset the body as a paragraph in a vertical box of the given
+  // width, so a block of text sits in the running line like a single box. [pos] aligns the box on the surrounding
+  // baseline: t (first line's baseline), b (last line's baseline), or c (vertical centre, the default). The width
+  // is a dimension or a factor of \linewidth. \minipage is the environment form, over the same machinery.
+  proc.registerPrimitive(
+    "parbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val align    = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse('c')
+        val widthRaw = tokensToSource(proc.readArgument(pos))
+        val body     = proc.readArgument(pos)
+        val w        = resolveLength(proc, t, widthRaw, pos, "\\parbox")
+
+        handler.flushPendingSpace()
+        val saved = t.getNumber("hsize")
+        t.set("hsize", w)
+        if align == 't' then t.vtop() else t.vbox()
+        proc.processTokenList(body)
+        t.paragraph()
+        val box = t.mode.exit
+        t.set("hsize", saved)
+
+        box match
+          case vb: VerticalBox => t.add(alignParbox(vb, align))
+          case _               =>
+    },
+  )
+
+  // \minipage's begin/end pair: \beginminipage [pos] {width} opens a vertical box of the given width and routes the
+  // environment body into it; \endminipage closes it and contributes the finished box, aligned by [pos] like
+  // \parbox. The width and alignment ride a stack so minipages can nest. Wired to \begin{minipage}/\end{minipage}
+  // by the document package.
+  val minipageStack = scala.collection.mutable.Stack[(Double, Char)]() // (saved hsize, alignment) per open minipage
+
+  proc.registerPrimitive(
+    "beginminipage",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val align    = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse('c')
+        val widthRaw = tokensToSource(proc.readArgument(pos))
+        val w        = resolveLength(proc, t, widthRaw, pos, "\\minipage")
+
+        minipageStack.push((t.getNumber("hsize"), align))
+        handler.flushPendingSpace()
+        t.set("hsize", w)
+        if align == 't' then t.vtop() else t.vbox()
+    },
+  )
+
+  proc.registerPrimitive(
+    "endminipage",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        if minipageStack.isEmpty then handler.error("\\endminipage without a matching \\beginminipage", pos)
+        else
+          val (savedHsize, align) = minipageStack.pop()
+
+          t.paragraph()
+          val box = t.mode.exit
+          t.set("hsize", savedHsize)
+
+          box match
+            case vb: VerticalBox => t.add(alignParbox(vb, align))
+            case _               =>
+    },
+  )
+
+  // newlength / setlength / addtolength - a length is an ordinary dimension variable; these are the LaTeX names for
+  // declaring and adjusting one. \newlength{name} initialises it to 0pt, \setlength{name}{dimen} assigns it, and
+  // \addtolength{name}{dimen} adds to it. The name is a plain variable (LaTeX's leading backslash is not needed),
+  // so the length is read back as \name or with \the\name and used in \calc like any \set variable. Each honours a
+  // leading \global the same way \set does.
+  def lengthAssign(proc: Processor, name: String, value: Value): Unit =
+    val global = proc.handler.globalAssign
+    proc.handler.globalAssign = false
+    if global then proc.handler.setGlobal(name, value) else proc.handler.set(name, value)
+
+  proc.registerPrimitive(
+    "newlength",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        lengthAssign(proc, Value.display(evalArg(proc, pos)), Value.Dimen(0))
+    },
+  )
+  proc.registerPrimitive(
+    "setlength",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        lengthAssign(proc, name, proc.evalArgumentExpr(pos))
+    },
+  )
+  proc.registerPrimitive(
+    "addtolength",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = Value.display(evalArg(proc, pos))
+        val inc  = points(proc.evalArgumentExpr(pos)).getOrElse(handler.error("\\addtolength expects a dimension", pos))
+        val cur  = points(proc.handler.get(name)).getOrElse(0.0)
+        lengthAssign(proc, name, Value.Dimen(cur + inc))
+    },
+  )
+
   // phantom / hphantom / vphantom / smash - 1 body arg: reserve the size of the argument along selected axes
   // without its full ink. \phantom leaves an invisible box the exact size of its argument; \hphantom keeps only
   // its width; \vphantom only its height and depth (the classic way to make a row of fractions share a baseline,
@@ -1443,13 +1591,7 @@ private[parser] def parseGraphicsOptions(
   opts match
     case None => (None, None, None)
     case Some(tokens) =>
-      val raw = tokens.map {
-        case Token.Text(s, _)       => s
-        case Token.ControlSeq(n, _) => "\\" + n
-        case Token.Space(_, _)      => " "
-        case Token.Newline(_)       => " "
-        case _                      => ""
-      }.mkString
+      val raw = tokensToSource(tokens)
       var width: Option[Double]  = None
       var height: Option[Double] = None
       var scale: Option[Double]  = None
@@ -1466,14 +1608,28 @@ private[parser] def parseGraphicsOptions(
           case other => proc.handler.error(s"\\includegraphics: unknown option '$other'", pos)
       (width, height, scale)
 
-// Resolve an \includegraphics length: a factor times \linewidth or \textwidth (both the current line width,
-// the bare command meaning factor 1), or an ordinary dimension like 200pt / 5cm / 0.5in.
-private[parser] def resolveGraphicsLength(proc: Processor, t: Typesetter, s: String, pos: CharReader): Double =
+// Flatten a token list back to its source text, the way \includegraphics recovers a length written with a
+// control word: a captured \linewidth survives as the literal "\linewidth" so resolveLength can read it. Used
+// where an argument is a length expression (\makebox / \parbox / \minipage widths) rather than something to set.
+private[parser] def tokensToSource(tokens: Seq[Token]): String =
+  tokens.map {
+    case Token.Text(s, _)       => s
+    case Token.ControlSeq(n, _) => "\\" + n
+    case Token.Space(_, _)      => " "
+    case Token.Newline(_)       => " "
+    case _                      => ""
+  }.mkString
+
+// Resolve a length written as a factor times \linewidth or \textwidth (both the current line width, the bare
+// command meaning factor 1), or an ordinary dimension like 200pt / 5cm / 0.5in. `cmd` names the command for any
+// error. Shared by \includegraphics, \makebox, \parbox and \minipage.
+private[parser] def resolveLength(proc: Processor, t: Typesetter, s0: String, pos: CharReader, cmd: String): Double =
+  val s = s0.trim
   def factorTimesLineWidth(suffix: String): Double =
     val f = s.dropRight(suffix.length).trim
     val factor =
       if f.isEmpty then 1.0
-      else f.toDoubleOption.getOrElse(proc.handler.error(s"\\includegraphics: '$f' is not a number", pos))
+      else f.toDoubleOption.getOrElse(proc.handler.error(s"$cmd: '$f' is not a number", pos))
     factor * t.getNumber("hsize")
 
   if s.endsWith("\\linewidth") then factorTimesLineWidth("\\linewidth")
@@ -1481,7 +1637,18 @@ private[parser] def resolveGraphicsLength(proc: Processor, t: Typesetter, s: Str
   else
     parseDimension(s, proc.handler.fontUnit) match
       case Some(Value.Dimen(p)) => p
-      case _                    => proc.handler.error(s"\\includegraphics: '$s' is not a length", pos)
+      case _                    => proc.handler.error(s"$cmd: '$s' is not a length", pos)
+
+private[parser] def resolveGraphicsLength(proc: Processor, t: Typesetter, s: String, pos: CharReader): Double =
+  resolveLength(proc, t, s, pos, "\\includegraphics")
+
+// Align a finished \parbox / \minipage vbox on the surrounding baseline: t leaves a \vtop as built (its reference
+// is the first line's baseline), b leaves a \vbox as built (reference at the last line's baseline), and c — the
+// default — raises the box by half so its vertical centre sits on the baseline, with the box's stated height and
+// depth following the shift (a RaiseBox, not a bare \raise) so the surrounding line opens to make room.
+private[parser] def alignParbox(vb: VerticalBox, align: Char): Box = align match
+  case 't' | 'b' => vb
+  case _         => new RaiseBox(vb, (vb.descent - vb.ascent) / 2)
 
 // Build an \hbox or \vbox whose command token has already been consumed: read its optional `to:` target
 // and braced body, typeset the body into a fresh builder, and return the finished box *without* adding it

@@ -77,18 +77,19 @@ Highest author-visible payoff after refs. Core math mode is already TeX-class.
   `\setlist`. **[pkg]** (lists + counters already exist)
 - `\caption*`, caption styling, `\captionof`. **[pkg]**
 
-## E. Cross-references & TOC — `\label`/`\ref`/`\tableofcontents`  [ENGINE, the big one]
+## E. Cross-references & TOC — `\label`/`\ref`/`\tableofcontents`  [DONE]
 
-The single largest missing LaTeX subsystem. Previously deferred; this worktree is the
-natural place to take it on.
+The aux store + two-pass driver (`ReferenceTable` + `Passes.untilStable`) and
+`\label`/`\ref`/`\pageref`/`\tableofcontents` landed earlier (carried in from `dev`). The
+remaining commands were added in this worktree:
 
-- `\label{k}`/`\ref{k}`/`\pageref{k}`/`\eqref{k}`/`\autoref{k}`/`\nameref{k}`.
-- `\tableofcontents`, `\listoffigures`, `\listoftables`.
-- **Hard part:** `\pageref` and TOC page numbers are unknown until page breaks happen →
-  resolve after shipout and feed back. Needs **(a)** an aux store (file-writing `\write`,
-  absent today, or an in-memory equivalent) and **(b)** a run-twice driver. This is the
-  biggest single plumbing piece — design it first, then `\label`/`\ref` for section/figure
-  numbers (known at eval time) is the easy 80%; only `\pageref`/TOC-folios need pass two.
+- `\eqref{k}` (parenthesised number), `\autoref{k}` (kind word + number), `\nameref{k}`
+  (title) — over a `RefEntry` that now carries the label's kind and name, captured at
+  `\label` from `currentlabeltype` / `currentlabelname`.
+- `\listoffigures` / `\listoftables` — over named contents lists ("toc"/"lof"/"lot") in
+  `ReferenceTable`; `\addcontentsline{list}{lvl}{num}{title}` files an entry, `\caption`
+  files into lof/lot. PageMode's shipout walk recurses into floats so a caption's `\label`
+  / `\addcontentsline` learns the page its float ships on.
 
 ## F. Page layout & headers  [pkg, one engine gap]
 
@@ -114,13 +115,20 @@ Already designed in its own roadmap (`verbatim_code` memo): engine `verbatim`/`\
 (raw-capture seam) then `\code` highlighting via the `highlighter` dep. **[prim]** —
 not duplicated here; pull from that plan.
 
-## I. Misc box/layout commands  [prim/pkg]
+## I. Misc box/layout commands  [mostly DONE]
 
-- `\parbox{w}{…}`, `\begin{minipage}{w}` → `\vbox to/spread` at a width. **[prim]**
-- `\makebox`/`\mbox`/`\framebox`. **[prim/pkg]**
-- `\newlength`/`\setlength`/`\addtolength` → typed Dimen vars via `\set`/`\calc`. **[pkg]**
-- `\ifthenelse`/`ifthen` package, `\ifdefined`. **[pkg]** (over `\if`/`\ifx`/`\calc`)
-- `siunitx` (`\SI`/`\num`/`\si`). **[pkg]** (number/unit formatting; large but pure)
+- `\parbox[pos]{w}{…}`, `\begin{minipage}[pos]{w}` — **DONE** (engine primitives `\parbox`
+  and `\beginminipage`/`\endminipage`; set hsize → build vbox at the width → align on the
+  baseline, `c` via a metric-adjusting RaiseBox). `\minipage` env wired in `document.texish`.
+- `\mbox`/`\makebox[w][pos]` — **DONE** (engine primitives; `\makebox` pads the content with
+  fil glue inside an hbox set to the width, l/c/r/s alignment).
+- `\newlength`/`\setlength`/`\addtolength` — **DONE** (engine primitives over the `\set`
+  variable store; the length is a plain Dimen variable, read back as `\name` / in `\calc`).
+- `\ifthenelse{test}{then}{else}` + `\equal` — **DONE** (`document.texish` macros over `\if`
+  and `\=`; compound tests use the expression operators). `\ifdefined` not done.
+- `siunitx` (`\SI`/`\num`/`\si`) — **NOT DONE.** A faithful siunitx needs a number formatter
+  (grouping/rounding/exponents — no grouping primitive exists yet) plus a unit-macro algebra
+  (`\kilo\gram\per\second`); it is a substantial standalone package, deferred to its own pass.
 
 ---
 
