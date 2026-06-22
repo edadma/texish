@@ -17,7 +17,7 @@ class MathMatrixTests extends AnyFreeSpec with Matchers:
       Vector(glyph(rec, 'c'), glyph(rec, 'd')),
     )
     // axis 3.5, rowSep 2, colSep 4: rows are 10 tall, total height 22, width 6+6+4 = 16
-    val m = new MatrixBox(rows, axisHeight = 3.5, rowSep = 2.0, colSep = 4.0, leftAlign = false)
+    val m = new MatrixBox(rows, axisHeight = 3.5, rowSep = 2.0, Vector.fill(2)(ColumnAlign.Center), Vector(4.0))
 
     m.width shouldBe (16.0 +- 1e-9)
     (m.ascent - m.descent) shouldBe (7.0 +- 1e-9) // centred on the axis: ascent − descent = 2·axisHeight
@@ -39,7 +39,8 @@ class MathMatrixTests extends AnyFreeSpec with Matchers:
         Vector(HBox(Vector(glyph(rec, 'a'), glyph(rec, 'b')))), // a wide (12) cell sets the column width
         Vector(glyph(rec, 'c')),                                // a narrow (6) cell under it
       )
-      val m = new MatrixBox(rows, axisHeight = 3.5, rowSep = 0.0, colSep = 0.0, leftAlign = leftAlign)
+      val align = if leftAlign then ColumnAlign.Left else ColumnAlign.Center
+      val m     = new MatrixBox(rows, axisHeight = 3.5, rowSep = 0.0, Vector(align), Vector.empty)
       rec.draw(m)
       rec.drawn.collectFirst { case (g, x, _) if g == 'c'.toInt => x }.get
 
@@ -53,7 +54,7 @@ class MathMatrixTests extends AnyFreeSpec with Matchers:
       Vector(glyph(rec, 'a'), glyph(rec, 'b')), // two columns
       Vector(glyph(rec, 'c')),                  // only one — the second is an empty pad
     )
-    val m = new MatrixBox(rows, axisHeight = 3.5, rowSep = 0.0, colSep = 4.0, leftAlign = false)
+    val m = new MatrixBox(rows, axisHeight = 3.5, rowSep = 0.0, Vector.fill(2)(ColumnAlign.Center), Vector(4.0))
 
     m.width shouldBe (16.0 +- 1e-9) // 6 + 6 + 4, the column count is the widest row's
   }

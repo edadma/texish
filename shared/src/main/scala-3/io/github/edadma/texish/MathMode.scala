@@ -103,6 +103,15 @@ class MathMode(
   def makeFraction(numerator: Box, denominator: Box): Box =
     new FractionBox(t, numerator, denominator, mathFont.fractionParams(style.isDisplay))
 
+  /** Build a fraction-like stack at an explicitly chosen display-ness, rather than inheriting it from this
+    * list's style: `\dfrac`/`\tfrac` force the display (or text) gaps and shifts on, regardless of where the
+    * fraction sits, and `\binom` stacks the operands with no rule (the parentheses are added by the caller).
+    * The numerator and denominator are expected to have been set at the matching `num`/`denom` styles for the
+    * forced style. The font for the bar thickness, axis and shifts is this list's own, as in TeX. */
+  def makeFractionAt(numerator: Box, denominator: Box, display: Boolean, bar: Boolean): Box =
+    val params = mathFont.fractionParams(display)
+    new FractionBox(t, numerator, denominator, if bar then params else params.copy(ruleThickness = 0.0))
+
   /** Build a radical (`\sqrt`) over an already-laid-out radicand, using this list's font and style. The
     * radicand is expected to have been set in [[style]]`.cramp`. The surd glyph is chosen tall enough to
     * span the radicand plus the bar and its clearance. An optional `degree` (the index of a higher root,
@@ -141,8 +150,36 @@ class MathMode(
     * laid-out cells, columns aligned and rows baseline-spaced, centred on the math axis so a delimiter set
     * around it spans it symmetrically. Columns are centred for a matrix, flush left for `\cases`. */
   def makeMatrix(rows: Vector[Vector[Box]], leftAlign: Boolean): Box =
-    val em = mathFont.size
-    new MatrixBox(rows, mathFont.axisHeight, rowSep = 0.45 * em, colSep = 0.9 * em, leftAlign)
+    makeArray(rows, if leftAlign then MathArrayAlign.Left else MathArrayAlign.Center)
+
+  /** Build a math array under a named alignment pattern — the engine behind both the brace forms (`\matrix`,
+    * `\cases`) and the `\begin{…}` array environments (`aligned`, `pmatrix`, `smallmatrix`, …). A centred or
+    * flush-left pattern gives every column the same alignment and a uniform inter-column gap; the aligned
+    * pattern alternates right/left columns, butting each right→left pair together at the relation seam and
+    * opening a wide gap between pairs. `tight` (for `\smallmatrix` and `\substack`) shrinks both the row and
+    * column gaps for a compact stack. The cells are expected to have been set at this list's cell style. */
+  def makeArray(rows: Vector[Vector[Box]], align: MathArrayAlign, tight: Boolean = false): Box =
+    val em     = mathFont.size
+    val nCols  = if rows.isEmpty then 0 else rows.map(_.size).max
+    val colGap = if tight then 0.3 * em else 0.9 * em
+    val rSep   = if tight then 0.2 * em else 0.45 * em
+    val seams  = math.max(0, nCols - 1)
+
+    val (aligns, seps) = align match
+      case MathArrayAlign.Center =>
+        (Vector.fill(nCols)(ColumnAlign.Center), Vector.fill(seams)(colGap))
+      case MathArrayAlign.Left =>
+        (Vector.fill(nCols)(ColumnAlign.Left), Vector.fill(seams)(colGap))
+      case MathArrayAlign.Aligned =>
+        // columns run right, left, right, left, …; within a right→left pair the seam carries just the relation's
+        // own left space (the left column ends in a term and the right column opens with `=`, so the alignment
+        // column reads `a = b` with proper spacing), and a wide quad opens between successive pairs
+        val relSpace = 5.0 / 18.0 * em // TeX's thickmuskip, the space a relation keeps beside an operand
+        val a = Vector.tabulate(nCols)(j => if j % 2 == 0 then ColumnAlign.Right else ColumnAlign.Left)
+        val s = Vector.tabulate(seams)(k => if k % 2 == 0 then relSpace else 2.0 * em)
+        (a, s)
+
+    new MatrixBox(rows, mathFont.axisHeight, rSep, aligns, seps)
 
   /** Build a `\left…\right` delimited sub-formula: the already-laid-out inner formula flanked by stretchy
     * fences tall enough to span it about the math axis. Either delimiter may be absent (a null delimiter,

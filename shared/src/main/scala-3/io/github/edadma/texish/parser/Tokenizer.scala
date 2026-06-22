@@ -181,11 +181,18 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
         reader = reader.next
       Token.ControlSeq(name.toString, pos)
     else if isSymbolic(reader.ch) then
-      // Symbolic control sequence - read consecutive symbolic chars
-      val name = new StringBuilder
-      while !reader.eoi && isSymbolic(reader.ch) do
-        name.append(reader.ch)
-        reader = reader.next
+      // Symbolic control sequence — a run of symbolic characters (so the comparison operators `\!=`, `\<=` and
+      // `\>=` read as one token), with one exception: a comma never joins a symbolic control sequence. `\,` is
+      // always the lone thin-space control symbol, so `\,(` tokenizes as `\,` then `(`, not as a control
+      // sequence named `,(` — there is no multi-character symbolic control sequence containing a comma.
+      val name  = new StringBuilder
+      val comma = reader.ch == ','
+      name.append(reader.ch)
+      reader = reader.next
+      if !comma then
+        while !reader.eoi && isSymbolic(reader.ch) && reader.ch != ',' do
+          name.append(reader.ch)
+          reader = reader.next
       Token.ControlSeq(name.toString, pos)
     else
       // Single special character escape like \{ or \}
