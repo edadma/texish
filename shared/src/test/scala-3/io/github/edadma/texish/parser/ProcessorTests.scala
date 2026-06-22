@@ -1,6 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
+import io.github.edadma.texish.HeadlessTypesetter
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -11,6 +12,15 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
     val proc = new Processor(handler)
     proc.process(input)
     handler.result
+
+  // A processor with the full typesetting primitives, so the active characters (#, &, ^, _) are
+  // registered the way a real document sees them.
+  private def typesetProc(): Processor =
+    val t       = new HeadlessTypesetter
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    proc
 
   "Processor" - {
     "should pass through plain text" in {
@@ -27,6 +37,16 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
 
     "should define and expand macros" in {
       process("\\def foo {bar}\\foo") shouldBe "bar"
+    }
+
+    "a value keeps a literal active character: an all-digit hex colour is not collapsed to a dimension" in {
+      // # is an active character (the \halign placeholder) but stands for itself elsewhere; a value like
+      // a #RRGGBB colour must keep it. Before the fix, {#808080} dropped the # and read 808080 as a
+      // dimension (\"808080pt\"), while {#b0b0b0} survived only because its letters blocked the number.
+      val proc = typesetProc()
+      proc.process("\\set c {#808080}\\set d {#b0b0b0}")
+      proc.handler.get("c") shouldBe Value.Text("#808080")
+      proc.handler.get("d") shouldBe Value.Text("#b0b0b0")
     }
 
     "should handle macro with content after" in {

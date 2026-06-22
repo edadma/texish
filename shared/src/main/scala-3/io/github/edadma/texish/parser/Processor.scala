@@ -1118,12 +1118,16 @@ def evalTokens(tokens: Vector[Token], handler: Handler): Value =
     case Vector(Token.ControlSeq(name, _)) =>
       handler.get(name)
     case _ =>
-      // Multiple tokens - concatenate as text including spaces
+      // Multiple tokens - concatenate as text including spaces. An active character that stands for
+      // itself outside its special mode (notably #, which is only a placeholder inside \halign)
+      // contributes its character, so a value like the colour {#808080} keeps its leading # instead of
+      // collapsing to a bare number that then reads as a dimension.
       val text = tokens.map {
-        case Token.Text(s, _)  => s
-        case Token.Space(s, _) => s
-        case Token.Newline(_)  => "\n"
-        case _                 => ""
+        case Token.Text(s, _)   => s
+        case Token.Space(s, _)  => s
+        case Token.Newline(_)   => "\n"
+        case Token.Active(c, _) => c.toString
+        case _                  => ""
       }.mkString
       if text.isEmpty then Value.Nil
       else parseGlue(text, handler.fontUnit).getOrElse(Value.Text(text)) // a braced glue spec like {12pt plus 2pt} arrives here
