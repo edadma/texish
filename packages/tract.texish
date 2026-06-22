@@ -1,18 +1,22 @@
-// tract.texish - impose a bilingual Z-fold gospel tract onto US Letter.
+// tract.texish - impose a bilingual Z-fold gospel tract for printing, folding, and cutting.
 //
-// One Letter sheet (portrait) carries TWO identical half-letter tracts stacked top and bottom; cut
-// the sheet across the middle to get two tracts. Each tract is Z-folded in thirds -- three 2.833in
-// columns. The message in language A flows down the front's three columns (leftmost column first);
-// the same message in language B flows down the back's three columns. Printed double-sided and
-// flipped on the LONG edge, the back columns are imposed in reverse so that after the flip each B
-// column lands behind its A column. So when a tract is unfolded flat it shows the whole message in
-// language A on one face and language B on the other.
+// A tract carries the same message in two languages, one per face, each Z-folded in thirds. Write each
+// language once as flowing prose; the package splits it into three panel-height columns (the leftmost
+// fills first), places them across a full-sheet \picture, and emits a two-page document -- front in
+// language A, back in language B, in the SAME column order -- with dashed fold guides on the thirds.
+// Unfolded flat, one face reads language A across columns 1-2-3 and the other reads language B.
 //
 //   \use{tract}
 //   \tract{ <language A body> }{ <language B body> }
 //
-// Geometry (points, 72 per inch): sheet 612x792, each tract 612x396, column 204 wide, fold lines at
-// x=204 and x=408, cut line at y=396. Print double-sided, flip on the long edge, cut, then Z-fold.
+// Two paper sizes (\set tractpaper {...}):
+//   letter - US Letter portrait holding TWO identical tracts stacked top and bottom, each 612x396 pts;
+//            a cut guide crosses the middle (y=396). Cut the sheet in half to get two tracts.
+//   a5     - A5 landscape (595.276x419.528 pts) holding ONE tract that fills the sheet; no cut.
+//
+// Printed double-sided, the back is NOT mirrored relative to the front on a long-edge-flip duplexer, so
+// language B's columns land behind language A's directly. Print at true 100% (no fit-to-page scaling)
+// so the fold thirds stay exact.
 
 // ---- configuration ----
 \set tractmargin {18}            // inset from each panel edge to its content (0.25in)
@@ -80,7 +84,8 @@
 }
 
 // Place three column boxes across one tract at content-top y. Used twice per page, once for the upper
-// tract and once for the lower, so the two tracts on the sheet are identical.
+// tract and once for the lower, so the two tracts on the sheet are identical. Each column argument is a
+// guarded \copy (see \tract), so an empty column places nothing rather than erroring.
 \def trPlace pa pb pc y {
   \at anchor:northwest {\trXa \y}{\pa}
   \at anchor:northwest {\trXb \y}{\pb}
@@ -108,15 +113,30 @@
   \setbox trB \vbox{\noindent\bodyB}
   \set hsize {\trSheetW}
   // Split each body into three panel-height columns. The first cut is column 1 (leftmost), the second
-  // is column 2, and the remainder is column 3 -- so the message fills the columns left to right.
-  \setbox trA1 \vsplit trA to:{\trCH}
-  \setbox trA2 \vsplit trA to:{\trCH}
-  \setbox trB1 \vsplit trB to:{\trCH}
-  \setbox trB2 \vsplit trB to:{\trCH}
-  // FRONT: language A, columns A1 A2 A3 left to right.
-  \trSide{\tractfrontdx}{\tractfrontdy}{\copy trA1}{\copy trA2}{\copy trA}
+  // is column 2, and the remainder is column 3 -- so the message fills the columns left to right. A
+  // body shorter than three columns empties its source register early, so each \vsplit is guarded with
+  // \isvoid (splitting a void register would error) and the unfilled columns are simply left empty.
+  \if {\isvoid trA}\else \setbox trA1 \vsplit trA to:{\trCH}\fi
+  \if {\isvoid trA}\else \setbox trA2 \vsplit trA to:{\trCH}\fi
+  \if {\isvoid trB}\else \setbox trB1 \vsplit trB to:{\trCH}\fi
+  \if {\isvoid trB}\else \setbox trB2 \vsplit trB to:{\trCH}\fi
+  // Warn (without stopping the run) when the remainder left after two splits is taller than one column:
+  // the body did not fit in three panels and the third will spill past the fold. \ht/\dp take a bare
+  // register name and cannot appear inside \calc, so each height is stored first, then summed. The names
+  // are literal because \isvoid/\ht read a raw token, not a macro-expanded one.
+  \if {\isvoid trA}\else
+    \set trRh {\ht trA}\set trRd {\dp trA}
+    \if {\> {\calc{trRh + trRd}}{\trCH}}\message{tract: the language-A body overflows three columns; the third panel spills past the fold. Shorten the text or reduce the tractmargin setting.}\fi
+  \fi
+  \if {\isvoid trB}\else
+    \set trRh {\ht trB}\set trRd {\dp trB}
+    \if {\> {\calc{trRh + trRd}}{\trCH}}\message{tract: the language-B body overflows three columns; the third panel spills past the fold. Shorten the text or reduce the tractmargin setting.}\fi
+  \fi
+  // FRONT: language A, columns A1 A2 A3 (the remainder) left to right. Each column is placed with a
+  // guarded \copy so a column left empty by a short body contributes nothing instead of erroring.
+  \trSide{\tractfrontdx}{\tractfrontdy}{\if {\isvoid trA1}\else\copy trA1\fi}{\if {\isvoid trA2}\else\copy trA2\fi}{\if {\isvoid trA}\else\copy trA\fi}
   \newpage
   // BACK: language B in the SAME column order as the front. On this duplex path the back is not
   // mirrored relative to the front, so B1 B2 B3 land behind A1 A2 A3 directly.
-  \trSide{\tractbackdx}{\tractbackdy}{\copy trB1}{\copy trB2}{\copy trB}
+  \trSide{\tractbackdx}{\tractbackdy}{\if {\isvoid trB1}\else\copy trB1\fi}{\if {\isvoid trB2}\else\copy trB2\fi}{\if {\isvoid trB}\else\copy trB\fi}
 }}

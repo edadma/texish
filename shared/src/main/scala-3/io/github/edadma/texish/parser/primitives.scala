@@ -753,6 +753,21 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // isvoid name - true when the named box register holds no box: either it was never \setbox, or it has been used
+  // up (\box empties it, and \vsplit empties the source once nothing remains to split). The predicate, unlike \box
+  // or \copy, never errors on an empty register, so a document can test before placing — \if {\isvoid col3}...\fi
+  // guards against a body too short to fill every column. Mirrors TeX's \ifvoid.
+  proc.registerPrimitive(
+    "isvoid",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = proc.readIdentifier(pos)
+        proc.setResult(Value.Bool(proc.handler.get(name) match
+          case Value.Native(_: Box) => false
+          case _                    => true))
+    },
+  )
+
   // kern - a rigid horizontal space of the given dimension (may be negative), e.g. \kern-.1667em
   proc.registerPrimitive(
     "kern",

@@ -137,3 +137,27 @@ class BoxRegisterTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     a[ParserException] should be thrownBy proc.process("\\setbox v \\vbox{\\hbox{AB}} \\unhbox v")
   }
+
+  "\\isvoid is true for a register that was never set, and does not error" in {
+    val (_, proc) = fixture()
+    proc.process("\\set r {\\isvoid nosuchbox}")
+    proc.handler.get("r") shouldBe Value.Bool(true)
+  }
+
+  "\\isvoid is false while the register holds a box" in {
+    val (_, proc) = fixture()
+    proc.process("\\setbox a \\hbox{AB} \\set r {\\isvoid a}")
+    proc.handler.get("r") shouldBe Value.Bool(false)
+  }
+
+  "\\isvoid is true again once \\box has emptied the register" in {
+    val (_, proc) = fixture()
+    proc.process("\\setbox a \\hbox{AB} \\box a \\set r {\\isvoid a}")
+    proc.handler.get("r") shouldBe Value.Bool(true)
+  }
+
+  "\\isvoid is true for a non-box variable (only a box is non-void)" in {
+    val (_, proc) = fixture()
+    proc.process("\\set a {5} \\set r {\\isvoid a}")
+    proc.handler.get("r") shouldBe Value.Bool(true)
+  }
