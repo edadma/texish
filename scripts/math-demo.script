@@ -47,8 +47,9 @@ $$A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
   \qquad
   \begin{Bmatrix} x \\ y \end{Bmatrix}.$$
 
-A \texttt{smallmatrix} such as $\begin{smallmatrix} a & b \\ c & d \end{smallmatrix}$
-sets compactly inside a line of text.
+Like the plain \texttt{matrix}, a \texttt{smallmatrix} carries no fences of its
+own, so you bracket it yourself; it sets compactly inside a line of text, as in
+$(\begin{smallmatrix} a & b \\ c & d \end{smallmatrix})$.
 
 \section {Cases}
 
