@@ -1,0 +1,174 @@
+\use{book}
+
+\title{The texish Reference Manual}
+\author{The texish project}
+\date{Version 0.7.0}
+
+\frontmatter
+\maketitle
+
+\chapter{Preface}
+
+This is the reference manual for \emph{texish}, a typesetting engine in the
+tradition of Donald Knuth's \TeX. Like \TeX, texish reads a source document
+written in a language of ordinary text interspersed with \emph{control
+sequences}, and from it builds finished pages: lines broken and justified by the
+Knuth--Plass algorithm, words divided by Liang's hyphenation patterns, formulae
+set in real math mode, and the whole assembled by a page builder into a PDF.
+
+The manual is written in two voices at once. Most of it is a narrative that
+introduces the engine one idea at a time, in roughly the order you meet those
+ideas when you write a document: characters and groups, then boxes and glue,
+then paragraphs, then mathematics, and so on. The later part is a reference: a
+systematic catalogue of the primitives and the bundled packages, to be consulted
+rather than read. A reader new to texish should follow the narrative; a reader
+who already knows what to do and needs to recall how should turn to the
+reference.
+
+A word on how to read the examples. Wherever the text shows you a piece of
+source, it is set in a typewriter face exactly as you would type it:
+
+\begin{verbatim}
+Hello, world. This is $E = mc^2$.
+\end{verbatim}
+
+When a single control sequence is named in the middle of a sentence --- the
+\verb|\section| command, say, or the \verb|\frac| of a fraction --- it too is
+set in typewriter, so that it can never be mistaken for the surrounding prose.
+Names of commands always begin with a backslash; names of packages and
+environments do not.
+
+This manual was, of course, typeset by texish itself.
+
+\contents
+
+\mainmatter
+
+\part{Foundations}
+
+\chapter{Introduction}
+
+texish is a small program with a large ancestry. Its purpose is to turn a text
+file into a beautifully set document, and almost everything about how it does so
+is borrowed, deliberately, from \TeX: the box-and-glue model of layout, the
+badness-driven line breaker, the math italic and the spacing rules of
+mathematics, the idea that a document is a program in a macro language. What
+texish adds is a modern home for those ideas --- it is written in Scala, runs on
+the Java virtual machine, in the browser, and as a native executable, and draws
+its pages through the Cairo graphics library --- and a deliberately small,
+readable core that a student can hope to understand in full.
+
+\section{What texish is}
+
+At heart texish is an \emph{interpreter}. You give it a source document; it
+reads that document from beginning to end, and as it reads it acts: it sets
+characters into words, gathers words into paragraphs, breaks paragraphs into
+lines, stacks lines and other material into pages, and ships each finished page
+to the output. There is no separate parsing stage that builds a tree for a later
+stage to walk; reading and typesetting happen together, in one pass over the
+input, exactly as in \TeX. This is worth stating plainly because it explains a
+good deal of the engine's behaviour: a command takes effect at the moment it is
+read, and its effect can depend on everything read before it.
+
+The output is a PDF (or, from the raster backends, a PNG). texish carries its own
+fonts --- the Latin Modern family that descends from Knuth's Computer Modern, a
+matching math font, and a monospace face for code --- so a document sets the same
+way on every machine, with no external font installation.
+
+\section{How a document becomes a page}
+
+It helps to know the path your source takes through the engine, because the rest
+of this manual is organised along it. There are four stages, each feeding the
+next.
+
+\subsection{Tokens}
+
+First the source is broken into \emph{tokens}. A run of ordinary letters is one
+text token; a backslash followed by letters is a control-sequence token, such as
+\verb|\section|; the special characters --- the braces that open and close a
+group, the \verb|$| that toggles mathematics --- are tokens of their own. A few
+characters are \emph{active} and behave like commands in their own right; the tie
+\verb|~|, which sets an unbreakable space, is one. Two slashes begin a comment
+that runs to the end of the line. (Unlike \TeX, the percent sign is an ordinary
+character in texish, free to be used in prose and in arithmetic.)
+
+\subsection{Processing and expansion}
+
+The tokens are then processed in order. Most control sequences are
+\emph{primitives}, built into the engine: \verb|\hskip| inserts horizontal space,
+\verb|\vbox| builds a vertical box, \verb|\section| opens a section. Others are
+\emph{macros}, defined in the source or by a package with \verb|\def|; when the
+engine meets a macro it replaces it with its definition and goes on reading. The
+bundled packages --- loaded with \verb|\use| --- are nothing more than
+collections of such definitions; the \verb|document| package, for instance,
+defines \verb|\section| and the rest of the article furniture in terms of the
+engine's primitives.
+
+\subsection{Boxes and glue}
+
+As the engine reads, the material it produces is assembled out of \emph{boxes}
+and \emph{glue}, the two ideas at the centre of the whole system. A box is a
+rectangle with a definite height, depth, and width --- a single character is a
+box, a word is a box of boxes, a line is a wider one. Glue is stretchable,
+shrinkable space set between boxes; it is glue that lets a line of type spread to
+fill the measure, and glue that opens up the space above a heading. Paragraphs
+are broken into lines by choosing breakpoints that make the glue stretch and
+shrink as little as possible, the optimisation that gives texish its even
+``colour'' on the page.
+
+\subsection{Pages}
+
+Finally the page builder collects the vertical list of lines, headings, and
+spaces, finds good places to break it into pages, attaches the running head and
+the folio, and ships each page to the PDF. Mathematics, footnotes, figures, and
+multiple columns all feed into this same machinery.
+
+\section{Your first document}
+
+A texish document can be as short as a line. Put the following in a file called
+\verb|hello.script|:
+
+\begin{verbatim}
+\use{document}
+
+\section{Hello}
+
+Hello, world. This is a paragraph of text, and here is a
+displayed formula:
+$$E = mc^2.$$
+
+\vfill\eject
+\end{verbatim}
+
+The first line loads the \verb|document| package, which gives the article format:
+sections, a title, lists, and so on. The body is ordinary text; a blank line ends
+one paragraph and begins the next, just as in \TeX. The \verb|$$...$$| pair sets a
+formula on a line of its own. The final \verb|\vfill\eject| fills the rest of the
+last page with blank space and ships it.
+
+To turn the source into a PDF, run the command-line tool from the repository:
+
+\begin{verbatim}
+sbt "texishCli/run hello.script"
+\end{verbatim}
+
+This writes \verb|hello.pdf| beside the source. That is the whole cycle: edit the
+script, run the tool, read the PDF.
+
+\section{How this manual is organized}
+
+The narrative proceeds from the small to the large. After this introduction,
+Part~I continues with the units of input --- characters, groups, and spaces ---
+and then with the boxes and glue from which everything is built. Part~II covers
+the horizontal world: words, paragraphs, line breaking, and hyphenation.
+Part~III is devoted to mathematics, the largest single subject in the engine.
+Part~IV describes the vertical world and the page builder, including footnotes,
+columns, and floats. Part~V documents the bundled packages --- \verb|document|,
+\verb|book|, \verb|math|, and the rest --- as the formats a working document
+actually uses.
+
+The reference that closes the manual lists every primitive with its arguments and
+a one-line description, grouped by the chapter that explains it, so that a command
+met in the narrative can be looked up later in a moment.
+
+\vfill\eject

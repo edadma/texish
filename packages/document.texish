@@ -175,7 +175,7 @@
 // captured value would lose everything after the dot; these build the dotted number with \cat instead. The top
 // level is just \thesection, so \appendix's switch to lettered numbers carries through here too.
 \def thesectionnum {\thesection}
-\def thesubsectionnum {\cat{\thesection}{\cat{.}{\arabic{\value{subsection}}}}}
+\def thesubsectionnum {\cat{\thesectionnum}{\cat{.}{\arabic{\value{subsection}}}}}
 \def thesubsubsectionnum {\cat{\thesubsectionnum}{\cat{.}{\arabic{\value{subsubsection}}}}}
 
 // Each heading takes a leading * for the unnumbered form (\section*{…}): the star form
@@ -184,17 +184,25 @@
 // number a following \label captures (set \global because the \else branch is inside \if's group), and \tocentry
 // notes the heading so \tableofcontents can list it with the page it lands on. The starred forms do neither, as
 // in LaTeX.
+//
+// Every numbered heading shares that bookkeeping — the three currentlabel fields a following \label/\autoref/
+// \nameref read, then a contents entry at the heading's level — so it lives here once. The book package's
+// \chapter, a heading level the article format does not have, calls this too.
+\def headingmeta lvl num kind t {
+  \global\set currentlabel {\num}
+  \global\set currentlabeltype {\kind}
+  \global\set currentlabelname {\t}
+  \tocentry{\lvl}{\num}{\t}
+}
+
 \def section * t {
   \vskip 14pt plus 3pt minus 1pt
   \if {\star}
     \leftline{\font lmroman 14 bold \t}
   \else
     \stepcounter{section}
-    \global\set currentlabel {\thesectionnum}
-    \global\set currentlabeltype {Section}
-    \global\set currentlabelname {\t}
+    \headingmeta{1}{\thesectionnum}{Section}{\t}
     \leftline{\font lmroman 14 bold \thesection\hskip 10 \t}
-    \tocentry{1}{\thesectionnum}{\t}
   \fi
   \nobreak
   \vskip 8pt plus 2pt
@@ -207,11 +215,8 @@
     \leftline{\font lmroman 12 bold \t}
   \else
     \stepcounter{subsection}
-    \global\set currentlabel {\thesubsectionnum}
-    \global\set currentlabeltype {Subsection}
-    \global\set currentlabelname {\t}
+    \headingmeta{2}{\thesubsectionnum}{Subsection}{\t}
     \leftline{\font lmroman 12 bold \thesubsection\hskip 10 \t}
-    \tocentry{2}{\thesubsectionnum}{\t}
   \fi
   \nobreak
   \vskip 6pt plus 1pt
@@ -224,11 +229,8 @@
     \leftline{\font lmroman 11 bold \t}
   \else
     \stepcounter{subsubsection}
-    \global\set currentlabel {\thesubsubsectionnum}
-    \global\set currentlabeltype {Subsubsection}
-    \global\set currentlabelname {\t}
+    \headingmeta{3}{\thesubsubsectionnum}{Subsubsection}{\t}
     \leftline{\font lmroman 11 bold \thesubsubsection\hskip 10 \t}
-    \tocentry{3}{\thesubsubsectionnum}{\t}
   \fi
   \nobreak
   \vskip 5pt plus 1pt

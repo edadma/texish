@@ -104,13 +104,19 @@
 // table counters under it); in front and back matter the number line is dropped and
 // the counter left alone. Either way the title is recorded as a page mark, so the
 // running head names whichever chapter a page belongs to.
-\def chapter t {
+\def thechapter {\arabic{\value{chapter}}}
+
+\def chapter * t {
   \eject
   \vskip 36pt
   \if {\= {\calc{chapnumbered}} {1}}
-    \stepcounter{chapter}
-    \leftline{\font lmroman 14 bold Chapter \arabic{\value{chapter}}}
-    \vskip 8pt
+    \if {\star}
+    \else
+      \stepcounter{chapter}
+      \leftline{\font lmroman 14 bold Chapter \thechapter}
+      \vskip 8pt
+      \headingmeta{0}{\thechapter}{Chapter}{\t}
+    \fi
   \fi
   \leftline{\font lmroman 24 bold \t}
   \mark{\t}
@@ -125,25 +131,21 @@
 \def headline {\font lmroman 9 italic \hfil\the\firstmark\hfil}
 
 // ---- Sectioning within a chapter -----------------------------------------------
-// The document package numbers sections from the top of the document (1, 2, ...) and
-// subsections within a section. A book numbers both within the chapter, so the run-in
-// number gains a chapter prefix: section 1.1, subsection 1.1.1. The headings are
-// otherwise the document package's, redefined here only to widen the number.
-\def section t {
-  \stepcounter{section}
-  \vskip 14pt plus 3pt minus 1pt
-  \leftline{\font lmroman 14 bold \arabic{\value{chapter}}.\arabic{\value{section}}\hskip 10 \t}
-  \vskip 8pt plus 2pt
-  \noindent
-}
-
-\def subsection t {
-  \stepcounter{subsection}
-  \vskip 12pt plus 3pt minus 1pt
-  \leftline{\font lmroman 12 bold \arabic{\value{chapter}}.\arabic{\value{section}}.\arabic{\value{subsection}}\hskip 10 \t}
-  \vskip 6pt plus 1pt
-  \noindent
-}
+// A book numbers sections within the chapter, so a section reads 1.1 and a subsection
+// 1.1.1. The document package builds every printed number, cross-reference and contents
+// entry on \thesection, so redefining that one macro is the whole change: \section,
+// \subsection, their starred forms and their \label / \autoref support are all
+// inherited from the document package unchanged. (\counterwithin above already resets
+// the section counter at the start of each chapter.)
+//
+// As in the document package there are two forms of the number, and book prefixes the
+// chapter onto each root; the sub-levels build on these and inherit the prefix. The
+// printed \thesection joins its parts with a literal dot, because it is typeset into the
+// heading. The value \thesectionnum joins them with \cat, because the document package
+// feeds it to \tocentry and \label as a value, where a bare `.` is the member-access
+// operator rather than a printed dot.
+\def thesection {\arabic{\value{chapter}}.\arabic{\value{section}}}
+\def thesectionnum {\cat{\thechapter}{\cat{.}{\arabic{\value{section}}}}}
 
 // ---- Float captions ------------------------------------------------------------
 // Figures and tables number within the chapter, so a caption shows the chapter as a
