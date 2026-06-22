@@ -25,6 +25,13 @@
 \set tractpaper {letter}         // letter: two tracts per US Letter sheet, cut in half. a5: one
                                  //   tract per A5 sheet (landscape), no cut.
 
+// Hyphenation language per face, as a tag whose patterns ship in the binary (en-us, es, fr). A narrow
+// column justifies much more tightly when long words can break, so set these to the body languages.
+// Empty (the default) leaves a face unhyphenated. For a language whose patterns are not bundled, load
+// them once with \loadhyphenation{tag}{path} before \tract and name the tag here.
+\set tractlanga {}               // hyphenation tag for the language-A (front) body, e.g. en-us
+\set tractlangb {}               // hyphenation tag for the language-B (back) body, e.g. es
+
 // Duplex registration: real duplex printing rarely lands the back exactly over the front, and the
 // cut must fall on the sheet's true middle. Fold the calibration sheet in half to find that middle,
 // see which side's cut guide sits on it (that side is correct) and how far the other side is off,
@@ -107,9 +114,12 @@
 
 \def tract bodyA bodyB {{
   \trSetup
-  // Typeset each language's body at the column content width.
+  // Typeset each language's body at the column content width. Hyphenation is a global setting read as
+  // each paragraph is broken, so switch to each face's language right before building its box.
   \set hsize {\trCW}
+  \if {\size {\tractlanga}}\usehyphenation{\tractlanga}\fi
   \setbox trA \vbox{\noindent\bodyA}
+  \if {\size {\tractlangb}}\usehyphenation{\tractlangb}\fi
   \setbox trB \vbox{\noindent\bodyB}
   \set hsize {\trSheetW}
   // Split each body into three panel-height columns. The first cut is column 1 (leftmost), the second

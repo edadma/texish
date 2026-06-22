@@ -68,20 +68,26 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     // doc tool does not accept ("Setting -Xplugin is currently not supported"). The plugin is only needed to
     // compile, not to build docs from TASTy, so drop it from the doc invocation to keep the doc build clean.
     Compile / doc / scalacOptions ~= { _.filterNot(_.startsWith("-Xplugin")) },
-    // Embed the TeX en-US hyphenation patterns as a Scala constant at build time, so they ship
-    // compiled into every target — a native binary has no pattern file to read at runtime.
-    // Hyphenation.enableEnglish() loads this. The string is escaped so any pattern content is safe.
+    // Embed every TeX hyphenation pattern file (shared/src/main/resources/hyph-*.tex) as a Scala
+    // constant at build time, keyed by language tag (hyph-en-us.tex -> "en-us"), so they ship compiled
+    // into every target — a native binary has no pattern file to read at runtime. Hyphenation reaches
+    // them through EmbeddedHyphenationPatterns.byTag. Each string is escaped so any content is safe.
     Compile / sourceGenerators += Def.task {
-      val root    = (LocalRootProject / baseDirectory).value
-      val src     = root / "shared" / "src" / "main" / "resources" / "hyph-en-us.tex"
-      val out     = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EnglishHyphenationPatterns.scala"
-      val escaped = IO.read(src).replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
+      val root  = (LocalRootProject / baseDirectory).value
+      val resir = root / "shared" / "src" / "main" / "resources"
+      val files = (resir * "hyph-*.tex").get.sortBy(_.getName)
+      val out   = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedHyphenationPatterns.scala"
+      val entries = files.map { f =>
+        val tag     = f.getName.stripPrefix("hyph-").stripSuffix(".tex")
+        val escaped = IO.read(f).replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
+        "    \"" + tag + "\" -> \"" + escaped + "\""
+      }
       IO.write(
         out,
         "package io.github.edadma.texish\n\n" +
-          "// Generated at build time from shared/src/main/resources/hyph-en-us.tex — do not edit.\n" +
-          "private[texish] object EnglishHyphenationPatterns:\n" +
-          "  val content: String = \"" + escaped + "\"\n",
+          "// Generated at build time from shared/src/main/resources/hyph-*.tex — do not edit.\n" +
+          "private[texish] object EmbeddedHyphenationPatterns:\n" +
+          "  val byTag: Map[String, String] = Map(\n" + entries.mkString(",\n") + "\n  )\n",
       )
       Seq(out)
     }.taskValue,

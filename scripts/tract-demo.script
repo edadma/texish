@@ -1,6 +1,11 @@
 // Bilingual Z-fold gospel tract. The package owns the page geometry; pick the paper with
 // \set tractpaper {letter} (two tracts per sheet, cut in half) or {a5} (one tract, no cut).
 \use{tract}
+
+// Hyphenate each face in its own language so the narrow columns justify tightly.
+\set tractlanga {en-us}
+\set tractlangb {es}
+
 \tract{
 \bold{God Loves You}
 

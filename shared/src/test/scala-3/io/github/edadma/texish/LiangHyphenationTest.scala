@@ -154,6 +154,37 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
     finally Hyphenation.clear() // leave the global hyphenator as we found it
   }
 
+  it should "bundle en-us, es, and fr patterns and enable each via enableEmbedded" in {
+    Hyphenation.embeddedLanguages should contain allOf ("en-us", "es", "fr")
+    Hyphenation.enableEmbedded("xx-nope") shouldBe false // an unbundled tag reports failure, not an error
+  }
+
+  it should "hyphenate Spanish words once the embedded es patterns are active" in {
+    Hyphenation.clear()
+    Hyphenation.enableEmbedded("es") shouldBe true
+    Hyphenation.setLanguage("es")
+    try
+      // the bundled es patterns find at least one break in an ordinary multi-syllable Spanish word, and
+      // every break splits the whole word (the prefix carries the trailing hyphen, as for English)
+      val points = Hyphenation("palabra").map(_.toList)
+      points should not be None
+      points.get should not be empty
+      all(points.get.map((before, after) => before.stripSuffix("-") + after)) shouldBe "palabra"
+    finally Hyphenation.clear()
+  }
+
+  it should "switch the active language between two embedded sets" in {
+    Hyphenation.clear()
+    Hyphenation.enableEmbedded("en-us")
+    Hyphenation.enableEmbedded("fr")
+    try
+      Hyphenation.setLanguage("fr")
+      Hyphenation.getLanguage shouldBe Some("fr")
+      Hyphenation.setLanguage("en-us")
+      Hyphenation.getLanguage shouldBe Some("en-us")
+    finally Hyphenation.clear()
+  }
+
   // Real English word hyphenation tests
   // Format: word -> expected syllables (hyphenation points are between syllables)
   // Values verified against hyph-en-us.tex patterns
