@@ -7,6 +7,10 @@
 
 \contents
 
+\listoffigs
+
+\listoftabs
+
 \vskip 18pt
 
 \section {Introduction}
@@ -14,24 +18,38 @@
 This document is typeset more than once. On the first pass the engine learns
 where every numbered heading lands; on the next it fills in the table of contents
 above and the references below. Forward references work because of it: the
-conclusion is section~\ref{sec:conclusion}, which begins on page~\pageref{sec:conclusion},
-and the worked example is section~\ref{sec:example} on page~\pageref{sec:example}.
+conclusion is \autoref{sec:conclusion}, which begins on page~\pageref{sec:conclusion},
+and the worked example is \autoref{sec:example} on page~\pageref{sec:example}.
 
 \label{sec:intro}A reference can also point backward, of course --- this
-introduction is section~\ref{sec:intro}.
+introduction is \autoref{sec:intro}, titled ``\nameref{sec:intro}''.
 
 \section {Background}
 
 \label{sec:background}A cross-reference binds a name to a numbered thing with \texttt{label}, then names
-it later with \texttt{ref} (the number) or \texttt{pageref} (the page). The number
-is captured where the label is written; the page is learned when that page ships,
-so neither has to be known in advance.
+it later with \texttt{ref} (the number), \texttt{pageref} (the page), \texttt{autoref}
+(the number with its kind word in front, as above), or \texttt{nameref} (the title).
+The number is captured where the label is written; the page is learned when that
+page ships, so neither has to be known in advance.
 
 \subsection {How the table of contents is built}
 
 Each sectioning command quietly records its level, number, title and page. The
 \texttt{tableofcontents} command replays those entries, drawing a dotted leader
-from each title to its page number --- the classic use of leaders.
+from each title to its page number --- the classic use of leaders. Figures and
+tables file their captions into separate lists, replayed by \texttt{listoffigures}
+and \texttt{listoftables}.
+
+\figure[h]{
+\centerline{\includegraphics[width=0.30\linewidth]{frog.jpg}}
+\vskip 6pt
+\centerline{\caption{A frog, the running example of an image float.}\label{fig:frog}}
+}
+
+\autoref{fig:frog} shows an image float; its caption is filed in the list of
+figures at the top. A display equation can be numbered and referenced the same way:
+$$ e^{i\pi} + 1 = 0 \eqno 1 $$
+\label{eq:euler}so \eqref{eq:euler} above is Euler's identity.
 
 \vfill\eject
 
@@ -39,16 +57,24 @@ from each title to its page number --- the classic use of leaders.
 
 \label{sec:example}This section sits on its own page so its number and folio are
 worth referencing from the introduction. Look back at the contents: this is
-section~\ref{sec:example}, and the background discussion was
-section~\ref{sec:background}.
+\autoref{sec:example}, and the background discussion was \autoref{sec:background}.
+
+\table[h]{
+\tabular{ll}{\texttt{ref} & the number \cr \texttt{pageref} & the page \cr \texttt{autoref} & the number with its kind \cr \texttt{nameref} & the title \cr}
+\vskip 6pt
+\caption{The reference commands, for the list of tables.}\label{tab:one}
+}
+
+\autoref{tab:one} is filed in the list of tables. We can also point at it by name:
+``\nameref{tab:one}''.
 
 \vfill\eject
 
 \section {Conclusion}
 
-\label{sec:conclusion}Forward and backward references, and a table of contents
-with real page numbers, all fall out of typesetting the document twice over one
-shared table. This conclusion is section~\ref{sec:conclusion} on
-page~\pageref{sec:conclusion}.
+\label{sec:conclusion}Forward and backward references, a table of contents,
+and separate lists of figures and tables --- with real page numbers --- all fall
+out of typesetting the document twice over one shared table. This conclusion is
+\autoref{sec:conclusion} on page~\pageref{sec:conclusion}.
 
 \vfill\eject

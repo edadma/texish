@@ -191,6 +191,8 @@
   \else
     \stepcounter{section}
     \global\set currentlabel {\thesectionnum}
+    \global\set currentlabeltype {Section}
+    \global\set currentlabelname {\t}
     \leftline{\font lmroman 14 bold \thesection\hskip 10 \t}
     \tocentry{1}{\thesectionnum}{\t}
   \fi
@@ -206,6 +208,8 @@
   \else
     \stepcounter{subsection}
     \global\set currentlabel {\thesubsectionnum}
+    \global\set currentlabeltype {Subsection}
+    \global\set currentlabelname {\t}
     \leftline{\font lmroman 12 bold \thesubsection\hskip 10 \t}
     \tocentry{2}{\thesubsectionnum}{\t}
   \fi
@@ -221,6 +225,8 @@
   \else
     \stepcounter{subsubsection}
     \global\set currentlabel {\thesubsubsectionnum}
+    \global\set currentlabeltype {Subsubsection}
+    \global\set currentlabelname {\t}
     \leftline{\font lmroman 11 bold \thesubsubsection\hskip 10 \t}
     \tocentry{3}{\thesubsubsectionnum}{\t}
   \fi
@@ -245,6 +251,31 @@
 \def contents {
   \section*{\tableofcontentstitle}
   \tableofcontents
+}
+
+// The list of figures and list of tables run the same way over their own engine-collected lists: \listoffigures /
+// \listoftables replay each caption's entry through \lofformat / \lotformat. These have no depth to indent — every
+// entry is a single float — so they print the number, the caption title, a dotted leader and the page. \listoffigs
+// / \listoftabs add the heading above the list, mirroring \contents.
+\def lofformat lvl num ttl pg {
+  \hbox to:\hsize {\num\hskip 8 \ttl\dotfill \pg}
+}
+
+\def lotformat lvl num ttl pg {
+  \hbox to:\hsize {\num\hskip 8 \ttl\dotfill \pg}
+}
+
+\def listoffigurestitle {List of Figures}
+\def listoftablestitle {List of Tables}
+
+\def listoffigs {
+  \section*{\listoffigurestitle}
+  \listoffigures
+}
+
+\def listoftabs {
+  \section*{\listoftablestitle}
+  \listoftables
 }
 
 // \paragraph is the lowest level: a bold run-in heading on the same line as the text it
@@ -351,14 +382,24 @@
 \def figure [placement:t] body {{//
 \set captionkind {Figure}//
 \set captioncounter {figure}//
+\set captionlist {lof}//
 \topinsert[\placement]{\body}//
 }}//
 \def table [placement:t] body {{//
 \set captionkind {Table}//
 \set captioncounter {table}//
+\set captionlist {lot}//
 \topinsert[\placement]{\body}//
 }}//
+// \caption steps the float's counter, then records the state a following \label captures — currentlabel holds the
+// number (\global, so it outlives the caption's group), currentlabeltype the kind word \autoref prefixes, and
+// currentlabelname the caption text \nameref prints — and files an entry into the float's contents list (lof / lot)
+// before printing the visible "Figure 1: …" caption.
 \def caption text {{//
 \stepcounter \captioncounter//
+\global\set currentlabel {\arabic{\value \captioncounter}}//
+\global\set currentlabeltype {\captionkind}//
+\global\set currentlabelname {\text}//
+\addcontentsline{\captionlist}{1}{\arabic{\value \captioncounter}}{\text}//
 \the\captionkind \arabic{\value \captioncounter}: \text//
 }}//

@@ -27,6 +27,38 @@ class ReferenceTests extends AnyFreeSpec with Matchers:
     r.refText("sec:intro") shouldBe Some("3.1")
   }
 
+  "a label carries its kind and name for \\autoref and \\nameref" in {
+    val r = new ReferenceTable
+    r.declare("sec:intro", "3.1", "Section", "Introduction")
+    r.refKind("sec:intro") shouldBe Some("Section")
+    r.refName("sec:intro") shouldBe Some("Introduction")
+  }
+
+  "kind and name are absent for a bare label" in {
+    val r = new ReferenceTable
+    r.declare("plain", "3.1")
+    r.refKind("plain") shouldBe None
+    r.refName("plain") shouldBe None
+  }
+
+  "setPage keeps a label's kind and name" in {
+    val r = new ReferenceTable
+    r.declare("fig:frog", "2", "Figure", "A frog")
+    r.setPage("fig:frog", 5)
+    r.refKind("fig:frog") shouldBe Some("Figure")
+    r.refName("fig:frog") shouldBe Some("A frog")
+    r.refPage("fig:frog") shouldBe Some(5)
+  }
+
+  "kind and name resolve forward across a commit" in {
+    val r = new ReferenceTable
+    r.refKind("fig:later") shouldBe None
+    r.declare("fig:later", "2", "Figure", "A frog")
+    r.commit()
+    r.refKind("fig:later") shouldBe Some("Figure")
+    r.refName("fig:later") shouldBe Some("A frog")
+  }
+
   "an undeclared label has no text" in {
     val r = new ReferenceTable
     r.refText("nope") shouldBe None
@@ -69,6 +101,33 @@ class ReferenceTests extends AnyFreeSpec with Matchers:
     r.toc shouldBe Vector(TocEntry(1, "1", "Intro", 1), TocEntry(2, "1.1", "Background", 2))
   }
 
+  "named lists collect independently and survive a commit" in {
+    val r = new ReferenceTable
+    r.recordToc(1, "1", "Intro", 1)
+    r.recordList("lof", 1, "1", "A frog", 2)
+    r.recordList("lot", 1, "1", "Results", 3)
+    r.recordList("lof", 1, "2", "A toad", 4)
+    r.commit()
+    r.list("toc") shouldBe Vector(TocEntry(1, "1", "Intro", 1))
+    r.list("lof") shouldBe Vector(TocEntry(1, "1", "A frog", 2), TocEntry(1, "2", "A toad", 4))
+    r.list("lot") shouldBe Vector(TocEntry(1, "1", "Results", 3))
+  }
+
+  "an unseen list is empty" in {
+    val r = new ReferenceTable
+    r.list("lof") shouldBe Vector.empty
+  }
+
+  "commit reports a change in a non-toc list" in {
+    val r = new ReferenceTable
+    r.recordList("lof", 1, "1", "A frog", 2)
+    r.commit() shouldBe true
+    r.recordList("lof", 1, "1", "A frog", 2)
+    r.commit() shouldBe false
+    r.recordList("lof", 1, "1", "A toad", 2)
+    r.commit() shouldBe true
+  }
+
   // ---- primitive wiring ------------------------------------------------------
 
   private def fixture(): (HeadlessTypesetter, Processor) =
@@ -109,6 +168,52 @@ class ReferenceTests extends AnyFreeSpec with Matchers:
     textOf(t, "captured") shouldBe "??"
   }
 
+  "\\eqref wraps the labelled text in parentheses" in {
+    val (t, proc) = fixture()
+    proc.process("\\set currentlabel {3.2}\\label{eq:euler}\\set captured {\\eqref{eq:euler}}")
+
+    textOf(t, "captured") shouldBe "(3.2)"
+  }
+
+  "\\eqref to an unknown label prints (??)" in {
+    val (t, proc) = fixture()
+    proc.process("\\set captured {\\eqref{ghost}}")
+
+    textOf(t, "captured") shouldBe "(??)"
+  }
+
+  "\\autoref prefixes the kind word captured at \\label" in {
+    val (t, proc) = fixture()
+    proc.process(
+      "\\set currentlabel {3.2}\\set currentlabeltype {Section}\\label{sec:m}\\set captured {\\autoref{sec:m}}",
+    )
+
+    textOf(t, "captured") shouldBe "Section 3.2"
+  }
+
+  "\\autoref falls back to a bare number when no kind was set" in {
+    val (t, proc) = fixture()
+    proc.process("\\set currentlabel {3.2}\\label{sec:m}\\set captured {\\autoref{sec:m}}")
+
+    textOf(t, "captured") shouldBe "3.2"
+  }
+
+  "\\nameref prints the title captured at \\label" in {
+    val (t, proc) = fixture()
+    proc.process(
+      "\\set currentlabel {3.2}\\set currentlabelname {Methods}\\label{sec:m}\\set captured {\\nameref{sec:m}}",
+    )
+
+    textOf(t, "captured") shouldBe "Methods"
+  }
+
+  "\\nameref to an unknown label prints the placeholder" in {
+    val (t, proc) = fixture()
+    proc.process("\\set captured {\\nameref{ghost}}")
+
+    textOf(t, "captured") shouldBe "??"
+  }
+
   "a label inside a paragraph migrates out of its line, like a mark" in {
     val (t, proc) = fixture()
     t.set("hsize", 100.0)
@@ -121,14 +226,47 @@ class ReferenceTests extends AnyFreeSpec with Matchers:
       line.boxes.exists(_.isInstanceOf[LabelBox]) shouldBe false
   }
 
-  "\\tocentry records a contents entry as a migrating box" in {
+  "\\tocentry records a contents entry as a migrating box in the toc list" in {
     val (t, proc) = fixture()
     proc.process("\\tocentry{2}{1.3}{Methods}")
 
     val last = t.mode.asInstanceOf[Builder].list.last
     last shouldBe a[TocMarkBox]
     val e = last.asInstanceOf[TocMarkBox]
-    (e.level, e.number, e.title) shouldBe (2, "1.3", "Methods")
+    (e.list, e.level, e.number, e.title) shouldBe ("toc", 2, "1.3", "Methods")
+  }
+
+  "\\addcontentsline records an entry into the named list" in {
+    val (t, proc) = fixture()
+    proc.process("\\addcontentsline{lof}{1}{2}{A frog}")
+
+    val last = t.mode.asInstanceOf[Builder].list.last.asInstanceOf[TocMarkBox]
+    (last.list, last.level, last.number, last.title) shouldBe ("lof", 1, "2", "A frog")
+  }
+
+  "\\listoffigures replays the lof list through \\lofformat, in order" in {
+    val (t, proc) = fixture()
+    t.references.recordList("lof", 1, "1", "A frog", 2)
+    t.references.recordList("lof", 1, "2", "A toad", 5)
+    t.references.commit()
+
+    proc.process(
+      "\\def lofformat a b c d {\\set rec {\\cat{\\rec}{(\\b,\\c,\\d)}}}\\set rec {}\\listoffigures",
+    )
+
+    textOf(t, "rec") shouldBe "(1,A frog,2)(2,A toad,5)"
+  }
+
+  "\\listoftables reads its own list, independent of the toc and lof" in {
+    val (t, proc) = fixture()
+    t.references.recordToc(1, "1", "Intro", 1)
+    t.references.recordList("lof", 1, "1", "A frog", 2)
+    t.references.recordList("lot", 1, "1", "Results", 3)
+    t.references.commit()
+
+    proc.process("\\def lotformat a b c d {\\set rec {\\cat{\\rec}{(\\c,\\d)}}}\\set rec {}\\listoftables")
+
+    textOf(t, "rec") shouldBe "(Results,3)"
   }
 
   "\\tableofcontents replays the resolved entries through \\tocformat, in order" in {
@@ -149,6 +287,19 @@ class ReferenceTests extends AnyFreeSpec with Matchers:
     proc.process("\\def tocformat a b c d {x}\\set rec {clean}\\tableofcontents")
 
     textOf(t, "rec") shouldBe "clean"
+  }
+
+  "a label and a contents entry buried inside a float learn the float's page at shipout" in quietly {
+    val (t, proc) = fixture()
+    proc.process(
+      "\\set currentlabel {1}\\topinsert{\\label{fig:in} \\addcontentsline{lof}{1}{1}{A frog}}\\vfill\\eject",
+    )
+    t.end()
+
+    // the \label rode a \centerline-free vbox inside the FloatBox; PageMode must recurse into the float to find it
+    t.references.refPage("fig:in") shouldBe Some(1)
+    t.references.commit() // promote the pending lof list so list() can read it
+    t.references.list("lof") shouldBe Vector(TocEntry(1, "1", "A frog", 1))
   }
 
   "\\pageref reports the folio of the page a label ships on" in quietly {
