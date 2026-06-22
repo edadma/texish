@@ -161,3 +161,31 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
     val (_, proc) = fixture()
     the[ParserException] thrownBy proc.process("\\begin{pmatrix} a & b \\end{pmatrix}")
   }
+
+  /** The natural width of the whole math formula in `src`. Every horizontal box that holds glyph nuclei
+    * directly is a laid-out math list — the outer `$…$` plus any braced sub-formula, which is added separately
+    * and is necessarily narrower. The outer formula contains the inner ones, so it is the widest of them; the
+    * paragraph line built around it holds no glyphs directly, so it is excluded. Used to see the inter-atom
+    * spacing the class-forcing commands induce. */
+  private def mathWidth(src: String): Double =
+    val captured = scala.collection.mutable.ArrayBuffer[Box]()
+    val t = new HeadlessTypesetter:
+      override infix def add(box: Box): io.github.edadma.texish.Typesetter =
+        captured += box
+        super.add(box)
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    proc.process(src)
+    captured.collect { case h: HBox if h.boxes.exists(_.isInstanceOf[GlyphBox]) => h.width }.max
+
+  "the class-forcing commands give their atom that class's spacing" in {
+    val ord = mathWidth("$axb$")              // three ordinary atoms, no inter-atom space
+    val bin = mathWidth("$a\\mathbin{x}b$")   // x forced to a binary operator: a medium space on each side
+    val rel = mathWidth("$a\\mathrel{x}b$")   // x forced to a relation: a (wider) thick space on each side
+    val forcedOrd = mathWidth("$a\\mathord{x}b$") // x forced back to ordinary: no space, same as bare
+
+    bin should be > ord
+    rel should be > bin
+    forcedOrd shouldBe (ord +- 0.001)
+  }

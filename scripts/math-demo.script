@@ -64,9 +64,14 @@ and modular forms come ready-made:
 
 $$\arctan x = \int_0^x \frac{dt}{1 + t^2}
   \qquad
+  15 \bmod 4 = 3
+  \qquad
   17 \equiv 2 \pmod{5}
   \qquad
   \operatorname{argmax}_{x} f(x).$$
+
+Here \texttt{\\bmod} is a true binary operator (a medium space on each side),
+while \texttt{\\pmod} parenthesises the modulus at the end of a congruence.
 
 The \texttt{\\overset} and \texttt{\\underset} commands stack an annotation on a
 base, \texttt{\\substack} stacks the lines of a many-line subscript, and

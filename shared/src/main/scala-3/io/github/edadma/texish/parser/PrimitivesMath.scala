@@ -393,6 +393,33 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // The math-class forcing commands - 1 body arg each: typeset the argument as a sub-formula and enter it into
+  // the list as a single atom of the named class, so it takes that class's inter-atom spacing regardless of what
+  // it contains. \mathbin{\operatorname{mod}} makes a binary "mod" (medium space on either side); \mathrel makes
+  // a relation; \mathopen/\mathclose make fences; and so on across TeX's eight classes. Math-mode only.
+  def mathClassPrimitive(name: String, cls: MathClass): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val box = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+
+              if box ne null then parent.addNode(MathAtom(cls, box))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  mathClassPrimitive("mathord", MathClass.Ord)
+  mathClassPrimitive("mathop", MathClass.Op)
+  mathClassPrimitive("mathbin", MathClass.Bin)
+  mathClassPrimitive("mathrel", MathClass.Rel)
+  mathClassPrimitive("mathopen", MathClass.Open)
+  mathClassPrimitive("mathclose", MathClass.Close)
+  mathClassPrimitive("mathpunct", MathClass.Punct)
+  mathClassPrimitive("mathinner", MathClass.Inner)
+
   // noalign - 1 body arg (no scoping - it's inline content in table)
   proc.registerPrimitive(
     "noalign",
