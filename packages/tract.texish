@@ -18,6 +18,8 @@
 \set tractmargin {18}            // inset from each panel edge to its content (0.25in)
 \set tractguides {1}             // draw fold (vertical) and cut (horizontal) guide lines
 \set tractguidecolor {#b0b0b0}
+\set tractpaper {letter}         // letter: two tracts per US Letter sheet, cut in half. a5: one
+                                 //   tract per A5 sheet (landscape), no cut.
 
 // Duplex registration: real duplex printing rarely lands the back exactly over the front, and the
 // cut must fall on the sheet's true middle. Fold the calibration sheet in half to find that middle,
@@ -29,19 +31,33 @@
 \set tractbackdx {0}
 \set tractbackdy {0}
 
-// ---- fixed sheet geometry ----
-\set trSheetW {612}
-\set trSheetH {792}
-\set trColW {204}
-\set trTractH {396}
-\set trCut {396}
-\set trFoldA {204}
-\set trFoldB {408}
-
-// Derived metrics: column content box size, the three column x origins, and the content-top y of the
-// upper and lower tract. Computed once per \tract call so a changed margin takes effect. (Names are
-// letter-only: a digit in a \-referenced name would be read as a separate token.)
+// Set up the sheet for the chosen paper, then derive every metric from it. An imposition package owns
+// the physical page, so we set paperwidth/paperheight ourselves (the CLI -p flag is irrelevant here)
+// and zero the page margins so picture coordinates are true sheet coordinates. Letter holds two tracts
+// stacked and is cut in half; A5 (landscape) holds one tract and is not cut. Names are letter-only: a
+// digit in a \-referenced name would be read as a separate token.
 \def trSetup {
+  \if {\= {\tractpaper}{a5}}
+    \global\set trSheetW {595.276}   // A5 landscape: 210mm wide
+    \global\set trSheetH {419.528}   //               148mm tall
+    \global\set trNup {1}
+  \else
+    \global\set trSheetW {612}       // US Letter portrait: 8.5in x 11in
+    \global\set trSheetH {792}
+    \global\set trNup {2}
+  \fi
+  \global\set paperwidth {\trSheetW}
+  \global\set paperheight {\trSheetH}
+  \global\set hoffset {0}
+  \global\set voffset {0}
+  \global\set hsize {\trSheetW}
+  \global\set vsize {\trSheetH}
+  \global\set raggedbottom {1}
+  \global\set trColW {\calc{trSheetW / 3}}
+  \global\set trTractH {\calc{trSheetH / trNup}}
+  \global\set trFoldA {\trColW}
+  \global\set trFoldB {\calc{2 * trColW}}
+  \global\set trCut {\trTractH}
   \global\set trCW {\calc{trColW - 2 * tractmargin}}
   \global\set trCH {\calc{trTractH - 2 * tractmargin}}
   \global\set trXa {\tractmargin}
@@ -58,7 +74,7 @@
     \nofill\stroke{\tractguidecolor}\linewidth{0.5}\dash{3 3}
     \line{\trFoldA 0 \trFoldA \trSheetH}
     \line{\trFoldB 0 \trFoldB \trSheetH}
-    \line{0 \trCut \trSheetW \trCut}
+    \if {\> {\trNup}{1}}\line{0 \trCut \trSheetW \trCut}\fi
     \dash{}\stroke{black}\linewidth{1}
   \fi
 }
@@ -80,7 +96,7 @@
     \translate{\dx \dy}
     \trGuides
     \trPlace{\ca}{\cb}{\cc}{\trYup}
-    \trPlace{\ca}{\cb}{\cc}{\trYdn}
+    \if {\> {\trNup}{1}}\trPlace{\ca}{\cb}{\cc}{\trYdn}\fi
   }
 }
 
