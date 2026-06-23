@@ -161,15 +161,19 @@
     \set quad {0}
     \if {\= {\s}{circle}}\set quad {1}\fi
     \if {\= {\s}{ellipse}}\set quad {1}\fi
-    \set diam {0}
-    \if {\= {\s}{diamond}}\set diam {1}\fi
     \if {\= {\quad}{1}}
       \set t {\calc{1 / sqrt((ux / hw)^2 + (uy / hh)^2)}}
-    \else\if {\= {\diam}{1}}
+    \else\if {\= {\s}{diamond}}
       \set t {\calc{1 / (abs(ux) / hw + abs(uy) / hh)}}
+    \else\if {\= {\s}{parallelogram}}
+      // a sheared rectangle: de-shear the ray's x by the slant per unit height, clip against
+      // the upright rectangle (half-width hw − slant/2), then the boundary is still centre + t·u.
+      \set ss {\calc{dgslant / (2 * hh)}}
+      \set hwr {\calc{hw - dgslant / 2}}
+      \set t {\calc{1 / max(abs(ux - ss * uy) / hwr, abs(uy) / hh)}}
     \else
       \set t {\calc{1 / max(abs(ux) / hw, abs(uy) / hh)}}
-    \fi\fi
+    \fi\fi\fi
     \global\set dgPx {\calc{cx + t * ux}}
     \global\set dgPy {\calc{cy + t * uy}}
   \fi
@@ -294,11 +298,10 @@
   \fi
 }}
 
-// \edge [label] {from} {to} — a straight arrow from one node to another, leaving and
-// entering through each node's boundary on the line between their centres, so it meets
-// both outlines cleanly however the nodes are aligned.
-\def edge [label] from to {{
-  \set f {\from}\set t {\to}
+// dgstraight{from}{to}{label} — the straight-arrow body, shared by \edge and used as the
+// degenerate case of the orthogonal edges. It leaves and enters through each node's
+// boundary on the line between their centres, so it meets both outlines cleanly.
+\def dgstraight f t label {{
   \set fcx {\mapget dgX {\f}}\set fcy {\mapget dgY {\f}}
   \set tcx {\mapget dgX {\t}}\set tcy {\mapget dgY {\t}}
   \dgboundary{\f}{\tcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
@@ -308,6 +311,9 @@
   \if {\size{\label}}\dglabel{\ax}{\ay}{\bx}{\by}{\label}\fi
 }}
 
+// \edge [label] {from} {to} — a straight arrow between two nodes.
+\def edge [label] from to {\dgstraight{\from}{\to}{\label}}
+
 // \edgehv [label] {from} {to} — an orthogonal arrow that leaves `from` horizontally and
 // enters `to` vertically, turning at the corner (to.x, from.y). This is TikZ's -| route,
 // the natural way to send a decision's side branch across and then down into the target.
@@ -315,13 +321,18 @@
   \set f {\from}\set t {\to}
   \set fcy {\mapget dgY {\f}}
   \set tcx {\mapget dgX {\t}}
-  \dgboundary{\f}{\tcx}{\fcy}\set ax {\dgPx}\set ay {\dgPy}
-  \dgboundary{\t}{\tcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
-  \set mar {\calc{2 * dgedgewidth}}
-  \dgpullback{\bx}{\by}{\tcx}{\fcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
-  \dgedge
-  \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\tcx \fcy}\lineto{\bx \by}}
-  \if {\size{\label}}\at anchor:south {\calc{(\ax + \tcx) / 2} \calc{\fcy + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+  \set tcy {\mapget dgY {\t}}
+  \if {\< {\calc{abs(fcy - tcy)}}{1.5}}
+    \dgstraight{\f}{\t}{\label}
+  \else
+    \dgboundary{\f}{\tcx}{\fcy}\set ax {\dgPx}\set ay {\dgPy}
+    \dgboundary{\t}{\tcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
+    \set mar {\calc{2 * dgedgewidth}}
+    \dgpullback{\bx}{\by}{\tcx}{\fcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
+    \dgedge
+    \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\tcx \fcy}\lineto{\bx \by}}
+    \if {\size{\label}}\at anchor:south {\calc{(\ax + \tcx) / 2} \calc{\fcy + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+  \fi
 }}
 
 // \edgevh [label] {from} {to} — the mirror of edgehv: leaves `from` vertically and enters
@@ -330,14 +341,20 @@
 \def edgevh [label] from to {{
   \set f {\from}\set t {\to}
   \set fcx {\mapget dgX {\f}}
+  \set fcy {\mapget dgY {\f}}
+  \set tcx {\mapget dgX {\t}}
   \set tcy {\mapget dgY {\t}}
-  \dgboundary{\f}{\fcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
-  \dgboundary{\t}{\fcx}{\tcy}\set bx {\dgPx}\set by {\dgPy}
-  \set mar {\calc{2 * dgedgewidth}}
-  \dgpullback{\bx}{\by}{\fcx}{\tcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
-  \dgedge
-  \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\fcx \tcy}\lineto{\bx \by}}
-  \if {\size{\label}}\at anchor:west {\calc{\fcx + dglabelgap} \calc{(\ay + \tcy) / 2}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+  \if {\< {\calc{abs(fcx - tcx)}}{1.5}}
+    \dgstraight{\f}{\t}{\label}
+  \else
+    \dgboundary{\f}{\fcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
+    \dgboundary{\t}{\fcx}{\tcy}\set bx {\dgPx}\set by {\dgPy}
+    \set mar {\calc{2 * dgedgewidth}}
+    \dgpullback{\bx}{\by}{\fcx}{\tcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
+    \dgedge
+    \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\fcx \tcy}\lineto{\bx \by}}
+    \if {\size{\label}}\at anchor:west {\calc{\fcx + dglabelgap} \calc{(\ay + \tcy) / 2}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+  \fi
 }}
 
 // \cedge [bend] {from} {to} [label] — a curved arrow bowed sideways by `bend` points
