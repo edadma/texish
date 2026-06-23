@@ -55,7 +55,7 @@ coherent family across prose, equations, and code.
 - **Railroad diagrams** — `\use{railroad}` turns a W3C-style EBNF grammar into a railroad
   (syntax) diagram, one picture per rule.
 - **Node-and-edge diagrams** — `\use{diagram}` places named, measured nodes in nine shapes
-  and routes labelled arrows between them; `\use{flowchart}` and `\use{automaton}` add
-  program-flowchart and state-machine vocabularies on top.
+  and routes labelled arrows between them; `\use{flowchart}`, `\use{automaton}` and
+  `\use{er}` add program-flowchart, state-machine and entity-relationship vocabularies on top.
 - **Three platforms** — the JVM (Graphics2D raster), Scala Native (Cairo PDF + image), and
   Scala.js.

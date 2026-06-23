@@ -1,0 +1,109 @@
+// er — entity-relationship diagrams in Chen notation, as a thin layer of conventions over
+// the `diagram` package. Import it with:
+//
+//     \use{er}
+//
+// Chen notation draws the three kinds of thing as three shapes — an entity is a rectangle,
+// a relationship a diamond, an attribute an ellipse — joined by undirected lines that carry
+// cardinalities (1, N, M). The weak forms double the outline, a key attribute underlines its
+// label, and total participation doubles the connecting line. All of it is declared inside a
+// \picture:
+//
+//     \picture width:4in height:2in {
+//       \entity{emp}{at 0.6in 1in}{Employee}
+//       \relationship{wf}{right emp 60}{works for}
+//       \entity{dept}{right wf 60}{Department}
+//       \keyattribute{eid}{above emp}{emp-id}
+//       \connect[N]{emp}{wf}
+//       \connect[1]{wf}{dept}
+//       \connect{emp}{eid}
+//     }
+//
+// Each role takes the same arguments as \node — a name, a placement spec ("right emp 60",
+// "above dept", "at 1in 2in", …) and a label. Only an accepting-state-style inner outline and
+// the double connecting line are drawn here; everything else maps straight onto a diagram
+// shape or the undirected \link, so the diagram configuration (dgfill, dgfont, dggap, …) and
+// the other diagram commands stay available alongside these.
+
+\use{diagram}
+
+// Gap between the two outlines of a weak entity / weak relationship / multivalued attribute,
+// and half the gap between the two lines of a total-participation connector.
+\set erweakgap {3.5}
+\set erdoublesep {1.6}
+
+// ---- Entities ------------------------------------------------------------------
+// \entity{name}{placement}{label} — a regular entity: a rectangle.
+\def entity name place label {\node[box]{\name}{\place}{\label}}
+
+// \weakentity{name}{placement}{label} — a weak entity: a rectangle with a second outline
+// just inside the first, drawn after the box (stroke only, so the label shows through).
+\def weakentity name place label {{
+  \node[box]{\name}{\place}{\label}
+  \set cx {\mapget dgX {\name}}\set cy {\mapget dgY {\name}}
+  \set hw {\mapget dgHw {\name}}\set hh {\mapget dgHh {\name}}
+  \set g {\erweakgap}
+  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \rect{\calc{cx - hw + g} \calc{cy - hh + g} \calc{2 * (hw - g)} \calc{2 * (hh - g)}}
+}}
+
+// ---- Relationships -------------------------------------------------------------
+// \relationship{name}{placement}{label} — a relationship: a diamond.
+\def relationship name place label {\node[diamond]{\name}{\place}{\label}}
+
+// \weakrelationship{name}{placement}{label} — an identifying (weak) relationship: a double
+// diamond. The inner diamond is the outer one scaled so its edges sit a constant gap inside,
+// which for a rhombus of half-extents (hw, hh) is the factor 1 − g·√(hw²+hh²)/(hw·hh).
+\def weakrelationship name place label {{
+  \node[diamond]{\name}{\place}{\label}
+  \set cx {\mapget dgX {\name}}\set cy {\mapget dgY {\name}}
+  \set hw {\mapget dgHw {\name}}\set hh {\mapget dgHh {\name}}
+  \set s {\calc{1 - erweakgap * hypot(hw, hh) / (hw * hh)}}
+  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \polygon{\cx \calc{cy + s * hh}  \calc{cx + s * hw} \cy  \cx \calc{cy - s * hh}  \calc{cx - s * hw} \cy}
+}}
+
+// ---- Attributes ----------------------------------------------------------------
+// \attribute{name}{placement}{label} — an attribute: an ellipse.
+\def attribute name place label {\node[ellipse]{\name}{\place}{\label}}
+
+// \keyattribute{name}{placement}{label} — a key attribute: an ellipse with the label
+// underlined, the Chen convention for a primary-key attribute.
+\def keyattribute name place label {\node[ellipse]{\name}{\place}{\underline{\label}}}
+
+// \multivalued{name}{placement}{label} — a multivalued attribute: a double ellipse.
+\def multivalued name place label {{
+  \node[ellipse]{\name}{\place}{\label}
+  \set cx {\mapget dgX {\name}}\set cy {\mapget dgY {\name}}
+  \set hw {\mapget dgHw {\name}}\set hh {\mapget dgHh {\name}}
+  \set g {\erweakgap}
+  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \ellipse{\cx \cy \calc{hw - g} \calc{hh - g}}
+}}
+
+// \derived{name}{placement}{label} — a derived attribute: a dashed ellipse. The dash is set
+// inside a \group so it is restored to solid afterwards; the node still registers its
+// geometry globally, so connectors find it as usual.
+\def derived name place label {\group{\linetype{dashed}\node[ellipse]{\name}{\place}{\label}}}
+
+// ---- Connectors ----------------------------------------------------------------
+// \connect [cardinality] {a} {b} — an undirected line between two things, the cardinality
+// (1, N, M, …) set beside it. This is diagram's \link; the line meets each shape's boundary.
+\def connect [card] from to {\link[\card]{\from}{\to}}
+
+// \connecttotal [cardinality] {a} {b} — a total-participation connector: two parallel lines a
+// little either side of the connection axis. The offset is the unit perpendicular of the
+// boundary-to-boundary axis scaled to erdoublesep, the same point arithmetic a double bond
+// uses, so the pair stays parallel at any angle.
+\def connecttotal [card] from to {{
+  \set f {\from}\set t {\to}
+  \set fcx {\mapget dgX {\f}}\set fcy {\mapget dgY {\f}}
+  \set tcx {\mapget dgX {\t}}\set tcy {\mapget dgY {\t}}
+  \dgboundary{\f}{\tcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
+  \dgboundary{\t}{\fcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
+  \set o {\pscale{\pperp{\pnormalize{\psub{(\bx, \by)}{(\ax, \ay)}}}}{erdoublesep}}
+  \dgedge
+  \line{\padd{(\ax, \ay)}{\o} \padd{(\bx, \by)}{\o}}
+  \line{\psub{(\ax, \ay)}{\o} \psub{(\bx, \by)}{\o}}
+  \if {\card}\dglabel{\ax}{\ay}{\bx}{\by}{\card}\fi
+}}

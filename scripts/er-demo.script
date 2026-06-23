@@ -1,0 +1,54 @@
+// Demonstration of the `er` package — entity-relationship diagrams in Chen notation, a thin
+// layer of conventions over the diagram layer.
+//
+// Render with:  texish scripts/er-demo.script
+
+\use{er}
+
+\def headline {\italic{The er package} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+\set raggedbottom {1}
+\def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
+
+\font lmroman 12 regular
+
+\bold{Entity-relationship diagrams}
+
+In Chen notation an entity is a rectangle, a relationship a diamond, and an attribute an
+ellipse, joined by undirected lines that carry cardinalities. A key attribute is underlined,
+a weak entity and an identifying relationship double their outline, and total participation
+doubles the connecting line. The schema below records employees, the departments they work
+for, and their dependents.
+
+\vskip 12pt
+
+\centerline{\picture width:6in height:4.3in {
+  // attributes across the top
+  \keyattribute{ssn}{at 0.55in 3.8in}{ssn}
+  \attribute{ename}{at 1.7in 3.9in}{name}
+  \attribute{dname}{at 4.3in 3.9in}{name}
+  \keyattribute{dnum}{at 5.45in 3.8in}{number}
+
+  // the entity — relationship — entity spine
+  \entity{emp}{at 1.3in 2.8in}{Employee}
+  \relationship{wf}{at 3in 2.8in}{Works For}
+  \entity{dept}{at 4.7in 2.8in}{Department}
+
+  // a weak entity, identified by the employee it depends on
+  \weakrelationship{has}{at 1.3in 1.7in}{Has}
+  \weakentity{dep}{at 1.3in 0.7in}{Dependent}
+  \keyattribute{depname}{at 3in 1in}{name}
+
+  // attribute links
+  \connect{emp}{ssn}
+  \connect{emp}{ename}
+  \connect{dept}{dname}
+  \connect{dept}{dnum}
+  \connect{dep}{depname}
+
+  // relationship links, with cardinalities
+  \connect[N]{emp}{wf}
+  \connect[1]{wf}{dept}
+  \connect[1]{emp}{has}
+  \connecttotal[N]{has}{dep}
+}}

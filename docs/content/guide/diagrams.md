@@ -6,9 +6,9 @@ weight: 9
 The `diagram` package draws node-and-edge diagrams — block diagrams, state machines,
 flowcharts, dependency graphs — over the [vector-graphics](/guide/graphics/) layer. A
 **node** is a named, measured box of some shape; an **edge** is an arrow between two named
-nodes. Two thin presets build on it: [`flowchart`](#flowcharts) gives the shapes their
-program-flowchart meanings, and [`automaton`](#automata) gives them finite-state-machine
-meanings.
+nodes. Three thin presets build on it: [`flowchart`](#flowcharts) gives the shapes their
+program-flowchart meanings, [`automaton`](#automata) gives them finite-state-machine
+meanings, and [`er`](#entity-relationship-diagrams) draws entity-relationship diagrams.
 
 ```texish
 \use{diagram}
@@ -89,6 +89,7 @@ Every edge inks in the configured colour and caps with the configured arrowhead.
 | Command | Route |
 |---------|-------|
 | `\edge [label] {from} {to}` | a straight arrow between the two nodes |
+| `\link [label] {from} {to}` | a straight **undirected** line (no arrowhead) |
 | `\edgehv [label] {from} {to}` | orthogonal: leaves horizontally, turns, enters vertically (`-\|`) |
 | `\edgevh [label] {from} {to}` | orthogonal: leaves vertically, turns, enters horizontally (`\|-`) |
 | `\cedge [bend] {from} {to} {label}` | a curved arrow, bowed sideways by `bend` points |
@@ -196,6 +197,45 @@ The `automaton` package gives the circle and the edges their finite-state-machin
 
 The presets carry no geometry of their own, so anything `diagram` exposes — the other shapes,
 the orthogonal and curved edges, and the full configuration — is available alongside them.
+
+## Entity-relationship diagrams
+
+The `er` package draws entity-relationship diagrams in **Chen notation**: an entity is a
+rectangle, a relationship a diamond, an attribute an ellipse, joined by undirected lines
+(`diagram`'s `\link`, no arrowhead) that carry cardinalities.
+
+```texish
+\use{er}
+```
+
+| Command | Drawn as |
+|---------|----------|
+| `\entity {name} {placement} {label}` | a rectangle |
+| `\weakentity {name} {placement} {label}` | a double rectangle |
+| `\relationship {name} {placement} {label}` | a diamond |
+| `\weakrelationship {name} {placement} {label}` | a double diamond (identifying relationship) |
+| `\attribute {name} {placement} {label}` | an ellipse |
+| `\keyattribute {name} {placement} {label}` | an ellipse with the label underlined |
+| `\multivalued {name} {placement} {label}` | a double ellipse |
+| `\derived {name} {placement} {label}` | a dashed ellipse |
+| `\connect [cardinality] {a} {b}` | an undirected line, the cardinality set beside it |
+| `\connecttotal [cardinality] {a} {b}` | a double line (total participation) |
+
+```texish
+\picture width:4.4in height:2in {
+  \keyattribute{ssn}{at 0.5in 1.7in}{ssn}
+  \entity{emp}{at 1.1in 1in}{Employee}
+  \relationship{wf}{right emp 60}{Works For}
+  \entity{dept}{right wf 60}{Department}
+  \connect{emp}{ssn}
+  \connect[N]{emp}{wf}
+  \connect[1]{wf}{dept}
+}
+```
+
+The weak forms and the double ellipse add a second outline (like an automaton's accepting
+state); the dashed ellipse and the underlined key attribute are an ordinary ellipse with a
+line-style or an `\underline`d label. Everything else is a `diagram` node or `\link`.
 
 ## A note on spacing
 

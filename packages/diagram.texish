@@ -308,11 +308,25 @@
   \dgboundary{\t}{\fcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
   \dgedge
   \arrow head:\dgarrow size:\dgarrowsize {\ax \ay \bx \by}
-  \if {\size{\label}}\dglabel{\ax}{\ay}{\bx}{\by}{\label}\fi
+  \if {\label}\dglabel{\ax}{\ay}{\bx}{\by}{\label}\fi
 }}
 
 // \edge [label] {from} {to} — a straight arrow between two nodes.
 \def edge [label] from to {\dgstraight{\from}{\to}{\label}}
+
+// \link [label] {from} {to} — an undirected connector: a plain line between two nodes'
+// boundaries, no arrowhead. The line for relationships that have no direction — an ER
+// entity to a relationship, a UML association, an edge of an undirected graph.
+\def link [label] from to {{
+  \set f {\from}\set t {\to}
+  \set fcx {\mapget dgX {\f}}\set fcy {\mapget dgY {\f}}
+  \set tcx {\mapget dgX {\t}}\set tcy {\mapget dgY {\t}}
+  \dgboundary{\f}{\tcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
+  \dgboundary{\t}{\fcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
+  \dgedge
+  \line{\ax \ay \bx \by}
+  \if {\label}\dglabel{\ax}{\ay}{\bx}{\by}{\label}\fi
+}}
 
 // \edgehv [label] {from} {to} — an orthogonal arrow that leaves `from` horizontally and
 // enters `to` vertically, turning at the corner (to.x, from.y). This is TikZ's -| route,
@@ -331,7 +345,7 @@
     \dgpullback{\bx}{\by}{\tcx}{\fcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
     \dgedge
     \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\tcx \fcy}\lineto{\bx \by}}
-    \if {\size{\label}}\at anchor:south {\calc{(\ax + \tcx) / 2} \calc{\fcy + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+    \if {\label}\at anchor:south {\calc{(\ax + \tcx) / 2} \calc{\fcy + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
   \fi
 }}
 
@@ -353,7 +367,7 @@
     \dgpullback{\bx}{\by}{\fcx}{\tcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
     \dgedge
     \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\fcx \tcy}\lineto{\bx \by}}
-    \if {\size{\label}}\at anchor:west {\calc{\fcx + dglabelgap} \calc{(\ay + \tcy) / 2}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+    \if {\label}\at anchor:west {\calc{\fcx + dglabelgap} \calc{(\ay + \tcy) / 2}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
   \fi
 }}
 
@@ -377,7 +391,7 @@
   \dgpullback{\bx}{\by}{\cpx}{\cpy}{\mar}\set bx {\dgQx}\set by {\dgQy}
   \dgedge
   \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\curveto{\cpx \cpy  \cpx \cpy  \bx \by}}
-  \if {\size{\label}}\at anchor:center {\calc{mx + nx * (\bend + dglabelgap + 4)} \calc{my + ny * (\bend + dglabelgap + 4)}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+  \if {\label}\at anchor:center {\calc{mx + nx * (\bend + dglabelgap + 4)} \calc{my + ny * (\bend + dglabelgap + 4)}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
 }}
 
 // \loop {name} [label] — a self-loop rising from the top of a node and returning to it
@@ -399,7 +413,7 @@
     \moveto{\lx \topy}
     \curveto{\calc{lx - ph} \calc{topy + ph}  \cpx \cpy  \ex \ey}
   }
-  \if {\size{\label}}\at anchor:south {\cx \calc{topy + ph + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+  \if {\label}\at anchor:south {\cx \calc{topy + ph + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
 }}
 
 // \dgentry {name} {dir} {len} — a short stub arrow pointing into a node from outside,

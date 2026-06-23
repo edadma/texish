@@ -193,6 +193,7 @@ between two named nodes that meets each node's true boundary.
 |---------|--------|
 | `\node [shape] {name} {placement} {label}` | a node; shape ∈ box, round, stadium, diamond, parallelogram, ellipse, circle, hexagon, subroutine (default box) |
 | `\edge [label] {from} {to}` | a straight arrow between two nodes |
+| `\link [label] {from} {to}` | a straight undirected line (no arrowhead) |
 | `\edgehv` / `\edgevh [label] {from} {to}` | an orthogonal arrow (across-then-down / down-then-across) |
 | `\cedge [bend] {from} {to} {label}` | a curved arrow, bowed by `bend` points |
 | `\loop {name} {label}` | a self-loop above a node |
@@ -206,7 +207,10 @@ The `flowchart` package (`\use{flowchart}`) adds role names — `\start` `\stop`
 `\process` (box), `\decision` (diamond), `\io` (parallelogram), `\subroutine` — and flow
 edges `\flow` / `\branch` / `\rejoin`. The `automaton` package (`\use{automaton}`) adds
 `\state` (circle), `\accepting` (double circle), `\initial`, `\trans`, `\arc` and
-`\loopabove`. Both are thin layers over `diagram`; see the [guide](/guide/diagrams/).
+`\loopabove`. The `er` package (`\use{er}`) draws Chen-notation entity-relationship diagrams
+— `\entity`, `\weakentity`, `\relationship`, `\weakrelationship`, `\attribute`,
+`\keyattribute`, `\multivalued`, `\derived`, and `\connect` / `\connecttotal` with
+cardinalities. All three are thin layers over `diagram`; see the [guide](/guide/diagrams/).
 
 ## Units
 
