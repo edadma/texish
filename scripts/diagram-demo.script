@@ -1,0 +1,101 @@
+// Demonstration of the general `diagram` package — node-and-edge diagrams over the
+// \picture layer. Nothing here is flowchart-specific: the same nodes, shapes and routed
+// edges draw a control-system block diagram, a data pipeline and a small module graph.
+//
+// Render with:  texish scripts/diagram-demo.script
+
+\use{diagram}
+
+\def headline {\italic{The diagram package} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+
+\font lmroman 12 regular
+
+\def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
+
+\bold{Node-and-edge diagrams}
+
+A \italic{node} is a named, measured box of some shape; an \italic{edge} is an arrow
+between two named nodes. A node is placed at an absolute coordinate or relative to
+another node, and every edge attaches to the true boundary of each node — so an arrow,
+straight or routed, always meets the outline cleanly whatever the shapes.
+
+\bold{A feedback control loop}
+
+The classic block diagram: a reference $r$ enters a summing junction, the error drives a
+controller and plant, and the measured output feeds back with a negative sign. The
+forward path is straight edges; the feedback path is two orthogonal edges (down, then
+across and up) that route around the diagram.
+
+\vskip 8pt
+
+\centerline{\picture width:5in height:2.3in {
+  \node{ref}{at 0.4in 1.7in}{$r$}
+  \node[circle]{sum}{right ref 30}{$\Sigma$}
+  \node{ctrl}{right sum 40}{Controller $C$}
+  \node{plant}{right ctrl 44}{Plant $P$}
+  \node{out}{right plant 44}{$y$}
+  \node{sensor}{below plant 56}{Sensor $H$}
+
+  \edge{ref}{sum}
+  \edge[$e$]{sum}{ctrl}
+  \edge[$u$]{ctrl}{plant}
+  \edge{plant}{out}
+  \edgevh[measure]{out}{sensor}
+  \edgehv{sensor}{sum}
+  \at anchor:east {1.16in 1.42in}{$-$}
+}}
+
+\eject
+
+\bold{A data pipeline}
+
+Shapes carry meaning by convention: here a stadium for a source and sink, a
+parallelogram for I/O, and plain boxes for the transforms between them. The edges are a
+straight chain with one labelled branch.
+
+\vskip 8pt
+
+{\set dgfont {10}\set dggap {18}
+\centerline{\picture width:6in height:1.7in {
+  \node[stadium]{src}{at 0.25in 1.05in}{Source}
+  \node[parallelogram]{read}{right src}{Read}
+  \node{parse}{right read}{Parse}
+  \node[diamond]{ok}{right parse}{ok?}
+  \node{agg}{right ok}{Reduce}
+  \node[stadium]{sink}{right agg}{Store}
+  \node{drop}{below ok 30}{Discard}
+
+  \edge{src}{read}
+  \edge{read}{parse}
+  \edge{parse}{ok}
+  \edge[yes]{ok}{agg}
+  \edge{agg}{sink}
+  \edgevh[no]{ok}{drop}
+}}}
+
+\bold{A module dependency graph}
+
+Nodes need not form a line. Placed at absolute coordinates, they make a small graph; the
+boundary routing means diagonal edges still meet each box squarely.
+
+\vskip 8pt
+
+\centerline{\picture width:3.6in height:2.2in {
+  \node{app}{at 1.4in 1.9in}{app}
+  \node{ui}{at 0.5in 1.1in}{ui}
+  \node{core}{at 1.4in 1.1in}{core}
+  \node{net}{at 2.4in 1.1in}{net}
+  \node{util}{at 1.4in 0.25in}{util}
+
+  \edge{app}{ui}
+  \edge{app}{core}
+  \edge{app}{net}
+  \edge{ui}{core}
+  \edge{core}{util}
+  \edge{net}{util}
+  \edge{ui}{util}
+}}
+
+Every figure above is one \italic{\\picture} box flowing in the text, set by the same
+engine as the prose.

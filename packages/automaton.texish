@@ -1,0 +1,60 @@
+// automaton — finite-state machines and state-transition diagrams, as a thin layer of
+// conventions over the `diagram` package. Import it with:
+//
+//     \use{automaton}
+//
+// A state is a circle; an accepting (final) state is a double circle; an initial state is
+// marked by a short incoming arrow. A transition is a labelled arrow between states, a
+// self-transition is a loop, and a pair of opposite transitions are drawn as two curved
+// arcs that separate instead of overlapping. Everything is declared inside a \picture:
+//
+//     \picture width:3.4in height:1.4in {
+//       \state{q0}{at 0.5in 0.7in}{$q_0$}
+//       \accepting{q1}{right q0 60}{$q_1$}
+//       \initial{q0}
+//       \trans[a]{q0}{q1}
+//       \loopabove{q0}{b}
+//       \arc[40]{q1}{q0}{a}
+//     }
+//
+// This package adds no drawing of its own beyond the inner ring of an accepting state: it
+// gives the diagram circle and edges their automata-theory meaning. The underlying diagram
+// commands (\node, \edge, \cedge, \loop) and configuration (dgfill, dgfont, dggap, …) stay
+// available for anything these conventions don't cover.
+
+\use{diagram}
+
+// Gap between the two rings of an accepting state's double circle.
+\set autoring {3.5}
+
+// ---- States --------------------------------------------------------------------
+// \state{name}{placement}{label} — an ordinary state, a circle sized to its label.
+\def state name place label {\node[circle]{\name}{\place}{\label}}
+
+// \accepting{name}{placement}{label} — a final state: a state with a second ring drawn
+// just inside the outline. The inner ring is stroked only, so the centred label shows
+// through.
+\def accepting name place label {{
+  \node[circle]{\name}{\place}{\label}
+  \set acx {\mapget dgX {\name}}
+  \set acy {\mapget dgY {\name}}
+  \set ahw {\mapget dgHw {\name}}
+  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \circle{\acx \acy \calc{ahw - autoring}}
+}}
+
+// \initial{name} — mark a state as the start state with a short arrow entering from the
+// left. (For an arrow from another side, use \dgentry{name}{north|south|east}{len}.)
+\def initial name {\dgentry{\name}{west}{30}}
+
+// ---- Transitions ---------------------------------------------------------------
+// \trans [symbol] {from} {to} — a transition, a straight labelled arrow between states.
+\def trans [label] from to {\edge[\label]{\from}{\to}}
+
+// \arc [bend] {from} {to} {symbol} — a curved transition, bowed sideways by `bend` points.
+// Use it for the two directions of a back-and-forth pair (give each the same bend) so they
+// draw as two separate arcs rather than one arrow over another.
+\def arc [bend:30] from to label {\cedge[\bend]{\from}{\to}{\label}}
+
+// \loopabove {name} {symbol} — a self-transition, a labelled loop above the state.
+\def loopabove name label {\loop{\name}{\label}}

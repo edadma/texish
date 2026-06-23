@@ -1,0 +1,41 @@
+// Demonstration of the `flowchart` package — program flowcharts as a thin layer of
+// conventions over the diagram layer.
+//
+// Render with:  texish scripts/flowchart-demo.script
+
+\use{flowchart}
+
+\def headline {\italic{The flowchart package} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+\def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
+
+\font lmroman 12 regular
+
+\bold{Program flowcharts}
+
+The flowchart package names the diagram shapes by their roles — a \italic{terminal} for
+start and stop, a \italic{process} rectangle, a \italic{decision} diamond, a
+\italic{parallelogram} for input and output — and reads the edges as flow. Below, the
+sum $\sum_{i=1}^{n} i$ is computed with a counting loop: the decision branches \italic{yes}
+down into the loop body, which curves back to test again, and \italic{no} across to the
+output.
+
+\vskip 10pt
+
+\centerline{\picture width:4.4in height:5in {
+  \start{begin}{at 1.5in 4.6in}{Start}
+  \io{read}{below begin}{Read $n$}
+  \process{init}{below read}{$s \gets 0,\quad i \gets 1$}
+  \decision{test}{below init}{$i \le n$?}
+  \process{body}{below test 46}{$s \gets s + i,\quad i \gets i + 1$}
+  \io{out}{right test 96}{Print $s$}
+  \stop{done}{below out}{Stop}
+
+  \flow{begin}{read}
+  \flow{read}{init}
+  \flow{init}{test}
+  \flow[yes]{test}{body}
+  \cedge[58]{body}{test}{}
+  \flow[no]{test}{out}
+  \flow{out}{done}
+}}

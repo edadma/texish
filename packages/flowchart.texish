@@ -1,0 +1,54 @@
+// flowchart — program flowcharts, as a thin layer of conventions over the `diagram`
+// package. Import it with:
+//
+//     \use{flowchart}
+//
+// This package adds no drawing of its own: it gives the diagram shapes their standard
+// flowchart meanings and reads in plain English. A node is declared by its role, an edge
+// by how it routes, all inside a \picture:
+//
+//     \picture width:3in height:4in {
+//       \start{begin}{at 1.2in 3.6in}{Start}
+//       \io{read}{below begin}{Read n}
+//       \decision{check}{below read}{n > 0?}
+//       \process{print}{below check}{Print n}
+//       \stop{done}{below print}{End}
+//       \flow{begin}{read}
+//       \flow{read}{check}
+//       \flow[yes]{check}{print}
+//       \flow{print}{done}
+//       \branch[no]{check}{done}
+//     }
+//
+// Roles map to the ISO-1028 / ANSI flowchart shapes that programmers expect:
+//   \start \stop  a terminal (rounded "stadium") — the entry and exit points
+//   \process      a rectangle — an action or computation
+//   \decision     a diamond — a branch; its outgoing edges are labelled yes / no
+//   \io           a parallelogram — input or output
+//   \subroutine   a rectangle with side bars — a predefined process (a call)
+// Each takes the same arguments as \node: a name, a placement spec ("below check",
+// "right read 40", "at 1in 2in", …) and a label.
+//
+// Edges read as flow:
+//   \flow [label] {from} {to}    a straight arrow along the path of control
+//   \branch [label] {from} {to}  a decision's side exit — across, then into the target
+//   \rejoin [label] {from} {to}  a path that drops and runs back to rejoin an earlier box
+// The underlying diagram edges (\edge, \edgehv, \edgevh, \cedge) and the configuration
+// (dgfill, dgfont, dggap, …) remain available for anything these conventions don't cover.
+
+\use{diagram}
+
+// ---- Node roles ----------------------------------------------------------------
+\def start name place label {\node[stadium]{\name}{\place}{\label}}
+\def stop name place label {\node[stadium]{\name}{\place}{\label}}
+\def process name place label {\node[box]{\name}{\place}{\label}}
+\def decision name place label {\node[diamond]{\name}{\place}{\label}}
+\def io name place label {\node[parallelogram]{\name}{\place}{\label}}
+\def subroutine name place label {\node[subroutine]{\name}{\place}{\label}}
+
+// ---- Edges ---------------------------------------------------------------------
+// Each forwards to a diagram edge, passing the optional label straight through; an
+// omitted label expands to nothing, so the target edge draws no label.
+\def flow [label] from to {\edge[\label]{\from}{\to}}
+\def branch [label] from to {\edgehv[\label]{\from}{\to}}
+\def rejoin [label] from to {\edgevh[\label]{\from}{\to}}

@@ -1,0 +1,55 @@
+// Demonstration of the `automaton` package — finite-state machines as a thin layer of
+// conventions over the diagram layer.
+//
+// Render with:  texish scripts/automaton-demo.script
+
+\use{automaton}
+
+\def headline {\italic{The automaton package} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+\def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
+
+\font lmroman 12 regular
+
+\bold{Finite-state machines}
+
+A state is a circle, an accepting state a double circle, and the start state carries an
+incoming arrow. A transition is a labelled arrow; a self-transition is a loop above the
+state. The machine below accepts strings over $\{a, b\}$ that contain the substring
+$ab$: stay in $q_0$ until an $a$ is read, wait in $q_1$ for the $b$, and once in the
+accepting state $q_2$ stay there.
+
+\vskip 12pt
+
+\centerline{\picture width:5in height:1.7in {
+  \state{q0}{at 0.7in 0.7in}{$q_0$}
+  \state{q1}{right q0 78}{$q_1$}
+  \accepting{q2}{right q1 78}{$q_2$}
+  \initial{q0}
+  \trans[$a$]{q0}{q1}
+  \trans[$b$]{q1}{q2}
+  \loopabove{q0}{$b$}
+  \loopabove{q1}{$a$}
+  \loopabove{q2}{$a, b$}
+}}
+
+\vskip 16pt
+
+\bold{A cyclic automaton}
+
+States need not lie in a row. Placed at the corners of a triangle, three states count the
+number of $1$s read modulo $3$; each $1$ steps to the next state, and $r_0$ — both the
+start and the only accepting state — is reached again exactly when the count is divisible
+by three. The transitions are curved arcs bowing around the cycle.
+
+\vskip 8pt
+
+\centerline{\picture width:3.2in height:2.3in {
+  \accepting{r0}{at 1.5in 1.9in}{$r_0$}
+  \state{r1}{at 0.6in 0.5in}{$r_1$}
+  \state{r2}{at 2.4in 0.5in}{$r_2$}
+  \initial{r0}
+  \arc[-30]{r0}{r1}{$1$}
+  \arc[-30]{r1}{r2}{$1$}
+  \arc[-30]{r2}{r0}{$1$}
+}}

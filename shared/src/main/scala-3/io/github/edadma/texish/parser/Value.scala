@@ -69,13 +69,15 @@ object Value:
   def falsy(v: Value): Boolean = !truthy(v)
 
   /** Interpret a value as a number where arithmetic expects one. A `Num` is itself, a `Dimen` is its size in
-    * points, and a `Text` that is wholly a numeric literal (e.g. `"5"`, `"-2.5"`) coerces to that number — so a
-    * variable holding a numeric string is usable in `\calc`, `\round`, and picture coordinates rather than being
-    * rejected as an unknown name. Anything else is not a number. */
+    * points, and a `Text` coerces when it is wholly a numeric literal (e.g. `"5"`, `"-2.5"`) or a dimension with an
+    * absolute unit (e.g. `"1in"`, `"3mm"`, which give their size in points) — so a variable holding a numeric or
+    * dimension string is usable in `\calc`, `\round`, and picture coordinates rather than being rejected as an
+    * unknown name, the same way the literal would be. (A font-relative `em`/`ex` string is not resolved here, where
+    * no font is in scope; those evaluate where the font unit is available.) Anything else is not a number. */
   def number(v: Value): Option[Double] = v match
     case Num(n)   => Some(n)
     case Dimen(p) => Some(p)
-    case Text(s)  => s.trim.toDoubleOption
+    case Text(s)  => s.trim.toDoubleOption.orElse(parseDimension(s.trim).collect { case Dimen(p) => p })
     case _        => None
 
   /** Convert a value to its display string */

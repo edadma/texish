@@ -1,0 +1,376 @@
+// diagram — node-and-edge diagrams (block diagrams, state machines, flowcharts,
+// dependency graphs) written entirely in the document language over the \picture
+// vector-graphics layer. Import it with:
+//
+//     \use{diagram}
+//
+// The model is the one TikZ users already know: a node is a named, measured box of
+// some shape; an edge is an arrow between two named nodes. Nodes are placed either at
+// an absolute coordinate or relative to another node ("below start", "right check"),
+// and every edge attaches to the true boundary of each node, so an arrow between two
+// boxes — straight, diagonal, elbowed or curved — always meets the box edge cleanly.
+//
+//     \node{start}{at 1in 8in}{Begin}
+//     \node[diamond]{check}{below start}{ok?}
+//     \node{done}{below check 40}{Finish}
+//     \edge{start}{check}
+//     \edge[yes]{check}{done}
+//
+// A node records its centre, half-width and half-height in maps keyed by its name, and
+// also publishes its centre as a named picture coordinate (so (start) works in raw
+// picture code). Edges read that geometry back. There is no diagram-specific engine
+// primitive: placement, the shapes and the arrow routing are all document language over
+// the picture primitives (\path, \arrow, point arithmetic, \at).
+//
+// Everything here lives inside a \picture: open one, declare nodes and edges into it,
+// and the whole diagram is a single box that flows in the text like any other.
+//
+// Higher-level formats build on this layer by giving the shapes domain meaning — the
+// flowchart package maps start/stop/process/decision to shapes here, the automaton
+// package maps state/accepting to circles — so they are thin presets, not re-implementations.
+
+// ---- Configuration (override with \set after \use) ------------------------------
+// All sizes are in points (72 per inch) unless they carry a unit.
+\set dgface {lmroman}        // typeface for node labels
+\set dgfont {11}             // type size of node labels
+\set dgpadx {13}             // horizontal padding between a label and its box edge
+\set dgpady {9}              // vertical padding between a label and its box edge
+\set dgminw {52}             // minimum node width
+\set dgminh {30}             // minimum node height
+\set dggap {28}              // default boundary-to-boundary gap for relative placement
+\set dgfill {#eef3fb}        // default node fill colour
+\set dglinecolor {#1f2933}   // ink for node outlines and edges
+\set dglinewidth {1pt}       // node outline width
+\set dgedgewidth {1.1pt}     // edge (arrow) width
+\set dgcorner {7}            // corner radius of a round (rounded-rectangle) node
+\set dgslant {13}            // horizontal slant of a parallelogram node
+\set dgdiamondsx {1.65}      // diamond width as a multiple of its label width
+\set dgdiamondsy {1.7}       // diamond height as a multiple of its label height
+\set dghexcut {13}           // depth of a hexagon node's pointed ends
+\set dgsubbar {7}            // inset of a subroutine node's side bars from its edge
+\set dgarrow {stealth}       // edge arrowhead style (stealth | triangle | bar | dot)
+\set dgarrowsize {8pt}       // edge arrowhead length
+\set dglabelface {lmroman}   // typeface for edge labels
+\set dglabelfont {9}         // type size of edge labels
+\set dglabelgap {6}          // gap between an edge and its label
+\set dgloop {26}             // height of a self-loop above its node
+\set dgbend {26}             // default perpendicular bow of a curved edge
+
+// ================================================================================
+// Measure & size — a node sizes itself to its label. dgsize sets the full box extent
+// (dgW, dgH) for a label of width lw and height lh in the given shape. Most shapes are
+// the label plus padding; a diamond is inflated so the label fits inside the rhombus, a
+// circle grows to the label's diagonal, and a parallelogram/hexagon widen for the slant
+// or the pointed ends. The result is clamped to the configured minimum size.
+
+\def dgsize shape lw lh {{
+  \set s {\shape}
+  \set bw {\calc{\lw + 2 * dgpadx}}
+  \set bh {\calc{\lh + 2 * dgpady}}
+  \if {\= {\s}{diamond}}
+    \set bw {\calc{\lw * dgdiamondsx + 2 * dgpadx}}
+    \set bh {\calc{\lh * dgdiamondsy + 2 * dgpady}}
+  \fi
+  \if {\= {\s}{circle}}
+    \set bw {\calc{hypot(\lw, \lh) + 2 * dgpadx}}
+    \set bh {\bw}
+  \fi
+  \if {\= {\s}{parallelogram}}\set bw {\calc{\lw + 2 * dgpadx + dgslant}}\fi
+  \if {\= {\s}{hexagon}}\set bw {\calc{\lw + 2 * dgpadx + dghexcut}}\fi
+  \if {\= {\s}{subroutine}}\set bw {\calc{\lw + 2 * dgpadx + 2 * dgsubbar}}\fi
+  \if {\= {\s}{circle}}
+    \if {\< {\bw}{\dgminh}}\set bw {\dgminh}\fi
+    \set bh {\bw}
+  \else
+    \if {\< {\bw}{\dgminw}}\set bw {\dgminw}\fi
+    \if {\< {\bh}{\dgminh}}\set bh {\dgminh}\fi
+  \fi
+  \global\set dgW {\bw}
+  \global\set dgH {\bh}
+}}
+
+// ================================================================================
+// Placement — dgplace turns a placement spec into a centre (dgCx, dgCy) for a node
+// whose half-extents are hw, hh. The spec is a little word language:
+//   at X Y          an absolute coordinate (two scalar expressions, e.g. "at 1in 8in")
+//   at (X,Y)        an absolute coordinate as one space-free parenthesised point
+//   below REF [g]   centred under node REF, a gap g (default dggap) between the boxes
+//   above REF [g]   centred over REF
+//   right REF [g]   to the right of REF, vertically aligned with it
+//   left  REF [g]   to the left of REF
+// Relative placement measures from the reference node's boundary, then steps in by the
+// gap and this node's own half-extent, so neighbours sit a true gap apart whatever their
+// sizes.
+
+\def dgplace place hw hh {{
+  \set ws {\words{\place}}
+  \set dir {\head{\ws}}
+  \if {\= {\dir}{at}}
+    \set rest {\tail{\ws}}
+    \if {\= {\size{\rest}}{1}}
+      \set c {\head{\rest}}
+      \global\set dgCx {\xof{\c}}
+      \global\set dgCy {\yof{\c}}
+    \else
+      \set xa {\head{\rest}}
+      \set ya {\head{\tail{\rest}}}
+      \global\set dgCx {\calc{\xa}}
+      \global\set dgCy {\calc{\ya}}
+    \fi
+  \else
+    \set ref {\head{\tail{\ws}}}
+    \set more {\tail{\tail{\ws}}}
+    \set gap {\dggap}
+    \if {\size{\more}}\set gap {\head{\more}}\fi
+    \set rx {\mapget dgX {\ref}}
+    \set ry {\mapget dgY {\ref}}
+    \set rhw {\mapget dgHw {\ref}}
+    \set rhh {\mapget dgHh {\ref}}
+    \if {\= {\dir}{below}}
+      \global\set dgCx {\rx}\global\set dgCy {\calc{ry - rhh - gap - \hh}}
+    \else\if {\= {\dir}{above}}
+      \global\set dgCx {\rx}\global\set dgCy {\calc{ry + rhh + gap + \hh}}
+    \else\if {\= {\dir}{right}}
+      \global\set dgCx {\calc{rx + rhw + gap + \hw}}\global\set dgCy {\ry}
+    \else\if {\= {\dir}{left}}
+      \global\set dgCx {\calc{rx - rhw - gap - \hw}}\global\set dgCy {\ry}
+    \fi\fi\fi\fi
+  \fi
+}}
+
+// ================================================================================
+// Boundary — the heart of edge routing. dgboundary{name}{tx}{ty} sets (dgPx, dgPy) to
+// the point on node `name`'s outline that lies on the ray from its centre toward the
+// target point (tx, ty). A ray leaving the centre is scaled by a factor t that depends
+// on the shape: an ellipse and a circle use the quadratic form, a diamond the |x|+|y|
+// form, and the rectangular family (box, round, stadium, parallelogram, hexagon) the
+// max form that clips a ray to a rectangle. Because every edge attaches through this one
+// function, a straight, diagonal, elbowed or curved arrow all meet the boundary exactly,
+// whatever the node's shape.
+
+\def dgboundary nm tx ty {{
+  \set n {\nm}
+  \set cx {\mapget dgX {\n}}\set cy {\mapget dgY {\n}}
+  \set hw {\mapget dgHw {\n}}\set hh {\mapget dgHh {\n}}
+  \set s {\mapget dgShape {\n}}
+  \set ux {\calc{\tx - cx}}\set uy {\calc{\ty - cy}}
+  \set len {\calc{hypot(ux, uy)}}
+  \if {\= {\len}{0}}
+    \global\set dgPx {\cx}\global\set dgPy {\cy}
+  \else
+    \set quad {0}
+    \if {\= {\s}{circle}}\set quad {1}\fi
+    \if {\= {\s}{ellipse}}\set quad {1}\fi
+    \set diam {0}
+    \if {\= {\s}{diamond}}\set diam {1}\fi
+    \if {\= {\quad}{1}}
+      \set t {\calc{1 / sqrt((ux / hw)^2 + (uy / hh)^2)}}
+    \else\if {\= {\diam}{1}}
+      \set t {\calc{1 / (abs(ux) / hw + abs(uy) / hh)}}
+    \else
+      \set t {\calc{1 / max(abs(ux) / hw, abs(uy) / hh)}}
+    \fi\fi
+    \global\set dgPx {\calc{cx + t * ux}}
+    \global\set dgPy {\calc{cy + t * uy}}
+  \fi
+}}
+
+// ================================================================================
+// Shapes — dgshape draws the outline of a node, filled and stroked, centred at (cx, cy)
+// with half-extents hw, hh. Each shape is one picture path or polygon. The recognised
+// shapes are box, round, stadium, diamond, parallelogram, ellipse, circle and hexagon;
+// an unknown name falls back to a plain box.
+
+\def dgshape shape cx cy hw hh {{
+  \set s {\shape}
+  \set bcx {\cx}\set bcy {\cy}\set bhw {\hw}\set bhh {\hh}
+  \set l {\calc{bcx - bhw}}\set r {\calc{bcx + bhw}}
+  \set b {\calc{bcy - bhh}}\set t {\calc{bcy + bhh}}
+  \fill{\dgfill}\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \if {\= {\s}{diamond}}
+    \polygon{\bcx \t  \r \bcy  \bcx \b  \l \bcy}
+  \else\if {\= {\s}{ellipse}}
+    \ellipse{\bcx \bcy \bhw \bhh}
+  \else\if {\= {\s}{circle}}
+    \circle{\bcx \bcy \bhw}
+  \else\if {\= {\s}{parallelogram}}
+    \polygon{\calc{l + dgslant} \t  \r \t  \calc{r - dgslant} \b  \l \b}
+  \else\if {\= {\s}{hexagon}}
+    \polygon{\l \bcy  \calc{l + dghexcut} \t  \calc{r - dghexcut} \t  \r \bcy  \calc{r - dghexcut} \b  \calc{l + dghexcut} \b}
+  \else\if {\= {\s}{stadium}}
+    \dgroundrect{\l}{\r}{\b}{\t}{\bhh}
+  \else\if {\= {\s}{round}}
+    \dgroundrect{\l}{\r}{\b}{\t}{\dgcorner}
+  \else\if {\= {\s}{subroutine}}
+    \rect{\l \b \calc{2 * bhw} \calc{2 * bhh}}
+    \line{\calc{l + dgsubbar} \b  \calc{l + dgsubbar} \t}
+    \line{\calc{r - dgsubbar} \b  \calc{r - dgsubbar} \t}
+  \else
+    \rect{\l \b \calc{2 * bhw} \calc{2 * bhh}}
+  \fi\fi\fi\fi\fi\fi\fi\fi
+}}
+
+// A rounded rectangle as one closed path: straight edges joined by quarter-circle corners
+// of radius rad, each corner a single cubic Bézier (handles 0.5523·rad along the tangents).
+// A stadium is this with rad equal to the half-height, giving fully rounded ends.
+\def dgroundrect l r b t rad {{
+  \set xl {\l}\set xr {\r}\set yb {\b}\set yt {\t}
+  \set rd {\rad}\set kr {\calc{0.5523 * \rad}}
+  \path{
+    \moveto{\calc{xl + rd} \yb}
+    \lineto{\calc{xr - rd} \yb}
+    \curveto{\calc{xr - rd + kr} \yb  \xr \calc{yb + rd - kr}  \xr \calc{yb + rd}}
+    \lineto{\xr \calc{yt - rd}}
+    \curveto{\xr \calc{yt - rd + kr}  \calc{xr - rd + kr} \yt  \calc{xr - rd} \yt}
+    \lineto{\calc{xl + rd} \yt}
+    \curveto{\calc{xl + rd - kr} \yt  \xl \calc{yt - rd + kr}  \xl \calc{yt - rd}}
+    \lineto{\xl \calc{yb + rd}}
+    \curveto{\xl \calc{yb + rd - kr}  \calc{xl + rd - kr} \yb  \calc{xl + rd} \yb}
+    \close
+  }
+}}
+
+// ================================================================================
+// \node [shape] {name} {placement} {label} — measure the label, size the box for the
+// shape, resolve the placement to a centre, record the geometry (and publish the centre
+// as the named coordinate `name`), then draw the shape and set the label centred on it.
+// The default shape is box. Run this inside a \picture.
+
+\def node [shape:box] name place label {{
+  \set nm {\name}
+  \set sh {\shape}
+  \setbox dgbox \hbox{{\font {\dgface} {\dgfont} {regular}\label}}
+  \set lw {\wd dgbox}
+  \set la {\ht dgbox}
+  \set ld {\dp dgbox}
+  \set lh {\calc{la + ld}}
+  \dgsize{\sh}{\lw}{\lh}
+  \set hw {\calc{dgW / 2}}
+  \set hh {\calc{dgH / 2}}
+  \dgplace{\place}{\hw}{\hh}
+  \set cx {\dgCx}\set cy {\dgCy}
+  \global\mapset dgX {\nm}{\cx}
+  \global\mapset dgY {\nm}{\cy}
+  \global\mapset dgHw {\nm}{\hw}
+  \global\mapset dgHh {\nm}{\hh}
+  \global\mapset dgShape {\nm}{\sh}
+  \coordinate{\nm}{(\cx, \cy)}
+  \dgshape{\sh}{\cx}{\cy}{\hw}{\hh}
+  \at anchor:center {\cx \cy}{{\font {\dgface} {\dgfont} {regular}\label}}
+}}
+
+// ================================================================================
+// Edges — every edge strokes in the configured ink and caps with the configured
+// arrowhead. dgedge is the shared pen setup; dglabel drops an edge label beside the
+// segment between (ax,ay) and (bx,by), nudged to the side the label gap allows.
+
+\def dgedge {\nofill\stroke{\dglinecolor}\linewidth{\dgedgewidth}}
+
+\def dglabel ax ay bx by label {{
+  \set mx {\calc{(\ax + \bx) / 2}}\set my {\calc{(\ay + \by) / 2}}
+  \set dx {\calc{\bx - \ax}}\set dy {\calc{\by - \ay}}
+  \set adx {\calc{abs(dx)}}\set ady {\calc{abs(dy)}}
+  \if {\> {\ady}{\adx}}
+    \at anchor:west {\calc{mx + dglabelgap} \my}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}
+  \else
+    \at anchor:south {\mx \calc{my + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}
+  \fi
+}}
+
+// \edge [label] {from} {to} — a straight arrow from one node to another, leaving and
+// entering through each node's boundary on the line between their centres, so it meets
+// both outlines cleanly however the nodes are aligned.
+\def edge [label] from to {{
+  \set f {\from}\set t {\to}
+  \set fcx {\mapget dgX {\f}}\set fcy {\mapget dgY {\f}}
+  \set tcx {\mapget dgX {\t}}\set tcy {\mapget dgY {\t}}
+  \dgboundary{\f}{\tcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
+  \dgboundary{\t}{\fcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
+  \dgedge
+  \arrow head:\dgarrow size:\dgarrowsize {\ax \ay \bx \by}
+  \if {\size{\label}}\dglabel{\ax}{\ay}{\bx}{\by}{\label}\fi
+}}
+
+// \edgehv [label] {from} {to} — an orthogonal arrow that leaves `from` horizontally and
+// enters `to` vertically, turning at the corner (to.x, from.y). This is TikZ's -| route,
+// the natural way to send a decision's side branch across and then down into the target.
+\def edgehv [label] from to {{
+  \set f {\from}\set t {\to}
+  \set fcy {\mapget dgY {\f}}
+  \set tcx {\mapget dgX {\t}}
+  \dgboundary{\f}{\tcx}{\fcy}\set ax {\dgPx}\set ay {\dgPy}
+  \dgboundary{\t}{\tcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
+  \dgedge
+  \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\tcx \fcy}\lineto{\bx \by}}
+  \if {\size{\label}}\at anchor:south {\calc{(\ax + \tcx) / 2} \calc{\fcy + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+}}
+
+// \edgevh [label] {from} {to} — the mirror of edgehv: leaves `from` vertically and enters
+// `to` horizontally, turning at (from.x, to.y). TikZ's |- route, used for a feedback line
+// that drops from a node and runs back along a row.
+\def edgevh [label] from to {{
+  \set f {\from}\set t {\to}
+  \set fcx {\mapget dgX {\f}}
+  \set tcy {\mapget dgY {\t}}
+  \dgboundary{\f}{\fcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
+  \dgboundary{\t}{\fcx}{\tcy}\set bx {\dgPx}\set by {\dgPy}
+  \dgedge
+  \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\fcx \tcy}\lineto{\bx \by}}
+  \if {\size{\label}}\at anchor:west {\calc{\fcx + dglabelgap} \calc{(\ay + \tcy) / 2}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+}}
+
+// \cedge [bend] {from} {to} [label] — a curved arrow bowed sideways by `bend` points
+// (positive bows to the left of the from→to direction). Two nodes joined by cedge in both
+// directions, each with the same bend, separate into two arcs instead of overlapping — the
+// usual way to draw a pair of opposite transitions. The curve leaves and enters aimed at
+// its own control point, so it meets each boundary tangentially.
+\def cedge [bend:26] from to label {{
+  \set f {\from}\set t {\to}
+  \set fcx {\mapget dgX {\f}}\set fcy {\mapget dgY {\f}}
+  \set tcx {\mapget dgX {\t}}\set tcy {\mapget dgY {\t}}
+  \set mx {\calc{(fcx + tcx) / 2}}\set my {\calc{(fcy + tcy) / 2}}
+  \set dx {\calc{tcx - fcx}}\set dy {\calc{tcy - fcy}}
+  \set len {\calc{hypot(dx, dy)}}
+  \set nx {\calc{-dy / len}}\set ny {\calc{dx / len}}
+  \set cpx {\calc{mx + nx * \bend}}\set cpy {\calc{my + ny * \bend}}
+  \dgboundary{\f}{\cpx}{\cpy}\set ax {\dgPx}\set ay {\dgPy}
+  \dgboundary{\t}{\cpx}{\cpy}\set bx {\dgPx}\set by {\dgPy}
+  \dgedge
+  \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\curveto{\cpx \cpy  \cpx \cpy  \bx \by}}
+  \if {\size{\label}}\at anchor:center {\calc{mx + nx * (\bend + dglabelgap + 4)} \calc{my + ny * (\bend + dglabelgap + 4)}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+}}
+
+// \loop {name} [label] — a self-loop rising from the top of a node and returning to it
+// with an arrowhead, the label set above the loop. The standard picture for a state that
+// transitions to itself.
+\def loop name label {{
+  \set n {\name}
+  \set cx {\mapget dgX {\n}}\set cy {\mapget dgY {\n}}
+  \set hw {\mapget dgHw {\n}}\set hh {\mapget dgHh {\n}}
+  \set q {\calc{hw * 0.4}}
+  \set topy {\calc{cy + hh}}
+  \set lx {\calc{cx - q}}\set rx {\calc{cx + q}}
+  \set ph {\dgloop}
+  \dgedge
+  \path arrow:end head:\dgarrow size:\dgarrowsize {
+    \moveto{\lx \topy}
+    \curveto{\calc{lx - ph} \calc{topy + ph}  \calc{rx + ph} \calc{topy + ph}  \rx \topy}
+  }
+  \if {\size{\label}}\at anchor:south {\cx \calc{topy + ph + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
+}}
+
+// \dgentry {name} {dir} {len} — a short stub arrow pointing into a node from outside,
+// used to mark an entry point (a flowchart's start, an automaton's initial state). dir is
+// north, south, east or west; the stub is len long, ending on that side of the node.
+\def dgentry name dir len {{
+  \set n {\name}
+  \set cx {\mapget dgX {\n}}\set cy {\mapget dgY {\n}}
+  \set hw {\mapget dgHw {\n}}\set hh {\mapget dgHh {\n}}
+  \set d {\dir}\set L {\len}
+  \if {\= {\d}{west}}\set bx {\calc{cx - hw}}\set by {\cy}\set ax {\calc{cx - hw - L}}\set ay {\cy}\fi
+  \if {\= {\d}{east}}\set bx {\calc{cx + hw}}\set by {\cy}\set ax {\calc{cx + hw + L}}\set ay {\cy}\fi
+  \if {\= {\d}{north}}\set bx {\cx}\set by {\calc{cy + hh}}\set ax {\cx}\set ay {\calc{cy + hh + L}}\fi
+  \if {\= {\d}{south}}\set bx {\cx}\set by {\calc{cy - hh}}\set ax {\cx}\set ay {\calc{cy - hh - L}}\fi
+  \dgedge
+  \arrow head:\dgarrow size:\dgarrowsize {\ax \ay \bx \by}
+}}
