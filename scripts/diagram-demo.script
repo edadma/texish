@@ -11,6 +11,7 @@
 
 \font lmroman 12 regular
 
+\set raggedbottom {1}
 \def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
 
 \bold{Node-and-edge diagrams}

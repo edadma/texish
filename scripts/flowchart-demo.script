@@ -7,6 +7,7 @@
 
 \def headline {\italic{The flowchart package} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
+\set raggedbottom {1}
 \def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
 
 \font lmroman 12 regular
