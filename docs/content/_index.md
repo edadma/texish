@@ -54,5 +54,8 @@ coherent family across prose, equations, and code.
   `\use{plot}` draws line, scatter, bar, and function plots with labelled axes.
 - **Railroad diagrams** — `\use{railroad}` turns a W3C-style EBNF grammar into a railroad
   (syntax) diagram, one picture per rule.
+- **Node-and-edge diagrams** — `\use{diagram}` places named, measured nodes in nine shapes
+  and routes labelled arrows between them; `\use{flowchart}` and `\use{automaton}` add
+  program-flowchart and state-machine vocabularies on top.
 - **Three platforms** — the JVM (Graphics2D raster), Scala Native (Cairo PDF + image), and
   Scala.js.

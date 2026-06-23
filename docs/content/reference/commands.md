@@ -184,6 +184,30 @@ Mono with terminals in bold. Common shapes are drawn idiomatically: a separated 
 `A (sep A)*` becomes `A` with `sep` on a return loop, and an optional choice `(A|B|C)?` folds
 the skip into the choice. See the [guide](/guide/railroad/) for customising colours and sizes.
 
+## Node-and-edge diagrams *(`\use{diagram}`)*
+
+Declared inside a `\picture`. A node is a named, measured box of a shape; an edge is an arrow
+between two named nodes that meets each node's true boundary.
+
+| Command | Effect |
+|---------|--------|
+| `\node [shape] {name} {placement} {label}` | a node; shape ∈ box, round, stadium, diamond, parallelogram, ellipse, circle, hexagon, subroutine (default box) |
+| `\edge [label] {from} {to}` | a straight arrow between two nodes |
+| `\edgehv` / `\edgevh [label] {from} {to}` | an orthogonal arrow (across-then-down / down-then-across) |
+| `\cedge [bend] {from} {to} {label}` | a curved arrow, bowed by `bend` points |
+| `\loop {name} {label}` | a self-loop above a node |
+| `\dgentry {name} {dir} {len}` | a short entry stub pointing into a node |
+
+A placement is `at X Y`, `at (X,Y)`, or `below`/`above`/`left`/`right REF [gap]` (relative to
+another node). The look is set with `\set` on the `dg…` variables (`dgfill`, `dglinecolor`,
+`dgfont`, `dggap`, `dgarrow`, …).
+
+The `flowchart` package (`\use{flowchart}`) adds role names — `\start` `\stop` (terminal),
+`\process` (box), `\decision` (diamond), `\io` (parallelogram), `\subroutine` — and flow
+edges `\flow` / `\branch` / `\rejoin`. The `automaton` package (`\use{automaton}`) adds
+`\state` (circle), `\accepting` (double circle), `\initial`, `\trans`, `\arc` and
+`\loopabove`. Both are thin layers over `diagram`; see the [guide](/guide/diagrams/).
+
 ## Units
 
 `pt` (the base unit, 1/72 in), `in`, `cm`, `mm`, `em`, `ex`.

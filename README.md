@@ -28,8 +28,10 @@ resolved by typesetting the document twice over a shared label table), lists, qu
 and tables with captions, and footnotes — and bundled packages
 add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), text
 sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
-plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), and railroad
-syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diagram per rule).
+plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), railroad
+syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diagram per rule),
+and node-and-edge diagrams (`\use{diagram}`, with `flowchart` and `automaton` presets — block
+diagrams, flowcharts and state machines).
 
 **Documentation: [texish.edadma.dev](https://texish.edadma.dev/).**
 
