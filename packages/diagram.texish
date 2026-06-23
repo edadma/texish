@@ -175,6 +175,23 @@
   \fi
 }}
 
+// dgpullback{bx}{by}{fx}{fy}{m} — set (dgQx, dgQy) to the point m units from (bx,by)
+// toward (fx,fy). An arrowhead on a \path is drawn with its tip pushed two line widths
+// past the path's end (so the filled head covers the stroke's cap); ending the path that
+// far short of a node's boundary, back along the direction it arrived from, lands the tip
+// exactly on the outline — the same place a straight \arrow puts it. The forward edges use
+// this so a curved or elbowed arrow does not poke into the target node.
+\def dgpullback bx by fx fy m {{
+  \set dx {\calc{\fx - \bx}}\set dy {\calc{\fy - \by}}
+  \set len {\calc{hypot(dx, dy)}}
+  \if {\= {\len}{0}}
+    \global\set dgQx {\bx}\global\set dgQy {\by}
+  \else
+    \global\set dgQx {\calc{\bx + \m * dx / len}}
+    \global\set dgQy {\calc{\by + \m * dy / len}}
+  \fi
+}}
+
 // ================================================================================
 // Shapes — dgshape draws the outline of a node, filled and stroked, centred at (cx, cy)
 // with half-extents hw, hh. Each shape is one picture path or polygon. The recognised
@@ -300,6 +317,8 @@
   \set tcx {\mapget dgX {\t}}
   \dgboundary{\f}{\tcx}{\fcy}\set ax {\dgPx}\set ay {\dgPy}
   \dgboundary{\t}{\tcx}{\fcy}\set bx {\dgPx}\set by {\dgPy}
+  \set mar {\calc{2 * dgedgewidth}}
+  \dgpullback{\bx}{\by}{\tcx}{\fcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
   \dgedge
   \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\tcx \fcy}\lineto{\bx \by}}
   \if {\size{\label}}\at anchor:south {\calc{(\ax + \tcx) / 2} \calc{\fcy + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
@@ -314,6 +333,8 @@
   \set tcy {\mapget dgY {\t}}
   \dgboundary{\f}{\fcx}{\tcy}\set ax {\dgPx}\set ay {\dgPy}
   \dgboundary{\t}{\fcx}{\tcy}\set bx {\dgPx}\set by {\dgPy}
+  \set mar {\calc{2 * dgedgewidth}}
+  \dgpullback{\bx}{\by}{\fcx}{\tcy}{\mar}\set bx {\dgQx}\set by {\dgQy}
   \dgedge
   \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\lineto{\fcx \tcy}\lineto{\bx \by}}
   \if {\size{\label}}\at anchor:west {\calc{\fcx + dglabelgap} \calc{(\ay + \tcy) / 2}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
@@ -335,6 +356,8 @@
   \set cpx {\calc{mx + nx * \bend}}\set cpy {\calc{my + ny * \bend}}
   \dgboundary{\f}{\cpx}{\cpy}\set ax {\dgPx}\set ay {\dgPy}
   \dgboundary{\t}{\cpx}{\cpy}\set bx {\dgPx}\set by {\dgPy}
+  \set mar {\calc{2 * dgedgewidth}}
+  \dgpullback{\bx}{\by}{\cpx}{\cpy}{\mar}\set bx {\dgQx}\set by {\dgQy}
   \dgedge
   \path arrow:end head:\dgarrow size:\dgarrowsize {\moveto{\ax \ay}\curveto{\cpx \cpy  \cpx \cpy  \bx \by}}
   \if {\size{\label}}\at anchor:center {\calc{mx + nx * (\bend + dglabelgap + 4)} \calc{my + ny * (\bend + dglabelgap + 4)}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
@@ -351,10 +374,13 @@
   \set topy {\calc{cy + hh}}
   \set lx {\calc{cx - q}}\set rx {\calc{cx + q}}
   \set ph {\dgloop}
+  \set cpx {\calc{rx + ph}}\set cpy {\calc{topy + ph}}
+  \set mar {\calc{2 * dgedgewidth}}
+  \dgpullback{\rx}{\topy}{\cpx}{\cpy}{\mar}\set ex {\dgQx}\set ey {\dgQy}
   \dgedge
   \path arrow:end head:\dgarrow size:\dgarrowsize {
     \moveto{\lx \topy}
-    \curveto{\calc{lx - ph} \calc{topy + ph}  \calc{rx + ph} \calc{topy + ph}  \rx \topy}
+    \curveto{\calc{lx - ph} \calc{topy + ph}  \cpx \cpy  \ex \ey}
   }
   \if {\size{\label}}\at anchor:south {\cx \calc{topy + ph + dglabelgap}}{{\font {\dglabelface} {\dglabelfont} {regular}\label}}\fi
 }}
