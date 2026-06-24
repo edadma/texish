@@ -18,20 +18,8 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
 
   // Simple commands (0 args)
   proc.registerPrimitive("newpage", SimplePrimitive(() => t.newpage()))
-  // \indent / \noindent open a paragraph, then skip the space that follows them in the source: a control word
-  // absorbs its trailing space in TeX, so `\noindent The` starts flush at the margin rather than one space in.
-  // (texish does not skip the space after control words in general — it is significant in `\the\x ` and
-  // `\first \last` — but for these two paragraph-openers a leading space is never wanted.)
-  proc.registerPrimitive("noindent", new Primitive {
-    def execute(proc: Processor, pos: CharReader): Unit =
-      t.noindent
-      proc.skipSpaces()
-  })
-  proc.registerPrimitive("indent", new Primitive {
-    def execute(proc: Processor, pos: CharReader): Unit =
-      t.indent
-      proc.skipSpaces()
-  })
+  proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
+  proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
   proc.registerPrimitive("cr", SimplePrimitive(() => t.op("newLine")))
   proc.registerPrimitive("hfil", SimplePrimitive(() => t.fil))
   proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))

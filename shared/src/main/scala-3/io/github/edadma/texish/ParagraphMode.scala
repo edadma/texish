@@ -6,6 +6,11 @@ import scala.collection.mutable.ArrayBuffer
 class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   def result: Box = ???
 
+  /** Whether the paragraph carries any real content yet, as opposed to nothing or only the first-line indent
+    * box (both of which are space). A space added while this is false is a leading space — discarded, so a
+    * paragraph opened by \noindent / \indent and followed by a space starts flush rather than one space in. */
+  def hasContent: Boolean = boxes.exists(!_.isSpace)
+
   override def done(): Unit =
     // An empty paragraph contributes nothing and leaves the surrounding state untouched: it sets no lines and,
     // crucially, does not reset \indent / \hangindent. This is what makes \noindent stick across a paragraph

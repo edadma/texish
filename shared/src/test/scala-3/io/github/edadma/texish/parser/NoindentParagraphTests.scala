@@ -77,17 +77,20 @@ class NoindentParagraphTests extends AnyFreeSpec with Matchers:
     startsIndented(ls(1)) shouldBe true
   }
 
-  "the \\noindent primitive skips the space after it, so the text starts flush" in {
-    // A control word absorbs its trailing space in TeX. The \noindent primitive followed by a literal space
-    // then text must begin the line with the text, not a leading interword space (a one-character indent).
+  "a space at the start of a paragraph is discarded, so \\noindent text starts flush" in {
+    // A space on a line that has no content yet (only the optional indent box) is a leading space and is
+    // dropped, so \noindent followed by a literal space and text begins with the text, not a one-character
+    // indent. This is handled in the paragraph, so it covers any command that opens a paragraph and emits
+    // nothing, not just \noindent.
     val ls = process("\\noindent The quick brown fox jumps over the lazy dog.")
     ls.length shouldBe 1
     leadingWidth(ls.head) should be < 1.0
   }
 
-  "the \\indent primitive still indents, and skips only the following space" in {
-    // \indent keeps its first-line indent; the space after the control word is absorbed, but the indent box is
-    // the real lead, so the line is indented (not flush) and the text follows the indent, not a stray space.
+  "the indent box survives, but a space right after it at paragraph start is discarded" in {
+    // \indent keeps its first-line indent (the indent box is real content's lead), and the space following it
+    // is a leading space and dropped — so the line is indented and the text follows the indent, not a stray
+    // space after it.
     val ls = process("\\indent The quick brown fox jumps over the lazy dog.")
     ls.length shouldBe 1
     startsIndented(ls.head) shouldBe true

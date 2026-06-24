@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HorizontalMode, MathMode, MathStyle, Mode, PictureMode, Typesetter, VerticalMode}
+import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HorizontalMode, MathMode, MathStyle, Mode, ParagraphMode, PictureMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -46,7 +46,13 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       // not prose); otherwise add a space unless in vertical mode (halign cells are not HorizontalMode but accept
       // spaces)
       if typesetter.mode.isInstanceOf[MathMode] || typesetter.mode.isInstanceOf[PictureMode] then ()
-      else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then typesetter.start add " "
+      else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then
+        // A space at the very start of a paragraph — nothing on the line yet but the optional indent box — is a
+        // leading space and is discarded, so a paragraph opened by a command that emits nothing (\noindent,
+        // \indent, …) and then a space starts flush rather than one interword space in.
+        typesetter.mode match
+          case pm: ParagraphMode if !pm.hasContent => ()
+          case _                                   => typesetter.start add " "
 
   def newline(): Unit =
     if captureSink != null then captureSink.nn.append("\n")
