@@ -18,8 +18,20 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
 
   // Simple commands (0 args)
   proc.registerPrimitive("newpage", SimplePrimitive(() => t.newpage()))
-  proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
-  proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
+  // \indent / \noindent open a paragraph, then skip the space that follows them in the source: a control word
+  // absorbs its trailing space in TeX, so `\noindent The` starts flush at the margin rather than one space in.
+  // (texish does not skip the space after control words in general — it is significant in `\the\x ` and
+  // `\first \last` — but for these two paragraph-openers a leading space is never wanted.)
+  proc.registerPrimitive("noindent", new Primitive {
+    def execute(proc: Processor, pos: CharReader): Unit =
+      t.noindent
+      proc.skipSpaces()
+  })
+  proc.registerPrimitive("indent", new Primitive {
+    def execute(proc: Processor, pos: CharReader): Unit =
+      t.indent
+      proc.skipSpaces()
+  })
   proc.registerPrimitive("cr", SimplePrimitive(() => t.op("newLine")))
   proc.registerPrimitive("hfil", SimplePrimitive(() => t.fil))
   proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))
@@ -848,37 +860,33 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
 
         full match
           case vb: VerticalBox =>
-            // Balancing minimizes the height of the tallest column: find the smallest column height that still
-            // packs the material into n columns. An equal share (total / n) is the floor; the whole height
-            // trivially fits in one column, so it is a feasible ceiling. Binary search between them — feasibility
-            // is monotonic in the height — converges on the tight balance point, much closer to level than
-            // simply aiming each column at total / n (which lets first-fit under-fill the early columns and dump
-            // the slack into the last).
-            def fits(h: Double): Boolean =
-              var rest  = vb.boxes
-              var count = 0
-              while rest.nonEmpty && count < n do
-                rest = splitVList(rest, h)._2
-                count += 1
-              rest.isEmpty
+            // Balance the material across the columns by line count. Each column takes ceil(remaining lines /
+            // remaining columns), so any surplus from an uneven division lands in the EARLIER columns and the
+            // last column is the shortest — the newspaper convention. Each column is a \vtop, so its reference
+            // point is the first line's baseline: stood side by side in the hbox, the columns align along their
+            // tops, not their (unequal) last baselines.
+            //
+            // Counting lines, rather than targeting a column height, sidesteps a measurement trap: a column
+            // split off as the trailing remainder has its leading interline glue stripped, so the same lines
+            // measure a hair shorter than they would as a prefix. A height target tuned to that short remainder
+            // leaves the earlier (prefix) columns one line short of it, which dumped the extra line into the
+            // last column and left it the tallest.
+            val legalBreak: (Vector[Box], Int) => Boolean = (list, i) =>
+              list(i) match
+                case p: Penalty   => p.penalty < Penalty.Inhibit
+                case g: Glue      => !g.nobreak && i > 0 && !list(i - 1).isSpace
+                case _: VSpaceBox => i > 0 && !list(i - 1).isSpace
+                case _            => false
 
-            var lo = vb.height / n
-            var hi = vb.height
-            var i  = 0
-            while i < 40 && hi - lo > 0.01 do
-              val mid = (lo + hi) / 2
-              if fits(mid) then hi = mid else lo = mid
-              i += 1
-            val target = hi // the smallest feasible column height
-
-            // peel off n-1 balanced pieces with \vsplit's breaking; the last column keeps whatever remains
-            var rest = vb.boxes
+            var rest = vb.boxes.toVector
             val cols = Vector.newBuilder[Box]
-            for _ <- 0 until n - 1 do
-              val (top, remainder) = splitVList(rest, target)
-              cols += new VBox(top)
-              rest = remainder
-            cols += new VBox(rest)
+            for col <- 0 until n - 1 do
+              val breaks = (1 until rest.length).filter(i => legalBreak(rest, i))
+              val take   = math.ceil((breaks.size + 1).toDouble / (n - col)).toInt
+              val cutPos = if take - 1 < breaks.size then breaks(take - 1) else rest.length
+              cols += new VTop(rest.take(cutPos))
+              rest = rest.drop(cutPos).dropWhile(_.isSpace)
+            cols += new VTop(rest)
 
             // lay the columns out left to right with the gutter between adjacent pairs
             val laid = cols.result().zipWithIndex.flatMap {

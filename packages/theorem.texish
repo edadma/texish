@@ -43,4 +43,6 @@
 \noindent\itshape Proof.\upshape//
 } {\vskip 3pt plus 1pt minus 1pt}//
 
-\def qed {\hfill□}//
+// The end-of-proof box is drawn on the \picture layer rather than set from a font glyph, so it needs no
+// particular character in the body face: a hollow square, stroked but not filled, the height of a capital.
+\def qed {\hfill\picture width:{6.5} height:{6.5} {\nofill\stroke{black}\linewidth{0.5pt}\rect{0.5 0.5 5.5 5.5}}}//
