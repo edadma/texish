@@ -318,8 +318,10 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val lang = evalArg(proc, pos)
         val path = evalArg(proc, pos)
         (lang, path) match
-          case (Value.Text(l), Value.Text(p)) => Hyphenation.loadPatterns(l, p)
-          case _                              => handler.error("\\loadhyphenation expects {language}{path}", pos)
+          case (Value.Text(l), Value.Text(p)) =>
+            Hyphenation.loadPatterns(l, p)
+            handler.typesetter.hyphenationLanguage = Some(l)
+          case _ => handler.error("\\loadhyphenation expects {language}{path}", pos)
     },
   )
 
@@ -330,8 +332,10 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         val arg = evalArg(proc, pos)
         arg match
-          case Value.Text(lang) => Hyphenation.setLanguage(lang)
-          case _                => handler.error("\\language expects a language name", pos)
+          case Value.Text(lang) =>
+            if Hyphenation.isLoaded(lang) then handler.typesetter.hyphenationLanguage = Some(lang)
+            else handler.error(s"\\language: no hyphenation patterns loaded for '$lang'", pos)
+          case _ => handler.error("\\language expects a language name", pos)
     },
   )
 
@@ -345,7 +349,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       def execute(proc: Processor, pos: CharReader): Unit =
         evalArg(proc, pos) match
           case Value.Text(lang) =>
-            if Hyphenation.enableEmbedded(lang) then Hyphenation.setLanguage(lang)
+            if Hyphenation.enableEmbedded(lang) then handler.typesetter.hyphenationLanguage = Some(lang)
             else
               val have = Hyphenation.embeddedLanguages.toSeq.sorted.mkString(", ")
               handler.error(

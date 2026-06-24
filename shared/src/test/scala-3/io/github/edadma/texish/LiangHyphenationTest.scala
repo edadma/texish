@@ -94,95 +94,71 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
       case None => fail("Expected hyphenation points")
   }
 
-  "Hyphenation wrapper" should "return None when no hyphenator set" in {
-    Hyphenation.clear()
-    Hyphenation("test") shouldBe None
+  // The Hyphenation object is a shared, append-only pattern cache with a pure lookup that takes the language
+  // explicitly. There is no global "active language" — selection is per-document on the Typesetter — so these
+  // tests never mutate state another suite can observe, and need no clear()/reset between them.
+
+  "Hyphenation cache lookup" should "return None when no language is selected" in {
+    Hyphenation(None, "test") shouldBe None
   }
 
-  it should "delegate to LiangHyphenation when set" in {
-    Hyphenation.clear()
-    val h = LiangHyphenation.fromPatterns("el1lo")
-    Hyphenation.setHyphenator(h)
-    Hyphenation.isEnabled shouldBe true
-    Hyphenation("hello") should not be None
-    Hyphenation.clear()
+  it should "return None for a language whose patterns are not loaded" in {
+    Hyphenation(Some("no-such-lang"), "hello") shouldBe None
   }
 
-  it should "load patterns from string" in {
-    Hyphenation.clear()
-    Hyphenation.loadPatternsFromString("el1lo hy3ph")
-    Hyphenation.isEnabled shouldBe true
-    Hyphenation.clear()
+  it should "hyphenate through patterns loaded under the default name" in {
+    Hyphenation.setHyphenator(LiangHyphenation.fromPatterns("el1lo"))
+    Hyphenation.isLoaded("default") shouldBe true
+    Hyphenation(Some("default"), "hello") should not be None
   }
 
-  it should "support multiple languages" in {
-    Hyphenation.clear()
-    Hyphenation.loadPatternsFromString("en", "el1lo")
-    Hyphenation.loadPatternsFromString("test", "es1ti")
-
-    Hyphenation.languages shouldBe Set("en", "test")
-    Hyphenation.getLanguage shouldBe Some("en") // first loaded becomes active
-
-    Hyphenation.setLanguage("test")
-    Hyphenation.getLanguage shouldBe Some("test")
-
-    Hyphenation.clear()
+  it should "load patterns from a string under a named language" in {
+    Hyphenation.loadPatternsFromString("strlang", "el1lo hy3ph")
+    Hyphenation.isLoaded("strlang") shouldBe true
+    Hyphenation(Some("strlang"), "hello") should not be None
   }
 
-  it should "switch between languages" in {
-    Hyphenation.clear()
-    Hyphenation.loadPatternsFromString("lang1", "el1lo")
-    Hyphenation.loadPatternsFromString("lang2", "ol1la")
-
-    Hyphenation.setLanguage("lang1")
-    Hyphenation("hello") should not be None
-
-    Hyphenation.setLanguage("lang2")
-    Hyphenation("holla") should not be None
-
-    Hyphenation.clear()
+  it should "hold several languages at once and look each up by name" in {
+    Hyphenation.loadPatternsFromString("en-test", "el1lo")
+    Hyphenation.loadPatternsFromString("xx-test", "ol1la")
+    Hyphenation.languages should contain allOf ("en-test", "xx-test")
+    Hyphenation(Some("en-test"), "hello") should not be None
+    Hyphenation(Some("xx-test"), "holla") should not be None
+    // selecting by name keeps the languages independent: en-test's patterns do not break "holla"
+    Hyphenation(Some("en-test"), "holla") shouldBe None
   }
 
-  it should "load the build-time embedded en-US patterns via enableEnglish" in {
-    Hyphenation.clear()
-    Hyphenation.isEnabled shouldBe false
-    Hyphenation.enableEnglish()
-    try
-      Hyphenation.isEnabled shouldBe true
-      // a famously long word the embedded patterns break in several places
-      Hyphenation("pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
-    finally Hyphenation.clear() // leave the global hyphenator as we found it
+  it should "load the build-time embedded en-US patterns via enableEmbedded" in {
+    Hyphenation.enableEmbedded("en-us") shouldBe true
+    // a famously long word the embedded patterns break in several places
+    Hyphenation(Some("en-us"), "pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
   }
 
-  it should "bundle en-us, es, and fr patterns and enable each via enableEmbedded" in {
+  it should "bundle en-us, es, and fr patterns" in {
     Hyphenation.embeddedLanguages should contain allOf ("en-us", "es", "fr")
     Hyphenation.enableEmbedded("xx-nope") shouldBe false // an unbundled tag reports failure, not an error
   }
 
-  it should "hyphenate Spanish words once the embedded es patterns are active" in {
-    Hyphenation.clear()
+  it should "hyphenate Spanish words once the embedded es patterns are loaded" in {
     Hyphenation.enableEmbedded("es") shouldBe true
-    Hyphenation.setLanguage("es")
-    try
-      // the bundled es patterns find at least one break in an ordinary multi-syllable Spanish word, and
-      // every break splits the whole word (the prefix carries the trailing hyphen, as for English)
-      val points = Hyphenation("palabra").map(_.toList)
-      points should not be None
-      points.get should not be empty
-      all(points.get.map((before, after) => before.stripSuffix("-") + after)) shouldBe "palabra"
-    finally Hyphenation.clear()
+    // the bundled es patterns find at least one break in an ordinary multi-syllable Spanish word, and
+    // every break splits the whole word (the prefix carries the trailing hyphen, as for English)
+    val points = Hyphenation(Some("es"), "palabra").map(_.toList)
+    points should not be None
+    points.get should not be empty
+    all(points.get.map((before, after) => before.stripSuffix("-") + after)) shouldBe "palabra"
   }
 
-  it should "switch the active language between two embedded sets" in {
-    Hyphenation.clear()
+  it should "select a hyphenation language per document, not globally" in {
     Hyphenation.enableEmbedded("en-us")
-    Hyphenation.enableEmbedded("fr")
-    try
-      Hyphenation.setLanguage("fr")
-      Hyphenation.getLanguage shouldBe Some("fr")
-      Hyphenation.setLanguage("en-us")
-      Hyphenation.getLanguage shouldBe Some("en-us")
-    finally Hyphenation.clear()
+    val withLang = new HeadlessTypesetter
+    withLang.hyphenationLanguage = Some("en-us")
+    val without = new HeadlessTypesetter
+    // the document that selected a language hyphenates; a fresh document does not, no matter what any other
+    // document or concurrently-running suite has loaded or selected
+    Hyphenation(withLang.hyphenationLanguage, "pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
+    without.hyphenationLanguage shouldBe None
+    Hyphenation(without.hyphenationLanguage, "pneumonoultramicroscopicsilicovolcanoconiosis") shouldBe None
   }
 
   // Real English word hyphenation tests

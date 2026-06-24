@@ -131,7 +131,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
               case b: CharBox =>
                 b.text.indexOf('-') match
                   case -1 =>
-                    Hyphenation(b.text) match
+                    Hyphenation(t.hyphenationLanguage, b.text) match
                       case None =>
                       case Some(hyphenation) =>
                         var lastBefore: CharBox = null

@@ -713,6 +713,14 @@ abstract class Typesetter:
     push(new HAlignMode(this))
     this
 
+  // ---- Hyphenation ----
+
+  /** The hyphenation language active for this document, or `None` for no hyphenation. This is per-document
+    * state — `\usehyphenation` / `\loadhyphenation` / `\language` set it on the typesetter — so two documents
+    * (or two concurrent test suites) never affect each other's line breaking. The pattern tables themselves
+    * are a shared, append-only cache in the [[Hyphenation]] object; only the *selection* lives here. */
+  var hyphenationLanguage: Option[String] = None
+
   // ---- Math mode ----
 
   /** The typeface math mode sets symbols in. Defaults to Latin Modern Math; an application can point it at

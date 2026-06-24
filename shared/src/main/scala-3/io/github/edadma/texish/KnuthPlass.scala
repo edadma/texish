@@ -83,7 +83,7 @@ object KnuthPlass:
       hsize - marginNat - (if hangindent != 0 && hung(n) then math.abs(hangindent) else 0.0)
 
     // Convert boxes to items, expanding hyphenation points
-    val items = buildItems(boxes, hyphenpenalty)
+    val items = buildItems(boxes, hyphenpenalty, t.hyphenationLanguage)
 
     if items.isEmpty then return Some(Seq.empty)
 
@@ -302,7 +302,7 @@ object KnuthPlass:
 
     Some(lines.toSeq)
 
-  private def buildItems(boxes: Seq[Box], hyphenpenalty: Double): Seq[Item] =
+  private def buildItems(boxes: Seq[Box], hyphenpenalty: Double, hyphLang: Option[String]): Seq[Item] =
     val items = ArrayBuffer[Item]()
 
     for (box, idx) <- boxes.zipWithIndex do
@@ -312,8 +312,8 @@ object KnuthPlass:
         case d: DiscretionaryBox =>
           items += DiscItem(d.pre, d.post, d.noBreak, hyphenpenalty, idx)
         case cb: CharBox =>
-          // Check for hyphenation opportunities
-          Hyphenation(cb.text) match
+          // Check for hyphenation opportunities, in the document's active language
+          Hyphenation(hyphLang, cb.text) match
             case Some(hyphenation) =>
               val hyphenPoints = hyphenation.toList
               if hyphenPoints.nonEmpty then
