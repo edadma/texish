@@ -1,24 +1,134 @@
-// Demonstration of the `automaton` package — finite-state machines as a thin layer of
-// conventions over the diagram layer.
+// A comprehensive tour of the `automaton` package — finite-state machines and
+// state-transition diagrams drawn as a thin layer of automata-theory conventions
+// over the `diagram` package.
 //
 // Render with:  texish scripts/automaton-demo.script
+//
+// `document` gives us a title block, numbered section headings and paragraph
+// indentation; `automaton` gives us the state and transition vocabulary.
 
+\use{document}
 \use{automaton}
 
-\def headline {\italic{The automaton package} \hfil page \the\pageno}
-\def footline {\hfil — \the\pageno — \hfil}
+\def headline {\italic{The automaton package} \hfil \the\pageno}
 \set raggedbottom {1}
+
+// A small helper to centre a picture (the whole diagram is one box that flows in
+// the text like any other).
 \def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
 
-\font lmroman 12 regular
+\title{The \texttt{automaton} Package}
+\author{A tour of finite-state-machine diagrams in texish}
+\maketitle
 
-\bold{Finite-state machines}
+\section{The vocabulary}
 
-A state is a circle, an accepting state a double circle, and the start state carries an
-incoming arrow. A transition is a labelled arrow; a self-transition is a loop above the
-state. The machine below accepts strings over $\{a, b\}$ that contain the substring
-$ab$: stay in $q_0$ until an $a$ is read, wait in $q_1$ for the $b$, and once in the
-accepting state $q_2$ stay there.
+The package adds a handful of commands on top of the \texttt{diagram} layer, each
+giving a circle or an arrow its automata-theory meaning. Every machine is declared
+inside a \texttt{\\picture}, and the four building blocks are: a \emph{state}, an
+\emph{accepting} (final) state, an \emph{initial} marker, and a labelled
+\emph{transition}. The figure below shows all four at once.
+
+\vskip 10pt
+
+\centerline{\picture width:4in height:1.4in {
+  \state{a}{at 0.7in 0.7in}{$q_0$}
+  \accepting{b}{right a 90}{$q_1$}
+  \initial{a}
+  \trans[$x$]{a}{b}
+}}
+
+\vskip 6pt
+
+\noindent Here \texttt{\\state} drew the ordinary circle $q_0$, \texttt{\\accepting}
+drew the double circle $q_1$, \texttt{\\initial} attached the short incoming arrow,
+and \texttt{\\trans} drew the labelled transition between them.
+
+\section{States}
+
+A state is a circle sized to its label; an accepting state carries a second ring
+drawn just inside the outline. The gap between those two rings is configurable with
+\texttt{\\autoring}. Below, an ordinary state sits beside an accepting one so the
+double ring is easy to compare.
+
+\vskip 10pt
+
+\centerline{\picture width:3.2in height:1.2in {
+  \state{s}{at 0.6in 0.55in}{ordinary}
+  \accepting{f}{right s 70}{accepting}
+}}
+
+\subsection{The initial marker}
+
+\texttt{\\initial} marks the start state with a short arrow entering from the left.
+For a start arrow coming from another side, the underlying \texttt{\\dgentry}
+primitive stays available: it takes a direction (\texttt{north}, \texttt{south},
+\texttt{east} or \texttt{west}) and a length. The three states below are each
+marked as a start state, but from different sides.
+
+\vskip 10pt
+
+\centerline{\picture width:4.4in height:1.5in {
+  \state{w}{at 0.8in 0.75in}{west}
+  \state{n}{right w 70}{north}
+  \state{s2}{right n 70}{south}
+  \initial{w}
+  \dgentry{n}{north}{30}
+  \dgentry{s2}{south}{30}
+}}
+
+\section{Transitions}
+
+\subsection{Straight transitions}
+
+\texttt{\\trans[symbol]\{from\}\{to\}} draws a straight labelled arrow between two
+states. The label is set beside the arrow, and the arrow attaches to the true
+circle boundary at each end. A transition on more than one symbol simply lists them
+in the label.
+
+\vskip 10pt
+
+\centerline{\picture width:4in height:1.2in {
+  \state{p}{at 0.7in 0.6in}{$p$}
+  \state{q}{right p 100}{$q$}
+  \trans[$a, b$]{p}{q}
+}}
+
+\subsection{Self-transitions}
+
+\texttt{\\loopabove\{name\}\{symbol\}} draws a self-transition as a labelled loop
+rising from the top of the state — the standard picture for a symbol that keeps the
+machine in the same state.
+
+\vskip 10pt
+
+\centerline{\picture width:2.6in height:1.4in {
+  \state{r}{at 1.3in 0.5in}{$q$}
+  \loopabove{r}{$a, b$}
+}}
+
+\subsection{Curved transitions for a back-and-forth pair}
+
+When two states transition to each other, two straight arrows would overlap.
+\texttt{\\arc[bend]\{from\}\{to\}\{symbol\}} bows the arrow sideways by \texttt{bend}
+points; giving each direction the same bend separates the pair into two clean arcs.
+
+\vskip 10pt
+
+\centerline{\picture width:3in height:1.4in {
+  \state{u}{at 0.7in 0.7in}{$0$}
+  \state{v}{right u 80}{$1$}
+  \arc[28]{u}{v}{$a$}
+  \arc[28]{v}{u}{$b$}
+}}
+
+\section{A complete DFA}
+
+Putting the pieces together: this deterministic finite automaton accepts strings
+over $\{a, b\}$ that contain the substring $ab$. The machine stays in $q_0$ until an
+$a$ is read, waits in $q_1$ for the following $b$, and once in the accepting state
+$q_2$ it stays there for the rest of the input. Each state carries the self-loops
+for the symbols that leave it unchanged.
 
 \vskip 12pt
 
@@ -34,23 +144,76 @@ accepting state $q_2$ stay there.
   \loopabove{q2}{$a, b$}
 }}
 
-\vskip 16pt
+\section{Layout is free}
 
-\bold{A cyclic automaton}
+States need not sit in a row — any placement the \texttt{diagram} layer understands
+works. Absolute coordinates (\texttt{at X Y}) and the relative directions
+(\texttt{right}, \texttt{left}, \texttt{above}, \texttt{below}, each with an optional
+gap) can be mixed freely. Placed at the corners of a triangle, the three states
+below count the number of $1$s read modulo three; each $1$ steps to the next state,
+and $r_0$ — both the start and the only accepting state — is reached again exactly
+when the count is divisible by three. The transitions are curved arcs bowing around
+the cycle.
 
-States need not lie in a row. Placed at the corners of a triangle, three states count the
-number of $1$s read modulo $3$; each $1$ steps to the next state, and $r_0$ — both the
-start and the only accepting state — is reached again exactly when the count is divisible
-by three. The transitions are curved arcs bowing around the cycle.
-
-\vskip 8pt
+\vskip 10pt
 
 \centerline{\picture width:3.2in height:2.3in {
-  \accepting{r0}{at 1.5in 1.9in}{$r_0$}
-  \state{r1}{at 0.6in 0.5in}{$r_1$}
-  \state{r2}{at 2.4in 0.5in}{$r_2$}
-  \initial{r0}
-  \arc[-30]{r0}{r1}{$1$}
-  \arc[-30]{r1}{r2}{$1$}
-  \arc[-30]{r2}{r0}{$1$}
+  \accepting{m0}{at 1.5in 1.9in}{$r_0$}
+  \state{m1}{at 0.6in 0.5in}{$r_1$}
+  \state{m2}{at 2.4in 0.5in}{$r_2$}
+  \initial{m0}
+  \arc[-30]{m0}{m1}{$1$}
+  \arc[-30]{m1}{m2}{$1$}
+  \arc[-30]{m2}{m0}{$1$}
 }}
+
+\section{A nondeterministic automaton}
+
+Nondeterminism needs no new commands: a state may simply have several transitions
+on the same symbol. This NFA accepts strings over $\{a, b\}$ that end in $ab$. The
+start state $n_0$ loops on every symbol while guessing where the suffix begins,
+takes an $a$ to $n_1$, then a $b$ to the accepting state $n_2$.
+
+\vskip 12pt
+
+\centerline{\picture width:5in height:1.7in {
+  \state{n0}{at 0.7in 0.7in}{$n_0$}
+  \state{n1}{right n0 90}{$n_1$}
+  \accepting{n2}{right n1 90}{$n_2$}
+  \initial{n0}
+  \loopabove{n0}{$a, b$}
+  \trans[$a$]{n0}{n1}
+  \trans[$b$]{n1}{n2}
+}}
+
+\section{Tuning the look}
+
+The configuration of the underlying \texttt{diagram} layer remains in reach, so the
+appearance can be tuned without leaving the package. Overriding \texttt{dgfill} (the
+state fill), \texttt{dglinecolor} (the ink), \texttt{autoring} (the double-ring gap)
+and \texttt{dgloop} (the height of a self-loop) restyles the same machine below. The
+overrides are confined to this picture's group, so they do not leak into the rest of
+the document.
+
+\vskip 12pt
+
+\centerline{{
+  \set dgfill {#fdeedd}
+  \set dglinecolor {#7a3b00}
+  \set autoring {4.5}
+  \set dgloop {32}
+  \picture width:4in height:1.7in {
+    \state{t0}{at 0.7in 0.7in}{$s_0$}
+    \accepting{t1}{right t0 100}{$s_1$}
+    \initial{t0}
+    \trans[$1$]{t0}{t1}
+    \loopabove{t0}{$0$}
+    \loopabove{t1}{$0, 1$}
+  }
+}}
+
+\vskip 10pt
+
+\noindent That completes the tour: states ordinary and accepting, the initial
+marker from any side, straight, looping and curved transitions, free placement, and
+the styling knobs — all the package has to offer.

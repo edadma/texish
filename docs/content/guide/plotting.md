@@ -229,5 +229,5 @@ grid, and palette — are the same [named colours or `#rrggbb` codes](/guide/gra
 picture layer uses.
 
 A complete, rendered demonstration of every series type, the legend, reference lines,
-marker shapes, auto colour, and auto-ranging lives at `scripts/plot.script` in the
+marker shapes, auto colour, and auto-ranging lives at `scripts/plot-demo.script` in the
 repository.

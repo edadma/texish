@@ -1,52 +1,142 @@
 // Demonstration of the `er` package — entity-relationship diagrams in Chen notation, a thin
-// layer of conventions over the diagram layer.
+// layer of conventions over the `diagram` package. This document walks through every shape and
+// connector the package provides and ends with a complete database schema that combines them.
 //
 // Render with:  texish scripts/er-demo.script
 
+\use{document}
 \use{er}
 
-\def headline {\italic{The er package} \hfil page \the\pageno}
-\def footline {\hfil — \the\pageno — \hfil}
-\set raggedbottom {1}
-\def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
+\title{Entity-Relationship Diagrams}
+\author{The \italic{er} package}
+\maketitle
 
-\font lmroman 12 regular
+// A small helper: each diagram is centred on its own line with a little air above and below.
+\def showpic p {\vskip 8pt\centerline{\p}\vskip 8pt}
 
-\bold{Entity-relationship diagrams}
+\section{Chen notation}
 
-In Chen notation an entity is a rectangle, a relationship a diamond, and an attribute an
-ellipse, joined by undirected lines that carry cardinalities. A key attribute is underlined,
-a weak entity and an identifying relationship double their outline, and total participation
-doubles the connecting line. The schema below records employees, the departments they work
-for, and their dependents.
+In Chen notation an entity-relationship schema is drawn from three kinds of shape, joined by
+undirected lines. An \italic{entity} — a thing the database stores facts about — is a
+rectangle. A \italic{relationship} — an association between entities — is a diamond. An
+\italic{attribute} — a property of an entity or relationship — is an ellipse. The
+\italic{cardinality} of each association (1, N, or M) is written beside the line that records
+it. The \italic{er} package gives each of these shapes a command of its own, so a diagram reads
+almost like its description.
 
-\vskip 12pt
+Every command has the same three arguments: a \italic{name} that later connectors refer to, a
+\italic{placement} (\verb|at x y|, or \verb|right foo 60|, \verb|above bar|, and so on,
+relative to an already-placed shape), and the \italic{label} drawn inside. Because \italic{er}
+is a layer over \italic{diagram}, the diagram configuration commands and the raw shape commands
+remain available alongside the ones shown here.
 
-\centerline{\picture width:6in height:4.3in {
-  // attributes across the top
-  \keyattribute{ssn}{at 0.55in 3.8in}{ssn}
-  \attribute{ename}{at 1.7in 3.9in}{name}
-  \attribute{dname}{at 4.3in 3.9in}{name}
-  \keyattribute{dnum}{at 5.45in 3.8in}{number}
+\section{Entities}
 
-  // the entity — relationship — entity spine
-  \entity{emp}{at 1.3in 2.8in}{Employee}
-  \relationship{wf}{at 3in 2.8in}{Works For}
-  \entity{dept}{at 4.7in 2.8in}{Department}
+An ordinary entity is a plain rectangle. A \italic{weak} entity — one whose instances cannot be
+identified without the entity it depends on — draws a second outline just inside the first.
 
-  // a weak entity, identified by the employee it depends on
-  \weakrelationship{has}{at 1.3in 1.7in}{Has}
+\showpic{\picture width:5in height:1in {
+  \entity{e1}{at 1in 0.5in}{Employee}
+  \weakentity{e2}{right e1 90}{Dependent}
+}}
+
+\section{Relationships}
+
+A relationship is a diamond. An \italic{identifying} (weak) relationship — the one that ties a
+weak entity to its owner — is drawn as a double diamond.
+
+\showpic{\picture width:5in height:1.1in {
+  \relationship{r1}{at 1in 0.55in}{Works For}
+  \weakrelationship{r2}{right r1 90}{Has}
+}}
+
+\section{Attributes}
+
+Attributes are ellipses, and Chen notation distinguishes four kinds. A plain \italic{attribute}
+is a single ellipse. A \italic{key} attribute, part of the entity's primary key, has its label
+underlined. A \italic{multivalued} attribute, which may hold several values at once, is a double
+ellipse. A \italic{derived} attribute, computed from other data rather than stored, is drawn
+with a dashed outline.
+
+\showpic{\picture width:6in height:1in {
+  \attribute{a1}{at 0.8in 0.5in}{name}
+  \keyattribute{a2}{right a1 35}{ssn}
+  \multivalued{a3}{right a2 35}{phones}
+  \derived{a4}{right a3 35}{age}
+}}
+
+\section{Connectors and cardinalities}
+
+A connector is an undirected line drawn with \verb|\connect|. With no argument it simply joins
+two shapes — the usual way to attach an attribute to its entity. Given a bracketed argument it
+also writes a cardinality beside the line: \verb|\connect[1]|, \verb|\connect[N]|,
+\verb|\connect[M]|. The line is clipped to each shape's boundary, so it meets the rectangle,
+diamond, or ellipse cleanly at any angle.
+
+\showpic{\picture width:5in height:1.7in {
+  \entity{c1}{at 1in 0.6in}{Course}
+  \relationship{c2}{right c1 70}{Taken By}
+  \entity{c3}{right c2 70}{Student}
+  \attribute{c4}{above c1 30}{title}
+  \connect{c1}{c4}
+  \connect[M]{c1}{c2}
+  \connect[N]{c2}{c3}
+}}
+
+A \italic{total participation} constraint — every instance of an entity must take part in the
+relationship — is drawn with \verb|\connecttotal|, which doubles the connecting line. It accepts
+the same optional cardinality. Here every dependent must belong to some employee, so the line
+from the relationship to the weak entity is doubled.
+
+\showpic{\picture width:5in height:1.4in {
+  \entity{t1}{at 1in 0.7in}{Employee}
+  \weakrelationship{t2}{right t1 70}{Has}
+  \weakentity{t3}{right t2 70}{Dependent}
+  \connect[1]{t1}{t2}
+  \connecttotal[N]{t2}{t3}
+}}
+
+\section{A complete schema}
+
+Putting every shape and connector together, the schema below records employees, the departments
+they work for, and their dependents. The \italic{Employee} entity carries a key attribute
+(\italic{ssn}), an ordinary attribute (\italic{name}), a multivalued attribute (\italic{phones},
+since an employee may list several numbers), and a derived attribute (\italic{age}, computed
+from a birth date). \italic{Department} has its own key and name. The weak entity
+\italic{Dependent} is identified through the double-diamond \italic{Has} relationship, with total
+participation: a dependent record cannot exist without its employee.
+
+\showpic{\picture width:6in height:4.6in {
+  // Employee attributes, fanned out above the entity.
+  \keyattribute{ssn}{at 0.55in 4in}{ssn}
+  \attribute{ename}{at 1.55in 4.2in}{name}
+  \multivalued{phones}{at 2.7in 4.2in}{phones}
+  \derived{age}{at 3.75in 4in}{age}
+
+  // Department attributes, above the department entity.
+  \attribute{dname}{at 4.55in 4.2in}{name}
+  \keyattribute{dnum}{at 5.55in 4in}{number}
+
+  // The entity — relationship — entity spine.
+  \entity{emp}{at 1.3in 2.9in}{Employee}
+  \relationship{wf}{at 3.1in 2.9in}{Works For}
+  \entity{dept}{at 4.9in 2.9in}{Department}
+
+  // A weak entity, identified by the employee it depends on.
+  \weakrelationship{has}{at 1.3in 1.8in}{Has}
   \weakentity{dep}{at 1.3in 0.7in}{Dependent}
-  \keyattribute{depname}{at 3in 1in}{name}
+  \keyattribute{depname}{at 3in 1.1in}{name}
 
-  // attribute links
+  // Attribute links.
   \connect{emp}{ssn}
   \connect{emp}{ename}
+  \connect{emp}{phones}
+  \connect{emp}{age}
   \connect{dept}{dname}
   \connect{dept}{dnum}
   \connect{dep}{depname}
 
-  // relationship links, with cardinalities
+  // Relationship links, with cardinalities.
   \connect[N]{emp}{wf}
   \connect[1]{wf}{dept}
   \connect[1]{emp}{has}

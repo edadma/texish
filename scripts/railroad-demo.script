@@ -5,55 +5,216 @@
 \author{the \texttt{railroad} package}
 \maketitle
 
-The \texttt{railroad} package turns a grammar written in W3C-style EBNF into a railroad
-(syntax) diagram, one picture per rule. What better grammar to draw than the one the package
-itself reads? Each rule below is rendered straight from its EBNF text by \texttt{\\railroad}.
+The \texttt{railroad} package turns a grammar written in W3C-style EBNF — the notation of the
+XML and XPath specifications — into a railroad (syntax) diagram, one picture per rule. The whole
+package is written in the document language over the \texttt{\\picture} vector layer: there is no
+railroad-specific engine primitive. This demo walks through every EBNF construct the package
+draws, each shown in isolation, and closes with a complete realistic grammar.
 
-\section{The shape of a grammar}
+A diagram has an entry arrow on the left, an exit arrow on the right, and the \emph{rail} running
+between them through every item. The rule name sits in a band across the top of its own picture.
 
-A grammar is one or more rules; each rule names an expression. An expression is a choice of
-terms, a term is a row of factors, and a factor is an item with an optional repetition mark.
+\section{Reading a rule}
+
+A grammar is one or more rules separated by whitespace or newlines. Each rule names an expression
+with \texttt{::=}. The simplest rule is a single item — here a reference to another rule, drawn as
+a plain rectangle (a \emph{nonterminal}).
 
 \railroad{
-  grammar    ::= rule+
+  start ::= program
+}
+
+\section{The three kinds of item}
+
+A \emph{primary} — the atom of a diagram — is one of three things, and each gets its own box
+shape so you can tell them apart at a glance.
+
+\subsection{Nonterminals}
+
+A bare name is a \emph{nonterminal}: a reference to another rule. It is drawn as a square-cornered
+rectangle.
+
+\railroad{
+  item ::= statement
+}
+
+\subsection{Terminals}
+
+A quoted literal — with either double or single quotes — is a \emph{terminal}: text that appears
+verbatim in the input. It is drawn as a rounded ``stadium'' box. The quotes are stripped; only the
+contents are shown.
+
+\railroad{
+  keyword ::= "return"
+}
+
+A terminal may contain spaces; the lexer rejoins words across an open quote, so a multi-word literal
+stays a single box.
+
+\railroad{
+  marker ::= "end of file"
+}
+
+\subsection{Character classes}
+
+A bracketed character class is drawn as a pointed hexagon, with its brackets kept so the class
+notation reads literally. Negated and ranged classes work the same way.
+
+\railroad{
+  digit ::= [0-9]
 }
 
 \railroad{
-  rule       ::= name "::=" expression
+  notquote ::= [^"]
 }
+
+\section{Putting items in a row}
+
+Writing two or more items in a row is \emph{concatenation}: they are drawn left to right, joined by
+a connecting rail. This is a \emph{sequence}.
 
 \railroad{
-  expression ::= term ("|" term)*
+  call ::= name "(" args ")"
 }
+
+The difference operator \texttt{-} of W3C EBNF is treated as plain concatenation, so \texttt{A - B}
+simply draws \texttt{A} then \texttt{B}.
 
 \railroad{
-  term       ::= factor+
+  range ::= low - high
 }
+
+\section{Choosing between items}
+
+The bar \texttt{|} is \emph{alternation}: the branches are stacked and the rail forks to pick one.
+The first alternative stays on the main line; later ones drop to a rounded fork below.
 
 \railroad{
-  factor     ::= primary ("?" | "*" | "+")?
+  sign ::= "+" | "-"
 }
 
-\section{Items}
-
-A primary is a name (a nonterminal), a terminal, or a parenthesised expression. A terminal
-is a quoted literal or a character class.
+A choice may have any number of branches, and each branch may itself be a row of items.
 
 \railroad{
-  primary    ::= name | terminal | "(" expression ")"
+  literal ::= number | "true" | "false" | string
 }
+
+\section{Grouping}
+
+Parentheses group a sub-expression so a repetition or a choice can apply to the whole group rather
+than to one item. A group is transparent — it adds no box of its own, only the structure inside it.
+Here the choice \texttt{("." \emph{or} ",")} is grouped so the row reads as a single column.
 
 \railroad{
-  terminal   ::= '"' chars '"' | "'" chars "'" | charclass
+  pair ::= key (":" | "=") value
 }
 
-\section{All at once}
+\section{Repetition marks}
 
-A single \texttt{\\railroad} call may hold several rules; they are drawn in turn.
+A repetition mark after an item (or a group) controls how many times it may occur. Each mark draws a
+distinct loop of rails.
+
+\subsection{Optional --- \texttt{?}}
+
+A trailing \texttt{?} makes an item \emph{optional}: it sits on the main line with a bypass rail
+arching over it, so the rail may skip it entirely.
 
 \railroad{
-  digit  ::= [0-9]
-  number ::= digit+ ("." digit+)?
-  sign   ::= "+" | "-"
-  signed ::= sign? number
+  decl ::= "var" name "="? value
 }
+
+\subsection{Zero or more --- \texttt{*}}
+
+A trailing \texttt{*} means \emph{zero or more}: a bypass above (to skip it) and a return loop below
+(to repeat it).
+
+\railroad{
+  block ::= "{" statement* "}"
+}
+
+\subsection{One or more --- \texttt{+}}
+
+A trailing \texttt{+} means \emph{one or more}: a return loop below to repeat, but no bypass, so at
+least one occurrence is required.
+
+\railroad{
+  digits ::= digit+
+}
+
+\subsection{Repeating a group}
+
+Because a group is just structure, a repetition mark applies to whatever it wraps — here a whole
+parenthesised sequence repeats zero or more times.
+
+\railroad{
+  chain ::= head ("." method "(" ")")*
+}
+
+\section{Two diagrams the package draws cleverly}
+
+The package recognises two idioms and lays them out the bottlecaps way — clearer than the literal
+rails the EBNF would otherwise produce.
+
+\subsection{Optional choice}
+
+When an optional wraps a choice, \texttt{(a | b)?}, rather than arching one big bypass over the
+fork, the skip is folded \emph{into} the fork as an empty top branch on the main line, with the real
+alternatives below it.
+
+\railroad{
+  visibility ::= ("public" | "private" | "protected")?
+}
+
+\subsection{Separated list}
+
+The pattern \texttt{A (sep A)*} — an item repeated with a separator between occurrences — is folded
+into a single ``list'' node: the item \texttt{A} rides the main line and the separator rides a
+return loop above it. This is exactly how a comma-separated argument list should look.
+
+\railroad{
+  args ::= expr ("," expr)*
+}
+
+\section{A complete grammar}
+
+A single \texttt{\\railroad} call may hold several rules; they are drawn one after another. Here is a
+small but realistic grammar — a JSON-ish value language — exercising every construct at once:
+nonterminals, terminals, character classes, sequence, choice, grouping, all three repetition marks,
+the optional-choice fold, and the separated-list fold.
+
+\railroad{
+  value   ::= object | array | string | number | "true" | "false" | "null"
+  object  ::= "{" (member ("," member)*)? "}"
+  member  ::= string ":" value
+  array   ::= "[" (value ("," value)*)? "]"
+}
+
+The structural rules above use grouping, the optional-choice fold, and the separated-list fold
+freely. The lexical rules below build a JSON number from character classes and repetition.
+
+\railroad{
+  number  ::= "-"? int frac? exp?
+  int     ::= digit+
+  frac    ::= "." digit+
+  exp     ::= ("e" | "E") ("+" | "-")? digit+
+  digit   ::= [0-9]
+}
+
+\section{Restyling the diagrams}
+
+Every visual is a configuration variable you may override with
+\texttt{\\set name \{value\}} after \texttt{\\use\{railroad\}}. Sizes are in points. Here we shrink the
+boxes, widen the gaps, and recolour the palette to a warm hue — the terminal and character-class
+shades are derived automatically as darker Oklch tints of the one base colour.
+
+\set rrbase {#ffe0c0}
+\set rrboxh {16}
+\set rrfont {8}
+\set rrhgap {20}
+\set rrlinecolor {#5a3210}
+
+\railroad{
+  loop ::= "for" "(" init? ";" cond? ";" step? ")" body
+}
+
+The same grammar, the same package — only the knobs changed.

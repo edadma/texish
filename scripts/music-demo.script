@@ -2,95 +2,106 @@
 \use{music}
 
 \title{The \texttt{music} Package}
-\author{Simple staff notation, drawn from the document language}
+\author{Engraved staff notation, drawn from the document language}
 \maketitle
 
 \section{Reading a score}
 
-The \texttt{music} package draws a line of staff notation on a treble clef. A score is
-a list of notes: a letter \texttt{a}–\texttt{g} for the pitch, optional \texttt{'} or
-\texttt{,} to raise or lower it an octave, and an optional duration digit — \texttt{1}
-whole, \texttt{2} half, \texttt{4} quarter (the default), \texttt{8} eighth. A \texttt{|}
-is a barline. The heads, clefs, flags, rests, accidentals and time-signature figures are
-real engraved glyphs from Bravura, the reference font for music notation; the stems, beams,
-staff lines and ledger lines are ruled over the \texttt{\\picture} layer.
+The \texttt{music} package draws a line of staff notation. A score, written
+\texttt{\\score\{\ldots\}}, is a space-separated list of notes. A note is an
+optional accidental, a letter \texttt{a}–\texttt{g} for the pitch, optional
+\texttt{'} or \texttt{,} to raise or lower it an octave, an optional duration
+digit, an optional augmentation dot, and any trailing marks. A \texttt{|} is a
+barline and \texttt{r} a rest. The heads, clefs, flags, rests, accidentals and
+time-signature figures are real engraved glyphs from a SMuFL music font; the
+stems, beams, staff lines, ledger lines and barlines are ruled over the
+\texttt{\\picture} layer.
 
 \section{A scale}
 
-The C major scale, an octave of quarter notes from middle C — which sits on its own
-ledger line below the staff — up to the C above.
+The C major scale, an octave of quarter notes from middle C — which sits on its
+own ledger line below the staff — up to the C above. The quarter note is the
+default, so it needs no duration digit.
 
 \bigskip
 \centerline{\score{c d e f g a b c'}}
 
 \section{Durations}
 
-The same C, held for a whole note, a half, a quarter, an eighth, and a sixteenth. The
-longer notes have open heads; the stem appears at the half note, a flag at the eighth, and
-a second flag at the sixteenth.
+The same C, held for a whole note, a half, a quarter, an eighth, a sixteenth,
+and a thirty-second. The longer notes have open heads; the stem appears at the
+half note, a flag at the eighth, a second flag at the sixteenth, and a third at
+the thirty-second.
 
 \bigskip
-\centerline{\score{c1 c2 c4 c8 c16}}
+\centerline{\score{c1 c2 c4 c8 c16 c32}}
+
+\section{Rests}
+
+A \texttt{r} is a rest, sized to its duration the same way a note is. Here a
+whole rest, a half, a quarter, and an eighth, each between sounding notes.
+
+\bigskip
+\centerline{\score{c r1 d r2 e r4 f r8 g}}
 
 \section{Dots}
 
-A dot after the duration lengthens a note by half. It is drawn just right of the head, in
-the space above when the note sits on a line. Here a dotted half, a dotted quarter paired
-with the eighth that completes its beat, and a run of beamed sixteenths.
+A dot after the duration lengthens a note by half. It is drawn just right of the
+head, in the space above when the note sits on a line. Here a dotted half, then a
+dotted quarter paired with the eighth that completes its beat.
 
 \bigskip
-\centerline{\score{c2. d4 | e4. e8 f4 g4 | [ c16 d16 e16 f16 ] g4 a2}}
-
-\section{A melody}
-
-The opening of \emph{Mary Had a Little Lamb}, with barlines and a half note to close
-each phrase.
-
-\bigskip
-\centerline{\score{e d c d | e e e2 | d d d2 | e g g2}}
-
-\bigskip
-And the start of \emph{Twinkle, Twinkle, Little Star}.
-
-\bigskip
-\centerline{\score{c c g g | a a g2 | f f e e | d d c2}}
+\centerline{\score{c2. d4 | e4. e8 f4 g4}}
 
 \section{Range and ledger lines}
 
-Notes far above or below the staff hang on short ledger lines, drawn only as far as the
-note reaches.
+Notes far above or below the staff hang on short ledger lines, drawn only as far
+as the note reaches. Here a span from two octaves below middle C up past the top
+of the staff.
 
 \bigskip
 \centerline{\score{c, e, g, c g c' e' g'}}
 
 \section{Accidentals}
 
-An accidental leads a note: \texttt{+} for a sharp, \texttt{-} for a flat, \texttt{n} for
-a natural. The sign is drawn just left of the head; it changes how the note is read, not
-where it sits, so \texttt{+f} and \texttt{f} share a line. Here a chromatic climb, then a
-sharpened note cancelled by a natural.
+An accidental leads a note: \texttt{+} for a sharp, \texttt{-} for a flat,
+\texttt{n} for a natural. The sign is drawn just left of the head; it changes how
+the note is read, not where it sits, so \texttt{+f} and \texttt{f} share a line.
+Here a chromatic climb, then a sharpened note cancelled by a natural.
 
 \bigskip
 \centerline{\score{c +c d -e e f +f g | +f nf f2}}
 
 \section{Beams}
 
-Eighth notes in a run are usually joined by a beam rather than each carrying its own flag.
-Bracket a group with \texttt{[} and \texttt{]} and the notes between share one beam.
+Eighth notes in a run are usually joined by a beam rather than each carrying its
+own flag. Bracket a group with \texttt{[} and \texttt{]} and the notes between
+share one beam.
 
 \bigskip
 \centerline{\score{[ c d e f ] [ g a b c' ]}}
 
 \bigskip
-A beamed phrase mixed with a longer note — the opening of \emph{Ode to Joy}.
+The beam is not flat: it tilts to follow the line of the melody, clamped so a
+wide leap does not run it off the staff. Here a rising group, a falling one, and
+an arch that the beam clears.
 
 \bigskip
-\centerline{\score{e e f g | g f e d | c c d e | [ e d ] d2}}
+\centerline{\score{[ c d e f g ] [ g f e d c ] [ c e g e c ]}}
+
+\subsection{Double beams}
+
+A run of sixteenths carries a second beam below the first, and a run of
+thirty-seconds a third. The bracket beams whatever durations it contains.
+
+\bigskip
+\centerline{\score{[ c16 d16 e16 f16 ] [ g32 a32 b32 c'32 ] [ c8 d16 e16 f8 ]}}
 
 \section{Time signatures}
 
-Setting \texttt{\\set musictimenum} and \texttt{\\set musictimeden} draws a time signature
-after the clef. Three-four time, a waltz, with the beats grouped into bars.
+Setting \texttt{\\set musictimenum} and \texttt{\\set musictimeden} draws a time
+signature after the clef. Three-four time, a waltz, with the beats grouped into
+bars.
 
 \bigskip
 \set musictimenum {3}
@@ -98,11 +109,22 @@ after the clef. Three-four time, a waltz, with the beats grouped into bars.
 \centerline{\score{c e g | c' g e | d f a | g2 e}}
 \set musictimenum {}
 
+\bigskip
+A two-digit signature, twelve-eight, stays centred as a block.
+
+\bigskip
+\set musictimenum {12}
+\set musictimeden {8}
+\centerline{\score{[ c8 d e ] [ e f g ] | [ g a b ] [ b a g ]}}
+\set musictimenum {}
+\set musictimeden {}
+
 \section{Key signatures}
 
-A key signature follows the clef. Set \texttt{\\set musickey} to a signed count: a positive
-number draws that many sharps, a negative one that many flats, each in its conventional order
-and on its conventional line. Here two sharps (D major), then three flats (E-flat major).
+A key signature follows the clef. Set \texttt{\\set musickey} to a signed count: a
+positive number draws that many sharps, a negative one that many flats, each in
+its conventional order and on its conventional line. Here two sharps (D major),
+then three flats (E-flat major).
 
 \bigskip
 \set musickey {2}
@@ -110,6 +132,7 @@ and on its conventional line. Here two sharps (D major), then three flats (E-fla
 \set musictimeden {4}
 \centerline{\score{d e +f g | a b +c' d' | b a g2}}
 \set musictimenum {}
+\set musictimeden {}
 \bigskip
 \set musickey {-3}
 \centerline{\score{c d e f g a b c'}}
@@ -117,45 +140,48 @@ and on its conventional line. Here two sharps (D major), then three flats (E-fla
 
 \section{Repeats and barlines}
 
-Besides the plain barline \texttt{|}, a score can write a double barline \texttt{||}, a final
-barline \texttt{|.}, and the start and end of a repeated section, \texttt{|:} and \texttt{:|}.
+Besides the plain barline \texttt{|}, a score can write a double barline
+\texttt{||}, a final barline \texttt{|.}, and the start and end of a repeated
+section, \texttt{|:} and \texttt{:|}.
 
 \bigskip
 \centerline{\score{|: c d e f | g a b c' :| d' c' b a || g1 |.}}
 
 \section{Articulations}
 
-A mark after a note tells the player how to attack it: \texttt{>} an accent, \texttt{!} a
-staccato, \texttt{=} a tenuto, \texttt{*} a marcato, \texttt{;} a fermata. Each sits on the
-side away from the stem, and several may stack. Here the same phrase plain, then accented,
-staccato, tenuto and marcato, closing on a fermata.
+A mark after a note tells the player how to attack it: \texttt{>} an accent,
+\texttt{!} a staccato, \texttt{=} a tenuto, \texttt{*} a marcato, \texttt{;} a
+fermata. Each sits on the side away from the stem, and several may stack. Here
+the same phrase plain, then accented, staccato, tenuto and marcato, closing on a
+note that is both marcato and held under a fermata.
 
 \bigskip
 \centerline{\score{c d e f | c> d> e> f> | c! d! e! f! | c= d= e= f= | g2*;}}
 
 \section{Slurs and ties}
 
-A run bracketed by \texttt{(} and \texttt{)} is drawn under one slur. A trailing \texttt{-}
-ties a note to the next of the same pitch, holding it across. Here a slurred turn, then two
-tied half notes.
+A run bracketed by \texttt{(} and \texttt{)} is drawn under one slur. A trailing
+\texttt{-} ties a note to the next of the same pitch, holding it across. Here a
+slurred turn, then two tied half notes.
 
 \bigskip
 \centerline{\score{( c d e f g ) a | c'-2 c'2}}
 
 \section{Dynamics and hairpins}
 
-A token beginning \texttt{!} is a dynamic, set below the staff: \texttt{!p}, \texttt{!mf},
-\texttt{!ff}, \texttt{!sfz}. A \texttt{<} opens a crescendo hairpin and \texttt{>} a
-diminuendo, each closed by \texttt{=}. Here a phrase that starts soft, swells, and falls away.
+A token beginning \texttt{!} is a dynamic, set below the staff: \texttt{!p},
+\texttt{!mf}, \texttt{!ff}, \texttt{!sfz}. A \texttt{<} opens a crescendo hairpin
+and \texttt{>} a diminuendo, each closed by \texttt{=}. Here a phrase that starts
+soft, swells, and falls away.
 
 \bigskip
 \centerline{\score{!p c d < e f g a = !f b c' > b a g f = !p e2}}
 
 \section{The bass clef}
 
-Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where middle
-C sits one ledger line \emph{above} the staff. Here a C major scale from the C below the
-staff up to middle C.
+Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where
+middle C sits one ledger line \emph{above} the staff. Here a C major scale from
+the C below the staff up to middle C.
 
 \set musicclef {bass}
 \bigskip
@@ -163,8 +189,9 @@ staff up to middle C.
 
 \section{Alto and tenor clefs}
 
-The C clef names the line that is middle C: the middle line in the \texttt{alto} clef, the
-fourth line in the \texttt{tenor}. The same C major scale around middle C, read in each.
+The C clef names the line that is middle C: the middle line in the \texttt{alto}
+clef, the fourth line in the \texttt{tenor}. The same C major scale around middle
+C, read in each.
 
 \set musicclef {alto}
 \bigskip
@@ -174,14 +201,31 @@ fourth line in the \texttt{tenor}. The same C major scale around middle C, read 
 \bigskip
 \centerline{\score{c d e f g a b c'}}
 
-\section{Choosing the music font}
+\section{A short piece}
 
-The glyphs come from a SMuFL music font, and \texttt{\\set musicfont} chooses which one. The
-default is Bravura, the standard reference font. Setting it to \texttt{petaluma} switches to a
-handwritten, jazz-lead-sheet style — the same notes, a different hand. Here the C major scale
-again, in Petaluma.
+Everything together: the opening of \emph{Ode to Joy} in the treble clef, in
+common time, with beamed eighths, a slurred phrase, a dynamic, and a final
+barline to close.
 
 \set musicclef {treble}
+\set musictimenum {4}
+\set musictimeden {4}
+\bigskip
+\centerline{\score{!mf e e f g | g f e d | c c d e | ( e4. d8 ) d2 |.}}
+\set musictimenum {}
+\set musictimeden {}
+
+\section{Choosing the music font}
+
+The glyphs come from a SMuFL music font, and \texttt{\\set musicfont} chooses which
+one. The default is Bravura, the standard reference font; \texttt{petaluma} is a
+handwritten, jazz-lead-sheet alternative — the same notes, a different hand. Here
+one phrase set in each.
+
+\bigskip
+\centerline{\score{[ c8 d e f ] g2 a4 | b4 c'2 r4 | g4*; }}
+
 \set musicfont {petaluma}
 \bigskip
-\centerline{\score{c d e f g a b c'}}
+\centerline{\score{[ c8 d e f ] g2 a4 | b4 c'2 r4 | g4*; }}
+\set musicfont {bravura}

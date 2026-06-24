@@ -1,0 +1,187 @@
+// chords-demo.script — a comprehensive showcase of the chords package.
+//
+// The chords package draws guitar chord diagrams over the \picture layer. This
+// demo exercises every feature of \chord: open and muted string markers, finger-
+// number labels, plain (number-less) dots, barre chords via the optional
+// [fret first last] argument, chords high up the neck that swap the nut for a
+// "<n>fr" fret-window label, and the configuration variables that restyle the
+// box. We frame it as a tiny chord book over the book format.
+
+\use{book}
+\use{chords}
+
+\title{The Chord Box}
+\author{A Tour of the chords Package}
+\date{}
+
+\frontmatter
+\maketitle
+
+\chapter{Preface}
+
+This little book is a complete tour of the \texttt{chords} package. Every kind of
+chord diagram the package can draw appears on the pages that follow: ordinary open
+chords, chords with muted and open strings, dots that carry finger numbers and dots
+that do not, barre chords drawn with a thick bar, and shapes high up the neck where
+the nut gives way to a fret-position label. The final chapter shows how the diagram
+can be restyled.
+
+\mainmatter
+
+\chapter{Reading a Chord Box}
+
+A chord diagram is a picture of the top of the neck as you look down at it. The six
+vertical lines are the strings, from the lowest and thickest on the left to the
+highest and thinnest on the right. The horizontal lines are the frets, and the thick
+line across the top is the nut. A black dot shows where to press a string, and the
+number inside it names the finger: \textbf{1} index, \textbf{2} middle, \textbf{3}
+ring, \textbf{4} little finger. Above the nut an ``o'' marks an open string and an
+``×'' marks a string you do not play.
+
+\bigskip
+\centerline{\chord{C}{x 3 2 0 1 0}{. 3 2 . 1 .}}
+\bigskip
+
+This is C major. The lowest string carries an ``×'' (do not play it), the fourth and
+top strings ring open under their ``o'' marks, and three numbered dots show where the
+ring, middle and index fingers press.
+
+\chapter{Open Chords}
+
+Open chords mix fretted dots with open and muted strings, and they sit at the top of
+the neck so each one is drawn from the nut. Here is the family every beginner learns
+first, each with its fingers numbered.
+
+\bigskip
+\centerline{
+  \chord{Em}{0 2 2 0 0 0}{. 2 3 . . .}\hskip 24
+  \chord{E}{0 2 2 1 0 0}{. 2 3 1 . .}\hskip 24
+  \chord{Am}{x 0 2 2 1 0}{. . 2 3 1 .}
+}
+\bigskip
+\centerline{
+  \chord{A}{x 0 2 2 2 0}{. . 1 2 3 .}\hskip 24
+  \chord{D}{x x 0 2 3 2}{. . . 1 3 2}\hskip 24
+  \chord{G}{3 2 0 0 0 3}{2 1 . . . 3}
+}
+\bigskip
+
+E minor and E major leave several strings open. A minor, A major and D major each
+mute the lowest one or two strings, so their diagrams open with ``×'' marks. G major
+spreads three fingers wide across the neck while leaving the middle three strings
+open.
+
+\chapter{Plain Dots Without Numbers}
+
+Passing an empty finger list draws plain dots with no numbers inside — useful for a
+chart that only shows shapes, or once the fingering is second nature. Here are the
+same C and G chords with bare dots.
+
+\bigskip
+\centerline{
+  \chord{C}{x 3 2 0 1 0}{}\hskip 30
+  \chord{G}{3 2 0 0 0 3}{}
+}
+\bigskip
+
+The open and muted markers above the nut are unchanged; only the numbers inside the
+dots are gone.
+
+\chapter{Barre Chords}
+
+A barre is one finger laid flat across several strings. It is given with the optional
+bracket argument \texttt{[fret first last]}: the fret it lies on, and the first and
+last string columns it covers, numbered 1 (low E, far left) to 6 (high e, far right).
+The package draws it as a thick round bar, and the dot that would land on the barre's
+own fret is left out, since the bar already covers it.
+
+\section{F Major}
+
+F major lays the index finger flat across all six strings at the first fret, written
+\texttt{[1 1 6]}, with the rest of the E-major shape stacked on top.
+
+\bigskip
+\centerline{\chord[1 1 6]{F}{1 3 3 2 1 1}{1 3 4 2 1 1}}
+\bigskip
+
+\section{B Major}
+
+B major barres five strings at the second fret, \texttt{[2 2 6]}, muting the lowest
+string. Its bar starts at column 2, so the low E keeps its ``×'' above the nut.
+
+\bigskip
+\centerline{\chord[2 2 6]{B}{x 2 4 4 4 2}{. 1 3 4 2 1}}
+\bigskip
+
+\chapter{High Up the Neck}
+
+When the fretted notes do not fit in the first four frets, the diagram shifts up the
+neck. The nut is replaced by an ordinary fret line, and a small ``\,fr'' label to the
+right of the top row says which fret the window starts on. The barre form works just
+the same up here.
+
+\section{A Movable Barre Shape}
+
+The F shape slid up the neck becomes B-flat at the first fret and other chords higher
+up. Here it is at the fifth fret (A) and the seventh (B), each labelled with its starting
+fret. Notice there is no nut and no open strings — every string is fretted by the
+barre or a finger above it.
+
+\bigskip
+\centerline{
+  \chord[5 1 6]{A}{5 7 7 6 5 5}{1 3 4 2 1 1}\hskip 30
+  \chord[7 1 6]{B}{7 9 9 8 7 7}{1 3 4 2 1 1}
+}
+\bigskip
+
+\section{A Closed Voicing}
+
+A chord can sit entirely within a window further up the neck without a barre at all.
+This G shape at the tenth fret has its highest note at the twelfth, so it is drawn in
+a window starting at the tenth fret.
+
+\bigskip
+\centerline{\chord{G}{3 x 0 0 0 3}{2 . . . . 3}}
+\bigskip
+\centerline{\chord{D}{x x 12 11 10 10}{. . 4 3 1 1}}
+\bigskip
+
+The first diagram is the open G again, for comparison; the second is a closed D
+voicing up the neck, drawn in its ``10\,fr'' window.
+
+\chapter{Restyling the Box}
+
+Every dimension and colour of the diagram is a configuration variable you can set
+after \texttt{\\use\{chords\}}. Sizes are in points. Here the same C chord is drawn
+larger and in a different ink by overriding a few of them.
+
+\bigskip
+\set chordcw {18}
+\set chordrh {21}
+\set chorddot {6}
+\set chordcolor {navy}
+\set chordnamesize {17}
+\centerline{\chord{C}{x 3 2 0 1 0}{. 3 2 . 1 .}}
+\bigskip
+
+The grid is wider and taller, the dots are bigger, the name is set in a larger size,
+and the whole diagram is drawn in navy. Resetting the variables restores the default
+look.
+
+\bigskip
+\set chordcw {13}
+\set chordrh {15}
+\set chorddot {4.4}
+\set chordcolor {black}
+\set chordnamesize {13}
+\centerline{\chord{C}{x 3 2 0 1 0}{. 3 2 . 1 .}}
+\bigskip
+
+\backmatter
+
+\chapter{Summary of Features}
+
+This tour covered open chords with mixed open and muted strings, finger-number labels
+and plain number-less dots, barre chords via the \texttt{[fret first last]} argument,
+movable shapes high up the neck with the ``\,fr'' window label in place of the nut,
+and the configuration variables that restyle the box.

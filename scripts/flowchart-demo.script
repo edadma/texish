@@ -1,29 +1,104 @@
 // Demonstration of the `flowchart` package — program flowcharts as a thin layer of
-// conventions over the diagram layer.
+// conventions over the `diagram` package. The flowchart package names the diagram shapes
+// by their roles (terminal, process, decision, input/output, subroutine) and reads the
+// edges as flow. This script exercises every node role, every edge router and branch
+// label, the configuration knobs, and a complete realistic algorithm flowchart.
 //
 // Render with:  texish scripts/flowchart-demo.script
 
+\use{document}
 \use{flowchart}
 
-\def headline {\italic{The flowchart package} \hfil page \the\pageno}
+\def headline {\italic{The flowchart package} \hfil \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
-\set raggedbottom {1}
 \def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
 
-\font lmroman 12 regular
+\title{The \texttt{flowchart} Package}
+\author{A texish demonstration}
+\maketitle
 
-\bold{Program flowcharts}
+\section{The five node roles}
 
-The flowchart package names the diagram shapes by their roles — a \italic{terminal} for
-start and stop, a \italic{process} rectangle, a \italic{decision} diamond, a
-\italic{parallelogram} for input and output — and reads the edges as flow. Below, the
-sum $\sum_{i=1}^{n} i$ is computed with a counting loop: the decision branches \italic{yes}
-down into the loop body, which curves back to test again, and \italic{no} across to the
-output.
+A flowchart is built inside a \verb|\picture| from \italic{nodes} and \italic{edges}.
+Each node is declared by its role; the package maps that role to the standard
+ISO-1028 / ANSI shape programmers expect. There are five roles. A \italic{terminal} —
+declared with \verb|\start| or \verb|\stop| — is a rounded ``stadium'' marking the entry
+and exit points. A \italic{process} is a plain rectangle: an action or computation. A
+\italic{decision} is a diamond, a branch whose outgoing edges are labelled. An
+\italic{io} node is a parallelogram for input or output. A \italic{subroutine} is a
+rectangle with side bars, denoting a call to a predefined process.
 
-\vskip 10pt
+Every role takes the same three arguments as the underlying \verb|\node|: a name, a
+placement spec, and a label. The figure below shows all five shapes side by side.
 
-\centerline{\picture width:4.4in height:5in {
+\vskip 8pt
+
+{\set dgfont {9}
+\centerline{\picture width:5.4in height:1.2in {
+  \start{t}{at 0.5in 0.6in}{Start}
+  \process{p}{right t 14}{Process}
+  \decision{d}{right p 14}{Decision?}
+  \io{i}{right d 18}{Read / Print}
+  \subroutine{s}{right i 14}{Subroutine}
+}}}
+
+\section{Placement specifications}
+
+A node is placed either at an absolute coordinate or relative to a node already declared.
+The placement spec is a small word language: \verb|at X Y| gives an absolute coordinate,
+while \verb|below ref|, \verb|above ref|, \verb|right ref| and \verb|left ref| position a
+node against another's boundary. Any relative form accepts an optional trailing gap in
+points — \verb|below test 46| widens the default spacing — so neighbours sit a true gap
+apart whatever their sizes. Relative placement is what lets a flowchart be written top to
+bottom in reading order.
+
+\vskip 8pt
+
+\centerline{\picture width:4.6in height:1.7in {
+  \process{c}{at 2.3in 0.85in}{centre}
+  \process{ab}{above c 18}{above}
+  \process{be}{below c 18}{below}
+  \process{le}{left c 24}{left}
+  \process{ri}{right c 24}{right}
+}}
+
+\section{Edges and branch labels}
+
+Edges read as flow. A \verb|\flow| is a straight arrow along the path of control; a
+\verb|\branch| leaves horizontally and then turns down into its target (the natural route
+for a decision's side exit); and a \verb|\rejoin| drops vertically and then runs back
+across to an earlier box (a feedback or merge line). Each takes an optional label in
+brackets, passed straight through to the arrow — and an omitted label simply draws no
+text. A decision's two exits are conventionally labelled \italic{yes} and \italic{no}.
+
+\vskip 8pt
+
+\centerline{\picture width:4.4in height:2.6in {
+  \decision{q}{at 1.1in 2.15in}{x > 0?}
+  \process{neg}{right q 70}{handle −x}
+  \process{pos}{below q 30}{handle x}
+  \stop{end}{below pos 36}{done}
+
+  \flow[yes]{q}{pos}
+  \branch[no]{q}{neg}
+  \flow{pos}{end}
+  \rejoin{neg}{end}
+}}
+
+The straight \verb|\flow| carries the \italic{yes} branch down into the process; the
+\verb|\branch| sends \italic{no} across and down to the right-hand process; and the
+\verb|\rejoin| from that process drops and merges back into the terminal.
+
+\section{A complete algorithm: summing 1 to n}
+
+Putting it together, here is a genuine algorithm flowchart with a counting loop and a
+decision. The sum $\sum_{i=1}^{n} i$ is computed iteratively: read $n$, initialise the
+accumulator, then test $i \le n$. The decision branches \italic{yes} down into the loop
+body, which curves back up to test again, and \italic{no} across to print the result.
+
+\vskip 8pt
+
+\centerline{\picture width:4.6in height:5in {
   \start{begin}{at 1.5in 4.6in}{Start}
   \io{read}{below begin}{Read $n$}
   \process{init}{below read}{$s \gets 0,\quad i \gets 1$}
@@ -40,3 +115,71 @@ output.
   \flow[no]{test}{out}
   \flow{out}{done}
 }}
+
+The feedback arrow from the loop body back to the decision is drawn with the underlying
+diagram primitive \verb|\cedge|, a curved edge bowed sideways. The flowchart package's
+own \verb|\flow|, \verb|\branch| and \verb|\rejoin| cover the common routes, but every
+diagram edge and every configuration knob remains available for anything the conventions
+do not.
+
+\section{A subroutine call with validation}
+
+The \verb|\subroutine| role marks a call to a predefined process. Here a request is read,
+validated by a decision, and — when valid — handed to a subroutine that processes it
+before the result is printed. An invalid request rejoins the exit directly.
+
+\vskip 8pt
+
+\centerline{\picture width:4.8in height:4.4in {
+  \start{s0}{at 1.5in 4.05in}{Begin}
+  \io{s1}{below s0}{Read request}
+  \decision{s2}{below s1}{Valid?}
+  \subroutine{s3}{below s2 40}{Process(request)}
+  \io{s4}{below s3}{Print result}
+  \stop{s5}{below s4}{End}
+  \process{s6}{right s2 90}{Log error}
+
+  \flow{s0}{s1}
+  \flow{s1}{s2}
+  \flow[yes]{s2}{s3}
+  \flow{s3}{s4}
+  \flow{s4}{s5}
+  \branch[no]{s2}{s6}
+  \rejoin{s6}{s5}
+}}
+
+\section{Configuration}
+
+Because the flowchart package is a preset over \verb|diagram|, all of diagram's
+configuration variables apply. They are set with
+\verb|\set name {value}| after the \verb|\use|, and respect grouping — set inside a brace
+group they affect only the figures within it. Below, the same little flowchart is drawn
+twice: once with the defaults, then with a warmer fill, tighter gap and smaller label
+font.
+
+\vskip 8pt
+
+\centerline{\picture width:2.6in height:2.2in {
+  \start{a0}{at 1.3in 1.85in}{Start}
+  \process{a1}{below a0}{step}
+  \stop{a2}{below a1}{Stop}
+  \flow{a0}{a1}
+  \flow{a1}{a2}
+}}
+
+\vskip 6pt
+
+{\set dgfill {#fdebd0}
+ \set dggap {16}
+ \set dgfont {9}
+ \set dgedgewidth {0.9pt}
+\centerline{\picture width:2.6in height:1.8in {
+  \start{b0}{at 1.3in 1.5in}{Start}
+  \process{b1}{below b0}{step}
+  \stop{b2}{below b1}{Stop}
+  \flow{b0}{b1}
+  \flow{b1}{b2}
+}}}
+
+Every figure in this document is a single \verb|\picture| box flowing in the text,
+typeset by the same engine as the prose around it.

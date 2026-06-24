@@ -1,0 +1,333 @@
+// =====================================================================
+//  texish — Engine Features
+//
+//  THE flagship demo for the texish typesetting engine. It merges the
+//  small engine-feature example scripts into one polished document that
+//  exercises the CORE engine primitives: boxes and glue, framing,
+//  balanced columns, box registers and \vsplit, cost-based page
+//  breaking, vector pictures, verbatim text, syntax-highlighted code,
+//  cross-references and a table of contents, and font/size switches.
+//
+//  The `document` package is used ONLY as the frame — for \section
+//  headings, the title block, and paragraph indentation. Everything in
+//  the body is a bare engine primitive, the subject of the demo.
+//
+//  Render with:  texish-cli scripts/texish-demo.script
+// =====================================================================
+
+\use{document}
+
+\title {texish --- Engine Features}
+\author {The texish project}
+\date {June 2026}
+\maketitle
+
+\contents
+
+\vskip 12pt
+
+\section {Boxes and glue}
+
+\label{sec:boxes}Everything texish sets is a \emph{box}, and the space between
+boxes is \emph{glue} --- a length that can stretch and shrink. The engine builds
+a paragraph by packing boxes and glue, then choosing line breaks. The primitives
+below expose that machinery directly. This is \autoref{sec:boxes}.
+
+\subsection {Horizontal and vertical boxes}
+
+An \verb|\hbox| packs its content into a single line that never breaks; a
+\verb|\vbox| stacks its content vertically. Here an \verb|\hbox| holds three
+words with explicit glue between them, framed so its extent is visible:
+
+\medskip
+\noindent\fbox{\hbox{one\hskip 18pt two\hskip 18pt three}}
+
+\subsection {Stretchable and shrinkable glue}
+
+Glue is written \texttt{natural plus stretch minus shrink}. Infinite stretch
+(\texttt{fil}, \texttt{fill}) wins over any finite amount, so it pushes
+neighbouring material apart. In the framed line below, the \verb|\hfil| between
+the words absorbs all the slack equally, while \verb|\hfill| (a stronger
+infinity) would take it all itself:
+
+\medskip
+\noindent\fbox{\hbox to:4in {left\hfil centre\hfil right}}
+
+\medskip
+\noindent\fbox{\hbox to:4in {pushed\hfill apart}}
+
+A finite \texttt{plus}/\texttt{minus} glue flexes only as far as it is allowed;
+here the gap may grow by up to 1in but is asked to fill 3in, so it stretches to
+its limit and the box reports the rest as underfull (an engine, not a document,
+concern):
+
+\medskip
+\noindent\fbox{\hbox to:3in {start\hskip 0pt plus 1in finish}}
+
+\subsection {Kerns, rules, and shifted boxes}
+
+A \verb|\kern| is rigid space that never flexes --- the spacing you reach for
+when glue must not move. A \verb|\hrule| draws a horizontal rule across the box
+it lands in, and \verb|\vrule| a vertical one. A box can be shifted off the
+baseline with \verb|\raise| and \verb|\lower| while keeping its own width.
+
+\medskip
+\noindent\fbox{\hbox{A\kern 24pt B\kern 2pt C}}
+
+\medskip
+\noindent\fbox{\hbox{base\raise 6pt \hbox{up} and \lower 4pt \hbox{down} again}}
+
+\medskip
+A vertical rule sits inline like any box: before\kern 3pt\vrule height:9pt depth:3pt\kern 3pt after.
+
+\medskip
+A horizontal rule, two points thick, drawn to an explicit width:
+
+\medskip
+\noindent\hrule width:3in ascent:1pt descent:1pt
+
+\section {Framing boxes}
+
+\label{sec:frame}The \verb|\fbox| and \verb|\framebox| primitives typeset their
+body and draw a rectangular rule around it, padded by \verb|\fboxsep| and ruled
+\verb|\fboxrule| thick. They flow inline like any other box. Their padding and
+rule thickness are ordinary length variables, so they can be changed:
+
+\medskip
+\noindent A \fbox{plain frame}, then a \framebox{wider frame} after the rule was
+thickened and the padding grown:
+
+\medskip
+\set fboxrule {1.5}
+\set fboxsep {8}
+\noindent\framebox{generous padding, thick rule}
+\set fboxrule {0.4}
+\set fboxsep {3}
+
+\section {Balanced multi-column text}
+
+\label{sec:columns}The \verb|\columns| primitive sets its body as several
+balanced columns: the text is typeset once at the column measure, divided into
+equal-height pieces with the same page-style breaking \verb|\vsplit| uses, and
+the pieces are stood side by side. Three balanced columns:
+
+\columns{3}{\noindent
+The quick brown fox jumps over the lazy dog, and then, gathering its breath, it
+turns and jumps back again, because a single leap is never quite enough to settle
+an old argument between a fox and a dog. Setting a paragraph in narrow columns
+forces many short lines, which is exactly what makes column balancing visible:
+the engine can choose a break between almost any pair of lines, so it divides the
+galley into three pieces of nearly equal height. The reader's eye travels down
+the first column, back to the top of the second, and down again, the way a
+newspaper or a two-column paper is read.}
+
+\vskip 12pt
+
+\noindent The same material in two columns with a wider gutter, set by the
+optional \texttt{gap} parameter:
+
+\columns gap:32 {2}{\noindent
+The quick brown fox jumps over the lazy dog, and then, gathering its breath, it
+turns and jumps back again, because a single leap is never quite enough to settle
+an old argument between a fox and a dog. Two columns leave longer lines than
+three, so the texture is closer to ordinary text while still balancing the
+material into two level halves.}
+
+\section {Box registers and vsplit}
+
+\label{sec:vsplit}A box can be saved in a named register with \verb|\setbox| and
+recalled with \verb|\box|. The \verb|\vsplit| primitive cuts a saved vertical box
+at a page-style breakpoint --- the latest legal break no taller than a target
+height --- handing back the top piece and leaving the remainder in the register.
+It is the building block under split footnotes and column balancing. Below a tall
+paragraph is set into a narrow \verb|\vbox|, split near its middle, and the two
+halves are stood side by side.
+
+\set hsize {170}
+\setbox col \vbox{\noindent
+The quick brown fox jumps over the lazy dog, and then, gathering its breath, it
+turns and jumps back again, because a single leap is never quite enough to settle
+an old argument between a fox and a dog. Typesetting a paragraph this narrow
+forces many short lines, which gives the column builder plenty of legal
+breakpoints --- one between every pair of lines --- so a split can land almost
+anywhere. Everything above the chosen break becomes the top piece and everything
+below it stays behind, ready to flow into the next column or page.}
+\set hsize {460}
+
+\vskip 6pt
+
+\set colheight {\ht col}
+\setbox colA \vsplit col to:{\calc{\colheight / 2}}
+
+\noindent\hbox{\box colA \hskip 24 \box col}
+
+\section {Cost-based page breaking}
+
+\label{sec:pages}The page builder chooses where to break by cost, as TeX does,
+rather than simply taking the latest legal break that fits. The cost is the
+page's badness there --- how hard its glue must work to reach the page height ---
+plus the \verb|\penalty| at the break. A positive penalty makes a discouraged
+break less attractive; \verb|\nobreak| forbids one outright; \verb|\eject| forces
+one. On an ordinary rigid page every break that fits is equally good, so the rule
+reduces to the familiar last-fit behaviour; the difference shows only where the
+glue can flex or a penalty intervenes.
+
+\penalty {9000}
+
+A penalty of nine thousand sits just before this paragraph. It is not an absolute
+prohibition --- that would be ten thousand --- but it is costly enough that the
+page builder prefers to break earlier and carry this paragraph over whole, rather
+than split the page right above it. That is the fine control cost-based breaking
+gives the author over the rhythm of the pages.
+
+\eject
+
+\section {Pictures --- vector graphics}
+
+\label{sec:picture}A \verb|\picture| is a fixed-size box drawn into with shapes,
+paths, and placed type. It flows in the text like any other box and prints through
+the same backend as the page itself. Coordinates are y-up from the lower-left; a
+bare number is a point and a unit suffix (\texttt{in}, \texttt{mm}, \texttt{pt})
+is honoured. The pen is set with \verb|\stroke|, the fill with \verb|\fill|.
+
+\medskip
+\noindent\picture width:4in height:1.6in {
+  \fill{lightsteelblue} \stroke{steelblue} \linewidth{1.5pt}
+  \rect{0.2in 0.2in 1in 1in}
+  \circle{2in 0.7in 0.5in}
+  \nofill \stroke{firebrick}
+  \ellipse{3.2in 0.7in 0.6in 0.4in}
+  \fill{seagreen} \nostroke
+  \polygon{0.2in 1.4in  0.7in 1.4in  0.45in 0.2in}
+}
+
+A \verb|\path| builds a freeform outline from move, line, and curve segments. A
+filled Bézier wave with a stroked edge:
+
+\medskip
+\noindent\picture width:4in height:1.4in {
+  \fill{papayawhip} \stroke{chocolate} \linewidth{1.5pt}
+  \path{
+    \moveto{0.2in 0.2in}
+    \lineto{0.2in 0.8in}
+    \curveto{1.2in 1.6in  2.6in -0.4in  3.8in 0.8in}
+    \lineto{3.8in 0.2in}
+    \close
+  }
+}
+
+Because texish has loops and arithmetic, a plot is just a path built in a
+\verb|\for|. The axes are lines and the curve samples $y = x^2$; \verb|\at| drops
+typeset content --- here math --- at a coordinate with an anchor.
+
+\medskip
+\noindent\picture width:3in height:2.4in {
+  \stroke{gray} \linewidth{1pt}
+  \line{0 0  2.8in 0}
+  \line{0 0  0 2.2in}
+  \stroke{royalblue} \linewidth{1.5pt}
+  \path{
+    \moveto{0 0}
+    \for\i{\range{1}{14}}{
+      \lineto{\*{\i}{14}  \*{\*{\i}{\i}}{0.8}}
+    }
+  }
+  \at anchor:south {1.4in -0.1in}{$x$}
+  \at anchor:west {0.05in 2.1in}{$y = x^2$}
+}
+
+\eject
+
+\section {Verbatim text}
+
+\label{sec:verbatim}Inline verbatim is set with \verb|\verb|. The character right
+after it is the delimiter, and the text runs to that character's next occurrence,
+set literally in the typewriter face. So \verb|x = a_b + c| and a URL like
+\verb|http://example.com/path| keep every character exactly as written, with no
+comment, escape, or active character given its usual meaning. Pick a delimiter the
+text does not use: \verb#a|b|c# uses a hash because the text contains bars.
+
+The verbatim environment sets a whole block the same way --- one source line per
+output line, leading spaces preserved, no line breaking:
+
+\begin{verbatim}
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)   // a // here is literal, not a comment
+
+print(factorial(5))
+\end{verbatim}
+
+\section {Syntax-highlighted code}
+
+\label{sec:code}Source code is set with \verb|\code| in the code face. A bare
+\verb|\code{…}| sets the body plainly; a \verb|\code[language]{…}| highlights it
+with that language's grammar and the current theme (a light theme by default, so
+the ink reads on white paper). A short JSON value as a highlighted block:
+
+\code[json]{{"name": "texish", "version": 5, "cross": ["jvm", "js", "native"]}}
+
+For a whole listing --- and for code whose braces do not balance --- the code
+environment reads everything up to its end and takes its language from
+\verb|\set codelang|:
+
+\set codelang {scala}
+\begin{code}
+def quadratic(a: Double, b: Double, c: Double) =
+  val disc = b * b - 4 * a * c     // the discriminant
+  if disc < 0 then None
+  else
+    val r = math.sqrt(disc)
+    Some((-b + r) / (2 * a), (-b - r) / (2 * a))
+\end{code}
+
+The theme is selectable with \verb|\set codetheme|; here a Python snippet under a
+different light theme:
+
+\set codetheme {gruvbox-light}
+\code[python]{def greet(name):
+    print(f"hello, {name}")   # an f-string
+    return len(name)}
+
+\section {Cross-references and the table of contents}
+
+\label{sec:refs}This document is typeset more than once. On the first pass the
+engine learns where every numbered heading lands; on the next it fills in the
+table of contents at the top and the references here. A \verb|\label| binds a name
+to a numbered thing; \verb|\ref| names its number, \verb|\pageref| its page, and
+\verb|\autoref| the number with its kind word in front.
+
+For example, the boxes-and-glue material is \autoref{sec:boxes} beginning on
+page~\pageref{sec:boxes}; pictures are \autoref{sec:picture} on
+page~\pageref{sec:picture}; and this very section is \autoref{sec:refs} on
+page~\pageref{sec:refs}. Forward references work the same way: the conclusion is
+\autoref{sec:fonts}, on page~\pageref{sec:fonts}. None of those numbers was known
+when the text was written --- they were filled in by re-running the document over
+one shared reference table, which is also what draws the dotted leaders in the
+contents above.
+
+\section {Fonts and sizes}
+
+\label{sec:fonts}The active face is chosen with \verb|\font typeface size style|,
+and the size alone with \verb|\fontsize|, which keeps the current shape and series.
+Shape switches like \verb|\bold| and \verb|\italic| compose with whatever size is
+in force. This is \autoref{sec:fonts}, the last section.
+
+\medskip
+\noindent A size sweep, each set with \verb|\fontsize| inside its own group so the
+surrounding text is unaffected:
+{\fontsize{8} eight}, {\fontsize{12} twelve}, {\fontsize{18} eighteen}, and
+{\fontsize{24} twenty-four} points.
+
+\medskip
+\noindent Shape switches compose with size: {\fontsize{16} {\bold{bold}} and
+{\italic{italic}} at sixteen points}, then back to the body size and shape for the
+rest of the line.
+
+\medskip
+\noindent A full \verb|\font| selection picks typeface, size, and style at once:
+{\font lmroman 14 bold a fourteen-point bold run} that reverts at the closing
+brace.
+
+\vfill\eject

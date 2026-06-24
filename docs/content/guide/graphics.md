@@ -44,6 +44,6 @@ restores.
 
 Coordinates may be computed, not just literal — a bare variable `\x` is its value and
 arithmetic like `\*{\x}{14}` works — so a plot, a chart, or a chemical diagram is just a
-path built in a `\for` loop. See `scripts/picture.script` in the repository for a worked
-demo: shapes, a Bézier wave, a rotate-fan, a *y = x²* line graph, a bar chart, and a
+path built in a `\for` loop. See the picture section of `scripts/texish-demo.script` in the
+repository for a worked demo: shapes, a Bézier wave, a *y = x²* line graph, a bar chart, and a
 benzene ring.

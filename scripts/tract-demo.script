@@ -1,10 +1,74 @@
-// Bilingual Z-fold gospel tract. The package owns the page geometry; pick the paper with
-// \set tractpaper {letter} (two tracts per sheet, cut in half) or {a5} (one tract, no cut).
+// ============================================================================
+// tract package demo -- a complete bilingual Z-fold gospel tract, imposed for
+// printing, folding, and cutting.
+//
+// The tract package OWNS the page geometry: it sets paperwidth/paperheight, the
+// page margins, and hsize/vsize itself so that picture coordinates are true
+// sheet coordinates. For that reason this demo does NOT \use{document} -- that
+// would fight the package over who controls the page. We \use{tract} and drive
+// it entirely through the package's own \tract macro and configuration knobs.
+//
+// What \tract does: you write each language's message once as ordinary flowing
+// prose. The package typesets each at the column content width, then \vsplits
+// it into three panel-height columns (leftmost fills first). It places those
+// columns across a full-sheet \picture and emits TWO pages -- the FRONT in
+// language A and the BACK in language B, in the SAME column order. Printed
+// double-sided (long-edge flip), the back is NOT mirrored, so B's columns land
+// directly behind A's. Unfolded flat, one face reads language A across columns
+// 1-2-3 and the other reads language B.
+// ============================================================================
+
 \use{tract}
 
-// Hyphenate each face in its own language so the narrow columns justify tightly.
+// ---- configuration knobs (every public option shown) -----------------------
+
+// Paper size. Two impositions ship with the package:
+//   letter -- US Letter portrait holding TWO identical tracts stacked top and
+//             bottom (each 612x396 pts), with a cut guide across the middle.
+//             Cut the sheet in half to get two tracts. (the primary result here)
+//   a5     -- A5 landscape (595.276x419.528 pts) holding ONE tract that fills
+//             the sheet; no cut. To render that variant instead, change the
+//             line below to:  \set tractpaper {a5}
+\set tractpaper {letter}
+
+// Inset from each panel edge to its content, in points (18pt = 0.25in).
+\set tractmargin {18}
+
+// Draw fold/cut tick marks in the margins so the folder and trimmer can line a
+// straightedge up to them, leaving the printed faces clean. Set to {0} for a
+// completely clean sheet with no guides at all.
+\set tractguides {1}
+
+// Colour of the guide ticks (any CSS colour name or #RRGGBB hex), and the
+// length of each tick in points.
+\set tractguidecolor {gray}
+\set tracttick {14}
+
+// Hyphenation language per face. Each value is a tag whose patterns ship in the
+// binary (en-us, es, fr). A narrow tract column justifies far more tightly when
+// long words can break, so we set each face to its body language: English on
+// the front, Spanish on the back. An empty value (the default) leaves a face
+// unhyphenated. For a language not bundled, \loadhyphenation{tag}{path} once
+// before \tract, then name the tag here.
 \set tractlanga {en-us}
 \set tractlangb {es}
+
+// ---- a note on print registration ------------------------------------------
+// Print this PDF DOUBLE-SIDED, flip on the LONG edge, at TRUE 100% (no
+// fit-to-page scaling), e.g.:
+//   lp -d <printer> -o sides=two-sided-long-edge -o media=letter \
+//      -o fit-to-page=false tract-demo.pdf
+// At true 100% the fold thirds stay exact. A consumer duplexer may land the
+// back image up to ~1mm off the front; the package does not compensate, and the
+// drift is harmless -- the two faces are different languages a reader never sees
+// overlaid, and the cut still falls inside each face's margin.
+
+// ---- the tract -------------------------------------------------------------
+// One \tract call: front-language body, then back-language body. Each body is
+// plain flowing prose; the package handles splitting it across the three panels
+// and guards every split/copy with \isvoid so a body shorter than three columns
+// simply leaves trailing panels blank instead of erroring, and a body longer
+// than three columns emits a \message warning rather than crashing.
 
 \tract{
 \bold{God Loves You}

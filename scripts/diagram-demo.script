@@ -1,36 +1,228 @@
-// Demonstration of the general `diagram` package — node-and-edge diagrams over the
-// \picture layer. Nothing here is flowchart-specific: the same nodes, shapes and routed
-// edges draw a control-system block diagram, a data pipeline and a small module graph.
+// Comprehensive demonstration of the `diagram` package — node-and-edge diagrams drawn
+// entirely in the document language over the \picture vector layer. Every node shape,
+// both placement modes, every edge kind, the arrowhead styles and a couple of complete
+// realistic diagrams are exercised below.
 //
 // Render with:  texish scripts/diagram-demo.script
 
+\use{document}
 \use{diagram}
 
 \def headline {\italic{The diagram package} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
 
-\font lmroman 12 regular
-
-\set raggedbottom {1}
-\def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
-
-\bold{Node-and-edge diagrams}
+\title{The diagram Package}
+\author{A tour of nodes, shapes and routed edges}
+\maketitle
 
 A \italic{node} is a named, measured box of some shape; an \italic{edge} is an arrow
-between two named nodes. A node is placed at an absolute coordinate or relative to
-another node, and every edge attaches to the true boundary of each node — so an arrow,
-straight or routed, always meets the outline cleanly whatever the shapes.
+between two named nodes. Each node is placed at an absolute coordinate or relative to a
+node already drawn, and every edge attaches to the true boundary of each node — so an
+arrow, straight or routed, always meets the outline cleanly whatever the shapes. A whole
+diagram lives inside one \italic{\\picture} box that flows in the text like any other.
 
-\bold{A feedback control loop}
+\section{Node shapes}
 
-The classic block diagram: a reference $r$ enters a summing junction, the error drives a
-controller and plant, and the measured output feeds back with a negative sign. The
-forward path is straight edges; the feedback path is two orthogonal edges (down, then
-across and up) that route around the diagram.
+The package recognises nine shapes. Each one sizes itself to its label and the configured
+padding, then clamps to a minimum width and height. The default shape is \italic{box}; the
+rest are selected with the optional argument, as in \italic{\\node[diamond]\{name\}\{…\}\{…\}}.
+
+\subsection{The rectangular family}
+
+\italic{box}, \italic{round} (a rounded rectangle), \italic{stadium} (fully rounded ends),
+\italic{parallelogram} (sheared by the configured slant) and \italic{hexagon} (pointed
+ends) all clip an edge to a rectangle, so arrows between them meet a flat side squarely.
 
 \vskip 8pt
 
-\centerline{\picture width:5in height:2.3in {
+\centerline{\picture width:5.4in height:1.1in {
+  \node{box}{at 0.45in 0.55in}{box}
+  \node[round]{round}{right box 26}{round}
+  \node[stadium]{stad}{right round 26}{stadium}
+  \node[parallelogram]{para}{right stad 26}{parallel}
+  \node[hexagon]{hex}{right para 26}{hexagon}
+}}
+
+\subsection{The rounded family}
+
+\italic{ellipse}, \italic{circle} and \italic{diamond} clip an edge by a smooth or
+diamond outline. A circle grows to its label's diagonal; a diamond is inflated so the text
+fits inside the rhombus. The ninth shape, \italic{subroutine}, is a box with two inner
+side bars (the flowchart symbol for a predefined process).
+
+\vskip 8pt
+
+\centerline{\picture width:5.4in height:1.3in {
+  \node[ellipse]{ell}{at 0.55in 0.65in}{ellipse}
+  \node[circle]{cir}{right ell 30}{circle}
+  \node[diamond]{dia}{right cir 30}{ok?}
+  \node[subroutine]{sub}{right dia 30}{subroutine}
+}}
+
+\section{Placement}
+
+A node is positioned either by an absolute coordinate or relative to another node.
+
+\subsection{Absolute coordinates}
+
+\italic{at X Y} takes two scalar expressions (which may carry units, e.g. \italic{at 1in
+0.5in}); \italic{at (X,Y)} takes one space-free parenthesised point. Absolute placement
+lets nodes form an arbitrary graph rather than a single row.
+
+\vskip 8pt
+
+\centerline{\picture width:3.0in height:1.5in {
+  \node{n1}{at 0.4in 1.15in}{A}
+  \node{n2}{at (2.1in,1.15in)}{B}
+  \node{n3}{at 1.25in 0.35in}{C}
+  \edge{n1}{n2}
+  \edge{n1}{n3}
+  \edge{n2}{n3}
+}}
+
+\subsection{Relative placement}
+
+\italic{below}, \italic{above}, \italic{right} and \italic{left} place a node a true gap
+away from a reference node's boundary — the gap is measured between the two outlines, so
+neighbours sit a clean distance apart whatever their sizes. An optional trailing number
+overrides the default gap.
+
+\vskip 8pt
+
+\centerline{\picture width:4.6in height:1.7in {
+  \node{c}{at 2.3in 0.85in}{centre}
+  \node{up}{above c}{above}
+  \node{dn}{below c}{below}
+  \node{lf}{left c}{left}
+  \node{rt}{right c 50}{right (gap 50)}
+  \edge{c}{up}
+  \edge{c}{dn}
+  \edge{c}{lf}
+  \edge{c}{rt}
+}}
+
+\section{Edges}
+
+Every kind of edge leaves and enters through a node's boundary. The straight, undirected,
+two orthogonal, curved, self-loop and entry-stub variants are shown together below.
+
+\subsection{Straight and undirected}
+
+\italic{\\edge} draws a straight arrow with an optional label; \italic{\\link} draws an
+undirected connector with no arrowhead — for relationships that have no direction.
+
+\vskip 8pt
+
+\centerline{\picture width:4.6in height:0.9in {
+  \node{a}{at 0.45in 0.45in}{A}
+  \node{b}{right a 60}{B}
+  \node{d}{right b 70}{C}
+  \node{e}{right d 60}{D}
+  \edge[edge]{a}{b}
+  \link[link]{d}{e}
+}}
+
+\subsection{Orthogonal routes}
+
+\italic{\\edgehv} routes horizontally then vertically (TikZ's \italic{-|}), and
+\italic{\\edgevh} vertically then horizontally (\italic{|-}) — the natural routes for a
+decision's side branch or a feedback line. Each turns at the corner and still enters its
+target's boundary cleanly.
+
+\vskip 8pt
+
+\centerline{\picture width:4.6in height:1.7in {
+  \node{p}{at 0.6in 1.25in}{P}
+  \node{q}{at 2.5in 0.35in}{Q}
+  \node{r}{at 0.6in 0.35in}{R}
+  \node{s}{at 3.9in 1.25in}{S}
+  \edgehv[hv]{p}{q}
+  \edgevh[vh]{r}{s}
+}}
+
+\subsection{Curved edges and self-loops}
+
+\italic{\\cedge} bows an arrow sideways by a \italic{bend} (positive bows left of the
+from→to direction). A pair of \italic{\\cedge}s with the same bend in opposite directions
+separate into two arcs — the usual picture for a pair of mutual transitions.
+\italic{\\loop} draws a self-loop returning to a node.
+
+\vskip 8pt
+
+\centerline{\picture width:4.4in height:1.7in {
+  \node[circle]{p}{at 1.1in 0.85in}{P}
+  \node[circle]{q}{right p 70}{Q}
+  \cedge[30]{p}{q}{go}
+  \cedge[30]{q}{p}{back}
+  \loop{p}{stay}
+}}
+
+\subsection{Entry stubs}
+
+\italic{\\dgentry} draws a short stub arrow pointing into a side of a node from outside,
+the way a flowchart marks its start or an automaton marks its initial state. The direction
+is \italic{north}, \italic{south}, \italic{east} or \italic{west} and the length is given
+in points.
+
+\vskip 8pt
+
+\centerline{\picture width:4.4in height:1.0in {
+  \node[circle]{s0}{at 1.0in 0.5in}{q0}
+  \node[circle]{s1}{right s0 60}{q1}
+  \dgentry{s0}{west}{24}
+  \edge[a]{s0}{s1}
+}}
+
+\section{Arrowhead styles}
+
+The edge arrowhead is set by \italic{\\dgarrow}; the package ships \italic{stealth} (the
+default), \italic{triangle}, \italic{bar} and \italic{dot}. The size is \italic{\\dgarrowsize}.
+Each setting below is made inside a group so it reverts afterward.
+
+\vskip 8pt
+
+{\set dgminw {30}
+\centerline{\picture width:4.6in height:0.8in {
+  {\set dgarrow {stealth}
+   \node{h1a}{at 0.3in 0.4in}{}\node{h1b}{right h1a 6}{stealth}\edge{h1a}{h1b}}
+  {\set dgarrow {triangle}
+   \node{h2a}{right h1b 22}{}\node{h2b}{right h2a 6}{triangle}\edge{h2a}{h2b}}
+  {\set dgarrow {bar}
+   \node{h3a}{right h2b 22}{}\node{h3b}{right h3a 6}{bar}\edge{h3a}{h3b}}
+  {\set dgarrow {dot}
+   \node{h4a}{right h3b 22}{}\node{h4b}{right h4a 6}{dot}\edge{h4a}{h4b}}
+}}}
+
+\section{Styling}
+
+Every visual property is a configuration variable set with \italic{\\set name \{value\}}
+after \italic{\\use}: the fill colour (\italic{\\dgfill}), the ink for outlines and edges
+(\italic{\\dglinecolor}), line widths, the label typeface and size, padding, and the
+default gap. Set inside a group, the change applies only to the diagram in that group.
+
+\vskip 8pt
+
+\centerline{\picture width:5.0in height:1.2in {
+  {\set dgfill {#fde8e8}\set dglinecolor {#9b2c2c}\set dgfont {12}
+   \node[round]{warn}{at 1.0in 0.6in}{Warning}}
+  {\set dgfill {#e6fffa}\set dglinecolor {#234e52}\set dgfont {12}
+   \node[round]{ok}{right warn 60}{All clear}}
+  {\set dglinecolor {#9b2c2c}\set dgarrow {triangle}
+   \edge[escalate]{warn}{ok}}
+}}
+
+\eject
+
+\section{A complete diagram: a feedback control loop}
+
+The classic block diagram. A reference $r$ enters a summing junction, the error drives a
+controller and plant, and the measured output feeds back with a negative sign. The forward
+path is straight edges; the feedback path is two orthogonal edges that route around the
+diagram and rejoin the summing junction.
+
+\vskip 10pt
+
+\centerline{\picture width:5.4in height:2.4in {
   \node{ref}{at 0.4in 1.7in}{$r$}
   \node[circle]{sum}{right ref 30}{$\Sigma$}
   \node{ctrl}{right sum 40}{Controller $C$}
@@ -47,56 +239,49 @@ across and up) that route around the diagram.
   \at anchor:east {1.16in 1.42in}{$-$}
 }}
 
-\eject
+\section{A complete diagram: a data pipeline}
 
-\bold{A data pipeline}
+Shapes carry meaning by convention: a stadium for the source and sink, a parallelogram for
+I/O, a diamond for a decision and plain boxes for the transforms between them. The chain is
+straight edges with one labelled branch routed down to the discard node.
 
-Shapes carry meaning by convention: here a stadium for a source and sink, a
-parallelogram for I/O, and plain boxes for the transforms between them. The edges are a
-straight chain with one labelled branch.
-
-\vskip 8pt
+\vskip 10pt
 
 {\set dgfont {10}\set dggap {18}
-\centerline{\picture width:6in height:1.7in {
-  \node[stadium]{src}{at 0.25in 1.05in}{Source}
+\centerline{\picture width:6in height:1.8in {
+  \node[stadium]{src}{at 0.25in 1.15in}{Source}
   \node[parallelogram]{read}{right src}{Read}
   \node{parse}{right read}{Parse}
-  \node[diamond]{ok}{right parse}{ok?}
-  \node{agg}{right ok}{Reduce}
+  \node[diamond]{okq}{right parse}{ok?}
+  \node{agg}{right okq}{Reduce}
   \node[stadium]{sink}{right agg}{Store}
-  \node{drop}{below ok 30}{Discard}
+  \node{drop}{below okq 30}{Discard}
 
   \edge{src}{read}
   \edge{read}{parse}
-  \edge{parse}{ok}
-  \edge[yes]{ok}{agg}
+  \edge{parse}{okq}
+  \edge[yes]{okq}{agg}
   \edge{agg}{sink}
-  \edgevh[no]{ok}{drop}
+  \edgevh[no]{okq}{drop}
 }}}
 
-\bold{A module dependency graph}
+\section{A complete diagram: a turnstile automaton}
 
-Nodes need not form a line. Placed at absolute coordinates, they make a small graph; the
-boundary routing means diagonal edges still meet each box squarely.
+Two states with circular outlines, the initial one marked by an entry stub, mutual
+transitions drawn as a separated pair of curved edges, and a self-loop where the machine
+stays put. This is the whole vocabulary of a small state machine in one picture.
 
-\vskip 8pt
+\vskip 10pt
 
-\centerline{\picture width:3.6in height:2.2in {
-  \node{app}{at 1.4in 1.9in}{app}
-  \node{ui}{at 0.5in 1.1in}{ui}
-  \node{core}{at 1.4in 1.1in}{core}
-  \node{net}{at 2.4in 1.1in}{net}
-  \node{util}{at 1.4in 0.25in}{util}
-
-  \edge{app}{ui}
-  \edge{app}{core}
-  \edge{app}{net}
-  \edge{ui}{core}
-  \edge{core}{util}
-  \edge{net}{util}
-  \edge{ui}{util}
+\centerline{\picture width:4.6in height:2.0in {
+  \node[circle]{locked}{at 1.2in 1.0in}{Locked}
+  \node[circle]{open}{right locked 90}{Open}
+  \dgentry{locked}{west}{26}
+  \cedge[28]{locked}{open}{coin}
+  \cedge[28]{open}{locked}{push}
+  \loop{locked}{push}
+  \loop{open}{coin}
 }}
 
-Every figure above is one \italic{\\picture} box flowing in the text, set by the same
-engine as the prose.
+Every figure in this document is one \italic{\\picture} box flowing in the text, set by the
+same engine as the prose around it.

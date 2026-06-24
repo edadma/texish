@@ -1,55 +1,107 @@
+// book-demo — a guided tour of the `book` package, texish's LaTeX `book`-class format.
+//
+// The book package IS the document format, so we load only it (it pulls in the
+// document package itself for emphasis, lists, quotations, floats and references).
+// Loading `document` as well would double up the sectioning machinery.
 \use{book}
 
-\title{A Short Book}
-\author{Typeset with the \texttt{book} package}
-\date{texish}
+// \title / \author / \date fill the doctitle / docauthor / docdate macros that the
+// title page sets large and centred. They are inherited from the document package.
+\title{The Book of Examples}
+\author{A. N. Author}
+\date{Typeset with texish}
 
+// ===== Front matter =============================================================
+// \frontmatter restarts the folio at lowercase-roman i and leaves chapters
+// unnumbered. \maketitle then gives the title block a page of its own.
 \frontmatter
 \maketitle
+
+// A table of contents. \contents prints the "Contents" heading and replays every
+// numbered chapter, section and subsection collected on the first pass, each with a
+// dotted leader to the page it lands on. Because texish resolves the page numbers by
+// re-running the document until they settle, the numbers below are the real ones.
+\contents
 
 \chapter{Preface}
 
 This book is set with the \texttt{book} package, the \texttt{book}-class companion to
-the \texttt{document} package's article format. Front matter like this preface carries
-lowercase-roman folios and unnumbered chapters, just as in LaTeX.
+the \texttt{document} package's article format. Front matter such as this preface
+carries lowercase-roman folios and unnumbered chapter titles, exactly as in LaTeX.
 
-The page number at the foot of this page is a roman numeral, and the chapter title
-above carries no number. When the main matter begins, the folios restart at arabic~1
-and chapters take numbers, with sections numbered within their chapter.
+Look at the foot of the page: the folio is a roman numeral. The chapter title above
+carries no number, because front-matter chapters are unnumbered. When the main matter
+begins, the folios restart at arabic~1 and chapters take numbers, with sections
+numbered \emph{within} their chapter.
 
+The running head along the top of every page names the chapter it belongs to. It is
+driven by a page mark that each chapter records, so turning a page never leaves the
+head naming the wrong chapter.
+
+\chapter{Acknowledgements}
+
+A second front-matter chapter, also unnumbered, showing that the roman folio simply
+keeps counting across chapters. Front matter is where a real book puts its preface,
+foreword, acknowledgements and contents — everything before the numbered body.
+
+// ===== Main matter ==============================================================
+// \mainmatter restarts the folio at arabic 1 and turns chapter numbering on. Parts
+// and chapters from here on are numbered.
 \mainmatter
 
+// A part is a page of its own: "Part I" over the part title, both centred. Parts group
+// chapters without renumbering them — the chapter counter runs straight through.
 \part{Foundations}
 
 \chapter{Introduction}
 
-The main matter numbers its chapters and restarts the folio at one. This is
+The main matter numbers its chapters and has restarted the folio at one. This is
 Chapter~1, and the page at the foot now reads an arabic numeral. Sections beneath a
 chapter carry the chapter as a prefix, so the first section below is numbered 1.1.
+
+Everything the document package provides is inherited unchanged: emphasis, lists,
+quotations, floats and cross-references all work here without redeclaring anything. The
+book package changes only the sectioning, the title page and the page numbering.
 
 \section{Background}
 
 A section's number is the chapter number and the section number joined with a dot. A
-new chapter resets the section counter, so the first section of every chapter is
-always \emph{n}.1. The running head at the top of the page shows the chapter title,
-recorded as a page mark when the chapter opened.
+new chapter resets the section counter, so the first section of every chapter is always
+\emph{n}.1. The running head at the top of the page shows the chapter title, recorded
+as a page mark when the chapter opened.
 
 \subsection{A finer point}
 
 Subsections add a third level, numbered within the section: this one is 1.1.1. The
-document package's lists, quotations and emphasis are all inherited unchanged, so a
-book can use them without redeclaring anything.
+document package's lists, quotations and emphasis are inherited, so a book uses them
+without any extra declarations.
 
 \begin{quote}
 A quotation block is indented on both sides and reverts to the body margins when it
-ends, because the environment sets its margins inside its own group.
+ends, because the environment sets its margins inside its own group. This is the
+document package's environment, used here unchanged inside a book chapter.
 \end{quote}
+
+\subsection{A second finer point}
+
+This subsection numbers as 1.1.2 — the third level counts within its section. Were a new
+section to begin, this subsection counter would restart at one alongside the section's.
 
 \section{A second section}
 
 This second section of the introduction numbers as 1.2. Because figures and tables are
 also numbered within the chapter, the figure below is Figure~1.1 — the first figure of
 Chapter~1 — and a figure in the next chapter would restart at 2.1.
+
+\figure{
+\centerline{\vrule width:120pt height:48pt}
+\caption{A solid rule standing in for an illustration.}
+\label{fig:rule}
+}
+
+The figure above is \autoref{fig:rule}, written with \texttt{\\autoref}, which prints
+the kind word and the per-chapter number the caption recorded. Cross-references resolve
+on the same settling pass that fixes the contents page numbers.
 
 \begin{itemize}
 \item Chapters open a fresh page and set a running head.
@@ -65,15 +117,66 @@ counting in arabic numerals from where the previous chapter left off.
 
 \section{Carrying on}
 
-Nothing here is new; this section exists only to push the document onto a further page
-so the running head and folio can be seen to follow the chapter across a page break.
-The body text wraps and justifies exactly as the document package sets it, since the
-book package changes only the sectioning, the title page, and the page numbering.
+A book numbers each chapter's sections from one, so this is section 2.1 even though it
+is the document's fourth numbered section overall. The body text wraps and justifies as
+the document package sets it; the book package leaves the paragraph machinery alone.
 
+\subsection{Onward}
+
+Subsection 2.1.1, here only to add enough material that the chapter spans more than a
+single page, letting the running head and folio be seen to follow the chapter across a
+page break. A book's running head and folios are most convincing across several pages,
+so this chapter deliberately runs long.
+
+The Knuth–Plass line breaker fills each paragraph, the page builder breaks the column at
+a sensible point, and the running head and footer wrap whatever lands on the page. None
+of that is the book package's doing — it inherits the whole typesetting pipeline and only
+dresses the page with chapter heads, a title page and per-matter folios.
+
+\section{A closing section}
+
+Section 2.2, to show the section counter advancing within the chapter while the
+subsection counter it owns has reset. Numbering that restarts per chapter is the single
+most book-like thing the package does, and it falls out of one \texttt{\\counterwithin}
+declaration plus a redefinition of how the section number prints.
+
+// A second part, to show parts carry their own uppercase-roman counter and do not
+// renumber the chapters under them — the next chapter is still numbered in sequence.
+\part{Practice}
+
+\chapter{Putting it together}
+
+This is Chapter~3, the first chapter of Part~II. The part divider before it stepped the
+part counter to II but left the chapter counter alone, so the chapters number straight
+through both parts. Parts are organisational only; they group chapters without resetting
+their numbers.
+
+\section{A final numbered section}
+
+Section 3.1 — the section counter has reset to one for the new chapter, as always. With
+three chapters across two parts, the contents page at the front lists every part,
+chapter, section and subsection with its resolved page number.
+
+// A starred chapter prints no number and records no contents entry, exactly like
+// LaTeX's \chapter*. It still opens a fresh page and sets the running head.
+\chapter*{An unnumbered interlude}
+
+This chapter was written \texttt{\\chapter*}, so it carries no number and does not appear
+in the table of contents, yet it still begins on a fresh page and updates the running
+head. Starred sectioning is how a book sets apart material that should not be numbered.
+
+// ===== Back matter ==============================================================
+// \backmatter unnumbers chapters again but keeps the arabic folio running, so an
+// afterword, bibliography or index reads as a titled chapter without a number.
 \backmatter
 
 \chapter{Afterword}
 
-Back matter unnumbers chapters again but keeps the arabic folio running, so an
+Back matter unnumbers chapters again while keeping the arabic folio running, so an
 afterword, bibliography or index reads as a titled chapter without a number while the
 page count continues unbroken from the main matter.
+
+That completes the tour: a title page, a contents list, roman front matter, two parts of
+numbered chapters with per-chapter sections, figures and cross-references, a starred
+interlude, and unnumbered back matter — the whole LaTeX \texttt{book} class, in one
+short document.

@@ -1,0 +1,204 @@
+// chem-demo — a comprehensive demonstration of the chem package. Render with:
+//   texish scripts/chem-demo.script
+//
+// The chem package has two halves: a small set of drawing macros for structural
+// formulas (\atom, \bond, \dbond, \tbond, tuned by bondgap and doublesep), and a
+// set of inline notation macros for formulas and reaction equations (\dn, \up, and
+// the mhchem-style \ce). This demo exercises every one of them over real chemistry.
+//
+// \use{document} gives us section headings, a title block, and paragraph
+// indentation; \use{chem} brings in the package itself.
+\use{document}
+\use{chem}
+
+\title{Typesetting Chemistry with \texttt{chem}}
+\author{The texish project}
+\maketitle
+
+\section{Formula notation}
+
+A molecular formula is just running text with the atom counts dropped and
+shrunk into subscripts. The package supplies \texttt{\\dn} for a subscript count
+and \texttt{\\up} for a superscript charge; both size themselves from the current
+font through the engine's \texttt{\\textsub} and \texttt{\\textsup}.
+
+\subsection{Subscripts}
+
+Write \texttt{H\\dn2 O} for water, H\dn2 O, or \texttt{C\\dn6 H\\dn{12} O\\dn6}
+for glucose, C\dn6 H\dn{12} O\dn6. Multi-digit counts go in braces. A few more:
+sulfuric acid H\dn2 SO\dn4, ammonia NH\dn3, methane CH\dn4, and the carbonate of
+calcium CaCO\dn3.
+
+\subsection{Charges and ions}
+
+A charge is a superscript, set with \texttt{\\up}. Use a math plus or minus inside
+it — \texttt{Na\\up\{\$+\$\}} — so the sign is a true plus or minus glyph from the
+math font rather than a hyphen. The sodium ion Na\up{$+$} and the chloride ion
+Cl\up{$-$}; the doubly charged calcium Ca\up{$2+$}; and a polyatomic ion built
+from a subscript and a charge together, the sulfate SO\dn4\up{$2-$} and the
+phosphate PO\dn4\up{$3-$}. The hydronium and hydroxide pair: H\dn3 O\up{$+$} and
+OH\up{$-$}.
+
+\subsection{Isotopes}
+
+An isotope carries its mass number as a leading superscript and, where useful, its
+atomic number as a leading subscript. Both are just \texttt{\\up} and \texttt{\\dn}
+written \italic{before} the symbol: \up{14}C is carbon-14, \up{235}U is the fissile
+uranium isotope, and with the atomic number too, \up{14}\dn6 C and \up{238}\dn{92} U.
+
+\section{Reaction equations}
+
+The \texttt{\\ce} macro typesets a whole reaction from compact, mhchem-style
+notation. Species are separated by spaces; a leading number is a stoichiometric
+coefficient, a run of letters is an element symbol (set upright), a digit run after
+letters is a subscript count, \texttt{+} joins species, and the arrows are
+\texttt{->}, \texttt{<=>}, \texttt{<->}, and \texttt{<-}. Everything is assembled
+as math markup, so \texttt{+} comes out as a binary operator and the arrows as real
+math glyphs centred on the text axis.
+
+\subsection{Combustion}
+
+\texttt{\\ce} flows inline in the running text. The complete combustion of methane,
+\ce{CH4 + 2 O2 -> CO2 + 2 H2O}, sits right in the sentence at the text size. So
+does the combustion of propane, \ce{C3H8 + 5 O2 -> 3 CO2 + 4 H2O}, and the burning
+of ethanol, \ce{C2H6O + 3 O2 -> 2 CO2 + 3 H2O}.
+
+To set a reaction on its own centred line — and at a larger size — put \texttt{\\ce}
+inside \texttt{\\centerline}:
+
+\bigskip
+\centerline{\font lmroman 14 regular \ce{2 C8H18 + 25 O2 -> 16 CO2 + 18 H2O}}
+\bigskip
+
+\subsection{Equilibrium}
+
+A reversible reaction takes the equilibrium arrow \texttt{<=>}, which \texttt{\\ce}
+renders as $\rightleftharpoons$. The Haber synthesis of ammonia is the classic
+example, \ce{N2 + 3 H2 <=> 2 NH3}, as is the contact-process step toward sulfuric
+acid, \ce{2 SO2 + O2 <=> 2 SO3}. A double-headed arrow \texttt{<->} reads
+$\leftrightarrow$, and a reverse arrow \texttt{<-} reads $\leftarrow$:
+\ce{2 NH3 <- N2 + 3 H2}.
+
+\subsection{Acid--base and precipitation}
+
+Because \texttt{\\ce} cannot carry a charge through its argument, ionic equations
+are written with \texttt{\\dn} and \texttt{\\up} directly in the running text. The
+neutralization of a strong acid and base, H\up{$+$} $+$ OH\up{$-$}
+$\longrightarrow$ H\dn2 O, and the dissolution of sodium chloride,
+NaCl $\longrightarrow$ Na\up{$+$} $+$ Cl\up{$-$}. A precipitation, silver chloride
+falling out of solution: Ag\up{$+$} $+$ Cl\up{$-$} $\longrightarrow$ AgCl.
+
+\subsection{Redox}
+
+A half-reaction shows electrons explicitly. The reduction of copper ions,
+Cu\up{$2+$} $+$ 2 e\up{$-$} $\longrightarrow$ Cu, and the oxidation of iron,
+Fe $\longrightarrow$ Fe\up{$3+$} $+$ 3 e\up{$-$}. The full neutral reaction
+between zinc and hydrochloric acid is easy in \texttt{\\ce}:
+\ce{Zn + 2 HCl -> ZnCl2 + H2}.
+
+\section{Structural drawings}
+
+The drawing half of the package builds structural formulas over the picture
+primitives. Name an atom and its label with \texttt{\\atom}, then connect named
+atoms with \texttt{\\bond} (single), \texttt{\\dbond} (double), or \texttt{\\tbond}
+(triple). Every bond is shortened at both ends by \italic{bondgap} so the atom
+labels stay clear; \italic{doublesep} sets how far apart the lines of a multiple
+bond run. The geometry is pure point arithmetic — no engine code.
+
+\subsection{Atoms and single bonds: water}
+
+\texttt{\\atom} places a centred element label and names the point;
+\texttt{\\bond} joins two named atoms by name.
+
+\bigskip
+\centerline{\picture width:2in height:1.4in {
+  \translate{72 34}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{O}{(0, 44)}{O}
+  \atom{Ha}{(-36, 4)}{H}
+  \atom{Hb}{(36, 4)}{H}
+  \bond{(O)}{(Ha)}
+  \bond{(O)}{(Hb)}
+}}
+\bigskip
+
+\subsection{Double bonds: carbon dioxide}
+
+\texttt{\\dbond} draws two parallel lines. Here the linear O=C=O of carbon dioxide,
+both bonds double.
+
+\bigskip
+\centerline{\picture width:3in height:0.8in {
+  \translate{34 30}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{O1}{(0, 0)}{O}
+  \atom{C}{(72, 0)}{C}
+  \atom{O2}{(144, 0)}{O}
+  \dbond{(O1)}{(C)}
+  \dbond{(C)}{(O2)}
+}}
+\bigskip
+
+\subsection{Triple bonds: acetylene}
+
+\texttt{\\tbond} draws three parallel lines. Acetylene is H--C$\equiv$C--H, a
+triple bond between the carbons.
+
+\bigskip
+\centerline{\picture width:3in height:0.7in {
+  \translate{20 26}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{Ha}{(0, 0)}{H}
+  \atom{C1}{(54, 0)}{C}
+  \atom{C2}{(120, 0)}{C}
+  \atom{Hb}{(174, 0)}{H}
+  \bond{(Ha)}{(C1)}
+  \tbond{(C1)}{(C2)}
+  \bond{(C2)}{(Hb)}
+}}
+\bigskip
+
+\subsection{Rings: benzene}
+
+Coordinates make rings easy: place the carbons and hydrogens on two polar rings,
+then loop the bonds, alternating single and double around the ring.
+
+\bigskip
+\centerline{\picture width:2.7in height:2.6in {
+  \translate{97 94}
+  \set R {46} \set HR {86}
+  \stroke{black} \linewidth{1.2pt}
+  \for\k{\range{0}{5}}{
+    \set a {\calc{k*60}} \set b {\calc{(k+1)*60}}
+    \if{\calc{k % 2}}
+      \bond{(a:R)}{(b:R)}
+    \else
+      \dbond{(a:R)}{(b:R)}
+    \fi
+    \bond{(a:R)}{(a:HR)}
+    \at anchor:center {(a:R)}{C}
+    \at anchor:center {(a:HR)}{H}
+  }
+}}
+\bigskip
+
+\subsection{Tuning the bond style}
+
+The clearance at each bond end and the gap of a multiple bond are the variables
+\italic{bondgap} and \italic{doublesep}; reassign them to restyle every bond that
+follows. Below, the same ethene C=C drawn at the default \italic{doublesep} and
+then with a wider one.
+
+\bigskip
+\centerline{\picture width:3in height:0.9in {
+  \translate{30 30}
+  \stroke{black} \linewidth{1.2pt}
+  \atom{C1}{(0, 0)}{C}  \atom{C2}{(72, 0)}{C}
+  \dbond{(C1)}{(C2)}
+  \set doublesep {5}
+  \atom{C3}{(150, 0)}{C}  \atom{C4}{(222, 0)}{C}
+  \dbond{(C3)}{(C4)}
+}}
+\bigskip
+
+\vfill\eject

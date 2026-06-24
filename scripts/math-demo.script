@@ -1,98 +1,264 @@
+// math-demo — a single comprehensive tour of texish mathematics.
+//
+// Two layers are on show. The first is the engine's own math mode — fractions,
+// roots, scripts, big operators, matrices, the math-array environments, the
+// stacking and framing boxes, and the math alphabets — all of which work with no
+// package loaded at all. The second is the small \texttt{math} package, which adds
+// the amsmath operator and connective names the engine does not define on its own:
+// \arcsin / \arccos / \arctan / \Pr, the modular \bmod / \pmod / \mod / \pod, the
+// implication arrows \implies / \iff / \impliedby, and the \dots ellipsis.
+//
+// \use{document} gives us the title block, numbered sections and prose styling;
+// \use{math} layers the amsmath names on top of the engine's built-in math.
+
 \use{document}
 \use{math}
 
-\title {Mathematics with the \texttt{math} package}
+\title {A Tour of Mathematics in texish}
 \author {The texish project}
 \date {June 2026}
 \maketitle
 
-The \texttt{math} package collects the amsmath constructions a working document
-needs. Most are built into the engine and need no package; loading \texttt{math}
-adds the operator and connective names amsmath defines on top.
+This document exercises the whole of texish math mode in one place: the
+constructions built into the engine and the amsmath names the \texttt{math}
+package adds on top. Every formula below is live — what you see is what the
+engine set.
 
-\section {Aligned equations}
+\section {Inline and display math}
+
+Math is written between dollar signs. A single pair, $a^2 + b^2 = c^2$, sets the
+formula \emph{inline}, in the run of the text and on the current line. A double
+pair sets it as a centred \emph{display}, broken out of the paragraph and given
+room to breathe:
+
+$$e^{i\pi} + 1 = 0.$$
+
+The same notation reads both ways: the inline limit $\lim_{n \to \infty} a_n = L$
+keeps its subscript tucked beside the operator to save vertical space, while the
+display form lets it drop underneath.
+
+\section {Fractions and binomials}
+
+The plain \texttt{\\frac} chooses its size from context — full size in a display,
+small in a line of text. The display fractions \texttt{\\dfrac} and \texttt{\\tfrac}
+fix that choice regardless of where they sit, and \texttt{\\binom} stacks a
+binomial coefficient inside invisible delimiters:
+
+$$\frac{a}{b} + \frac{c}{d} = \frac{ad + bc}{bd}
+  \qquad
+  \binom{n}{k} = \dfrac{n!}{k!\,(n - k)!}.$$
+
+Because \texttt{\\dfrac} stays full size everywhere, it nests cleanly into a
+continued fraction, while \texttt{\\tfrac} keeps a one-line fraction compact:
+
+$$\dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{x}}}}
+  \qquad
+  \tfrac{1}{2} + \tfrac{1}{3} = \tfrac{5}{6}.$$
+
+\section {Roots}
+
+A square root sets a surd over its argument, sized to fit; an optional index
+turns it into an $n$th root:
+
+$$\sqrt{2} \qquad \sqrt{a^2 + b^2} \qquad \sqrt[3]{x} \qquad \sqrt[n]{\frac{a}{b}}.$$
+
+Roots and fractions compose to any depth, the radical stretching to clear what it
+covers:
+
+$$\varphi = \frac{1 + \sqrt{5}}{2}
+  \qquad
+  \sqrt{1 + \sqrt{1 + \sqrt{1 + x}}}.$$
+
+\section {Scripts and big operators}
+
+Subscripts and superscripts attach with the underscore and caret, and group
+with braces when they run to more than a token:
+
+$$x_i^2 \qquad a_{n+1} \qquad e^{x^2} \qquad 2^{2^{2^{2}}}.$$
+
+The big operators — sums, products and integrals — carry their bounds as scripts.
+In a display they sit above and below the operator; the integral keeps its bounds
+to the side:
+
+$$\sum_{k=1}^{n} k = \frac{n(n+1)}{2}
+  \qquad
+  \prod_{k=1}^{n} k = n!
+  \qquad
+  \int_0^1 x^2 \, dx = \frac{1}{3}.$$
+
+They nest and stack as expected:
+
+$$\sum_{i=1}^{n} \sum_{j=1}^{m} a_{ij}
+  \qquad
+  \int_{-\infty}^{\infty} e^{-x^2} \, dx = \sqrt{\pi}.$$
+
+\section {Greek, operators and relations}
+
+Greek letters are named directly, lower and upper case:
+
+$$\alpha \; \beta \; \gamma \; \delta \; \theta \; \lambda \; \mu \; \pi \; \sigma \; \omega
+  \qquad
+  \Gamma \; \Delta \; \Theta \; \Lambda \; \Pi \; \Sigma \; \Omega.$$
+
+The named functions are set upright, like \texttt{\\sin}, \texttt{\\log} and
+\texttt{\\lim}, and take operator spacing. The \texttt{math} package adds the
+inverse trigonometric and probability names alongside them:
+
+$$\sin^2\theta + \cos^2\theta = 1
+  \qquad
+  \arctan x = \int_0^x \frac{dt}{1 + t^2}
+  \qquad
+  \Pr(A \cup B) \le \Pr(A) + \Pr(B).$$
+
+When a function has no built-in name, \texttt{\\operatorname} makes one — the run
+is kept roman and given the spacing of an operator, with subscripts dropping
+beneath it in a display:
+
+$$\operatorname{argmax}_{x} f(x)
+  \qquad
+  \arcsin x + \arccos x = \frac{\pi}{2}.$$
+
+The modular forms also come from the package. \texttt{\\bmod} is the binary "mod"
+of $a \bmod b$, set with a medium space on each side; \texttt{\\pmod} closes a
+congruence with a parenthesised modulus after a quad of space:
+
+$$15 \bmod 4 = 3
+  \qquad
+  17 \equiv 2 \pmod{5}
+  \qquad
+  a \equiv b \mod n.$$
+
+Relations and set notation carry their own spacing too:
+
+$$a < b \le c \qquad x \in \mathbb{R} \qquad A \subseteq B \cup C
+  \qquad
+  f : X \to Y.$$
+
+\section {Matrices}
+
+The matrix environments share one layout and differ only in the fence they put
+around it — none, parentheses, brackets, braces or bars:
+
+$$\begin{matrix} 1 & 0 \\ 0 & 1 \end{matrix}
+  \qquad
+  \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
+  \qquad
+  \begin{bmatrix} a & b \\ c & d \end{bmatrix}
+  \qquad
+  \begin{Bmatrix} x \\ y \end{Bmatrix}.$$
+
+The bar fences give the determinant and the norm:
+
+$$\det A = \begin{vmatrix} a & b \\ c & d \end{vmatrix} = ad - bc
+  \qquad
+  \begin{Vmatrix} 1 & 0 \\ 0 & 1 \end{Vmatrix}.$$
+
+A \texttt{smallmatrix} carries no fences of its own, so you bracket it yourself;
+it sets compactly inside a line, as in
+$(\begin{smallmatrix} a & b \\ c & d \end{smallmatrix})$.
+
+\section {Cases and aligned blocks}
+
+A piecewise definition uses \texttt{cases}, whose rows are set flush left under a
+single brace, the column before \texttt{\\&} the value and the column after it the
+condition:
+
+$$|x| = \begin{cases} \phantom{-}x & x \ge 0, \\ -x & x < 0. \end{cases}$$
 
 The \texttt{aligned} environment lines a block of equations up on their relation
-symbols. The \texttt{\\&} marks the alignment column, just before the relation:
+symbols — the \texttt{\\&} marks the alignment column, just before the relation:
 
 $$\begin{aligned}
   (a + b)^2 &= a^2 + 2ab + b^2 \\
             &= a^2 + b^2 + 2ab.
 \end{aligned}$$
 
-A chain of reasoning reads naturally with the implication arrows:
+The \texttt{gathered} environment centres a run of equations without aligning
+them, and \texttt{split} breaks one long equation across lines on a shared
+alignment point:
 
-$$x^2 = 4 \implies x = 2 \;\text{or}\; x = -2 \iff |x| = 2.$$
+$$\begin{gathered}
+  a^2 + b^2 = c^2 \\
+  E = mc^2
+\end{gathered}
+\qquad
+\begin{split}
+  f(x) &= (x+1)(x-1) \\
+       &= x^2 - 1.
+\end{split}$$
 
-\section {Fractions and binomials}
+\section {Stacks, overlines and boxes}
 
-The display fractions \texttt{\\dfrac} and \texttt{\\tfrac} fix the size of a
-fraction regardless of where it sits, and \texttt{\\binom} stacks a binomial
-coefficient:
+\texttt{\\overset} and \texttt{\\underset} stack an annotation above or below a
+base, and \texttt{\\substack} stacks the lines of a many-line subscript:
 
-$$\dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{x}}}
+$$A \overset{\text{def}}{=} B
   \qquad
-  \binom{n}{k} = \dfrac{n!}{k!\,(n - k)!}
+  \underset{n \to \infty}{\lim} \frac{1}{n} = 0
   \qquad
-  \tfrac{1}{2}.$$
-
-\section {Matrices}
-
-The matrix environments differ only in their fences --- parentheses, brackets,
-bars or braces:
-
-$$A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
-  \qquad
-  \det A = \begin{vmatrix} 1 & 2 \\ 3 & 4 \end{vmatrix} = -2
-  \qquad
-  \begin{Bmatrix} x \\ y \end{Bmatrix}.$$
-
-Like the plain \texttt{matrix}, a \texttt{smallmatrix} carries no fences of its
-own, so you bracket it yourself; it sets compactly inside a line of text, as in
-$(\begin{smallmatrix} a & b \\ c & d \end{smallmatrix})$.
-
-\section {Cases}
-
-A piecewise definition uses the \texttt{cases} environment, whose rows are set
-flush left under a single brace:
-
-$$|x| = \begin{cases} \phantom{-}x & x \ge 0, \\ -x & x < 0. \end{cases}$$
-
-\section {Operators, stacks and boxes}
-
-Custom operators are set upright with \texttt{\\operatorname}, while the inverse
-and modular forms come ready-made:
-
-$$\arctan x = \int_0^x \frac{dt}{1 + t^2}
-  \qquad
-  15 \bmod 4 = 3
-  \qquad
-  17 \equiv 2 \pmod{5}
-  \qquad
-  \operatorname{argmax}_{x} f(x).$$
-
-Here \texttt{\\bmod} is a true binary operator (a medium space on each side),
-while \texttt{\\pmod} parenthesises the modulus at the end of a congruence.
+  \sum_{\substack{0 < i < n \\ i \ne k}} a_i.$$
 
 A rule may be drawn across a whole sub-formula with \texttt{\\overline} or
-\texttt{\\underline} (distinct from the short \texttt{\\bar} accent):
+\texttt{\\underline}, and \texttt{\\boxed} rings a result in a frame:
 
 $$\overline{a + b} = \overline{a} + \overline{b}
   \qquad
   \underline{x + y}
   \qquad
-  \overline{\overline{z}}.$$
+  \boxed{\, E = mc^2 \,}.$$
 
-The \texttt{\\overset} and \texttt{\\underset} commands stack an annotation on a
-base, \texttt{\\substack} stacks the lines of a many-line subscript, and
-\texttt{\\boxed} rings a result:
+\section {Math alphabets}
 
-$$A \overset{\text{def}}{=} B
+A formula draws its variables from the Mathematical Alphanumeric blocks of the
+math font. Each alphabet command remaps the letters of its argument into one of
+those blocks, so the same word can be set in any of the standard math typefaces:
+
+$$\mathrm{Roman} \quad \mathbf{Bold} \quad \mathit{Italic}
+  \quad \mathsf{Sans} \quad \mathtt{Typewriter}$$
+
+The two decorative alphabets mathematicians reach for constantly are blackboard
+bold, for the number systems, and calligraphic and fraktur, for structures and
+ideals:
+
+$$\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R} \subset \mathbb{C}$$
+
+$$\mathcal{F} : \mathfrak{A} \to \mathfrak{B}, \qquad \mathfrak{p} \subset \mathcal{O}_K$$
+
+A worked sentence mixes several at once: let $\mathbb{F}$ be a field, $V$ a vector
+space over $\mathbb{F}$, and $\mathcal{L}(V)$ the algebra of operators on it;
+write $\mathbf{x}$ for a column vector and $\mathrm{tr}\, A$ for a trace.
+
+\section {Text, connectives and ellipses}
+
+\texttt{\\text} drops a run of ordinary upright prose into a formula, the way a
+qualifying phrase reads beside an equation:
+
+$$x^2 = 4 \quad \text{if and only if} \quad x = \pm 2.$$
+
+The implication arrows from the package join whole statements, each a heavy arrow
+with a thick space on either side, so a chain of reasoning reads naturally:
+
+$$x^2 = 4 \implies x = 2 \;\text{or}\; x = -2 \iff |x| = 2.$$
+
+The \texttt{\\dots} ellipsis carries a sequence to its limit:
+
+$$1 + 2 + 3 + \dots + n = \frac{n(n+1)}{2}
   \qquad
-  \sum_{\substack{0 < i < n \\ i \ne k}} a_i
-  \qquad
-  \underset{n \to \infty}{\lim} \frac{1}{n} = 0
-  \qquad
-  \boxed{\,E = mc^2\,}.$$
+  a_1, a_2, \dots, a_n.$$
+
+\section {Forcing a symbol's class}
+
+Every symbol in a formula belongs to a class — ordinary, operator, binary,
+relation, opening, closing, punctuation or inner — and the class sets the spacing
+around it. The eight class-forcing commands override that class when a symbol is
+being used in an unusual role. For instance, a slash used as a binary operator
+takes the medium binary spacing with \texttt{\\mathbin}, while a colon forced to a
+relation takes the wider relation spacing with \texttt{\\mathrel}:
+
+$$a \mathbin{/} b \qquad x \mathrel{:} y \qquad \mathopen| x \mathclose|.$$
+
+The full set is \texttt{\\mathord}, \texttt{\\mathop}, \texttt{\\mathbin},
+\texttt{\\mathrel}, \texttt{\\mathopen}, \texttt{\\mathclose}, \texttt{\\mathpunct}
+and \texttt{\\mathinner}.
 
 \vfill\eject

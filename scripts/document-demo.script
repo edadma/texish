@@ -1,49 +1,104 @@
+// document-demo — a comprehensive tour of the `document` package.
+//
+// The `document` package layers a LaTeX-`article`-style format over the texish
+// engine: a title block, an abstract, numbered sectioning, a table of contents,
+// lists, quotations, alignment helpers, inline markup, a full set of font-size
+// declarations, text symbols, the TeX-family logos, floating figures and tables
+// with numbered captions, minipages, and a couple of conditionals. This single
+// script exercises every public command, environment, and declaration the
+// package provides, framed as a short article about itself.
+
 \use{document}
 
-\title {Your Paper}
-\author {You}
+// ---- Title block ---------------------------------------------------------------
+// \title / \author / \date record their argument; \maketitle typesets them,
+// centred, at the top of the document.
+\title {A Tour of the \TeXish{} Article Format}
+\author {The texish project}
 \date {June 2026}
 \maketitle
 
+// The abstract environment sets a centred bold "Abstract" heading over a smaller,
+// narrower block.
 \begin{abstract}
-Your abstract.
+This document exercises the full feature set of the \texttt{document} package:
+the title block and abstract, numbered and unnumbered sectioning, a table of
+contents whose page numbers resolve in a second pass, lists of every kind,
+quotations, alignment, inline markup, the LaTeX font-size declarations, the
+common text symbols, the \TeX{} family logos, floating figures and tables with
+numbered captions, minipages, and conditionals. It is set in a 10-point serif
+body on a tight \LaTeX{} type scale.
 \end{abstract}
 
-\section {Introduction}
+// ---- Table of contents ---------------------------------------------------------
+// \contents prints a "Contents" heading and lists every numbered heading with the
+// page it lands on. The CLI runs the document twice automatically, so the page
+// numbers and section numbers shown here resolve correctly.
+\contents
 
-Your introduction goes here! Simply start writing your document and use the
-preview to see the result. Examples of commonly used commands and features are
-listed below, to help you get started.
+\vfill\eject
 
-Notice that the first paragraph after a heading is set flush to the left margin,
+// ---- Sectioning ----------------------------------------------------------------
+\section {Sectioning}
+
+The \texttt{section}, \texttt{subsection} and \texttt{subsubsection} commands give
+three numbered levels. Numbering is automatic: a subsection resets to one at the
+start of each new section, and a subsubsection resets within each subsection.
+
+Notice that this first paragraph after a heading is set flush to the left margin,
 with no first-line indent, exactly as in a LaTeX \emph{article}. The paragraphs
-that follow it, like this one, open with the usual first-line indent and there is
-no extra vertical space between them — the indent alone marks the boundary.
+that follow, like this one, open with the usual first-line indent and there is no
+extra vertical space between them — the indent alone marks the boundary.
 
-\section {Some examples to get started}
+\subsection {Subsections}
 
-\subsection {How to create Sections and Subsections}
+A subsection sits one level down and carries a two-part number such as 1.1. Its
+number is reset every time a new section begins.
 
-Simply use the section and subsection commands, as in this example document! All
-the formatting and numbering is handled automatically: a subsection's number is
-reset to one at the start of each new section.
+\subsubsection {Subsubsections}
 
-\subsection {How to add Lists}
+A subsubsection is the deepest numbered level, numbered 1.1.1, and is reset within
+each subsection.
 
-You can make lists with automatic numbering \dots
+\subsection {Starred (unnumbered) headings}
+
+Every heading has a starred form that skips the counter and prints no number, and
+is left out of the table of contents.
+
+\subsubsection* {An unnumbered subsubsection}
+
+This heading was written with a star, so it stands out from the body without a
+number and without a contents entry.
+
+\paragraph{A run-in heading.} The \texttt{paragraph} command is the lowest level:
+it sets its title bold on the same line as the text it introduces, with no number
+and no break after it. The body continues immediately, as you see here.
+
+\section {Lists}
+
+The package provides three list environments, all of which nest cleanly.
+
+\subsection {Enumerated lists}
+
+The \texttt{enumerate} environment numbers its items automatically \dots
 
 \begin{enumerate}
 \item Like this,
-\item and like this.
+\item and like this, long enough to wrap onto a second line so the continuation
+aligns under the text rather than the number,
+\item and a third point.
 \end{enumerate}
 
-\noindent\dots or bullet points \dots
+\subsection {Bulleted and nested lists}
+
+The \texttt{itemize} environment marks each item with a bullet, and lists nest to
+any depth — a list inside an item simply indents one level further:
 
 \begin{itemize}
-\item Like this,
+\item a bullet,
 
-\item and like this, with an item long enough to wrap onto a second line so that
-the continuation lines align neatly under the text rather than under the marker,
+\item another bullet, with text long enough to wrap so the continuation lines
+align neatly under the text rather than under the marker,
 
 \item including a nested list inside an item:
 
@@ -57,9 +112,20 @@ indent stands out against the outer level.
 \item and back out at the first level for the final item.
 \end{itemize}
 
-\subsection {How to add Quotations}
+\subsection {Description lists}
 
-A quotation is indented on both sides and remains fully justified:
+The \texttt{description} environment pairs a bold term, given to \texttt{item} in
+brackets, with its hanging definition:
+
+\begin{description}
+\item[texish] the layout engine these notes are typeset with.
+\item[package] a reusable bundle of macros, loaded with \texttt{use}.
+\item[document] the article-style package this very script demonstrates.
+\end{description}
+
+\section {Quotations}
+
+A \texttt{quote} block is indented on both sides and remains fully justified:
 
 \begin{quote}
 The art of writing is the art of discovering what you believe. Good prose is like
@@ -67,14 +133,145 @@ a windowpane, clear enough that the reader forgets it is there at all and sees
 only what lies beyond it.
 \end{quote}
 
-The text returns to the full measure after the block closes.
+A \texttt{quotation} block is the same, indented a little wider — suited to longer,
+multi-paragraph passages:
 
-\subsection {How to change the margins and paper size}
+\begin{quotation}
+Style is not a fixed thing but a way of moving through a sentence. The writer who
+attends to rhythm and clarity will find that form and meaning arrive together,
+each shaping the other.
+\end{quotation}
 
-Usually the format you are using will have the page margins and paper size set
-correctly for that use-case. In these cases, it is best not to alter the margins
-directly. This format follows the proportions of a 10-point \LaTeX article: a
-serif body on a tight type scale, with roman titles and \textbf{bold} headings.
-The same engine that sets the \TeX, \LaTeX and \TeXish logos sets this document.
+The text returns to the full measure after either block closes.
+
+\section {Alignment}
+
+The alignment environments set whole blocks centred, flush left, or flush right,
+and there are single-line helpers as well.
+
+\begin{center}
+This paragraph is centred, with both margins stretching equally so that every line
+of the wrapped paragraph finds the middle of the measure.
+\end{center}
+
+\begin{flushleft}
+This paragraph is set flush left, ragged down its right edge, with no first-line
+indent.
+\end{flushleft}
+
+\begin{flushright}
+This paragraph is set flush right, ragged down its left edge.
+\end{flushright}
+
+The single-line helpers \texttt{centerline}, \texttt{leftline} and
+\texttt{rightline} place one line each at the left, centre, or right of the
+measure:
+
+\centerline{This single line is centred.}
+\leftline{This single line is flush left.}
+\rightline{This single line is flush right.}
+
+\noindent The \texttt{centering} declaration switches the rest of a group to
+centred lines, the basis of the \texttt{center} environment above.
+
+\section {Inline markup}
+
+The body can be set \emph{emphasised}, \textit{italic}, \textsl{slanted},
+\textbf{bold}, \textsc{in small caps}, or \underline{underlined}, switched between
+the family roles \textrm{roman}, \textsf{sans-serif}, and \texttt{typewriter}, and
+reset to the plain face with \textnormal{normal}. A water molecule is
+H\textsubscript{2}O and the 1\textsuperscript{st} item carries a raised ordinal.
+The ellipsis commands \texttt{dots} and \texttt{ldots} both set \dots{} three dots.
+
+\section {Font sizes}
+
+The size declarations run the full LaTeX scale, each keeping the current family and
+shape and resetting the leading. From smallest to largest:
+{\tiny tiny} {\scriptsize scriptsize} {\footnotesize footnotesize} {\small small}
+{\normalsize normalsize} {\large large} {\Large Large} {\LARGE LARGE}
+{\huge huge} {\Huge Huge}.
+
+\section {Text symbols and logos}
+
+The common LaTeX text symbols each set a single character: the section sign~\S, the
+paragraph mark~\P, the dagger~\dag{} and double dagger~\ddag, the copyright
+sign~\copyright, the registered mark~\textregistered, the trademark~\texttrademark,
+the pound sign~\pounds, a bullet~\textbullet, an em dash~\textemdash, an en
+dash~\textendash, and the degree sign~\textdegree.
+
+The classic logos come for free: \TeX, \LaTeX, and \TeXish{} — the engine that sets
+this document.
+
+\section {Floats: figures and tables}
+
+A \texttt{figure} detaches its body to the top of a page, and a \texttt{caption}
+written inside numbers it on the figure counter. The \texttt{label} on the caption
+lets it be cross-referenced: this is Figure~\ref{fig:frog}.
+
+\figure[h]{
+\centerline{\includegraphics[width=0.3\linewidth]{frog.jpg}}
+\vskip 6pt
+\centerline{\caption{A frog, scaled to a third of the text width.}\label{fig:frog}}
+}
+
+A \texttt{table} float works the same way over its own counter. Here a minipage
+holds a small hand-set table as the float's body:
+
+\table[h]{
+\centerline{\begin{minipage}{2.6in}
+\leftline{\textbf{Level}\hfil\textbf{Command}}
+\vskip 2pt
+\leftline{1\hfil\texttt{section}}
+\leftline{2\hfil\texttt{subsection}}
+\leftline{3\hfil\texttt{subsubsection}}
+\end{minipage}}
+\vskip 6pt
+\centerline{\caption{The three numbered sectioning levels.}\label{tab:levels}}
+}
+
+The two captioned floats above are the source for the lists of figures and tables
+on the next page (see Table~\ref{tab:levels} for the sectioning summary).
+
+\vfill\eject
+
+// Lists of figures and tables, each replaying its captions with page numbers.
+\listoffigs
+
+\listoftabs
+
+\section {Boxes and conditionals}
+
+A \texttt{minipage} sets its body as a paragraph in a box of a chosen width. Two
+side by side, centred, with a gap between them:
+
+\centerline{//
+\begin{minipage}{2in}
+This is the left minipage. Its text wraps inside a two-inch box, independent of the
+box beside it.
+\end{minipage}//
+\hskip 24
+\begin{minipage}{2in}
+And this is the right minipage, the same width, set as its own little paragraph.
+\end{minipage}}
+
+\medskip
+
+\noindent The \texttt{ifthenelse} command chooses between two branches on a boolean
+test, and \texttt{equal} tests two strings for equality. For example,
+\ifthenelse{\equal{texish}{texish}}{the two strings \emph{are} equal}{they are not}
+— and \ifthenelse{\equal{texish}{tex}}{they are equal}{the two strings are
+\emph{not} equal}.
+
+\appendix
+
+\section {After the appendix}
+
+After \texttt{appendix}, the section counter restarts and its number switches to a
+letter, so this section is Appendix~A while keeping the same \texttt{section}
+command. A subsection here follows along as A.1.
+
+\subsection {A lettered subsection}
+
+This subsection reads A.1, built on the appendix's lettered top level.
 
 \vfill\eject

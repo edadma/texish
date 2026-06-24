@@ -85,8 +85,8 @@ shortened along its own axis is written directly, e.g. `\padd{(A)}{\pscale{\pnor
 
 Coordinates may also be computed, not just literal — a bare variable `\x` is its value and arithmetic
 like `\*{\x}{14}` or `\forloop.index` works — so a plot, a chart, or a chemical diagram is just a path
-built in a `\for` loop. See [`scripts/picture.script`](scripts/picture.script) for a worked demo
-(shapes, a Bézier wave, a rotate-fan, a y=x² line graph, a bar chart, and a benzene ring).
+built in a `\for` loop. See the picture section of [`scripts/texish-demo.script`](scripts/texish-demo.script)
+for a worked demo (shapes, a Bézier wave, a y=x² line graph, and more).
 
 ## Command-line tool
 

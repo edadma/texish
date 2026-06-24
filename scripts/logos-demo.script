@@ -1,0 +1,95 @@
+// logos-demo — a tour of the TeX-family logos provided by the logos package.
+//
+// The logos package defines three macros — \TeX, \LaTeX and \TeXish — that
+// reproduce the famous, carefully-kerned wordmarks of the TeX family using only
+// the engine's box, kern, raise/lower and \vbox primitives. This demo shows them
+// in running prose, across the whole document type scale, and in a centred
+// display line, then explains how each is built.
+//
+// document already imports logos internally (it uses \TeX/\LaTeX in its own
+// prose), so the second \use is harmless — we name it explicitly here because
+// this is the logos demo.
+
+\use{document}
+\use{logos}
+
+\title {The TeX-family Logos}
+\author {The texish engine}
+\date {June 2026}
+\maketitle
+
+\section {The three logos}
+
+The \texttt{logos} package gives any document the three wordmarks of the \TeX{}
+family.
+The original \TeX, Donald Knuth's typesetting system; \LaTeX, Leslie Lamport's
+document format layered on top of it; and \TeXish, the mark of this engine — a
+playful cousin that sets \TeX{} with a small slanted ``ish'' tucked against the
+final letter.
+
+What makes these logos special is not their letters but their spacing. Each one
+overlaps and lowers its glyphs by precise amounts so that the word reads as a
+single designed unit rather than three or five letters set side by side. Because
+the construction is expressed in relative units (em-fractions and x-heights),
+the kerning holds together no matter what size the logo is set at.
+
+\section {Across the type scale}
+
+The same three macros, set at every size in the document's type scale. Notice
+that the lowered E in \TeX, the raised A in \LaTeX, and the slanted, raised
+``ish'' in \TeXish all keep their proportions as the type grows:
+
+\noindent{\normalsize \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\large \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\Large \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\LARGE \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\huge \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\Huge \TeX\quad \LaTeX\quad \TeXish}
+
+\section {In a display line, and in context}
+
+Set large and centred on a line of their own, the wordmarks make a tidy
+colophon:
+
+{\LARGE\centerline{\TeX\quad \LaTeX\quad \TeXish}}
+
+They also behave inside ordinary markup. Here they are in \textbf{bold}: the run
+\textbf{\TeX, \LaTeX{} and \TeXish}, and in \textit{italic}: the run
+\textit{\TeX, \LaTeX{} and \TeXish} — the kerns ride along with the surrounding
+font, since they are measured from the current glyphs.
+
+\section {How each logo is built}
+
+\subsection {\TeX}
+
+\TeX{} is three letters with the middle one dropped and pulled tight against its
+neighbours. The E is set in an \texttt{hbox} and lowered by half an x-height with
+\texttt{lower} so its centre sits below the baseline; a negative \texttt{kern} of
+about a sixth of an em pulls it leftward under the bar of the T, and a second,
+smaller negative \texttt{kern} closes the gap before the X. The result is the
+unmistakable T-E-X with the E nestled between the taller letters.
+
+\subsection {\LaTeX}
+
+\LaTeX{} extends \TeX{} by riding a small capital A high against the L, at the
+cap height. Lamport's own trick — reproduced here — measures the height of a T
+into a box register, then sets a seven-point A inside a \texttt{vbox} built ``to''
+that height with \texttt{vss} filling beneath it. The \texttt{vss} pushes the
+small A up to the top of the box, so its apex lines up with the tops of the
+surrounding capitals. Negative kerns tuck the A back over the L, and the rest of
+the word is simply \TeX.
+
+\subsection {\TeXish}
+
+\TeXish{} is this engine's own mark: it is exactly \TeX, followed by a small,
+raised, slanted ``ish'' set in a seven-point oblique. The negative \texttt{kern}
+draws the ``ish'' in against the X, and the \texttt{raise} lifts it about a fifth
+of an em off the baseline, so it reads as a light suffix clinging to the wordmark
+rather than a separate syllable on the line.
+
+\vfill\eject

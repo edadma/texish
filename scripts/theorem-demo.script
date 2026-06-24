@@ -1,57 +1,158 @@
+// theorem-demo — a comprehensive tour of the `theorem` package.
+//
+// The package layers amsthm-style theorem environments over the counters package.
+// Every public feature is exercised below:
+//
+//   * \newtheorem{env}{Heading}            — an environment with its own counter
+//   * \newtheorem{env}[shared]{Heading}    — share another environment's counter
+//   * \newtheorem{env}{Heading}[within]    — number within a counter (e.g. section)
+//   * \begin{env}[note] ... \end{env}      — an optional parenthesised note in the head
+//   * the proof environment with its run-in "Proof." head
+//   * \qed                                 — the flush-right end-of-proof box
+//
+// We pull in `document` for section headings and paragraph indentation, and `math`
+// for the formulas set inside the theorem bodies.
+
 \use{document}
 \use{theorem}
+\use{math}
 
+// Each \newtheorem defines a fresh environment. `theorem` gets its own counter.
+// `lemma` and `corollary` SHARE the theorem counter (the [theorem] optional before
+// the heading), so all three advance one running sequence. `definition` and
+// `example` are numbered WITHIN each section (the [section] optional after the
+// heading), printing "section.n". `remark` keeps an independent counter of its own.
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}{Corollary}
+\newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{definition}{Definition}[section]
+\newtheorem{example}{Example}[section]
 \newtheorem{remark}{Remark}
 
 \title{The \texttt{theorem} Package}
-\author{A demonstration of amsthm-style environments in texish}
+\author{A tour of amsthm-style environments in texish}
 \maketitle
 
-\section{Numbered theorems}
+\section{Independent numbering}
 
-The plain style sets a bold run-in head and an italic body. A note in brackets after
-\texttt{\\begin} appears in parentheses.
+A theorem-like environment defined with \texttt{\\newtheorem\{theorem\}\{Theorem\}}
+carries its own counter. The plain style sets a bold run-in head and an italic body,
+and the body shape reverts at \texttt{\\end}.
+
+\begin{theorem}
+The square of the hypotenuse of a right triangle equals the sum of the squares of
+its legs: $a^2 + b^2 = c^2$. This is Theorem 1, the first member of its own counter.
+\end{theorem}
+
+A second instance advances the same counter to become Theorem 2.
+
+\begin{theorem}
+Every integer $n > 1$ has a factorisation into primes, $n = p_1 p_2 \cdots p_k$,
+which is unique up to the order of the factors.
+\end{theorem}
+
+\section{Shared counters}
+
+The optional argument \emph{before} the heading shares another environment's counter.
+Here \texttt{lemma} and \texttt{corollary} were both declared with \texttt{[theorem]},
+so they continue the single running sequence rather than starting fresh. Note the
+numbers below pick up where the theorems left off.
+
+\begin{lemma}
+A lemma sharing the theorem counter numbers in the same sequence, so this is Lemma 3
+rather than Lemma 1. If $f$ is differentiable on $(a, b)$ and continuous on $[a, b]$,
+then $f$ attains a maximum on $[a, b]$.
+\end{lemma}
+
+\begin{corollary}
+A corollary, also sharing that counter, follows as Corollary 4. Hence between any two
+distinct reals there lies a rational number.
+\end{corollary}
+
+\begin{theorem}
+And a further theorem advances the shared sequence once more, to Theorem 5.
+\end{theorem}
+
+\section{Optional notes}
+
+A note in brackets after \texttt{\\begin} is shown in parentheses in the head, giving
+the theorem a name. The body should start on the line after \texttt{\\begin} so that a
+normal interword space follows the run-in head.
 
 \begin{theorem}[Pythagoras]
 For a right triangle with legs $a$, $b$ and hypotenuse $c$, the squares of the legs
 sum to the square of the hypotenuse: $a^2 + b^2 = c^2$.
 \end{theorem}
 
-\begin{lemma}
-A lemma defined with a shared counter numbers in the same sequence as the theorems,
-so this is Lemma 2 rather than Lemma 1.
+\begin{lemma}[Schwarz inequality]
+For vectors $u$ and $v$ in an inner-product space,
+$\langle u, v \rangle^2 \le \langle u, u \rangle \, \langle v, v \rangle$, with
+equality exactly when $u$ and $v$ are linearly dependent.
 \end{lemma}
-
-\begin{theorem}
-A second theorem advances that shared counter again, becoming Theorem 3.
-\end{theorem}
-
-\begin{corollary}
-A corollary runs on its own independent counter, so it starts again at 1.
-\end{corollary}
-
-\begin{proof}
-The statement follows immediately from the definitions, and the end-of-proof box is
-set flush right on the last line by \texttt{\\qed}. \qed
-\end{proof}
 
 \section{Numbering within a section}
 
+Environments declared with a trailing \texttt{[section]} reset whenever the section
+counter advances and print the section number as a prefix. So the items below are
+numbered 4.1, 4.2, and so on, the leading 4 being the number of this section.
+
 \begin{definition}[Continuity]
 A function $f$ is continuous at a point $x_0$ when small changes in $x$ near $x_0$
-produce arbitrarily small changes in $f(x)$. Definitions are numbered within the
-section, so this is 2.1.
+produce arbitrarily small changes in $f(x)$. This is Definition 4.1.
 \end{definition}
 
-\begin{definition}
-The second definition in this section numbers as 2.2, its counter having been reset
-when the section counter advanced.
+\begin{definition}[Limit]
+The limit $\lim_{x \to x_0} f(x) = L$ means that $f(x)$ can be made as close to $L$
+as desired by taking $x$ sufficiently close to $x_0$. This numbers as Definition 4.2.
 \end{definition}
+
+\begin{example}
+The function $f(x) = x^2$ is continuous everywhere. Because \texttt{example} also
+numbers within the section but on its OWN counter, it begins at 4.1 independently of
+the definitions above.
+\end{example}
+
+\section{Proofs and the QED mark}
+
+The \texttt{proof} environment sets an italic run-in ``Proof.'' head with an upright
+body. Placing \texttt{\\qed} at the end sets the end-of-proof box flush right on
+the last line. Definitions in this section continue the within-section numbering, now
+prefixed with 5.
+
+\begin{definition}[Even integer]
+An integer $n$ is even when $n = 2k$ for some integer $k$. This is Definition 5.1,
+the section prefix having advanced.
+\end{definition}
+
+\begin{theorem}
+The sum of two even integers is even.
+\end{theorem}
+
+\begin{proof}
+Let $m = 2j$ and $n = 2k$ for integers $j$ and $k$. Then $m + n = 2j + 2k = 2(j + k)$,
+which is twice the integer $j + k$, and is therefore even. \qed
+\end{proof}
+
+\begin{theorem}[Irrationality of \texttt{root 2}]
+There is no rational number whose square is $2$.
+\end{theorem}
+
+\begin{proof}
+Suppose $\sqrt{2} = p / q$ in lowest terms. Then $p^2 = 2 q^2$, so $p$ is even, say
+$p = 2r$; then $2 q^2 = 4 r^2$, so $q$ is even too. But then $p$ and $q$ share the
+factor $2$, contradicting lowest terms. \qed
+\end{proof}
+
+\section{Independent counters revisited}
+
+Finally, the \texttt{remark} environment was given neither a shared counter nor a
+within-section parent, so it runs entirely on its own, unaffected by the theorems,
+definitions, and examples above.
 
 \begin{remark}
-Remarks keep their own counter, independent of the theorems and definitions above.
+Remarks number independently of every other environment, so this is Remark 1.
+\end{remark}
+
+\begin{remark}
+And the next remark is simply Remark 2.
 \end{remark}
