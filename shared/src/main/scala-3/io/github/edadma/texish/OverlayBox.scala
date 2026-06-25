@@ -10,7 +10,7 @@ package io.github.edadma.texish
   * margin (zero for a left figure, the remaining width for a right one) and `dy` drops it from the baseline anchor
   * down over the band it occupies.
   */
-class OverlayBox(content: Box, dx: Double, dy: Double) extends ContentBox:
+class OverlayBox(val content: Box, dx: Double, dy: Double) extends ContentBox:
   val ascent: Double   = 0.0
   val descent: Double  = 0.0
   override val width: Double = 0.0

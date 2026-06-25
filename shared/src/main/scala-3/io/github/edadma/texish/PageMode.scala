@@ -184,7 +184,8 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     // pageno is still the shipping page's number at this point (DocumentMode advances it after the add). The walk
     // descends through the page's boxes: a label or \addcontentsline inside a float or footnote (e.g. the
     // \caption/\label of a figure, which ride a \centerline hbox inside the float's vbox rather than migrating to
-    // the page's vertical list) ships on this page too and must learn the same folio.
+    // the page's vertical list) ships on this page too and must learn the same folio. The same holds for a wrapped
+    // figure's caption, which rides inside the OverlayBox the wrap anchors at this point.
     val folio = t.getNumber("pageno").toInt
 
     def resolve(box: Box): Unit = box match
@@ -192,6 +193,7 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
       case e: TocMarkBox  => t.references.recordList(e.list, e.level, e.number, e.title, folio)
       case f: FloatBox    => resolve(f.content)
       case ins: InsertBox => resolve(ins.content)
+      case o: OverlayBox  => resolve(o.content)
       case v: VerticalBox => v.boxes.foreach(resolve)
       case h: HBox        => h.boxes.foreach(resolve)
       case _              =>
