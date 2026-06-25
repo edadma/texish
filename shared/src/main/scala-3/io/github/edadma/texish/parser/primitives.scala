@@ -299,6 +299,69 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive("midinsert", floatPrimitive("ht"))
   proc.registerPrimitive("botinsert", floatPrimitive("b"))
 
+  // The side argument of a cutout primitive: anything starting with 'r' is the right margin, otherwise the left.
+  def readSide(proc: Processor, pos: CharReader): Side =
+    if Value.display(evalArg(proc, pos)).trim.toLowerCase.startsWith("r") then Side.Right else Side.Left
+
+  // The galley a between-paragraph cutout attaches to. Cutouts only make sense in vertical mode, where the current
+  // list is the vertical galley; inside a paragraph there is no fixed vertical position to anchor one to.
+  def cutoutGalley(name: String, pos: CharReader): VerticalMode =
+    t.mode match
+      case v: VerticalMode => v
+      case _ =>
+        handler.error(s"\\$name must be used between paragraphs", pos)
+
+  // cutout - two dimensions and a side: reserve a bare rectangle of the given width and height at the current point
+  // in the galley, hugging the left or right margin, that the following text flows around. The low-level geometry
+  // primitive — it places no content; \wrapbox places a figure and sizes a cutout to it.
+  proc.registerPrimitive(
+    "cutout",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val width  = Value.number(evalArg(proc, pos)).getOrElse(0.0)
+        val height = Value.number(evalArg(proc, pos)).getOrElse(0.0)
+        val side   = readSide(proc, pos)
+        val g      = cutoutGalley("cutout", pos)
+        val yTop   = g.naturalHeight
+        g.cutouts += Cutout(yTop, yTop + height, side, width)
+    },
+  )
+
+  // wrapbox - a side, a width, then a body: typeset the body into its own box of that width, anchor it against the
+  // chosen margin at the current point, and register a cutout the body's size (plus \wrapsep gutter) so the following
+  // text wraps beside it. The box overlays the galley with no height of its own (see OverlayBox), so it sits across
+  // the lines the cutout narrows rather than pushing them down.
+  proc.registerPrimitive(
+    "wrapbox",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val s     = readSide(proc, pos)
+        val width = Value.number(evalArg(proc, pos)).getOrElse(0.0)
+        val body  = proc.readArgument(pos)
+
+        // typeset the body now, into its own vertical box set to the figure width; the scope brackets the width
+        // change and any font or spacing changes the body makes
+        t.enter()
+        t.vbox()
+        if width > 0 then t.set("hsize", width)
+        proc.processTokenList(body)
+        t.paragraph()
+
+        val content = t.mode.exit
+
+        t.exit()
+
+        if content ne null then
+          val g      = cutoutGalley("wrapbox", pos)
+          val gutter = t.getNumber("wrapsep")
+          val hsize  = t.getNumber("hsize")
+          val yTop   = g.naturalHeight
+          val dx     = if s == Side.Right then hsize - content.width else 0.0
+          g.cutouts += Cutout(yTop, yTop + content.height, s, content.width + gutter)
+          t.add(new OverlayBox(content, dx, content.ascent))
+    },
+  )
+
   // penalty - 1 numeric arg: how undesirable a page break is here (10000 forbids, -10000 forces)
   proc.registerPrimitive(
     "penalty",

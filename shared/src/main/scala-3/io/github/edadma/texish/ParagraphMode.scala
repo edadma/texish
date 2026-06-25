@@ -11,6 +11,17 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     * paragraph opened by \noindent / \indent and followed by a space starts flush rather than one space in. */
   def hasContent: Boolean = boxes.exists(!_.isSpace)
 
+  // Where this paragraph sits in the galley, snapshotted when it is broken: `yStart` is the galley height it opens
+  // at and `bls` the baseline-to-baseline distance, so line n occupies the vertical band [yStart+n*bls, +bls]. That
+  // band is what the active cutouts are queried against, mapping a figure's vertical extent onto the lines it narrows.
+  private def galley: VerticalMode = t.modeStack(1).asInstanceOf[VerticalMode]
+  private var yStart = 0.0
+  private var bls    = 0.0
+
+  /** The (left, right) inset that the galley's figures impose on line `n` of this paragraph. */
+  private def cut(n: Int): (Double, Double) =
+    galley.insetsAt(yStart + n * bls, yStart + (n + 1) * bls)
+
   override def done(): Unit =
     // An empty paragraph contributes nothing and leaves the surrounding state untouched: it sets no lines and,
     // crucially, does not reset \indent / \hangindent. This is what makes \noindent stick across a paragraph
@@ -19,8 +30,14 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     if boxes.nonEmpty then
       val hsize = t.getNumber("hsize")
 
+      // Fix this paragraph's place in the galley so the line breaker and the line setter agree on which lines a
+      // figure narrows. The snapshot is taken before any line is contributed, so it is the height the paragraph
+      // opens at; the figures take their room out of the per-line measure through `extraInset`.
+      yStart = galley.naturalHeight
+      bls = t.getGlue("baselineskip").naturalSize
+
       // Try Knuth-Plass optimal line breaking first
-      KnuthPlass.breakParagraph(boxes.toSeq, hsize, t) match
+      KnuthPlass.breakParagraph(boxes.toSeq, hsize, t, n => { val (l, r) = cut(n); l + r }) match
         case Some(lines) if lines.nonEmpty =>
           buildLinesFromOptimal(lines, hsize)
         case _ =>
@@ -36,10 +53,11 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     pop
 
   /** The left and right margin glue for the line whose 0-based number is `n`, from `\leftskip` /
-    * `\rightskip` and a `\hangindent` selected by `\hangafter`. The box builder still sets the whole
-    * line to `hsize`, so these insets push the justified text into the same narrowed measure the
-    * breaker chose its breaks against. A positive `\hangindent` indents on the left, a negative one
-    * on the right. */
+    * `\rightskip`, a `\hangindent` selected by `\hangafter`, and the inset of any figure the line
+    * flows around. The box builder still sets the whole line to `hsize`, so these insets push the
+    * justified text into the same narrowed measure the breaker chose its breaks against. A positive
+    * `\hangindent` indents on the left, a negative one on the right; a left figure adds to the left
+    * margin (text moves right past it), a right figure to the right. */
   private def lineMargins(n: Int): (Glue, Glue) =
     val leftskip   = t.getGlue("leftskip")
     val rightskip  = t.getGlue("rightskip")
@@ -47,8 +65,9 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     val hangafter  = t.getNumber("hangafter").toInt
     val hung       = if hangafter >= 0 then n >= hangafter else n < -hangafter
     val hang       = if hangindent != 0 && hung then hangindent else 0.0
-    val left       = if hang > 0 then leftskip + hang else leftskip
-    val right      = if hang < 0 then rightskip + -hang else rightskip
+    val (cutL, cutR) = cut(n)
+    val left       = if hang > 0 then leftskip + hang + cutL else leftskip + cutL
+    val right      = if hang < 0 then rightskip + -hang + cutR else rightskip + cutR
     (left, right)
 
   /** The page-break penalty between two consecutive lines of a paragraph: interlinepenalty everywhere, plus

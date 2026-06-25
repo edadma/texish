@@ -56,8 +56,15 @@ object KnuthPlass:
     else if r < 1.0 then LooseFit
     else VeryLoose
 
-  // Returns lines as sequences of boxes, ready to be added to HBoxBuilder
-  def breakParagraph(boxes: Seq[Box], hsize: Double, t: Typesetter): Option[Seq[Seq[Box]]] =
+  // Returns lines as sequences of boxes, ready to be added to HBoxBuilder. `extraInset(n)` is any further narrowing
+  // of line n beyond the margins and hanging indent — the room taken by the figures the line flows around (see
+  // Cutout). It defaults to nothing, so a paragraph with no cutouts breaks exactly as before.
+  def breakParagraph(
+      boxes: Seq[Box],
+      hsize: Double,
+      t: Typesetter,
+      extraInset: Int => Double = _ => 0.0,
+  ): Option[Seq[Seq[Box]]] =
     if boxes.isEmpty then return Some(Seq.empty)
 
     val tolerance        = t.getNumber("tolerance")
@@ -80,7 +87,7 @@ object KnuthPlass:
     val marginShr  = leftskip.shrink + rightskip.shrink
     def hung(n: Int): Boolean = if hangafter >= 0 then n >= hangafter else n < -hangafter
     def measure(n: Int): Double =
-      hsize - marginNat - (if hangindent != 0 && hung(n) then math.abs(hangindent) else 0.0)
+      hsize - marginNat - (if hangindent != 0 && hung(n) then math.abs(hangindent) else 0.0) - extraInset(n)
 
     // Convert boxes to items, expanding hyphenation points
     val items = buildItems(boxes, hyphenpenalty, t.hyphenationLanguage)
