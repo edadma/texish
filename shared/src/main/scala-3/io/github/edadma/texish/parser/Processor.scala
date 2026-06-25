@@ -134,8 +134,8 @@ class Processor(val handler: Handler):
   // text — the same mechanism as the escapes above — so any document can type them, not only ones that
   // \use{document}: a poster, a chord chart or a music score wants an em-dash or a degree sign without pulling in
   // article-class title and sectioning machinery. A \def of the same name still overrides, as for any primitive.
-  registerPrimitive("dots", LiteralPrimitive("…"))
-  registerPrimitive("ldots", LiteralPrimitive("…"))
+  // (\dots / \ldots are mode-sensitive — a low ellipsis in text, dot glyphs in math — so they are registered with
+  // the typesetting primitives, which know the mode, not here.)
   registerPrimitive("S", LiteralPrimitive("§"))
   registerPrimitive("P", LiteralPrimitive("¶"))
   registerPrimitive("dag", LiteralPrimitive("†"))

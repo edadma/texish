@@ -111,8 +111,8 @@ $$\sin^2\theta + \cos^2\theta = 1
   \Pr(A \cup B) \le \Pr(A) + \Pr(B).$$
 
 When a function has no built-in name, \texttt{\\operatorname} makes one — the run
-is kept roman and given the spacing of an operator, with subscripts dropping
-beneath it in a display:
+is kept roman and given the spacing of an operator, with its scripts set to the
+side like the log-like \texttt{\\sin} and \texttt{\\arccos}, not stacked beneath:
 
 $$\operatorname{argmax}_{x} f(x)
   \qquad

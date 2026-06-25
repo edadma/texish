@@ -25,6 +25,20 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))
   proc.registerPrimitive("hss", SimplePrimitive(() => t.add(InfGlue)))
 
+  // \dots / \ldots — a low ellipsis. In text it is the … glyph. The math font carries no … glyph (unlike the
+  // centred \cdots, which keeps its own glyph), so in math the low dots are built from three period glyphs spaced
+  // a little apart and set as one inner atom, so the run takes an ellipsis's inter-atom spacing.
+  val ellipsisPrimitive: Primitive = new Primitive:
+    def execute(proc: Processor, pos: CharReader): Unit =
+      t.mode match
+        case m: MathMode =>
+          def dot = m.mathFont.glyphBox('.'.toInt)
+          def gap = HSpaceBox(m.mathFont.size * 2.0 / 18.0)
+          m.addNode(MathAtom(MathClass.Inner, HBox(Vector(dot, gap, dot, gap, dot))))
+        case _ => handler.text("…")
+  proc.registerPrimitive("dots", ellipsisPrimitive)
+  proc.registerPrimitive("ldots", ellipsisPrimitive)
+
   // The vertical glue commands end an open paragraph first, as in TeX: \vfill issued mid-paragraph would
   // otherwise add its glue to the paragraph itself, where it sets as horizontal space inside the last line and
   // the vertical list never sees it.

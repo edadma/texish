@@ -396,7 +396,8 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
   // operatorname - 1 body arg: a custom upright multi-letter operator, as \operatorname{argmax} sets argmax in
   // roman like the built-in \sin or \log. Math-mode only; the argument's letters are set upright through the
   // math font (not italicised as variables would be) into a single Op-class atom, so the name gets the
-  // inter-atom spacing of an operator.
+  // inter-atom spacing of an operator. Its scripts are set to the side, like the log-like \sin and \arccos, not
+  // stacked above and below — \operatorname is LaTeX's \mathop…\nolimits.
   proc.registerPrimitive(
     "operatorname",
     new Primitive {
@@ -405,7 +406,7 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
           case parent: MathMode =>
             val text = stripOuterBraces(proc.readArgument(pos)).collect { case Token.Text(s, _) => s }.mkString
             val glyphs = text.iterator.filterNot(_.isWhitespace).map(ch => parent.mathFont.glyphBox(ch.toInt)).toVector
-            parent.addNode(MathAtom(MathClass.Op, HBox(glyphs)))
+            parent.addNode(MathAtom(MathClass.Op, HBox(glyphs), limits = Some(false)))
           case _ => handler.error("\\operatorname is only allowed in math mode", pos)
     },
   )

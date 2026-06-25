@@ -215,14 +215,19 @@ object MathSymbols:
     "vdots" -> (0x22EE, Inner), "ddots" -> (0x22F1, Inner),
   )
 
-  // Multi-letter operator names set upright (\sin, \log, …). They are Op-class atoms whose nucleus is a
-  // little row of upright Latin glyphs.
-  private val operatorNames: Set[String] = Set(
+  // Multi-letter operator names set upright (\sin, \log, …). They are Op-class atoms whose nucleus is a little
+  // row of upright Latin glyphs. The log-like functions keep their scripts to the side even in a display, so
+  // \sin^2 x sets the 2 as an ordinary superscript; the limit-like operators stack their scripts above and
+  // below in a display, so \lim_{n\to\infty} drops its subscript underneath.
+  private val nolimitsOperators: Set[String] = Set(
     "sin", "cos", "tan", "cot", "sec", "csc",
     "sinh", "cosh", "tanh", "coth",
-    "log", "ln", "lg", "exp", "lim", "limsup", "liminf",
-    "max", "min", "sup", "inf", "det", "gcd", "deg", "arg", "dim", "ker", "hom",
+    "log", "ln", "lg", "exp", "deg", "arg", "dim", "ker", "hom",
   )
+  private val limitsOperators: Set[String] = Set(
+    "lim", "limsup", "liminf", "max", "min", "sup", "inf", "det", "gcd",
+  )
+  private val operatorNames: Set[String] = nolimitsOperators ++ limitsOperators
 
   // Explicit math spaces, in math units (18mu = 1em). \! is a negative thin space.
   private val spacesMu: Map[String, Double] = Map(
@@ -242,7 +247,13 @@ object MathSymbols:
     * operator name, or an explicit space. */
   def commandNode(mf: MathFont, name: String): Option[MathNode] =
     symbols.get(name).map((cp, cls) => glyphAtom(mf, cls, cp))
-      .orElse(if operatorNames(name) then Some(MathAtom(Op, operatorBox(mf, name))) else None)
+      .orElse(
+        if operatorNames(name) then
+          // a log-like operator fixes its scripts to the side (limits = false); a limit-like one leaves the
+          // default, so a display stacks them above and below
+          Some(MathAtom(Op, operatorBox(mf, name), limits = if nolimitsOperators(name) then Some(false) else None))
+        else None,
+      )
       .orElse(spacesMu.get(name).map(mu => MathSpace(Glue(mu / 18.0 * mf.size))))
 
   /** A single-glyph atom carrying that glyph's italic correction, so a superscript can be set out past a

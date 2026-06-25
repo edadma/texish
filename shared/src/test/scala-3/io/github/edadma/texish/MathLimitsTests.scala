@@ -95,6 +95,29 @@ class MathLimitsTests extends AnyFreeSpec with Matchers:
     m.result.asInstanceOf[HBox].boxes.head shouldBe a[MathScriptBox]
   }
 
+  "in display style a log-like operator keeps its scripts to the side" in {
+    val t  = new HeadlessTypesetter
+    val bf = base(t)
+    val m  = new MathMode(t, bf, MathStyle.Display)
+
+    m.addCommand("sin") shouldBe true
+    m.addScript(superscript = true, bf.glyphBox('2'.toInt))
+
+    // \sin^2 sets the 2 as an ordinary trailing superscript, not stacked above the operator
+    m.result.asInstanceOf[HBox].boxes.head shouldBe a[MathScriptBox]
+  }
+
+  "in display style a limit-like operator stacks its scripts" in {
+    val t  = new HeadlessTypesetter
+    val bf = base(t)
+    val m  = new MathMode(t, bf, MathStyle.Display)
+
+    m.addCommand("lim") shouldBe true
+    m.addScript(superscript = false, bf.glyphBox('n'.toInt))
+
+    m.result.asInstanceOf[HBox].boxes.head shouldBe a[LimitsBox]
+  }
+
   "\\nolimits overrides the display default back to side-set scripts" in {
     val t  = new HeadlessTypesetter
     val bf = base(t)

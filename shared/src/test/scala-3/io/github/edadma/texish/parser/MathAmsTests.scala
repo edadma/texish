@@ -190,6 +190,12 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
     forcedOrd shouldBe (ord +- 0.001)
   }
 
+  "the math low ellipsis sets visible dots, not the missing … glyph" in {
+    // the math font carries no … glyph, so \ldots is built from three period glyphs; were it the bare … glyph it
+    // would render blank and $1\ldots2$ would be no wider than $12$
+    mathWidth("$1\\ldots 2$") should be > (mathWidth("$12$") + 10.0)
+  }
+
   // Tokenize with `&` active (as the processor does), so a matrix body splits on the column separator.
   private def tokenize(s: String): Vector[Token] =
     val tz   = Tokenizer(s, Set('~', '&'))
