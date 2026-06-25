@@ -20,7 +20,7 @@ Save this as `hello.texish`:
 
 \section{Introduction}
 Welcome to texish. This paragraph is set in Latin Modern Roman and broken into
-lines the way \TeX\ does. Input conventions give you proper typography for free:
+lines the way \TeX does. Input conventions give you proper typography for free:
 ``curly quotes'', an en--dash, an em---dash, and an ellipsis\dots
 
 \section{A little mathematics}
