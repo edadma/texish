@@ -43,7 +43,7 @@ The document is typeset twice over a shared label table, so forward references r
 | `\textsub{…}` `\textsup{…}` | text subscript / superscript |
 | `\color{name}` `\textcolor{name}{…}` | pen colour (CSS name or `#RRGGBB`) |
 | `\href{url}{text}` `\url{url}` | clickable links (real PDF annotations) |
-| `\TeX` `\LaTeX` `\TeXish` | the logos |
+| `\TeX` `\LaTeX` `\TeXish` | the logos *(`\use{document}`)* |
 | `` ``…'' `` `--` `---` `...` `~` | quotes, dashes, ellipsis, tie |
 | `\$` | a literal dollar sign |
 
@@ -167,7 +167,8 @@ palette colour, and a label adds a legend entry.
 | `\map{…}` `\mapset` `\mapget` `\maphas` | keyed maps |
 | `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
 | `\oklch{L}{C}{h}` `\oklchof{color}` | build / read a colour in the Oklch space (lightness, chroma, hue) — derive shades by varying L |
-| `\newcounter` `\stepcounter` `\value` `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph` | counters and number formatting |
+| `\newcounter` `\setcounter` `\addtocounter` `\stepcounter` `\value` `\counterwithin` | named counters; `\counterwithin` resets a child when its parent steps |
+| `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph`/`\fnsymbol` | format a number as digits / roman / letters / footnote symbols |
 | `\use{name}` `\include{path}` | load a format / include raw input |
 
 ## Railroad diagrams *(`\use{railroad}`)*

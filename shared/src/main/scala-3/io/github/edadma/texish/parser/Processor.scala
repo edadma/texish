@@ -37,6 +37,13 @@ class Processor(val handler: Handler):
   // file is a no-op — dependency diamonds load once.
   private val loadedModules = mutable.Set[String]()
 
+  // Named counters (LaTeX-style \newcounter/\stepcounter/\value, …). Counters are global by definition — TeX never
+  // restores them at group exit — so they live in plain maps here rather than the scoped variable store.
+  // counterValues maps a counter name to its current integer; counterParent maps a child counter to the parent
+  // whose \stepcounter resets it (LaTeX's reset lists), applied recursively by \stepcounter.
+  private[parser] val counterValues = mutable.Map[String, Int]()
+  private[parser] val counterParent = mutable.Map[String, String]()
+
   // Register default primitives
   registerPrimitive("def", DefPrimitive)
   registerPrimitive("gdef", GdefPrimitive)
@@ -117,6 +124,15 @@ class Processor(val handler: Handler):
   registerPrimitive("alph", AlphPrimitive)
   registerPrimitive("Alph", AlphUpPrimitive)
   registerPrimitive("fnsymbol", FnSymbolPrimitive)
+
+  // Named counters (LaTeX's \newcounter family). The formatters above turn a counter's value into a label; these
+  // hold and advance the value. \value reads a counter as a number, so \arabic{\value{section}} composes the two.
+  registerPrimitive("newcounter", NewCounterPrimitive)
+  registerPrimitive("setcounter", SetCounterPrimitive)
+  registerPrimitive("addtocounter", AddToCounterPrimitive)
+  registerPrimitive("value", ValuePrimitive)
+  registerPrimitive("counterwithin", CounterWithinPrimitive)
+  registerPrimitive("stepcounter", StepCounterPrimitive)
 
   // Escape sequences for special characters
   registerPrimitive("{", LiteralPrimitive("{"))

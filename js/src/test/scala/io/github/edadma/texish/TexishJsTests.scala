@@ -56,7 +56,7 @@ class TexishJsTests extends AnyFreeSpec with Matchers:
 
   "a document using an embedded package resolves it with no filesystem" in {
     // \use{document} reads no file on disk here — its source is embedded in the build and resolved as a
-    // fallback. It in turn pulls in the logos package, so the whole module graph must come from the embed.
+    // fallback. The logos (\TeX et al.) are part of document, so they too must come from the embed.
     val src =
       """\use{document}
         |\section{Hello}
@@ -68,7 +68,7 @@ class TexishJsTests extends AnyFreeSpec with Matchers:
   }
 
   "the standard packages are all embedded" in {
-    for name <- Seq("document", "book", "logos", "counters", "theorem") do
+    for name <- Seq("document", "book", "theorem") do
       EmbeddedPackages.sources.keySet should contain(name)
   }
 

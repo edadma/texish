@@ -17,8 +17,6 @@
 // is shown in parentheses in the head. The body text should start on the line after
 // \begin so a normal interword space follows the head.
 
-\use{counters}
-
 // The run-in head is bold; the body is set in italic (the plain theorem style). The
 // body shape reverts at \end, which closes the environment's group. The counter is
 // the environment's own (created here) unless another is shared in; when a parent

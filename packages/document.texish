@@ -10,11 +10,6 @@
 // roman title, bold headings on a tight type scale, and a centred page number at
 // the foot of every page.
 
-// ---- Counters ------------------------------------------------------------------
-// Section and float numbering use the LaTeX-style named counters from the counters
-// package (\newcounter / \stepcounter / \counterwithin / \value).
-\use{counters}
-
 // ---- Body font and leading ----------------------------------------------------
 // A 10pt body on a 12pt baseline, as in a default `article`. The heading and
 // title sizes below follow the LaTeX magnification steps from this base:
@@ -98,8 +93,15 @@
 // not it loads this package; they are not redefined here.
 
 // ---- TeX-family logos ----------------------------------------------------------
-// The classic logos come from the logos package.
-\use{logos}
+// The TeX-family wordmarks, set from the engine's box primitives. \LaTeX rides a
+// small capital A in a \vbox whose height is a measured T, with \vss filling
+// beneath, so its apex sits at the cap height (Lamport's own construction). \TeXish
+// is this engine's mark — \TeX with a slanted "ish" raised against the X. The small
+// letters and the kerns are all relative to the current size (\fontscale and em/ex
+// units), so every logo scales cleanly from a footnote to a title.
+\def TeX {T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}
+\def LaTeX {L\kern-.36em\setbox latexAbox \hbox{T}\vbox to:\ht latexAbox {\hbox{\fontscale{.7}{regular}A}\vss}\kern-.15em\TeX}
+\def TeXish {\TeX\kern-.14em\raise.22em\hbox{\fontscale{.7}{slanted}ish}}
 
 // ---- Title block ---------------------------------------------------------------
 // \title / \author / \date record their argument (markup preserved) in a macro;

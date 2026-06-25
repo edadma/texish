@@ -19,7 +19,6 @@
 
 // ---- Counters ------------------------------------------------------------------
 // Figures and tables count independently, each on its own LaTeX-style named counter.
-\use{counters}//
 \newcounter{figure}//
 \newcounter{table}//
 

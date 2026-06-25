@@ -200,7 +200,15 @@ the pound sign~\pounds, a bullet~\textbullet, an em dash~\textemdash, an en
 dash~\textendash, and the degree sign~\textdegree.
 
 The classic logos come for free: \TeX, \LaTeX, and \TeXish{} — the engine that sets
-this document.
+this document. Each is built from the engine's box, kern and raise primitives, with
+its small letters sized relative to the surrounding text, so the careful kerning
+holds together at any size:
+
+\noindent{\large \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\LARGE \TeX\quad \LaTeX\quad \TeXish}
+
+\noindent{\Huge \TeX\quad \LaTeX\quad \TeXish}
 
 \section {Floats: figures and tables}
 

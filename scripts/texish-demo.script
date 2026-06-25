@@ -290,6 +290,46 @@ different light theme:
     print(f"hello, {name}")   # an f-string
     return len(name)}
 
+\section {Named counters}
+
+\label{sec:counters}Every numbered thing in a document — a section, a figure, a
+footnote — rides on a \emph{counter}: a named integer the engine holds and advances
+for you. \verb|\newcounter| declares one (starting at zero), \verb|\stepcounter|
+adds one, \verb|\setcounter| and \verb|\addtocounter| assign and adjust it, and
+\verb|\value| reads it back so a formatter can render it. The six formatters turn
+the same value into different text:
+
+\newcounter{demo}
+\setcounter{demo}{4}
+\begin{quote}
+\noindent\verb|\arabic| \arabic{\value{demo}}, \verb|\roman| \roman{\value{demo}},
+\verb|\Roman| \Roman{\value{demo}}, \verb|\alph| \alph{\value{demo}}, \verb|\Alph|
+\Alph{\value{demo}}, \verb|\fnsymbol| \fnsymbol{\value{demo}}.
+\end{quote}
+
+The feature that makes counters more than variables is \verb|\counterwithin|, which
+binds a child counter under a parent so that stepping the parent resets the child to
+zero — LaTeX's reset list, and exactly what makes a figure number restart in each
+new chapter. Here \verb|fig| is bound under \verb|chap|, and the figure number falls
+back to one each time the chapter advances:
+
+\newcounter{chap}
+\newcounter{fig}
+\counterwithin{fig}{chap}
+\setcounter{chap}{0}
+\begin{quote}
+\noindent
+\stepcounter{chap}\stepcounter{fig}\arabic{\value{chap}}.\arabic{\value{fig}}\quad
+\stepcounter{fig}\arabic{\value{chap}}.\arabic{\value{fig}}\quad
+\stepcounter{fig}\arabic{\value{chap}}.\arabic{\value{fig}}\quad
+\stepcounter{chap}\stepcounter{fig}\arabic{\value{chap}}.\arabic{\value{fig}}\quad
+\stepcounter{fig}\arabic{\value{chap}}.\arabic{\value{fig}}
+\end{quote}
+
+\noindent The reset is recursive, so a three-level chain (part, chapter, section)
+cascades from a single step of the outermost counter — the same machinery the
+numbered headings in this very document run on.
+
 \section {Cross-references and the table of contents}
 
 \label{sec:refs}This document is typeset more than once. On the first pass the

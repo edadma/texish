@@ -31,8 +31,6 @@
 // variables plotOx/plotOy (the data area's bottom-left corner) and plotSx/plotSy
 // (device points per data unit). \px and \py apply it.
 
-\use{logos}
-
 // ---- Configuration (override with \set after \use, before \plot) --------------
 // Sizes are in points (72 per inch). The data *area* is plotareaw × plotareah; the
 // picture grows by the margins around it.
