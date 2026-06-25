@@ -330,18 +330,38 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         // position the same way a figure's is from its overlay — keeping it aligned across a page break
         val marker = new CutoutMarker
         t.add(marker)
-        g.cutouts += Cutout(marker, height, side, width)
+        g.cutouts += Cutout(marker, height, side, Cutout.rect(width))
     },
   )
 
-  // wrapbox - a side, a width, then a body: typeset the body into its own box of that width, anchor it against the
-  // chosen margin at the current point, and register a cutout the body's size (plus \wrapsep gutter) so the following
-  // text wraps beside it. The box overlays the galley with no height of its own (see OverlayBox), so it sits across
-  // the lines the cutout narrows rather than pushing them down.
+  // cutshape - a named silhouette, then a width, height and side: like \cutout but the text follows the shape's
+  // outline rather than its bounding box. A bare geometry primitive with no figure of its own; \wrapshape both
+  // places a figure and gives it a shaped cutout. The bare cutout keeps no gutter — the width given is the inset.
   proc.registerPrimitive(
-    "wrapbox",
+    "cutshape",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val shape  = CutoutShape.named(Value.display(evalArg(proc, pos)))
+        val width  = Value.number(evalArg(proc, pos)).getOrElse(0.0)
+        val height = Value.number(evalArg(proc, pos)).getOrElse(0.0)
+        val side   = readSide(proc, pos)
+        val g      = cutoutGalley("cutshape", pos)
+        val marker = new CutoutMarker
+        t.add(marker)
+        g.cutouts += Cutout(marker, height, side, CutoutShape.profile(shape, width, height, 0.0))
+    },
+  )
+
+  // A wrapped figure: read a side, a width and a body, typeset the body into its own box of that width, anchor it
+  // against the chosen margin at the current point, and register a cutout of the given shape sized to the body (plus
+  // the \wrapsep gutter) so the following text wraps beside it. The box overlays the galley with no height of its own
+  // (see OverlayBox), so it sits across the lines the cutout narrows rather than pushing them down. \wrapbox reads no
+  // shape and is always a rectangle; \wrapshape reads a leading shape name so the text can follow the figure's
+  // silhouette instead of its bounding box.
+  def wrapPrimitive(name: String, readShape: (Processor, CharReader) => CutoutShape): Primitive =
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val shape = readShape(proc, pos)
         val s     = readSide(proc, pos)
         val width = Value.number(evalArg(proc, pos)).getOrElse(0.0)
         val body  = proc.readArgument(pos)
@@ -364,7 +384,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         t.indentParagraph = savedIndent
 
         if content ne null then
-          val g       = cutoutGalley("wrapbox", pos)
+          val g       = cutoutGalley(name, pos)
           val gutter  = t.getNumber("wrapsep")
           val hsize   = t.getNumber("hsize")
           val dx      = if s == Side.Right then hsize - content.width else 0.0
@@ -374,14 +394,19 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
           // anchor the cutout to the overlay, so the band the text wraps into tracks wherever the figure actually
           // sits — after any topskip above it, and after a page break carries it to the next page — rather than a
           // fixed coordinate that would drift from the figure and narrow the wrong lines
-          g.cutouts += Cutout(overlay, content.height, s, content.width + gutter)
+          g.cutouts += Cutout(overlay, content.height, s, CutoutShape.profile(shape, content.width, content.height, gutter))
 
           // forbid a page break between the figure and the text that wraps it: with the inhibit penalty here, the
           // glue that follows the overlay has a penalty for its predecessor and so is no longer a legal break, the
           // way ParagraphMode.wrapPenalty forbids breaks between the wrapped lines. The only break left is above
           // the figure, so a wrap that will not fit moves to the next page whole rather than stranding the figure.
           t.add(Penalty(Penalty.Inhibit))
-    },
+    }
+
+  proc.registerPrimitive("wrapbox", wrapPrimitive("wrapbox", (_, _) => CutoutShape.Rectangle))
+  proc.registerPrimitive(
+    "wrapshape",
+    wrapPrimitive("wrapshape", (proc, pos) => CutoutShape.named(Value.display(evalArg(proc, pos)))),
   )
 
   // clearwrap - end any text-wrap in progress: pad the galley down past the foot of every active wrapped figure so

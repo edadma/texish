@@ -1,0 +1,61 @@
+// wrap-shape-demo — text that follows a figure's silhouette, not just its bounding box.
+//
+// A wrapped figure narrows the lines beside it by consulting a cutout: a region of the galley the text flows around.
+// Until now that region was a plain rectangle — the figure's full bounding box. \wrapfigure[shape] gives the cutout a
+// profile instead, a depth-to-inset function, so the running text curves in around a disc and back out again, or
+// follows the slope of a wedge. The figure is drawn to match the named silhouette; the engine narrows each line to
+// the widest point the shape reaches across that line's band, so the text hugs the outline without ever crossing it.
+//
+// Captions are left out of the shaped figures on purpose: a shaped cutout treats the whole figure box as that
+// silhouette, and a caption riding low in the box would sit where the shape has tapered toward the margin — where the
+// wrapping text is allowed back in. Keep captions for rectangular wraps; a shaped figure is the picture alone.
+
+\use{document}
+\use{float}
+
+\title {Wrapping text around a shape}
+\author {the float package}
+\maketitle
+
+\section{A disc}
+
+\wrapfigure[ellipse]{r}{1.6in}{
+  \picture width:1.6in height:1.6in {
+    \fill{lightblue}\stroke{black}\linewidth{1pt}\circle{57.6 57.6 57.6}
+  }
+}
+A disc anchored on the right pushes the text away by its full width only at its widest point, across the middle. Near
+the top and the foot of the circle the silhouette curves back toward the margin, and the text follows it in, so the
+column has a rounded bite taken out of its right edge rather than a square one. Lorem ipsum dolor sit amet,
+consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Once the lines clear the bottom of the
+disc they return to the full measure and run flush to the margin again.
+
+\section{A wedge}
+
+\wrapfigure[triangledown]{l}{1.5in}{
+  \picture width:1.5in height:1.5in {
+    \fill{lightgreen}\stroke{black}\linewidth{1pt}\polygon{0 0 0 108 108 108}
+  }
+}
+A right triangle anchored on the left has its vertical leg on the margin and its hypotenuse sloping down to a point at
+the foot. The text to its right follows that slope: the first lines stand well clear of the wide top, and each line
+below steps a little closer to the margin as the figure narrows beneath it. Excepteur sint occaecat cupidatat non
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus
+error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore
+veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit.
+
+\section{The plain rectangle still works}
+
+\wrapfigure{r}{1.5in}{
+  \picture width:1.5in height:1in {
+    \fill{lightyellow}\stroke{black}\linewidth{1pt}\rect{1 1 106 70}
+  }
+  \vskip 4pt
+  \caption{A rectangular wrap, captioned as before.}
+}
+With no shape given, a wrapped figure is the ordinary rectangle, and a caption inside it numbers and wraps within
+the figure column exactly as it always has. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet,
+consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam
+quaerat voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam.

@@ -18,20 +18,29 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   private var yStart = 0.0
   private var bls    = 0.0
 
-  // The cutout bands as resolved at the instant this paragraph is broken — `(top, bottom, side, inset)` each. They
+  // The cutout bands as resolved at the instant this paragraph is broken — `(top, bottom, side, profile)` each. They
   // are snapshotted once, before any line is contributed, and used for every line's measure and break penalty.
   // Snapshotting matters: contributing a line can trigger a page break that shifts the figure's live position, so a
   // band re-resolved per line would narrow inconsistently. The snapshot also fixes the figure relative to this
   // paragraph's lines, and the two travel together under any later page break, so the narrowing stays aligned with
   // the figure wherever the wrap ends up.
-  private var cutBands: Seq[(Double, Double, Side, Double)] = Nil
+  private var cutBands: Seq[(Double, Double, Side, Double => Double)] = Nil
+
+  // The widest inset a shaped cutout imposes anywhere in the depth range `[a, b]` a line spans. A rectangle is
+  // constant, but a curved silhouette bulges within a single line's height, so the profile is sampled across the
+  // band and the maximum taken — at line resolution this keeps text clear of the outline without ever crossing it.
+  private def maxInset(profile: Double => Double, a: Double, b: Double): Double =
+    val steps = 6
+    (0 to steps).iterator.map(i => profile(a + (b - a) * i / steps)).max
 
   /** The (left, right) inset that the galley's figures impose on line `n` of this paragraph. */
   private def cut(n: Int): (Double, Double) =
     val y0 = yStart + n * bls
     val y1 = yStart + (n + 1) * bls
-    cutBands.foldLeft((0.0, 0.0)) { case ((l, r), (top, bottom, side, inset)) =>
+    cutBands.foldLeft((0.0, 0.0)) { case ((l, r), (top, bottom, side, profile)) =>
       if y1 > top && y0 < bottom then
+        // the line's band clipped into the cutout, in depth-below-top coordinates the profile is defined in
+        val inset = maxInset(profile, math.max(y0, top) - top, math.min(y1, bottom) - top)
         side match
           case Side.Left  => (math.max(l, inset), r)
           case Side.Right => (l, math.max(r, inset))
@@ -51,7 +60,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       // opens at; the figures take their room out of the per-line measure through `extraInset`.
       yStart = galley.naturalHeight
       bls = t.getGlue("baselineskip").naturalSize
-      cutBands = galley.cutouts.flatMap(c => galley.cutoutBand(c).map((top, bottom) => (top, bottom, c.side, c.inset))).toSeq
+      cutBands = galley.cutouts.flatMap(c => galley.cutoutBand(c).map((top, bottom) => (top, bottom, c.side, c.profile))).toSeq
 
       // Try Knuth-Plass optimal line breaking first
       KnuthPlass.breakParagraph(boxes.toSeq, hsize, t, n => { val (l, r) = cut(n); l + r }) match

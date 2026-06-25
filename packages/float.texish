@@ -73,16 +73,22 @@
 // A wrapped figure reserves no vertical height — text flows beside it — so a figure taller than its accompanying text
 // would be ridden over by the next full-width block. Sectioning commands clear the wrap automatically; before any
 // other full-width block that must sit below the figure, call the engine's \clearwrap to step past the figure's foot.
-\def wrapfigure side width body {{//
+//
+// An optional leading [shape] makes the text follow the figure's silhouette rather than its bounding box — ellipse,
+// triangleup, triangledown or diamond, with the default rect giving the ordinary rectangular wrap. Draw a figure
+// whose outline matches the shape (a disc for [ellipse], a wedge for [triangledown]) and the running text curves in
+// around it; for a non-rectangular shape the figure box is still anchored at the margin, so leave the silhouette
+// tangent to that edge.
+\def wrapfigure [shape:rect] side width body {{//
 \set captionkind {Figure}//
 \set captioncounter {figure}//
 \set captionlist {lof}//
-\wrapbox{\side}{\width}{\body}//
+\wrapshape{\shape}{\side}{\width}{\body}//
 }}//
 
-\def wraptable side width body {{//
+\def wraptable [shape:rect] side width body {{//
 \set captionkind {Table}//
 \set captioncounter {table}//
 \set captionlist {lot}//
-\wrapbox{\side}{\width}{\body}//
+\wrapshape{\shape}{\side}{\width}{\body}//
 }}//
