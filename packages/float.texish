@@ -67,6 +67,8 @@
 // the following text wraps beside it. The side is l or r and the width is the figure's column width (the text takes
 // the rest, less the \wrapsep gutter). The caption kind/counter/list are chosen exactly as for the edge floats, so a
 // \caption inside the body numbers in the same shared sequence — a wrapped figure and a top figure share one count.
+// Write the caption as a bare \caption so it flows and wraps within the figure's column; do not \centerline it, which
+// would force it onto one line that, if the caption is wider than the figure, spills over the wrapped text beside it.
 \def wrapfigure side width body {{//
 \set captionkind {Figure}//
 \set captioncounter {figure}//
