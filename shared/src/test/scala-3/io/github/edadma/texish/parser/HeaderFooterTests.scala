@@ -121,3 +121,16 @@ class HeaderFooterTests extends AnyFreeSpec with Matchers:
     t.drawn.map(_._1).count(_ == "heading") shouldBe pages
     for i <- 1 to 200 do t.drawn.map(_._1).count(_ == s"word$i") shouldBe 1
   }
+
+  "the folio advances even when a page ships inside a group that later closes" in quietly {
+    val (t, proc) = fixture()
+
+    // a page can ship while a group (here braces, but a list or quote environment is the same) is still open;
+    // the folio advance must be global, or the closing group rolls it back and the next page ships with the
+    // stale number. The first page ships at the \eject inside the braces; the second ships at end of document,
+    // after the braces have closed — its footer must read 2, not a reverted 1.
+    proc.process("\\def footline {\\hfil \\the\\pageno}\n{inside one\n\n\\vfill\\eject inside two}")
+    t.end()
+
+    t.drawn.map(_._1).filter(s => s == "1" || s == "2") shouldBe ArrayBuffer("1", "2")
+  }

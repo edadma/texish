@@ -19,12 +19,15 @@ class DocumentMode(val t: Typesetter) extends Mode:
     // page ships, so shipout-time material (running headers and footers) reads the shipping page's number here,
     // before the advance. Because it is never reassigned from `page`, a document may renumber pages the way plain
     // TeX lets you assign \pageno — e.g. lowercase-roman front matter, then \set pageno {1} to restart the body.
+    // The advance is global (like TeX's \global\advance\count0): a page can ship while an environment group (a
+    // list, a quote) is open, and a plain `set` would write only that group's scope and be rolled back when it
+    // closes — leaving the next page to ship with a stale folio.
     t.get("layout") match
       case Some(Value.Text("zfold")) => handleZFoldLayout(box)
       case _                         => handleSimpleLayout(box)
 
     page += 1
-    t.set("pageno", t.getNumber("pageno").toInt + 1)
+    t.setGlobal("pageno", t.getNumber("pageno").toInt + 1)
 
   // panels share a physical sheet, so running headers/footers (pageDecorator) don't apply to this layout
   def handleZFoldLayout(b: Box): Unit =
