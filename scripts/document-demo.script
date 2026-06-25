@@ -214,19 +214,19 @@ lets it be cross-referenced: this is Figure~\ref{fig:frog}.
 \centerline{\caption{A frog, scaled to a third of the text width.}\label{fig:frog}}
 }
 
-A \texttt{table} float works the same way over its own counter. Here a minipage
-holds a small hand-set table as the float's body:
+A \texttt{table} float works the same way on its own counter: its caption reads
+"Table~1", not "Figure~4", and it files into the list of tables. Its body can be
+any content — the float, the caption and the counter are the document-package
+features; a tabular grid would come from a separate package.
 
 \table[h]{
-\centerline{\begin{minipage}{2.6in}
-\leftline{\textbf{Level}\hfil\textbf{Command}}
-\vskip 2pt
-\leftline{1\hfil\texttt{section}}
-\leftline{2\hfil\texttt{subsection}}
-\leftline{3\hfil\texttt{subsubsection}}
+\centerline{\begin{minipage}{3.2in}
+\textbf{Sectioning summary.} The three numbered levels are \texttt{section},
+\texttt{subsection} and \texttt{subsubsection}, numbered 1, 1.1 and 1.1.1 and
+reset within their parent.
 \end{minipage}}
 \vskip 6pt
-\centerline{\caption{The three numbered sectioning levels.}\label{tab:levels}}
+\centerline{\caption{The numbered sectioning levels.}\label{tab:levels}}
 }
 
 The two captioned floats above are the source for the lists of figures and tables

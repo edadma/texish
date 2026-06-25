@@ -355,14 +355,15 @@
   \def itemmark {}
 } {}
 
-// \item starts one list item. The item text begins at the list's left margin
-// (leftskip), so wrapped continuation lines align under it automatically. The
-// marker is set in a zero-width \llap box that hangs to the left, a labelsep gap
-// before the text, exactly as a LaTeX list label does. An optional [label] overrides
-// the list marker (the description-list form, set bold). The closing \ignorespaces
-// drops the space before the item's text.
+// \item starts one list item, at the list's left margin (leftskip). A bullet or number
+// is a narrow marker, so it is set in a zero-width \llap box that hangs to the left into
+// the indent, a labelsep gap before the text, exactly as a LaTeX list label does. A
+// description term — the optional bold [label] — can be much wider than the indent, so
+// it is set inline at the margin instead (advancing the pen), the definition following
+// after the gap; \llap-ing a wide term would push it out past the page's left margin.
+// The closing \ignorespaces drops the space before the item's text.
 \def item [label:] {
-  \noindent\llap{\if {\label} {\font lmroman 10 bold \label} \else \itemmark \fi\hskip\labelsep}\ignorespaces}
+  \noindent\if {\label} {\font lmroman 10 bold \label}\hskip\labelsep\else\llap{\itemmark\hskip\labelsep}\fi\ignorespaces}
 
 // ---- Floats (figures and tables) ----------------------------------------------
 // \figure / \table detach their body to a page edge (default top) over the engine's
