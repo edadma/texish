@@ -1,0 +1,143 @@
+package io.github.edadma.texish.parser
+
+import io.github.edadma.char_reader.CharReader
+import io.github.edadma.path.Path
+import io.github.edadma.texish.EmbeddedPackages
+
+// ============ FOR LOOP ============
+
+object ForPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    // Syntax: \for\var{sequence-expr}{body}
+    val varName = proc.readControlSeqName(pos)
+    proc.skipSpaces()
+
+    // Evaluate sequence expression
+    val seqValue = proc.evalArgumentExpr(pos)
+
+    // Read body
+    val bodyTokens = proc.readArgument(pos)
+
+    // Get items to iterate
+    val items: Vector[Value] = seqValue match
+      case Value.Seq(items) => items
+      case Value.Text(s) => s.map(c => Value.Text(c.toString)).toVector
+      case Value.Map(entries) => entries.map((k, v) => Value.Map(Map("key" -> Value.Text(k), "value" -> v))).toVector
+      case Value.Nil | Value.Undefined => Vector.empty
+      case _ => Vector(seqValue)
+
+    // Iterate
+    val length = items.size
+    items.zipWithIndex.foreach { (item, idx) =>
+      proc.handler.enterScope()
+
+      // Set loop variable
+      proc.handler.set(varName, item)
+
+      // Set forloop metadata as a map
+      val forloop = Value.Map(Map(
+        "index" -> Value.Num(idx + 1),
+        "indexz" -> Value.Num(idx),
+        "first" -> Value.Bool(idx == 0),
+        "last" -> Value.Bool(idx == length - 1),
+        "length" -> Value.Num(length),
+        "rindex" -> Value.Num(length - idx),
+        "rindexz" -> Value.Num(length - idx - 1),
+        "element" -> item
+      ))
+      proc.handler.set("forloop", forloop)
+
+      // Process body
+      proc.processTokenList(bodyTokens)
+
+      proc.handler.exitScope()
+    }
+
+object DonePrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit = ()
+    // End of for loop - marker only
+
+// ============ FILE INCLUSION ============
+
+object IncludePrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    // Read the file path argument
+    val pathTokens = proc.readArgument(pos)
+    val path = pathTokens.map {
+      case Token.Text(s, _)  => s
+      case Token.Space(s, _) => s
+      case _                 => ""
+    }.mkString.trim
+
+    if path.isEmpty then
+      proc.handler.error("\\include requires a file path", pos)
+
+    // Read the file and push its tokens onto the source stack
+    try
+      val fileReader = CharReader.fromFile(path)
+      val tokenizer = Tokenizer(fileReader)
+      proc.pushTokenizer(tokenizer)
+    catch
+      case e: Exception =>
+        proc.handler.error(s"Cannot include file '$path': ${e.getMessage}", pos)
+
+/** `\use{name}` — import a texish module: locate `name.texish`, load it once with output suppressed (so the file's
+  * prose and blank lines emit nothing — only its definitions take effect), and skip a repeat `\use` of the same
+  * file. This is the module loader; `\include` remains the raw input that re-reads and typesets a literal path.
+  *
+  * Resolution searches, in order: the directory of the file doing the `\use`, the current directory, the `packages`
+  * folder under `$TEXISHHOME` if that environment variable is set, and a `./packages/` folder under the current
+  * directory. The first existing file wins, so a local module shadows a standard one. The search roots are an
+  * ordered list, so more roots can be added later without changing the ones already in effect.
+  */
+object UsePrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val nameTokens = proc.readArgument(pos)
+    val name = nameTokens.map {
+      case Token.Text(s, _)  => s
+      case Token.Space(s, _) => s
+      case _                 => ""
+    }.mkString.trim
+
+    if name.isEmpty then proc.handler.error("\\use requires a module name", pos)
+
+    val fileName = if name.endsWith(".texish") then name else s"$name.texish"
+
+    // Read TEXISHHOME from the live environment (see PlatformEnv — `System.getenv`/`sys.env` snapshot
+    // the environment on Native, so a host that sets the variable after start would not be seen).
+    val texishHome = PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty)
+
+    // Search the filesystem first, but tolerate a host that has no working filesystem at all — a browser, where
+    // the path layer reaches for Node APIs that are absent. If probing the filesystem throws, treat it as "no
+    // file found" and fall through to the embedded copy below.
+    val onDisk: Option[Path] =
+      try
+        val roots: List[Path] =
+          List(
+            Some(Path(proc.currentDir)),
+            Some(Path(".")),
+            texishHome.map(h => Path(h) / "packages"),
+            Some(Path(".") / "packages"),
+          ).flatten
+        roots.map(_ / fileName).find(p => p.exists && p.isFile)
+      catch case _: Throwable => None
+
+    onDisk match
+      case Some(file) =>
+        val resolved  = file.toAbsolutePath.normalize
+        val canonical = resolved.toPlatformString
+        if proc.claimModule(canonical) then
+          val dir = resolved.parent.map(_.toPlatformString).getOrElse(".")
+          try proc.loadModule(file.readText(), dir)
+          catch
+            case e: ParserException => throw e
+            case e: Exception       => proc.handler.error(s"\\use: cannot load module '$name': ${e.getMessage}", pos)
+      case None =>
+        // No file on disk: fall back to a module embedded in the build. This is how a host with no package
+        // directory — chiefly the browser — resolves the standard modules; where the files are present the
+        // search above wins first, so a local package still shadows the embedded copy.
+        EmbeddedPackages.sources.get(name.stripSuffix(".texish")) match
+          case Some(chunks) =>
+            if proc.claimModule(s"embedded:${name.stripSuffix(".texish")}") then proc.loadModule(chunks.mkString, ".")
+          case None =>
+            proc.handler.error(s"\\use: module '$name' not found on the filesystem or among the embedded modules", pos)
