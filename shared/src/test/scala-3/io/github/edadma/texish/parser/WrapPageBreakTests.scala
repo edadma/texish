@@ -151,6 +151,28 @@ class WrapPageBreakTests extends AnyFreeSpec with Matchers:
     g.cutouts shouldBe empty          // the wrap is finished
   }
 
+  "a figure and an edge float preserve the surrounding paragraph indent across their body" in {
+    // both typeset a body that runs a paragraph (a caption), which would otherwise leave the indent flag set and so
+    // wrongly indent — or, after a section's \noindent, flush — the text that follows. The body must not change
+    // whether the surrounding flow indents: the wrapping text beside a figure indents like any body paragraph but
+    // stays flush when it opens a section, and a detached edge float never disturbs the paragraph after it.
+    def afterBody(src: String, indent: Boolean): Boolean =
+      val t       = new HeadlessTypesetter
+      val handler = new TypesetterHandler(t)
+      val proc    = new Processor(handler)
+      registerTypesettingPrimitives(proc, handler)
+      t.indentParagraph = indent
+      Console.withOut(new java.io.ByteArrayOutputStream)(proc.process(src))
+      t.indentParagraph
+
+    val wrap = "\\wrapbox{l}{108}{\\picture width:108 height:40 {}\\vskip 4pt a caption}"
+    val edge = "\\topinsert{\\picture width:108 height:40 {}\\vskip 4pt a caption}"
+    afterBody(wrap, indent = true) shouldBe true
+    afterBody(wrap, indent = false) shouldBe false
+    afterBody(edge, indent = true) shouldBe true
+    afterBody(edge, indent = false) shouldBe false
+  }
+
   "a figure taller than the page is allowed to break rather than hang the page builder" in {
     // a cutout taller than the whole page would, if its interior breaks were forbidden, leave a single long
     // paragraph with nowhere legal to break; the over-tall figure is exempt, so the paragraph still paginates

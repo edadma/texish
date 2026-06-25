@@ -347,7 +347,11 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val body  = proc.readArgument(pos)
 
         // typeset the body now, into its own vertical box set to the figure width; the scope brackets the width
-        // change and any font or spacing changes the body makes
+        // change and any font or spacing changes the body makes. The indent flag is bracketed too: the body runs a
+        // paragraph (its caption), which would leave indentParagraph set and so indent — or after a section, flush —
+        // the wrapping text regardless of what the surrounding flow asked for. Preserving it means the text beside
+        // the figure indents like any body paragraph but stays flush when it opens a section.
+        val savedIndent = t.indentParagraph
         t.enter()
         t.vbox()
         if width > 0 then t.set("hsize", width)
@@ -357,6 +361,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val content = t.mode.exit
 
         t.exit()
+        t.indentParagraph = savedIndent
 
         if content ne null then
           val g       = cutoutGalley("wrapbox", pos)
@@ -376,13 +381,6 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
           // way ParagraphMode.wrapPenalty forbids breaks between the wrapped lines. The only break left is above
           // the figure, so a wrap that will not fit moves to the next page whole rather than stranding the figure.
           t.add(Penalty(Penalty.Inhibit))
-
-          // the paragraph that wraps the figure starts flush. Typesetting the figure's own body ran a paragraph,
-          // which left indentParagraph set, so without this the wrapping text would take a first-line indent on top
-          // of its wrap narrowing — sticking its first line out past the rest, and indenting a paragraph that should
-          // be flush because it opens a section. The figure already provides the block offset; the text beside it
-          // aligns to the wrap, not to a paragraph indent.
-          t.indentParagraph = false
     },
   )
 

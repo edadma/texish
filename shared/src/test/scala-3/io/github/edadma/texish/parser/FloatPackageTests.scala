@@ -72,16 +72,6 @@ class FloatPackageTests extends AnyFreeSpec with Matchers:
     all(ls.map(leadingWidth)) should (be >= 118.0 and be <= 122.0)
   }
 
-  "a wrapped figure leaves the text beside it flush, with no first line jutting out" in {
-    // no \noindent here: typesetting the figure's own body runs a paragraph, which would otherwise leave the
-    // wrapping text indented on its first line, sticking it out past the rest of the narrowed lines. Every line,
-    // the first included, should sit at just the figure width plus the gutter.
-    val ls = lines("\\wrapfigure{l}{1.5in}{\\picture width:1.5in height:3in {}}\n\n" +
-      ("The quick brown fox jumps over the lazy dog. " * 10))
-    ls.length should be > 3
-    all(ls.map(leadingWidth)) should (be >= 118.0 and be <= 122.0)
-  }
-
   "a right wrapfigure keeps the text flush left but forces more lines" in {
     val plain   = lines("\\noindent " + ("The quick brown fox jumps over the lazy dog. " * 10))
     val wrapped = lines(
