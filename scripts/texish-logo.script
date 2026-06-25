@@ -1,0 +1,95 @@
+// texish-logo — a brand mark for the texish engine, drawn entirely in the
+// document language over the \picture vector layer, so the logo prints through
+// the very pipeline it advertises and scales cleanly from a favicon to a banner.
+//
+// The idea: texish is TeX with an "-ish". The mark is an app-icon tile carrying
+// the wordmark — the classic TeX (cream caps, the E dropped and tucked between
+// its neighbours) with a small, raised, slanted "ish" in the brand accent. The
+// accent on the suffix is the whole point: the "ish" is what makes it texish.
+//
+// Render with:  texish scripts/texish-logo.script   ->   scripts/texish-logo.pdf
+//
+// Everything is parameterised on one number S (the tile side, in points), so a
+// single macro draws the mark at any size; the showcase below renders it across
+// a whole row of sizes to prove the kerning and proportions hold.
+
+// --- the badge -------------------------------------------------------------
+//
+// \badge{S}{tile}{letters}{accent} draws an S-by-S rounded-square tile filled
+// with the tile colour, then sets the wordmark centred over it. The corner
+// radius, the wordmark size and the accent rule are all fractions of S, so the
+// proportions are identical at every scale. The rounded square is one closed
+// \path with quarter-circle Bézier corners (control offset k = 0.5523 r).
+
+\def badge S tile letters accent {
+  \set ss {\calc{\S}}
+  \set rr {\calc{ss * 0.225}}
+  \set kk {\calc{rr * 0.5523}}
+  \picture width:{\calc{ss}} height:{\calc{ss}} {
+    \fill{\tile} \nostroke
+    \path{
+      \moveto{\calc{rr} 0}
+      \lineto{\calc{ss - rr} 0}
+      \curveto{\calc{ss - rr + kk} 0  \calc{ss} \calc{rr - kk}  \calc{ss} \calc{rr}}
+      \lineto{\calc{ss} \calc{ss - rr}}
+      \curveto{\calc{ss} \calc{ss - rr + kk}  \calc{ss - rr + kk} \calc{ss}  \calc{ss - rr} \calc{ss}}
+      \lineto{\calc{rr} \calc{ss}}
+      \curveto{\calc{rr - kk} \calc{ss}  0 \calc{ss - rr + kk}  0 \calc{ss - rr}}
+      \lineto{0 \calc{rr}}
+      \curveto{0 \calc{rr - kk}  \calc{rr - kk} 0  \calc{rr} 0}
+      \close
+    }
+    \nofill \stroke{\accent} \linewidth{\calc{ss * 0.026}} \linecap{round}
+    \line{\calc{ss * 0.355} \calc{ss * 0.2}  \calc{ss * 0.645} \calc{ss * 0.2}}
+    \at anchor:center {\calc{ss * 0.5} \calc{ss * 0.52} }{{\font {lmroman} {\calc{ss * 0.35}} {regular}\textcolor{\letters}{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}\kern-.14em\raise.22em\hbox{\textcolor{\accent}{\fontscale{.7}{slanted}ish}}}}
+  }
+}
+
+// --- the horizontal wordmark lockup ----------------------------------------
+//
+// The same wordmark without the tile, on a transparent ground, sized so the
+// caps are S points tall, with a brand-accent rule swept beneath it. For light
+// backgrounds: ink letters, accent suffix and rule.
+
+\def wordmark S letters accent {
+  \set ws {\calc{\S}}
+  \picture width:{\calc{ws * 2.7}} height:{\calc{ws * 1.55}} {
+    \at anchor:west {\calc{ws * 0.08} \calc{ws * 0.78} }{{\font {lmroman} {\calc{ws}} {regular}\textcolor{\letters}{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}\kern-.14em\raise.22em\hbox{\textcolor{\accent}{\fontscale{.7}{slanted}ish}}}}
+    \nofill \stroke{\accent} \linewidth{\calc{ws * 0.07}} \linecap{round}
+    \line{\calc{ws * 0.1} \calc{ws * 0.2}  \calc{ws * 2.0} \calc{ws * 0.2}}
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+// Core centering, lifted from the document format so the script stays free of
+// the article furniture and renders the marks on a bare page.
+\def centerline t {\hbox to:\hsize {\hss\t\hss}}
+
+\centerline{{\font {lmroman} {17} {regular}The \kern.02em texish \kern.02em mark}}
+
+\vskip 18pt
+
+\centerline{The same badge across the icon size scale, on a common baseline:}
+
+\vskip 14pt
+
+\centerline{\badge{32}{#1B1E2E}{#F4ECDD}{#FF6A3D}\hskip 16pt\badge{48}{#1B1E2E}{#F4ECDD}{#FF6A3D}\hskip 16pt\badge{72}{#1B1E2E}{#F4ECDD}{#FF6A3D}\hskip 16pt\badge{104}{#1B1E2E}{#F4ECDD}{#FF6A3D}\hskip 16pt\badge{150}{#1B1E2E}{#F4ECDD}{#FF6A3D}}
+
+\vskip 34pt
+
+\centerline{The hero mark, and its light-ground inversion:}
+
+\vskip 16pt
+
+\centerline{\badge{210}{#1B1E2E}{#F4ECDD}{#FF6A3D}\hskip 30pt\badge{210}{#F4ECDD}{#1B1E2E}{#E5532A}}
+
+\vskip 34pt
+
+\centerline{The wordmark lockup:}
+
+\vskip 12pt
+
+\centerline{\wordmark{40}{#1B1E2E}{#FF6A3D}}
+
+\vfill\eject
