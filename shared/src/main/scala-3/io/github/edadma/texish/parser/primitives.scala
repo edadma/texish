@@ -279,7 +279,10 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val body = proc.readArgument(pos)
 
         // the body is typeset now, into its own vertical box; the scope brackets any font or spacing changes the
-        // body makes so the surrounding text resumes unaffected
+        // body makes so the surrounding text resumes unaffected. The indent flag is bracketed too: a float is
+        // detached, so a \noindent inside it (a caption opens with one) must not flow out and flush the paragraph
+        // that follows the float in the running text.
+        val savedIndent = t.indentParagraph
         t.enter()
         t.vbox()
         proc.processTokenList(body)
@@ -288,6 +291,7 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val content = t.mode.exit
 
         t.exit()
+        t.indentParagraph = savedIndent
 
         // contributed to the current list directly: between paragraphs that is the vertical list (a float is a
         // zero-size control item, so no interline glue attaches), and inside a paragraph it rides the line and
@@ -372,6 +376,34 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
           // way ParagraphMode.wrapPenalty forbids breaks between the wrapped lines. The only break left is above
           // the figure, so a wrap that will not fit moves to the next page whole rather than stranding the figure.
           t.add(Penalty(Penalty.Inhibit))
+
+          // the paragraph that wraps the figure starts flush. Typesetting the figure's own body ran a paragraph,
+          // which left indentParagraph set, so without this the wrapping text would take a first-line indent on top
+          // of its wrap narrowing — sticking its first line out past the rest, and indenting a paragraph that should
+          // be flush because it opens a section. The figure already provides the block offset; the text beside it
+          // aligns to the wrap, not to a paragraph indent.
+          t.indentParagraph = false
+    },
+  )
+
+  // clearwrap - end any text-wrap in progress: pad the galley down past the foot of every active wrapped figure so
+  // the following content clears it, then drop the cutouts. A wrapped figure reserves no vertical space of its own
+  // (its overlay is zero-height, so text flows beside it), so a figure taller than its accompanying text would
+  // otherwise be ridden over by whatever block comes next — a section heading is a full-width \leftline that does
+  // not narrow around the figure. A sectioning command issues \clearwrap so its heading steps below the figure;
+  // running text needs no clearing, since its lines narrow and flow past the figure on their own. Padding nothing
+  // when the content has already cleared the figure, it is always safe to call.
+  proc.registerPrimitive(
+    "clearwrap",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case g: VerticalMode =>
+            val floor = g.cutouts.flatMap(c => g.cutoutBand(c).map(_._2)).maxOption.getOrElse(0.0)
+            val gap   = floor - g.naturalHeight
+            if gap > 0 then t.add(VSpaceBox(gap))
+            g.cutouts.clear()
+          case _ =>
     },
   )
 

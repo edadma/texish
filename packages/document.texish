@@ -196,6 +196,7 @@
 }
 
 \def section * t {
+  \clearwrap
   \vskip 14pt plus 3pt minus 1pt
   \if {\star}
     \leftline{\font lmroman 14 bold \t}
@@ -210,6 +211,7 @@
 }
 
 \def subsection * t {
+  \clearwrap
   \vskip 12pt plus 3pt minus 1pt
   \if {\star}
     \leftline{\font lmroman 12 bold \t}
@@ -224,6 +226,7 @@
 }
 
 \def subsubsection * t {
+  \clearwrap
   \vskip 10pt plus 2pt minus 1pt
   \if {\star}
     \leftline{\font lmroman 11 bold \t}

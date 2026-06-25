@@ -13,6 +13,7 @@ import io.github.edadma.texish.{
   Typesetter,
   VBox,
   VerticalBox,
+  VerticalMode,
 }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -128,6 +129,26 @@ class WrapPageBreakTests extends AnyFreeSpec with Matchers:
     figurePage should be > 0
     pages.map(overlays).sum shouldBe 1
     linesOf(pages(figurePage)).count(leadingWidth(_) >= Narrowed) should be >= 5
+  }
+
+  "clearwrap pads the galley past a wrapped figure's foot so following content clears it" in {
+    // a tall figure (80pt) with only one short line of accompanying text: the overlay reserves no height, so without
+    // clearwrap the galley would sit at ~one line and the next block would ride over the figure. \clearwrap pads
+    // down to the figure's foot and drops the cutout, so the galley height is at least the figure height and the
+    // following content starts below it.
+    val t       = new HeadlessTypesetter
+    t.set("vsize", 1.0e9)
+    t.set("topskip", Glue(0)) // figure sits at galley top, so its foot is at exactly its height
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    Console.withOut(new java.io.ByteArrayOutputStream) {
+      proc.process("\\wrapbox{l}{100}{\\picture width:100 height:80 {}}\none short line\n\n\\clearwrap")
+      t.paragraph()
+    }
+    val g = t.mode.asInstanceOf[VerticalMode]
+    g.naturalHeight should be >= 80.0 // padded down to the figure's foot
+    g.cutouts shouldBe empty          // the wrap is finished
   }
 
   "a figure taller than the page is allowed to break rather than hang the page builder" in {

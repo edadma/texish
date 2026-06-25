@@ -34,14 +34,15 @@
 // \caption steps the float's counter, then records the state a following \label captures — currentlabel holds the
 // number (\global, so it outlives the caption's group), currentlabeltype the kind word \autoref prefixes, and
 // currentlabelname the caption text \nameref prints — and files an entry into the float's contents list (lof / lot)
-// before printing the visible "Figure 1: …" caption.
+// before printing the visible "Figure 1: …" caption. The caption opens \noindent: when it wraps within a figure's
+// column its first line should sit flush, not take a paragraph indent that juts past the lines below it.
 \def caption text {{//
 \stepcounter \captioncounter//
 \global\set currentlabel {\arabic{\value \captioncounter}}//
 \global\set currentlabeltype {\captionkind}//
 \global\set currentlabelname {\text}//
 \addcontentsline{\captionlist}{1}{\arabic{\value \captioncounter}}{\text}//
-\the\captionkind \arabic{\value \captioncounter}: \text//
+\noindent\the\captionkind \arabic{\value \captioncounter}: \text//
 }}//
 
 // ---- Edge floats ---------------------------------------------------------------
@@ -69,6 +70,9 @@
 // \caption inside the body numbers in the same shared sequence — a wrapped figure and a top figure share one count.
 // Write the caption as a bare \caption so it flows and wraps within the figure's column; do not \centerline it, which
 // would force it onto one line that, if the caption is wider than the figure, spills over the wrapped text beside it.
+// A wrapped figure reserves no vertical height — text flows beside it — so a figure taller than its accompanying text
+// would be ridden over by the next full-width block. Sectioning commands clear the wrap automatically; before any
+// other full-width block that must sit below the figure, call the engine's \clearwrap to step past the figure's foot.
 \def wrapfigure side width body {{//
 \set captionkind {Figure}//
 \set captioncounter {figure}//
