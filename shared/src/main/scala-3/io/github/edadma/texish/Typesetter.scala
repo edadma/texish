@@ -917,8 +917,10 @@ abstract class Typesetter:
 
       //
       "imageScaling" -> 1.0,
-      "pagewidth"    -> 8.5 * in,
-      "pageheight"   -> 11 * in,
+
+      // The physical sheet, as in LaTeX/pdfTeX. (Classic TeX has no page-size concept — it sizes only the text
+      // area, \hsize × \vsize, and leaves the sheet to the output driver.) The text block is placed at
+      // \hoffset/\voffset from the corner, so the margins are paperwidth − hoffset − hsize and likewise vertically.
       "paperwidth"   -> 8.5 * in,
       "paperheight"  -> 11 * in,
     )
