@@ -322,8 +322,11 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         val height = Value.number(evalArg(proc, pos)).getOrElse(0.0)
         val side   = readSide(proc, pos)
         val g      = cutoutGalley("cutout", pos)
-        val yTop   = g.naturalHeight
-        g.cutouts += Cutout(yTop, yTop + height, side, width)
+        // anchor the cutout to a marker dropped at this point, so its band is resolved from the marker's live
+        // position the same way a figure's is from its overlay — keeping it aligned across a page break
+        val marker = new CutoutMarker
+        t.add(marker)
+        g.cutouts += Cutout(marker, height, side, width)
     },
   )
 
@@ -352,13 +355,23 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
         t.exit()
 
         if content ne null then
-          val g      = cutoutGalley("wrapbox", pos)
-          val gutter = t.getNumber("wrapsep")
-          val hsize  = t.getNumber("hsize")
-          val yTop   = g.naturalHeight
-          val dx     = if s == Side.Right then hsize - content.width else 0.0
-          g.cutouts += Cutout(yTop, yTop + content.height, s, content.width + gutter)
-          t.add(new OverlayBox(content, dx, content.ascent))
+          val g       = cutoutGalley("wrapbox", pos)
+          val gutter  = t.getNumber("wrapsep")
+          val hsize   = t.getNumber("hsize")
+          val dx      = if s == Side.Right then hsize - content.width else 0.0
+          val overlay = new OverlayBox(content, dx, content.ascent)
+          t.add(overlay)
+
+          // anchor the cutout to the overlay, so the band the text wraps into tracks wherever the figure actually
+          // sits — after any topskip above it, and after a page break carries it to the next page — rather than a
+          // fixed coordinate that would drift from the figure and narrow the wrong lines
+          g.cutouts += Cutout(overlay, content.height, s, content.width + gutter)
+
+          // forbid a page break between the figure and the text that wraps it: with the inhibit penalty here, the
+          // glue that follows the overlay has a penalty for its predecessor and so is no longer a legal break, the
+          // way ParagraphMode.wrapPenalty forbids breaks between the wrapped lines. The only break left is above
+          // the figure, so a wrap that will not fit moves to the next page whole rather than stranding the figure.
+          t.add(Penalty(Penalty.Inhibit))
     },
   )
 

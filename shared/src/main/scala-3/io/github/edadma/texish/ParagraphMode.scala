@@ -18,9 +18,25 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   private var yStart = 0.0
   private var bls    = 0.0
 
+  // The cutout bands as resolved at the instant this paragraph is broken — `(top, bottom, side, inset)` each. They
+  // are snapshotted once, before any line is contributed, and used for every line's measure and break penalty.
+  // Snapshotting matters: contributing a line can trigger a page break that shifts the figure's live position, so a
+  // band re-resolved per line would narrow inconsistently. The snapshot also fixes the figure relative to this
+  // paragraph's lines, and the two travel together under any later page break, so the narrowing stays aligned with
+  // the figure wherever the wrap ends up.
+  private var cutBands: Seq[(Double, Double, Side, Double)] = Nil
+
   /** The (left, right) inset that the galley's figures impose on line `n` of this paragraph. */
   private def cut(n: Int): (Double, Double) =
-    galley.insetsAt(yStart + n * bls, yStart + (n + 1) * bls)
+    val y0 = yStart + n * bls
+    val y1 = yStart + (n + 1) * bls
+    cutBands.foldLeft((0.0, 0.0)) { case ((l, r), (top, bottom, side, inset)) =>
+      if y1 > top && y0 < bottom then
+        side match
+          case Side.Left  => (math.max(l, inset), r)
+          case Side.Right => (l, math.max(r, inset))
+      else (l, r)
+    }
 
   override def done(): Unit =
     // An empty paragraph contributes nothing and leaves the surrounding state untouched: it sets no lines and,
@@ -35,6 +51,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       // opens at; the figures take their room out of the per-line measure through `extraInset`.
       yStart = galley.naturalHeight
       bls = t.getGlue("baselineskip").naturalSize
+      cutBands = galley.cutouts.flatMap(c => galley.cutoutBand(c).map((top, bottom) => (top, bottom, c.side, c.inset))).toSeq
 
       // Try Knuth-Plass optimal line breaking first
       KnuthPlass.breakParagraph(boxes.toSeq, hsize, t, n => { val (l, r) = cut(n); l + r }) match
@@ -80,6 +97,20 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     if beforeLast then p += t.getNumber("widowpenalty").toInt
     p
 
+  /** The wrappenalty for the break after line `n`: a page break there would land strictly inside a wrapped figure's
+    * band — between the figure's top and bottom — stranding the figure on the shipped page while the text it
+    * narrows spilled onto the next. Returning wrappenalty forbids it, so the whole wrap travels together and the
+    * page builder breaks above the figure instead. A figure taller than the page is exempt: forbidding every break
+    * inside it would leave the page builder nowhere to break, so it is allowed to split rather than hang.
+    */
+  private def wrapPenalty(n: Int): Int =
+    val breakY = yStart + (n + 1) * bls
+    val vsize  = t.getNumber("vsize")
+    val strands = cutBands.exists { case (top, bottom, _, _) =>
+      breakY > top + 1e-6 && breakY < bottom - 1e-6 && bottom - top <= vsize
+    }
+    if strands then t.getNumber("wrappenalty").toInt else 0
+
   private def buildLinesFromOptimal(lines: Seq[Seq[Box]], hsize: Double): Unit =
     var first = true
 
@@ -113,7 +144,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       migrating.foreach(t.modeStack(1).add)
 
       if !isLast then
-        val p = penaltyBetween(lineIdx == 0, lineIdx == lines.length - 2)
+        val p = math.max(penaltyBetween(lineIdx == 0, lineIdx == lines.length - 2), wrapPenalty(lineIdx))
         if p != 0 then t.modeStack(1) add Penalty(p)
 
   private def buildLinesGreedy(hsize: Double): Unit =
@@ -211,9 +242,10 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
 
       val newLine = hbox.result
 
-      // a greedy line is final exactly when it exhausted the paragraph's boxes
+      // a greedy line is final exactly when it exhausted the paragraph's boxes. This penalty guards the break
+      // before the line just built — line lineIdx — so the wrap check is for the break after line lineIdx-1.
       if lineIdx > 0 then
-        val p = penaltyBetween(lineIdx == 1, boxes.isEmpty)
+        val p = math.max(penaltyBetween(lineIdx == 1, boxes.isEmpty), wrapPenalty(lineIdx - 1))
         if p != 0 then t.modeStack(1) add Penalty(p)
 
       t.modeStack(1) add newLine

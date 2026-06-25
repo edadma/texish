@@ -20,14 +20,25 @@ abstract class VerticalMode extends ListBoxBuilder:
     */
   def naturalHeight: Double = boxes.iterator.map(_.height).sum
 
-  /** The (left, right) inset a line occupying the vertical band `[y0, y1]` inherits from the active cutouts — the
-    * worst intrusion from each side, so two figures facing each other narrow the line from both.
+  /** The galley height at which `anchor` sits — the summed heights of the boxes before it — or None once the anchor
+    * is gone from the list, which happens when the figure it marks has shipped with its page. Resolving the cutout
+    * top this way, from the live list, is what keeps a wrap aligned with its figure across a page break.
     */
-  def insetsAt(y0: Double, y1: Double): (Double, Double) =
-    cutouts.foldLeft((0.0, 0.0)) { case ((l, r), c) =>
-      val (cl, cr) = c.insetsOver(y0, y1)
-      (math.max(l, cl), math.max(r, cr))
-    }
+  private def positionOf(anchor: Box): Option[Double] =
+    var acc = 0.0
+    val it  = boxes.iterator
+    while it.hasNext do
+      val b = it.next()
+      if b eq anchor then return Some(acc)
+      acc += b.height
+    None
+
+  /** The `[top, bottom]` band a cutout currently occupies, or None if its anchor has shipped away. Resolving the top
+    * from the live list — rather than a coordinate frozen when the cutout was registered — is what keeps a wrap
+    * aligned with its figure: a fixed top drifts the moment a page break pads a fresh topskip above the figure.
+    */
+  def cutoutBand(c: Cutout): Option[(Double, Double)] =
+    positionOf(c.anchor).map(top => (top, top + c.height))
 
   override infix def add(box: Box): Unit =
     // Control items (penalties, marks) are invisible to interline-glue insertion (TeX's \prevdepth tracks boxes,

@@ -169,6 +169,11 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
       newpage()
 
   def newpage(): Unit =
+    // a cutout whose figure ships with this page is finished; one whose figure is carried to the next page is not
+    // among these boxes and survives, its band re-derived from the figure's position there. No coordinate rebasing
+    // is needed: cutout tops are resolved from the live galley, not stored absolutely (see Cutout).
+    cutouts.filterInPlace(c => !boxes.exists(_ eq c.anchor))
+
     // record this page's marks before shipping, so shipout-time material (running headers) reads them: topmark
     // is the previous page's botmark, and a markless page inherits it for firstmark and botmark too, as in TeX
     val marks = boxes.collect { case m: MarkBox => m.text }

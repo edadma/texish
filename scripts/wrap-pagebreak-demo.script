@@ -1,0 +1,85 @@
+// wrap-pagebreak-demo — a wrapped figure stays whole across a page break.
+//
+// A wrapfigure anchored near the bottom of a page would, if the page broke between its lines, leave the figure on
+// one page and the text it narrows on the next. The engine forbids a page break inside a wrap band, so the whole
+// wrap — figure and the lines beside it — moves to the next page together; and a figure that shipped with its page
+// stops narrowing the lines of later pages. This document runs past one page so the second figure, anchored where
+// the first page has run out of room, is forced whole onto page two.
+
+\use{document}
+\use{float}
+
+\title {Wrapped Figures Across Page Breaks}
+\author {the float package}
+\maketitle
+
+\section{A wrap that fits on the page}
+
+\wrapfigure{r}{1.7in}{
+  \picture width:1.7in height:1.1in {
+    \fill{lightblue}\stroke{black}\linewidth{1pt}\rect{1 1 121 78}
+  }
+  \vskip 4pt
+  \centerline{\caption{This figure fits here.}}
+}
+
+A wrapped figure anchors against the margin where it is written and the following lines flow around it in a narrowed
+measure. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+pariatur. Once the lines clear the bottom of the figure they return to the full measure and run flush again.
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam,
+eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam
+voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione
+voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci
+velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+
+Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea
+commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae
+consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur. At vero eos et accusamus et iusto odio
+dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias
+excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi.
+
+Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut
+perferendis doloribus asperiores repellat. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil
+impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus.
+Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates
+repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus.
+
+Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui
+dolorem eum fugiat quo voluptas nulla pariatur. At vero eos et accusamus et iusto odio dignissimos ducimus qui
+blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati
+cupiditate non provident. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque
+laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae.
+
+Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos
+qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur,
+adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat
+voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut
+aliquid ex ea commodi consequatur, quis autem vel eum iure reprehenderit qui in ea voluptate velit esse.
+
+\section{A wrap forced whole onto the next page}
+
+\wrapfigure{r}{1.7in}{
+  \picture width:1.7in height:1.2in {
+    \fill{lightgreen}\stroke{black}\linewidth{1pt}\rect{1 1 121 85}
+  }
+  \vskip 4pt
+  \centerline{\caption{This figure moved whole to the next page.}}
+}
+
+This figure is anchored where the first page has nearly run out of room. Rather than breaking between the lines it
+narrows and stranding the figure on the previous page, the whole wrap travels to the next page together. Lorem ipsum
+dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat, duis aute
+irure dolor in reprehenderit in voluptate velit esse cillum dolore.
+
+Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat
+facere possimus, omnis voluptas assumenda est. Temporibus autem quibusdam et aut officiis debitis aut rerum
+necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae, so the lines run on well
+past the foot of the figure before the measure opens out again.
+
+\section{List of figures}
+
+\listoffigs

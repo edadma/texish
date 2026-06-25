@@ -901,12 +901,19 @@ abstract class Typesetter:
       "adjdemerits"     -> 10000.0, // penalty for adjacent tight/loose lines
       "emergencystretch" -> 0.0,   // extra per-line stretch in the final pass for paragraphs that won't justify
 
-      // Page-break penalties between the lines of a paragraph. The page builder is first-fit, so values between
-      // 0 and 9999 don't bias anything — what matters is 10000 (forbid) and -10000 (force). The defaults forbid
-      // orphans (a paragraph's first line alone at a page bottom) and widows (its last line alone at a page top).
+      // Page-break penalties between the lines of a paragraph. The page builder breaks by cost (badness + penalty),
+      // so a value between 0 and 9999 biases the break away from this position; 10000 forbids a break here and
+      // -10000 forces one. The defaults forbid orphans (a paragraph's first line alone at a page bottom) and widows
+      // (its last line alone at a page top).
       "clubpenalty"      -> 10000.0, // against breaking after a paragraph's first line
       "widowpenalty"     -> 10000.0, // against breaking before a paragraph's last line
       "interlinepenalty" -> 0.0,     // between all other lines
+
+      // Against a page break that lands inside a wrapped figure's band, which would strand the figure on one page
+      // and the text it narrows on the next. Forbidding it keeps the whole wrap together; the page builder breaks
+      // above the figure instead and moves it wholesale to the next page (a figure taller than the page is exempt,
+      // since forbidding every break inside it would leave nowhere to break).
+      "wrappenalty"      -> 10000.0,
 
       //
       "imageScaling" -> 1.0,
