@@ -3,7 +3,7 @@
 // The `document` package layers a LaTeX-`article`-style format over the texish
 // engine: a title block, an abstract, numbered sectioning, a table of contents,
 // lists, quotations, alignment helpers, inline markup, a full set of font-size
-// declarations, text symbols, the TeX-family logos, floating figures and tables
+// declarations, text symbols, floating figures and tables
 // with numbered captions, minipages, and a couple of conditionals. This single
 // script exercises every public command, environment, and declaration the
 // package provides, framed as a short article about itself.
@@ -25,7 +25,7 @@ This document exercises the full feature set of the \texttt{document} package:
 the title block and abstract, numbered and unnumbered sectioning, a table of
 contents whose page numbers resolve in a second pass, lists of every kind,
 quotations, alignment, inline markup, the LaTeX font-size declarations, the
-common text symbols, the \TeX{} family logos, floating figures and tables with
+common text symbols, floating figures and tables with
 numbered captions, minipages, and conditionals. It is set in a 10-point serif
 body on a tight \LaTeX{} type scale.
 \end{abstract}
@@ -191,24 +191,13 @@ shape and resetting the leading. From smallest to largest:
 {\normalsize normalsize} {\large large} {\Large Large} {\LARGE LARGE}
 {\huge huge} {\Huge Huge}.
 
-\section {Text symbols and logos}
+\section {Text symbols}
 
 The common LaTeX text symbols each set a single character: the section sign~\S, the
 paragraph mark~\P, the dagger~\dag{} and double dagger~\ddag, the copyright
 sign~\copyright, the registered mark~\textregistered, the trademark~\texttrademark,
 the pound sign~\pounds, a bullet~\textbullet, an em dash~\textemdash, an en
 dash~\textendash, and the degree sign~\textdegree.
-
-The classic logos come for free: \TeX, \LaTeX, and \TeXish{} — the engine that sets
-this document. Each is built from the engine's box, kern and raise primitives, with
-its small letters sized relative to the surrounding text, so the careful kerning
-holds together at any size:
-
-\noindent{\large \TeX\quad \LaTeX\quad \TeXish}
-
-\noindent{\LARGE \TeX\quad \LaTeX\quad \TeXish}
-
-\noindent{\Huge \TeX\quad \LaTeX\quad \TeXish}
 
 \section {Floats: figures and tables}
 
