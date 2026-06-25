@@ -17,6 +17,23 @@ so they fire in ordinary running text:
 | `...` | an ellipsis (`\dots` also works) |
 | `~` | a non-breaking space (a tie, as in `Figure~1`) |
 
+## Commands and whitespace
+
+Unlike TeX, a texish command does **not** swallow the whitespace that follows it. A space
+after a command name stays in the text, so you write commands inline and the spacing comes
+out as typed:
+
+```texish
+lines the way \TeX does, then \dots and on.
+```
+
+Because of this there is no control-space (TeX's `\ `): you never need `\TeX{}` or a trailing
+backslash just to keep a following space — `\TeX does` already renders as "TeX does". Writing
+`\TeX\ ` is in fact an error, since `\ ` is read as a command named space, which does not
+exist. Use the empty group `{}` only when you genuinely need to *stop* a command's argument
+or name early — e.g. to butt text directly against a command with no space, as in
+`\TeX{}nically`.
+
 ## Emphasis and weight
 
 ```texish
