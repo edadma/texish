@@ -130,6 +130,25 @@ class Processor(val handler: Handler):
   // $ is the active math toggle; \$ is a literal dollar sign (for prose, prices, code samples)
   registerPrimitive("$", LiteralPrimitive("$"))
 
+  // Common text symbols, under their standard LaTeX names. Each is a single Unicode character emitted as literal
+  // text — the same mechanism as the escapes above — so any document can type them, not only ones that
+  // \use{document}: a poster, a chord chart or a music score wants an em-dash or a degree sign without pulling in
+  // article-class title and sectioning machinery. A \def of the same name still overrides, as for any primitive.
+  registerPrimitive("dots", LiteralPrimitive("…"))
+  registerPrimitive("ldots", LiteralPrimitive("…"))
+  registerPrimitive("S", LiteralPrimitive("§"))
+  registerPrimitive("P", LiteralPrimitive("¶"))
+  registerPrimitive("dag", LiteralPrimitive("†"))
+  registerPrimitive("ddag", LiteralPrimitive("‡"))
+  registerPrimitive("copyright", LiteralPrimitive("©"))
+  registerPrimitive("textregistered", LiteralPrimitive("®"))
+  registerPrimitive("texttrademark", LiteralPrimitive("™"))
+  registerPrimitive("pounds", LiteralPrimitive("£"))
+  registerPrimitive("textbullet", LiteralPrimitive("•"))
+  registerPrimitive("textemdash", LiteralPrimitive("—"))
+  registerPrimitive("textendash", LiteralPrimitive("–"))
+  registerPrimitive("textdegree", LiteralPrimitive("°"))
+
   def registerPrimitive(name: String, prim: Primitive): Unit =
     primitives(name) = prim
 

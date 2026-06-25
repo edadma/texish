@@ -92,23 +92,10 @@
 \def textnormal t {{\normalfont\t}}
 \def textsuperscript t {\textsup{\t}}
 \def textsubscript t {\textsub{\t}}
-\def dots {…}
-\def ldots {…}
-
 // ---- Text symbols --------------------------------------------------------------
-// The common LaTeX text symbols, each a single Unicode character.
-\def S {§}
-\def P {¶}
-\def dag {†}
-\def ddag {‡}
-\def copyright {©}
-\def textregistered {®}
-\def texttrademark {™}
-\def pounds {£}
-\def textbullet {•}
-\def textemdash {—}
-\def textendash {–}
-\def textdegree {°}
+// The common LaTeX text symbols (\dots \ldots \S \P \dag \ddag \copyright \textregistered \texttrademark \pounds
+// \textbullet \textemdash \textendash \textdegree) are engine primitives, available to every document whether or
+// not it loads this package; they are not redefined here.
 
 // ---- TeX-family logos ----------------------------------------------------------
 // The classic logos come from the logos package.
