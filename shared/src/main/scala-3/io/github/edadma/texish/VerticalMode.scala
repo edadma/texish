@@ -45,12 +45,14 @@ abstract class VerticalMode extends ListBoxBuilder:
     // not penalties), so the previous item for baseline purposes is the last non-control one. The glue still goes
     // after a penalty, giving the order box-penalty-glue-box: a break at the glue is then illegal (discardable
     // predecessor) and the penalty alone decides breakability between the two boxes.
-    val prev = boxes.findLast(!_.isInstanceOf[ControlBox]).orNull
+    // TeX's \prevdepth tracks the depth of the last BOX on the list, not the last item: glue, kerns and penalties
+    // pass through it. So the interline glue before a new box is computed from that last box even when an explicit
+    // \vskip sits between them — the \vskip then ADDS to the leading rather than replacing it. (The earlier code
+    // read the last item, so a \vskip suppressed the interline and jammed the next line up against the previous.)
+    val prevBox = boxes.findLast(b => !b.isInstanceOf[ControlBox] && !b.isInstanceOf[NoGlueBox] && !b.isSpace).orNull
 
-    if !box.isInstanceOf[ControlBox] && !box.isInstanceOf[NoGlueBox] && (prev ne null) && !prev.isSpace && !box.isSpace
-      && !prev.isInstanceOf[NoGlueBox]
-    then
-      val baselineskip = t.getGlue("baselineskip") - prev.descent - box.ascent
+    if !box.isInstanceOf[ControlBox] && !box.isInstanceOf[NoGlueBox] && !box.isSpace && (prevBox ne null) then
+      val baselineskip = t.getGlue("baselineskip") - prevBox.descent - box.ascent
       val skip =
         if baselineskip.naturalSize <= t.getNumber("lineskiplimit") then t.getGlue("lineskip")
         else baselineskip

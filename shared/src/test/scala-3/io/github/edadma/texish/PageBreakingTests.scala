@@ -50,12 +50,27 @@ class PageBreakingTests extends AnyFreeSpec with Matchers:
     pm add Line(40) // 140 > 100: break at the second glue
 
     doc.shipped.length shouldBe 1
-    // the page is glue-set to vsize: 40 + 20 + 40
+    // the page is glue-set to vsize: 40 + (19 set glue + 1 lineskip interline) + 40. The interline glue sits
+    // between the explicit glue and the second line — \vskip adds to the leading, it does not replace it.
     doc.shipped(0).height shouldBe 100.0 +- 1e-9
-    doc.shipped(0).boxes.map(_.height) shouldBe Seq(40.0, 20.0, 40.0)
+    doc.shipped(0).boxes.map(_.height) shouldBe Seq(40.0, 19.0, 1.0, 40.0)
     // the break glue was discarded; only the third line carried over
     pm.length shouldBe 1
     pm.size shouldBe 40.0 +- 1e-9
+  }
+
+  "a glue between two lines adds the interline glue rather than replacing it" in quietly {
+    // TeX's \prevdepth passes through glue, so an explicit \vskip between two lines adds to the leading rather
+    // than replacing it: the interline glue is still inserted before the second line. The earlier code read the
+    // last list item, so the \vskip suppressed the interline and jammed the lines together.
+    val (doc, pm) = setup(100)
+    pm add Line(40)
+    pm add Glue(10, 5, 5) // an explicit \vskip between the two lines
+    pm add Line(40)
+    pm add Glue(10, 5, 5)
+    pm add Line(40) // overflow ships the first two lines
+    // the shipped page is Line, set-glue, interline, Line — four items, not three; the \vskip did not eat the interline
+    doc.shipped(0).boxes.length shouldBe 4
   }
 
   "the new page never starts with discardables" in quietly {

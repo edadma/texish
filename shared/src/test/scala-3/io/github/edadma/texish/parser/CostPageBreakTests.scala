@@ -59,9 +59,9 @@ class CostPageBreakTests extends AnyFreeSpec with Matchers:
   }
 
   "with no penalty the cost rule lands on the latest break that fits, as first-fit did" in {
-    // A rigid page (no stretch) where three blocks and their two gutters total 40, fitting vsize-45; a fourth
-    // would overflow. Every fitting break is equally bad on a rigid page, so the tie goes to the later one — the
-    // page carries as much as it can, exactly the old first-fit behaviour.
+    // A rigid page (no stretch). The blocks carry interline leading between them, so two blocks, their gutter and
+    // that leading fit in 45 while a third would overflow. Every fitting break is equally bad on a rigid page, so
+    // the tie goes to the later one — the page carries as much as it can, exactly the old first-fit behaviour.
     val (t, doc) = fixture(45)
     Console.withOut(new java.io.ByteArrayOutputStream) {
       t.add(new Block(10))
@@ -70,5 +70,5 @@ class CostPageBreakTests extends AnyFreeSpec with Matchers:
       t.add(Glue(5)); t.add(new Block(10))
       t.end()
     }
-    blocks(doc.shipped(0)) shouldBe 3 // 10 + 5 + 10 + 5 + 10 = 40 fits in 45; the fourth block would overflow
+    blocks(doc.shipped(0)) shouldBe 2 // two blocks plus their gutter and the leading between them fit in 45
   }
