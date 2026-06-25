@@ -67,6 +67,16 @@ class DocumentFeaturesTests extends AnyFreeSpec with Matchers:
     fontOf(boxes, "Y").typeface shouldBe "lmroman"
   }
 
+  "\\fontscale sizes relative to the current font, keeping the typeface" in {
+    // a logo's small letters (the \TeXish "ish", the \LaTeX "A") track the surrounding size at any scale
+    val boxes = render("A{\\fontscale{0.5}{slanted}B}")
+    val a     = fontOf(boxes, "A")
+    val b     = fontOf(boxes, "B")
+    b.size shouldBe (a.size * 0.5 +- 1e-9)
+    b.typeface shouldBe a.typeface
+    b.style should contain("slanted")
+  }
+
   "text symbols emit their Unicode character" in {
     text(render("\\S")) should include("§")
     text(render("\\P")) should include("¶")

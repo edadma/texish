@@ -7,7 +7,9 @@
 // format-level macro. \LaTeX sets the small A in a \vbox whose height is a measured
 // T, with \vss filling beneath, so its apex rides at the cap height (Lamport's own
 // construction). \TeXish is this engine's mark — \TeX with a slanted "ish" raised
-// against the X.
+// against the X. The small letters and the kerns are all relative to the current size
+// (\fontscale and em/ex units), so every logo scales cleanly from a footnote to a
+// title — the A and the "ish" stay 0.7 of the surrounding letters at any size.
 \def TeX {T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}
-\def LaTeX {L\kern-.36em\setbox latexAbox \hbox{T}\vbox to:\ht latexAbox {\hbox{\font lmroman 7 regular A}\vss}\kern-.15em\TeX}
-\def TeXish {\TeX\kern-.14em\raise.22em\hbox{\font lmroman 7 slanted ish}}
+\def LaTeX {L\kern-.36em\setbox latexAbox \hbox{T}\vbox to:\ht latexAbox {\hbox{\fontscale{.7}{regular}A}\vss}\kern-.15em\TeX}
+\def TeXish {\TeX\kern-.14em\raise.22em\hbox{\fontscale{.7}{slanted}ish}}

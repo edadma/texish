@@ -78,18 +78,21 @@ unmistakable T-E-X with the E nestled between the taller letters.
 
 \LaTeX{} extends \TeX{} by riding a small capital A high against the L, at the
 cap height. Lamport's own trick — reproduced here — measures the height of a T
-into a box register, then sets a seven-point A inside a \texttt{vbox} built ``to''
-that height with \texttt{vss} filling beneath it. The \texttt{vss} pushes the
-small A up to the top of the box, so its apex lines up with the tops of the
-surrounding capitals. Negative kerns tuck the A back over the L, and the rest of
-the word is simply \TeX.
+into a box register, then sets the A at seven-tenths of the current size with
+\texttt{fontscale} inside a \texttt{vbox} built ``to'' that height with
+\texttt{vss} filling beneath it. The \texttt{vss} pushes the small A up to the
+top of the box, so its apex lines up with the tops of the surrounding capitals.
+Sizing the A from the current font, rather than at a fixed point size, is what
+lets the logo hold together from a footnote to a title. Negative kerns tuck the
+A back over the L, and the rest of the word is simply \TeX.
 
 \subsection {\TeXish}
 
 \TeXish{} is this engine's own mark: it is exactly \TeX, followed by a small,
-raised, slanted ``ish'' set in a seven-point oblique. The negative \texttt{kern}
-draws the ``ish'' in against the X, and the \texttt{raise} lifts it about a fifth
-of an em off the baseline, so it reads as a light suffix clinging to the wordmark
-rather than a separate syllable on the line.
+raised, slanted ``ish'' set with \texttt{fontscale} at seven-tenths of the
+current size, so it stays in proportion at every scale. The negative
+\texttt{kern} draws the ``ish'' in against the X, and the \texttt{raise} lifts it
+about a fifth of an em off the baseline, so it reads as a light suffix clinging
+to the wordmark rather than a separate syllable on the line.
 
 \vfill\eject

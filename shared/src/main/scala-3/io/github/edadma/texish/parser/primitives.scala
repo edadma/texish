@@ -585,6 +585,26 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // fontscale - 2 args, a factor and a style: re-select the current typeface at the current size scaled by the
+  // factor, with the given style. Like \font but relative and keeping the typeface, so a small ornament tracks the
+  // surrounding size at any scale — the slanted "ish" of \TeXish and the small A of \LaTeX size off the current
+  // font instead of a fixed point size, and the logos render proportionally in a footnote or a title alike.
+  proc.registerPrimitive(
+    "fontscale",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val factor = evalArg(proc, pos)
+        val style  = evalArg(proc, pos)
+        (factor, style) match
+          case (Value.Num(f), Value.Text(st)) =>
+            val cur  = t.currentFont
+            val font = t.selectFont(cur.typeface, cur.size * f.toDouble, st.split("\\s+").toSet)
+            t.set("spaceskip", Glue(font.space, 1))
+            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+          case _ => handler.error("\\fontscale expects <factor> <style>", pos)
+    },
+  )
+
   // image - 1 arg
   proc.registerPrimitive(
     "image",
