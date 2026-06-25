@@ -93,6 +93,10 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\makebox[width][l\|c\|r\|s]{…}` | a box of a set width, content aligned (width = a dimension or a `\linewidth` factor) |
 | `\parbox[t\|c\|b]{width}{…}` | set a paragraph in a box of the given width, aligned on the baseline |
 | `\begin{minipage}[t\|c\|b]{width}…\end{minipage}` | the environment form of `\parbox` *(format)* |
+| `\wrapbox{side}{width}{…}` | anchor a box at the left/right margin so following text wraps beside it |
+| `\wrapshape{shape}{side}{width}{…}` | the same, with text following a non-rectangular silhouette |
+| `\cutout{width}{height}{side}` `\cutshape{shape}{width}{height}{side}` | reserve a rectangular / shaped hole in the running text |
+| `\clearwrap` | drop past the foot of the current wrap before the next full-width block |
 | `\newlength{name}` `\setlength{name}{d}` `\addtolength{name}{d}` | declare / set / adjust a length (a dimension variable, read back as `\name`) |
 | `\centerline` `\leftline` `\rightline` `\centering` | alignment |
 | `\rlap` `\llap` | zero-width overlap boxes |
@@ -114,6 +118,22 @@ The amsmath operator and connective names, on top of the built-in math above.
 |---------|--------|
 | `\includegraphics[width=,height=,scale=]{path}` | place a PNG or JPEG |
 | `\picture width:… height:… {…}` | open a vector-graphics drawing |
+
+## Floats and text wrapping *(`\use{float}`)*
+
+The package upgrades `\figure`/`\table` to real edge floats and adds in-flow figures the
+text flows around, all sharing one caption sequence (`\caption`, numbered on independent
+figure and table counters, filing into the lists of figures and tables).
+
+| Command | Effect |
+|---------|--------|
+| `\figure[htb]{…}` `\table[htb]{…}` | detach the body to a page edge (here / top / bottom) |
+| `\wrapfigure{side}{width}{…}` `\wraptable{side}{width}{…}` | anchor the body at the margin (`side` = `l`/`r`); running text wraps beside it |
+| `\wrapfigure[shape]{side}{width}{…}` | wrap text along a non-rectangular silhouette (`shape` = `ellipse`/`triangleup`/`triangledown`/`diamond`/`rect`) |
+| `\caption{…}` | a numbered caption; the float it sits in decides whether it counts as a figure or a table |
+
+Captions file into the lists of figures and tables that `document`'s `\listoffigs` / `\listoftabs`
+print, resolved on the second typesetting pass.
 
 ## Chemistry *(`\use{chem}`)*
 
