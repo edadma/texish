@@ -40,6 +40,32 @@ they sit, wrapped or floated. Duis aute irure dolor in reprehenderit in voluptat
 fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
 anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque.
 
+\section{Wrapping around a shape}
+
+An optional [shape] before the side — ellipse, triangleup, triangledown or diamond — makes the running text follow
+the figure's outline rather than its bounding box. Draw a figure whose drawn shape matches the name; keep captions
+out of a shaped figure, since the silhouette tapers away from the box's corners.
+
+\wrapfigure[ellipse]{r}{1.5in}{
+  \picture width:1.5in height:1.5in {
+    \fill{lightblue}\stroke{black}\linewidth{1pt}\circle{54 54 54}
+  }
+}
+A disc anchored on the right pushes the text away by its full width only across the middle; near the top and the foot
+of the circle the silhouette curves back toward the margin and the text follows it in, taking a rounded bite out of
+the column's edge. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.
+
+\wrapfigure[triangledown]{l}{1.5in}{
+  \picture width:1.5in height:1.5in {
+    \fill{lightgreen}\stroke{black}\linewidth{1pt}\polygon{0 0 0 108 108 108}
+  }
+}
+A wedge on the left has its vertical leg on the margin and its hypotenuse sloping down to a point; the text to its
+right follows that slope, each line stepping closer to the margin as the figure narrows beneath it. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum, sed ut perspiciatis
+unde omnis iste natus error sit voluptatem accusantium doloremque laudantium totam rem aperiam eaque ipsa quae.
+
 \section{A floated figure and a table}
 
 \figure{
