@@ -79,6 +79,11 @@
 // whose outline matches the shape (a disc for [ellipse], a wedge for [triangledown]) and the running text curves in
 // around it; for a non-rectangular shape the figure box is still anchored at the margin, so leave the silhouette
 // tangent to that edge.
+//
+// A \begin{minipage}{width} ... \end{minipage} block is an ideal payload for a rectangular wrap: it sets a passage as
+// its own little page in a fixed-width box, so the running text flows around the whole block as one unit and it never
+// splits across the column. Pair a minipage with a plain (rect) \wrapfigure, not a shaped one — the block is
+// rectangular, so a curved silhouette would let the text ride into its corners.
 \def wrapfigure [shape:rect] side width body {{//
 \set captionkind {Figure}//
 \set captioncounter {figure}//

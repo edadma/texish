@@ -72,6 +72,20 @@ class FloatPackageTests extends AnyFreeSpec with Matchers:
     all(ls.map(leadingWidth)) should (be >= 118.0 and be <= 122.0)
   }
 
+  "a minipage used as a wrapfigure payload narrows the text by the box width plus the gutter" in {
+    // a minipage is a rigid box, the natural payload for a rectangular wrap: a 120pt [t] minipage anchored left
+    // indents the lines beside it by its own width plus the 12pt wrapsep gutter, exactly as a picture of that width
+    // would — the block composes as an ordinary wrap payload. It is short, so only the lines it spans are narrowed
+    // and the rest return flush to the margin.
+    val body = "\\wrapfigure{l}{2in}{\\beginminipage[t]{120pt}A block of text set in its own box.\\endminipage}\n\n" +
+      "\\noindent " + ("The quick brown fox jumps over the lazy dog. " * 10)
+    val ws   = lines(body).map(leadingWidth)
+    ws.length should be > 3
+    ws.count(_ >= 130.0) should be >= 1           // the lines beside the box are indented
+    ws.max should (be >= 130.0 and be <= 134.0)   // by the box width (120) plus the wrapsep gutter (12)
+    ws.last should be < 5.0                        // and text below the box runs flush again
+  }
+
   "a right wrapfigure keeps the text flush left but forces more lines" in {
     val plain   = lines("\\noindent " + ("The quick brown fox jumps over the lazy dog. " * 10))
     val wrapped = lines(
