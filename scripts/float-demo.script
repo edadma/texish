@@ -1,0 +1,72 @@
+// float-demo — the float package: figures and tables that float to a page edge or that text wraps around.
+//
+// \use{float} layers a document vocabulary over the engine's float primitives. \wrapfigure{side}{width}{body}
+// anchors a figure against a margin so the running text wraps beside it; \figure{body} detaches a figure to the top
+// of its page; and a \caption inside either one numbers it — figures and tables each on their own sequence — and
+// files it into the list of figures. The hard parts (narrowing each line's measure, lifting a float to a page edge)
+// live in the engine; the package is only the naming and numbering on top.
+
+\use{document}
+\use{float}
+
+\title {Figures and Tables}
+\author {the float package}
+\maketitle
+
+\section{Wrapping text around a figure}
+
+\wrapfigure{r}{1.7in}{
+  \picture width:1.7in height:1.2in {
+    \fill{lightblue}\stroke{black}\linewidth{1pt}\rect{1 1 121 85}
+  }
+  \vskip 4pt
+  \caption{A right-anchored figure.}
+}
+A wrapped figure stays in the running text: it anchors against the margin at the point it is written, and the
+following lines flow around it in a narrowed measure. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
+do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+ullamco laboris nisi ut aliquip ex ea commodo consequat. Once the lines clear the bottom of the figure they return
+to the full measure and run flush to the margin again.
+
+\wrapfigure{l}{1.7in}{
+  \picture width:1.7in height:1.2in {
+    \fill{lightgreen}\stroke{black}\linewidth{1pt}\rect{1 1 121 85}
+  }
+  \vskip 4pt
+  \caption{A left-anchored figure.}
+}
+The next figure anchors on the left, and its caption reads "Figure 2" — the count carries across figures wherever
+they sit, wrapped or floated. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
+fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
+anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque.
+
+\section{A floated figure and a table}
+
+\figure{
+  \centerline{
+    \picture width:3in height:1in {
+      \fill{lightyellow}\stroke{black}\linewidth{1pt}\rect{1 1 215 71}
+    }
+  }
+  \vskip 4pt
+  \centerline{\caption{A figure floated to the top of the page.}}
+}
+This figure was written here in the source but detaches to the top of the page, the way a LaTeX figure environment
+floats. Its caption continues the figure sequence, so it is "Figure 3". Tables count on a separate sequence: the
+caption below numbers as "Table 1", not "Figure 4".
+
+\table{
+  \centerline{
+    \picture width:2in height:0.7in {
+      \fill{lightgray}\stroke{black}\linewidth{1pt}\rect{1 1 143 49}
+    }
+  }
+  \vskip 4pt
+  \centerline{\caption{The same machinery numbers tables independently.}}
+}
+Both kinds of caption record themselves for a contents list, so the document package can print a list of figures,
+as below.
+
+\section{List of figures}
+
+\listoffigs

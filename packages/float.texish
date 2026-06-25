@@ -1,0 +1,99 @@
+// float — figures and tables that either float to a page edge or have text wrap around them.
+//
+//     \use{float}
+//
+//     \figure{ \includegraphic ... \caption{A diagram} }          // floats to the top of a page
+//     \figure[htb]{ ... \caption{...} }                            // here / top / bottom, as for the engine inserts
+//     \wrapfigure{r}{1.8in}{ ... \caption{...} }                   // anchored right, text wraps beside it
+//     \table{ ... \caption{A table} }
+//
+// Two kinds of float share one set of caption machinery. An edge float (\figure / \table) detaches its body to a
+// page edge over the engine's \topinsert; an in-flow wrap (\wrapfigure / \wraptable) anchors its body against a
+// margin at the current point over the engine's \wrapbox, and the running text flows around it. A \caption written
+// inside either one steps that float's counter and prints a numbered caption, and records the float for \ref and the
+// list of figures / tables. Numbering is independent per kind, so figures count 1, 2, 3 while tables count 1, 2, 3.
+//
+// This package owns only the document-level vocabulary; the hard parts — detaching a float to a page edge, and
+// narrowing each line's measure to wrap text around an anchored box — live in the engine. Each line ends with // so
+// its trailing newline is stripped and the macros emit no stray whitespace in running text.
+
+// ---- Counters ------------------------------------------------------------------
+// Figures and tables count independently, each on its own LaTeX-style named counter.
+\use{counters}//
+\newcounter{figure}//
+\newcounter{table}//
+
+// ---- Caption state -------------------------------------------------------------
+// A float sets these three before typesetting its body, so a \caption inside the body knows which counter to step,
+// which word to print, and which contents list to file into. The defaults describe a figure, so a bare \caption
+// outside any float still numbers as one rather than failing.
+\set captionkind {Figure}//
+\set captioncounter {figure}//
+\set captionlist {lof}//
+
+// \caption steps the float's counter, then records the state a following \label captures — currentlabel holds the
+// number (\global, so it outlives the caption's group), currentlabeltype the kind word \autoref prefixes, and
+// currentlabelname the caption text \nameref prints — and files an entry into the float's contents list (lof / lot)
+// before printing the visible "Figure 1: …" caption. The caption opens \noindent: when it wraps within a figure's
+// column its first line should sit flush, not take a paragraph indent that juts past the lines below it.
+\def caption text {{//
+\stepcounter \captioncounter//
+\global\set currentlabel {\arabic{\value \captioncounter}}//
+\global\set currentlabeltype {\captionkind}//
+\global\set currentlabelname {\text}//
+\addcontentsline{\captionlist}{1}{\arabic{\value \captioncounter}}{\text}//
+\noindent\the\captionkind \arabic{\value \captioncounter}: \text//
+}}//
+
+// ---- Edge floats ---------------------------------------------------------------
+// \figure / \table detach their body to a page edge (default top) over the engine's \topinsert. An optional [htb]
+// placement — here / top / bottom, order significant — is forwarded unchanged. Each selects its own caption kind,
+// counter and list before handing the body off, so a \caption inside numbers as a figure or table accordingly.
+\def figure [placement:t] body {{//
+\set captionkind {Figure}//
+\set captioncounter {figure}//
+\set captionlist {lof}//
+\topinsert[\placement]{\body}//
+}}//
+
+\def table [placement:t] body {{//
+\set captionkind {Table}//
+\set captioncounter {table}//
+\set captionlist {lot}//
+\topinsert[\placement]{\body}//
+}}//
+
+// ---- Wrapped floats ------------------------------------------------------------
+// \wrapfigure / \wraptable anchor their body against a margin at the current point over the engine's \wrapbox, and
+// the following text wraps beside it. The side is l or r and the width is the figure's column width (the text takes
+// the rest, less the \wrapsep gutter). The caption kind/counter/list are chosen exactly as for the edge floats, so a
+// \caption inside the body numbers in the same shared sequence — a wrapped figure and a top figure share one count.
+// Write the caption as a bare \caption so it flows and wraps within the figure's column; do not \centerline it, which
+// would force it onto one line that, if the caption is wider than the figure, spills over the wrapped text beside it.
+// A wrapped figure reserves no vertical height — text flows beside it — so a figure taller than its accompanying text
+// would be ridden over by the next full-width block. Sectioning commands clear the wrap automatically; before any
+// other full-width block that must sit below the figure, call the engine's \clearwrap to step past the figure's foot.
+//
+// An optional leading [shape] makes the text follow the figure's silhouette rather than its bounding box — ellipse,
+// triangleup, triangledown or diamond, with the default rect giving the ordinary rectangular wrap. Draw a figure
+// whose outline matches the shape (a disc for [ellipse], a wedge for [triangledown]) and the running text curves in
+// around it; for a non-rectangular shape the figure box is still anchored at the margin, so leave the silhouette
+// tangent to that edge.
+//
+// A \begin{minipage}{width} ... \end{minipage} block is an ideal payload for a rectangular wrap: it sets a passage as
+// its own little page in a fixed-width box, so the running text flows around the whole block as one unit and it never
+// splits across the column. Pair a minipage with a plain (rect) \wrapfigure, not a shaped one — the block is
+// rectangular, so a curved silhouette would let the text ride into its corners.
+\def wrapfigure [shape:rect] side width body {{//
+\set captionkind {Figure}//
+\set captioncounter {figure}//
+\set captionlist {lof}//
+\wrapshape{\shape}{\side}{\width}{\body}//
+}}//
+
+\def wraptable [shape:rect] side width body {{//
+\set captionkind {Table}//
+\set captioncounter {table}//
+\set captionlist {lot}//
+\wrapshape{\shape}{\side}{\width}{\body}//
+}}//
