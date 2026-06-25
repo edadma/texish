@@ -1,10 +1,12 @@
 ---
-title: "Command Cheat Sheet"
+title: "Command Reference"
 weight: 2
 ---
 
-A quick index of the commands. Those marked *(format)* require `\use{document}`; the rest
-are engine primitives available in any document.
+Every command, grouped by topic. Those marked *(format)* require `\use{document}` (or the named
+package); the rest are engine primitives available in any document. The engine variables they read
+are in [Parameters and Variables](../parameters/), and the `\picture` drawing commands are in the
+[Drawing Reference](../drawing/).
 
 ## Document structure *(format)*
 
@@ -33,6 +35,7 @@ The document is typeset twice over a shared label table, so forward references r
 | `\nameref{name}` | print the title of the labelled section or caption |
 | `\tableofcontents` `\contents` | a contents list built from the section headings |
 | `\listoffigures` `\listoftables` | lists of captioned figures / tables (`\listoffigs` `\listoftabs` add the heading) |
+| `\addcontentsline{list}{level}{number}{title}` `\tocentry{level}{number}{title}` | low-level: file an entry into a named list (`toc`/`lof`/`lot`) — sectioning and `\caption` call these |
 
 ## Text and markup
 
@@ -45,7 +48,36 @@ The document is typeset twice over a shared label table, so forward references r
 | `\href{url}{text}` `\url{url}` | clickable links (real PDF annotations) |
 | `\TeX` `\LaTeX` `\TeXish` | the logos *(`\use{document}`)* |
 | `` ``…'' `` `--` `---` `...` `~` | quotes, dashes, ellipsis, tie |
-| `\$` | a literal dollar sign |
+| `\$` `\&` `\#` `\%` `\{` `\}` `\\` `\~` | literal special characters (`$ & # % { } \ ~`) |
+
+## Fonts and font shape
+
+`\bold`/`\italic`/`\smallcaps`/`\slanted` wrap an argument; the declarations switch the font for
+the rest of the enclosing group (so an environment can set its whole body in one shape) and revert
+at the closing brace or `\end`. Family roles select the roman/sans/typewriter member of the current
+super-family, keeping weight and slope.
+
+| Command | Effect |
+|---------|--------|
+| `\font{face}{size}{style}` | select typeface, size and style together |
+| `\fontsize{size}` | change only the size, keeping the typeface and shape |
+| `\fontscale{factor}{style}` | re-select the current typeface at the current size × factor |
+| `\typeface{name}` | select a typeface by name |
+| `\bold{…}` `\italic{…}` `\slanted{…}` `\smallcaps{…}` | shape-wrapping commands |
+| `\textrm{…}` `\textsf{…}` `\texttt{…}` | roman / sans / typewriter member of the super-family |
+| `\itshape` `\slshape` `\bfseries` `\scshape` | declare italic / slanted / bold / small-caps for the group |
+| `\upshape` `\mdseries` `\normalfont` | clear the shape axis / clear bold / return to the plain face |
+| `\rmfamily` `\sffamily` `\ttfamily` | declare roman / sans / typewriter for the group |
+| `\accent{mark}{char}` | combine an accent mark with a base character |
+
+## Text symbols
+
+| Command | Symbol |
+|---------|--------|
+| `\copyright` `\textregistered` `\texttrademark` | © ® ™ |
+| `\dag` `\ddag` `\S` `\P` | † ‡ § ¶ |
+| `\pounds` `\textdegree` `\textbullet` | £ ° • |
+| `\textemdash` `\textendash` | — – |
 
 ## Mathematics
 
@@ -53,22 +85,23 @@ The document is typeset twice over a shared label table, so forward references r
 |---------|--------|
 | `$…$` `$$…$$` | inline and display math |
 | `^` `_` | super/subscript |
-| `\frac{a}{b}` `a \over b` | fractions |
+| `\frac{a}{b}` `a \over b` `a \atop b` | fractions (`\atop` stacks with no rule) |
 | `\dfrac{a}{b}` `\tfrac{a}{b}` | forced display-style / text-style fractions |
 | `\binom{n}{k}` `\dbinom` `\tbinom` | binomial coefficients |
 | `\sqrt{x}` `\sqrt[3]{x}` | roots |
-| `\sum` `\int` `\prod` `\limits` | big operators |
+| `\sum` `\int` `\prod` `\limits` `\nolimits` | big operators (`\nolimits` forces scripts to the side) |
 | `\operatorname{…}` | an upright custom operator (like `\sin`, with operator spacing) |
 | `\left( … \right)` | stretchy delimiters |
 | `\hat` `\vec` `\widehat` | accents |
 | `\overset{a}{b}` `\underset{a}{b}` `\substack{a \\ b}` | stack material above / below / in a script pile |
 | `\boxed{…}` | a framed formula |
+| `\overline{…}` `\underline{…}` | a rule over / under the content (`\underline` also works in text) |
 | `\text{…}` `\mathcal{…}` | upright / calligraphic |
 | `\mathbf` `\mathit` `\mathrm` `\mathsf` `\mathtt` `\mathbb` `\mathfrak` | math alphabets (bold, italic, roman, sans, mono, blackboard, fraktur) |
 | `\phantom` `\hphantom` `\vphantom` | reserve a box's size without drawing it |
 | `\smash{…}` | draw a box but report zero height and depth |
 | `\longrightarrow` `\rightleftharpoons` | long / equilibrium arrows |
-| `\,` `\:` `\;` `\!` | thin / medium / thick / negative-thin space |
+| `\,` `\:` `\;` `\!` `\quad` `\qquad` | thin / medium / thick / negative-thin / 1em / 2em space |
 | `\matrix` `\pmatrix` `\bmatrix` `\vmatrix` `\Vmatrix` `\Bmatrix` `\smallmatrix` `\cases` | matrices |
 | `\begin{aligned}…\end{aligned}` | equations aligned on their `&` relations (`\\` between rows) |
 | `\eqno(…)` | display equation number |
@@ -92,7 +125,7 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\mbox{…}` | an unbreakable horizontal box of its natural width |
 | `\makebox[width][l\|c\|r\|s]{…}` | a box of a set width, content aligned (width = a dimension or a `\linewidth` factor) |
 | `\parbox[t\|c\|b]{width}{…}` | set a paragraph in a box of the given width, aligned on the baseline |
-| `\begin{minipage}[t\|c\|b]{width}…\end{minipage}` | the environment form of `\parbox` *(format)* |
+| `\begin{minipage}[t\|c\|b]{width}…\end{minipage}` | the environment form of `\parbox` (over the `\beginminipage`/`\endminipage` primitives) |
 | `\wrapbox{side}{width}{…}` | anchor a box at the left/right margin so following text wraps beside it |
 | `\wrapshape{shape}{side}{width}{…}` | the same, with text following a non-rectangular silhouette |
 | `\cutout{width}{height}{side}` `\cutshape{shape}{width}{height}{side}` | reserve a rectangular / shaped hole in the running text |
@@ -102,15 +135,73 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\rlap` `\llap` | zero-width overlap boxes |
 | `\kern` `\hskip` `\vskip` | rigid / glue spacing |
 | `\smallskip` `\medskip` `\bigskip` | named vertical gaps |
-| `\vfil` `\vfill` `\hfil` `\hss` | stretchable fill |
+| `\indent` `\noindent` | force / suppress the next paragraph's indent |
+| `\newpage` | end the current page and start a new one |
+| `\ignorespaces` | swallow the spaces that follow (at the end of a macro body) |
+| `\vfil` `\vfill` `\vss` `\hfil` `\hfill` `\hss` | stretchable fill |
 | `\lower` `\raise` | shift a box vertically |
-| `\setbox` `\box` `\copy` `\wd`/`\ht`/`\dp` | box registers and their dimensions |
+| `\setbox` `\box` `\copy` `\unhbox` `\unvbox` `\wd`/`\ht`/`\dp` `\isvoid` | box registers, their dimensions, splicing, and the empty test |
 | `\vsplit name to:<dim>` | cut a saved vbox at a page-style breakpoint |
 | `\columns {n} {…}` | set the body as *n* balanced columns (`gap:<dim>` before `{n}` sets the gutter) |
 | `\leaders` `\cleaders` `\xleaders` | fill space by tiling a box |
 | `\dotfill` `\hrulefill` | a dotted / ruled leader (e.g. contents lines) |
 | `\discretionary{pre}{post}{no}` `\softhyphen` | author-controlled break points |
 | `\penalty` `\nobreak` `\eject` | page-break control (breaks are chosen by cost) |
+| `\topinsert` `\midinsert` `\botinsert` | plain-TeX edge floats (the `float` package builds `\figure`/`\table` on these) |
+| `\mark{…}` | drop a mark for running heads (`topmark`/`firstmark`/`botmark`) |
+
+The framing primitives read `fboxsep` / `fboxrule`; box and page behaviour is tuned through the
+[parameters](../parameters/) (`hsize`, `parindent`, `baselineskip`, `tolerance`, the page-break
+penalties, and so on).
+
+## Rules, frames, and transforms
+
+| Command | Effect |
+|---------|--------|
+| `\hrule` `\vrule` | a horizontal / vertical rule (`[width:…]`, `[height:…]`, `[depth:…]` size it) |
+| `\fbox{…}` `\framebox{…}` | frame the content (padding `fboxsep`, rule `fboxrule`, current pen colour) |
+| `\colorbox{color}{…}` | fill the content's background with a colour, no frame |
+| `\fcolorbox{frame}{bg}{…}` | frame in one colour around a body filled with another |
+| `\rotatebox{deg}{…}` | rotate the content counter-clockwise about its left baseline |
+| `\scalebox{factor}[yfactor]{…}` | scale the content (one factor scales uniformly) |
+| `\reflectbox{…}` | mirror the content left-to-right |
+| `\resizebox{w}{h}{…}` | scale to a width and height (`!` for either keeps the aspect ratio) |
+| `\raisebox{lift}{…}` | raise the content, adjusting its reported height and depth |
+
+## Tables
+
+| Command | Effect |
+|---------|--------|
+| `\halign{template \cr rows}` | a column-aligned table; `#` marks the cell slot in the template, `&` separates cells, `\cr` ends a row |
+| `\noalign{…}` | between rows of an `\halign`, insert material (often an `\hrule`) outside the column alignment |
+| `\omit` | at the start of a cell, skip its template and set the cell plain |
+| `\tabular{cols}{body}` | the LaTeX form: `cols` is `l`/`c`/`r` columns and `\|` rules; the body uses `&`, `\\` and `\hline` |
+
+## Verbatim and code
+
+| Command | Effect |
+|---------|--------|
+| `\verb<delim>…<delim>` | inline verbatim: the char after `\verb` delimits, the text is set literally in monospace |
+| `\code[language]{…}` | a code listing in the code face; `[language]` syntax-highlights it (see the code environment for unbalanced braces) |
+
+Both read their text raw from the input, so — like LaTeX's `\verb` — they cannot be produced by a
+macro. `\code` colours by the theme in `codetheme`; the `code` environment takes its language from
+`codelang`.
+
+## Hyphenation
+
+| Command | Effect |
+|---------|--------|
+| `\usehyphenation{tag}` | enable the bundled patterns for a language tag (`en-us`, `es`, `fr`, …) and make it active |
+| `\loadhyphenation{lang}{path}` | load Liang patterns from a `.tex` file and make `lang` active |
+| `\language{lang}` | switch to an already-loaded language |
+
+## Hooks
+
+| Command | Effect |
+|---------|--------|
+| `\addtohook{name}{code}` | append an unevaluated code fragment to a named hook |
+| `\usehook{name}` | run every fragment registered on a hook, in order |
 
 ## Page geometry
 
@@ -139,7 +230,13 @@ Example: `\geometry paper:a4 margin:2cm` or `\geometry left:2in right:1in top:1.
 | Command | Effect |
 |---------|--------|
 | `\includegraphics[width=,height=,scale=]{path}` | place a PNG or JPEG |
+| `\image{path}` | place an image at its natural size |
+| `\defbitmap{name}{w}{h}{depth}{base64}` | define an inline bitmap from embedded data (so a package can carry a glyph) |
+| `\usebitmap[width:… height:…]{name}` | place a bitmap defined by `\defbitmap` |
 | `\picture width:… height:… {…}` | open a vector-graphics drawing |
+
+The drawing commands available inside `\picture` (paths, shapes, strokes, fills, transforms, text,
+arrows) are listed in the [drawing reference](../drawing/).
 
 ## Floats and text wrapping *(`\use{float}`)*
 
@@ -205,7 +302,9 @@ palette colour, and a label adds a legend entry.
 | `\round{value}{places}` | round a number to a fixed number of decimals |
 | `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |
 | `\for … \done` | iteration |
-| `\seq{…}` `\words{s}` `\head` `\tail` `\size` `\cat` | sequences; `\words` splits a string on whitespace |
+| `\the\name` | output a variable's value (`\the\pageno`, `\the\hsize`, …) |
+| `\seq{…}` `\words{s}` `\head` `\tail` `\last` `\size` `\cat` `\range{a}{b}` | sequences; `\words` splits on whitespace, `\range` counts `a`–`b`, `\last` is the final element |
+| `\upcase{…}` `\downcase{…}` `\trim{…}` | uppercase / lowercase / strip surrounding whitespace |
 | `\map{…}` `\mapset` `\mapget` `\maphas` | keyed maps |
 | `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
 | `\oklch{L}{C}{h}` `\oklchof{color}` | build / read a colour in the Oklch space (lightness, chroma, hue) — derive shades by varying L |
