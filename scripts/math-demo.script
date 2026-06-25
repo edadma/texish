@@ -240,11 +240,13 @@ with a thick space on either side, so a chain of reasoning reads naturally:
 
 $$x^2 = 4 \implies x = 2 \;\text{or}\; x = -2 \iff |x| = 2.$$
 
-The \texttt{\\dots} ellipsis carries a sequence to its limit:
+An ellipsis carries a sequence to its limit. Between operators the centred
+\texttt{\\cdots} lines the dots up with the plus signs; in a comma list the low
+\texttt{\\ldots} sits on the baseline with the commas:
 
-$$1 + 2 + 3 + \dots + n = \frac{n(n+1)}{2}
+$$1 + 2 + 3 + \cdots + n = \frac{n(n+1)}{2}
   \qquad
-  a_1, a_2, \dots, a_n.$$
+  a_1, a_2, \ldots, a_n.$$
 
 \section {Forcing a symbol's class}
 
