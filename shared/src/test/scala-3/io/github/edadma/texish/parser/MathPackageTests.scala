@@ -34,7 +34,8 @@ class MathPackageTests extends AnyFreeSpec with Matchers:
     noException should be thrownBy render("$p \\implies q \\iff r \\impliedby s$")
   }
 
-  "\\dots is an alias for the low ellipsis" in {
+  "\\dots in a comma list renders without error" in {
+    // \dots is context-sensitive (low here, before the comma); the glyph-level check is in MathAmsTests
     noException should be thrownBy render("$a_1, a_2, \\dots, a_n$")
   }
 

@@ -33,6 +33,3 @@
 \def implies {\;\Rightarrow\;}//
 \def impliedby {\;\Leftarrow\;}//
 \def iff {\;\Leftrightarrow\;}//
-
-// The amsmath spelling of the low ellipsis, an alias for the engine's \ldots.
-\def dots {\ldots}//

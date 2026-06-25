@@ -25,19 +25,47 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
   proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))
   proc.registerPrimitive("hss", SimplePrimitive(() => t.add(InfGlue)))
 
-  // \dots / \ldots — a low ellipsis. In text it is the … glyph. The math font carries no … glyph (unlike the
-  // centred \cdots, which keeps its own glyph), so in math the low dots are built from three period glyphs spaced
-  // a little apart and set as one inner atom, so the run takes an ellipsis's inter-atom spacing.
-  val ellipsisPrimitive: Primitive = new Primitive:
-    def execute(proc: Processor, pos: CharReader): Unit =
-      t.mode match
-        case m: MathMode =>
-          def dot = m.mathFont.glyphBox('.'.toInt)
-          def gap = HSpaceBox(m.mathFont.size * 2.0 / 18.0)
-          m.addNode(MathAtom(MathClass.Inner, HBox(Vector(dot, gap, dot, gap, dot))))
-        case _ => handler.text("…")
-  proc.registerPrimitive("dots", ellipsisPrimitive)
-  proc.registerPrimitive("ldots", ellipsisPrimitive)
+  // \ldots / \dots — a text ellipsis (the … glyph) or, in math, low dots. The math font carries no … glyph
+  // (unlike the centred \cdots, which keeps its own), so the low dots are built from three period glyphs spaced a
+  // little apart and set as one inner atom. \ldots is always low; \dots is context-sensitive like amsmath's — it
+  // sets the centred \cdots when an operator or relation follows (a + \dots + z) and low dots otherwise (a, \dots, z).
+  def addLowDots(m: MathMode): Unit =
+    def dot = m.mathFont.glyphBox('.'.toInt)
+    def gap = HSpaceBox(m.mathFont.size * 2.0 / 18.0)
+    m.addNode(MathAtom(MathClass.Inner, HBox(Vector(dot, gap, dot, gap, dot))))
+
+  // Whether the next input token is a binary operator or a relation — the case amsmath's \dots sets with centred
+  // dots. The classification reuses the math symbol table: the first character of a text run, or a whole
+  // control-sequence symbol, is looked up and its atom class inspected.
+  def nextIsBinOrRel(proc: Processor, m: MathMode): Boolean =
+    def binRel(node: Option[MathNode]): Boolean = node match
+      case Some(a: MathAtom) => a.cls == MathClass.Bin || a.cls == MathClass.Rel
+      case _                 => false
+    proc.skipSpaces() // a space is insignificant in math, so look past it to the next real token
+    proc.hasMoreTokens && (proc.peekToken() match
+      case Token.Text(s, _) =>
+        binRel(s.dropWhile(_.isWhitespace).headOption.flatMap(c => MathSymbols.charNode(m.mathFont, c.toInt)))
+      case Token.ControlSeq(name, _) => binRel(MathSymbols.commandNode(m.mathFont, name))
+      case _                         => false)
+
+  proc.registerPrimitive(
+    "ldots",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case m: MathMode => addLowDots(m)
+          case _           => handler.text("…")
+    },
+  )
+  proc.registerPrimitive(
+    "dots",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case m: MathMode => if nextIsBinOrRel(proc, m) then m.addCommand("cdots") else addLowDots(m)
+          case _           => handler.text("…")
+    },
+  )
 
   // The vertical glue commands end an open paragraph first, as in TeX: \vfill issued mid-paragraph would
   // otherwise add its glue to the paragraph itself, where it sets as horizontal space inside the last line and

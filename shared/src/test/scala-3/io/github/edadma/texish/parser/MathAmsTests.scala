@@ -11,6 +11,7 @@ import io.github.edadma.texish.{
   MathMode,
   MathStyle,
   MatrixBox,
+  VBox,
 }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -194,6 +195,34 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
     // the math font carries no … glyph, so \ldots is built from three period glyphs; were it the bare … glyph it
     // would render blank and $1\ldots2$ would be no wider than $12$
     mathWidth("$1\\ldots 2$") should be > (mathWidth("$12$") + 10.0)
+  }
+
+  /** Every glyph codepoint drawn anywhere in the formula `src`, in tree order. */
+  private def mathGlyphCodes(src: String): List[Int] =
+    val captured = scala.collection.mutable.ArrayBuffer[Box]()
+    val t = new HeadlessTypesetter:
+      override infix def add(box: Box): io.github.edadma.texish.Typesetter =
+        captured += box
+        super.add(box)
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+    registerTypesettingPrimitives(proc, handler)
+    proc.process(src)
+    def codes(b: Box): List[Int] = b match
+      case g: GlyphBox => List(g.glyph)
+      case h: HBox     => h.boxes.toList.flatMap(codes)
+      case v: VBox     => v.boxes.toList.flatMap(codes)
+      case _           => Nil
+    captured.toList.flatMap(codes)
+
+  "\\dots is context-sensitive: centred dots before an operator, low dots before a comma" in {
+    // amsmath's rule — \cdots (the ⋯ glyph, 0x22EF) between operators, \ldots (period glyphs, 0x2E) in a list
+    val beforeOp    = mathGlyphCodes("$a + \\dots + b$").toSet
+    val beforeComma = mathGlyphCodes("$a, \\dots, b$").toSet
+    beforeOp should contain(0x22EF)        // centred ⋯
+    beforeOp should not contain '.'.toInt
+    beforeComma should contain('.'.toInt)  // low period dots
+    beforeComma should not contain 0x22EF
   }
 
   // Tokenize with `&` active (as the processor does), so a matrix body splits on the column separator.
