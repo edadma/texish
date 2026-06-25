@@ -112,6 +112,28 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\discretionary{pre}{post}{no}` `\softhyphen` | author-controlled break points |
 | `\penalty` `\nobreak` `\eject` | page-break control (breaks are chosen by cost) |
 
+## Page geometry
+
+`\geometry` sets the page frame the way LaTeX's geometry package does, but with texish
+`name:value` options instead of a `key=value` list. It resolves the sheet, the text size,
+and the margins, then sets `paperwidth`/`paperheight`, `hsize`/`vsize` and `hoffset`/`voffset`
+globally — so a `\geometry` in the preamble holds for the whole document, and a later call
+re-frames the pages that follow it (as LaTeX's `\newgeometry` does). The far margin is always
+the remainder, so the frame closes by construction.
+
+| Option | Effect |
+|--------|--------|
+| `paper:<name>` | a named sheet: `letter`, `legal`, `a3`, `a4`, `a5` |
+| `paperwidth:<dim>` `paperheight:<dim>` | the sheet size explicitly |
+| `landscape:on` `portrait:on` | swap the sheet to its wider / taller orientation |
+| `margin:<dim>` | one length for all four margins (`hmargin`/`vmargin` for one axis) |
+| `left:` `right:` `top:` `bottom:<dim>` | the four margins individually |
+| `textwidth:` `textheight:<dim>` (or `width:`/`height:`) | the text-block size directly |
+| `centering:on` | centre the text block (`hcentering`/`vcentering` for one axis) |
+| `headsep:` `footskip:<dim>` | the running-head and running-foot gaps |
+
+Example: `\geometry paper:a4 margin:2cm` or `\geometry left:2in right:1in top:1.5in bottom:1in`.
+
 ## Images and graphics
 
 | Command | Effect |

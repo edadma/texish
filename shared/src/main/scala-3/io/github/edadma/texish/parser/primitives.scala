@@ -1079,6 +1079,63 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
     },
   )
 
+  // geometry - LaTeX geometry-style page setup, taken as texish name:value options rather than a {key=value,…}
+  // list. It resolves the page frame and sets the underlying variables: the physical sheet (paper / paperwidth /
+  // paperheight / landscape / portrait) and, on each axis independently, the margins and text size from whichever
+  // of {margin, hmargin/vmargin, left/right, top/bottom, textwidth/textheight (or width/height), centering} were
+  // given. The settings are global, so a \geometry in the preamble holds for the whole document. Examples:
+  //   \geometry paper:a4 margin:1in
+  //   \geometry left:1.5in right:1in top:1in bottom:1in
+  //   \geometry textwidth:6in centering:on
+  //   \geometry paper:a4 landscape:on
+  proc.registerPrimitive(
+    "geometry",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts = proc.readOptionalParams(pos)
+
+        def dim(key: String): Option[Double]  = opts.get(key).flatMap(Value.number)
+        def flag(key: String): Boolean = opts.get(key).exists { v =>
+          Value.display(v).trim.toLowerCase match
+            case "off" | "false" | "no" | "0" | "" => false
+            case _                                 => true
+        }
+
+        // The physical sheet: a named size, then explicit overrides, then an orientation swap.
+        var pw = t.getNumber("paperwidth")
+        var ph = t.getNumber("paperheight")
+        opts.get("paper").map(Value.display).foreach { name =>
+          t.paperSize(name) match
+            case Some((w, h)) => pw = w; ph = h
+            case None => handler.error(s"\\geometry: unknown paper size '$name' (letter, legal, a3, a4, a5)", pos)
+        }
+        dim("paperwidth").foreach(pw = _)
+        dim("paperheight").foreach(ph = _)
+        if flag("landscape") && pw < ph then { val s = pw; pw = ph; ph = s }
+        if flag("portrait") && pw > ph then { val s = pw; pw = ph; ph = s }
+
+        val centerAll = flag("centering")
+        val (hoff, hs) = resolveGeometryAxis(pw, dim("margin").orElse(dim("hmargin")),
+          dim("left"), dim("right"), dim("textwidth").orElse(dim("width")),
+          centerAll || flag("hcentering"), t.getNumber("hoffset"), t.getNumber("hsize"))
+        val (voff, vs) = resolveGeometryAxis(ph, dim("margin").orElse(dim("vmargin")),
+          dim("top"), dim("bottom"), dim("textheight").orElse(dim("height")),
+          centerAll || flag("vcentering"), t.getNumber("voffset"), t.getNumber("vsize"))
+
+        if hs <= 0 then handler.error(s"\\geometry: the horizontal margins leave no room for text", pos)
+        else if vs <= 0 then handler.error(s"\\geometry: the vertical margins leave no room for text", pos)
+        else
+          t.setGlobal("paperwidth", pw)
+          t.setGlobal("paperheight", ph)
+          t.setGlobal("hoffset", hoff)
+          t.setGlobal("hsize", hs)
+          t.setGlobal("voffset", voff)
+          t.setGlobal("vsize", vs)
+          dim("headsep").foreach(t.setGlobal("headsep", _))
+          dim("footskip").foreach(t.setGlobal("footskip", _))
+    },
+  )
+
   // setbox name \hbox{...} (or \vbox / \vtop) - typeset a box now and save it in a register under `name`, for
   // later measurement (\wd / \ht / \dp) and placement (\box / \copy). Like \set, the assignment is local to the
   // current group. The box's contents are typeset at this point, not when the register is later used.
@@ -1801,6 +1858,34 @@ private[parser] def points(v: Value): Option[Double] = v match
   case Value.Dimen(p) => Some(p.toDouble)
   case Value.Num(n)   => Some(n.toDouble)
   case _              => None
+
+/** Resolve one axis of `\geometry`: given the sheet extent `P` and whichever of an equal margin, the two edge
+  * margins, and the text size were supplied, return the `(offset, textSize)` pair for that axis. The priority
+  * mirrors LaTeX's geometry package: an equal margin wins; then a fixed pair of edge margins makes the text the
+  * remainder; then a text size is positioned by whichever single edge margin is fixed, or centred if neither is;
+  * then a lone edge margin shifts the current text block; then a bare `centering` re-centres it; otherwise the
+  * axis is left unchanged. `P − offset − textSize` is the far margin, so the frame always closes. */
+private[parser] def resolveGeometryAxis(
+    P: Double,
+    marginBoth: Option[Double],
+    low: Option[Double],
+    high: Option[Double],
+    text: Option[Double],
+    center: Boolean,
+    curOffset: Double,
+    curSize: Double,
+): (Double, Double) =
+  marginBoth match
+    case Some(m) => (m, P - 2 * m)
+    case None =>
+      (low, high, text) match
+        case (Some(l), Some(h), _)     => (l, P - l - h)        // both edges fixed → text is what's left
+        case (Some(l), None, Some(tw)) => (l, tw)               // near edge + width
+        case (None, Some(h), Some(tw)) => (P - h - tw, tw)      // far edge + width
+        case (None, None, Some(tw))    => ((P - tw) / 2, tw)    // width alone → centred (as in LaTeX)
+        case (Some(l), None, None)     => (l, curSize)          // near edge alone → shift, keep width
+        case (None, Some(h), None)     => (P - h - curSize, curSize) // far edge alone → keep width
+        case (None, None, None)        => if center then ((P - curSize) / 2, curSize) else (curOffset, curSize)
 
 // Text script geometry (\textsub / \textsup): the body is set at scriptScale of the current font size and
 // its box shifted by a fraction of that size below (sub) or above (sup) the baseline.

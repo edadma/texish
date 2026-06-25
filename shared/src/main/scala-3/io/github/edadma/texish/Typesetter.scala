@@ -499,6 +499,16 @@ abstract class Typesetter:
 
   def mm: Double = cm / 10
 
+  /** The named paper sizes the engine knows, as `(width, height)` in point space. Shared by the `\geometry`
+    * primitive and the CLI's `--paper` flag so the two never drift apart. Names are matched case-insensitively. */
+  def paperSize(name: String): Option[(Double, Double)] = name.toLowerCase match
+    case "letter" => Some((8.5 * in, 11 * in))
+    case "legal"  => Some((8.5 * in, 14 * in))
+    case "a3"     => Some((297 * mm, 420 * mm))
+    case "a4"     => Some((210 * mm, 297 * mm))
+    case "a5"     => Some((148 * mm, 210 * mm))
+    case _        => None
+
   infix def get(name: String): Option[Value] = scopes.top.get(name)
 
   infix def getVar(name: String): Value = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))

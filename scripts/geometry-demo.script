@@ -1,0 +1,79 @@
+// geometry-demo — the \geometry primitive, which sets the page frame the way LaTeX's
+// geometry package does, but with texish name:value options instead of a key=value list.
+//
+// This document sets a deliberately asymmetric frame — a wide two-inch left margin, a
+// one-inch right margin, and a tall top margin — so the effect is plain on the page: the
+// text block is pushed right and down from where a default 1in-all-round letter page would
+// put it. \geometry is given in the "preamble", before any content, and its settings are
+// global, so they hold for every page.
+
+\use{document}
+
+\geometry paper:letter left:2in right:1in top:1.5in bottom:1in
+
+\title{The \texttt{geometry} Page Frame}
+\author{The texish engine}
+\date{Version 0.9.0}
+\maketitle
+
+\section{What it controls}
+
+The \texttt{geometry} primitive resolves a page frame and sets the variables the page
+builder reads: the physical sheet (\texttt{paperwidth}, \texttt{paperheight}), the text
+size (\texttt{hsize}, \texttt{vsize}), and the top-left offset of the text block
+(\texttt{hoffset}, \texttt{voffset}). Every option is a \texttt{name:value} pair, and the
+far margin is always whatever is left over, so the frame closes by construction.
+
+This page was set with
+
+\begin{quote}
+\noindent\texttt{\\geometry paper:letter left:2in right:1in top:1.5in bottom:1in}
+\end{quote}
+
+\noindent which is why the body sits two inches in from the left and an inch and a half
+down from the top, with an inch of space at the right and foot.
+
+\section{The options}
+
+\begin{description}
+\item[paper] a named sheet --- \texttt{letter}, \texttt{legal}, \texttt{a3},
+\texttt{a4} or \texttt{a5}. \texttt{paperwidth} and \texttt{paperheight} set the sheet
+explicitly instead.
+\item[landscape] swap the sheet to its wider orientation (\texttt{portrait} forces the
+taller one).
+\item[margin] one length for all four margins. \texttt{hmargin} sets left and right
+together, \texttt{vmargin} top and bottom.
+\item[left, right, top, bottom] the four margins individually. Give two opposite margins
+and the text size between them is the remainder; give one and the text keeps its width and
+simply shifts.
+\item[textwidth, textheight] (also \texttt{width}, \texttt{height}) the text block size
+directly, rather than via the margins.
+\item[centering] centre the text block on the sheet --- equal margins on each axis.
+\texttt{hcentering} and \texttt{vcentering} centre one axis only.
+\item[headsep, footskip] the running-head and running-foot gaps, passed straight through.
+\end{description}
+
+\section{Lengths}
+
+Any option that takes a length accepts the engine's units --- \texttt{in}, \texttt{pt},
+\texttt{cm}, \texttt{mm}, \texttt{pc} --- so \texttt{margin:2cm} and \texttt{margin:0.75in}
+are both fine. A bare number is read as points.
+
+\section{Composing}
+
+Options combine left to right. A common book setup is a named sheet with a single margin,
+
+\begin{quote}
+\noindent\texttt{\\geometry paper:a5 margin:0.75in}
+\end{quote}
+
+\noindent and a slide-style page is a wide sheet turned on its side with a centred body,
+
+\begin{quote}
+\noindent\texttt{\\geometry paper:a4 landscape:on textwidth:9in centering:on}
+\end{quote}
+
+\noindent Because the settings are global, a later \texttt{\\geometry} call changes the
+frame for the pages that follow it, the way \texttt{\\newgeometry} does in LaTeX.
+
+\vfill\eject

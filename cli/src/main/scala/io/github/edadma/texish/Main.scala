@@ -157,13 +157,8 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
 
 /** Paper dimensions in the engine's point space, using the typesetter's own unit constants. */
 private def paperDimensions(paper: String, t: Typesetter): (Double, Double) =
-  paper match
-    case "letter" => (8.5 * t.in, 11 * t.in)
-    case "legal"  => (8.5 * t.in, 14 * t.in)
-    case "a3"     => (297 * t.mm, 420 * t.mm)
-    case "a4"     => (210 * t.mm, 297 * t.mm)
-    case "a5"     => (148 * t.mm, 210 * t.mm)
-    case other    => sys.error(s"unknown paper size: $other") // unreachable: the CLI validates --paper
+  // the same named-size table the \geometry primitive uses, so the CLI flag and the in-document command agree
+  t.paperSize(paper).getOrElse(sys.error(s"unknown paper size: $paper")) // unreachable: the CLI validates --paper
 
 /** The output base path: an explicit `-o` wins; otherwise the input file's own path with its extension dropped
   * but its directory kept, so the result lands beside the source rather than in the current directory; with no
