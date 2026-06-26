@@ -45,9 +45,16 @@ def registerTypesettingPrimitives(proc: Processor, handler: TypesetterHandler): 
       t.get(name) match
         case Some(Value.Macro(_, body, _)) =>
           handler.isolated {
-            t.hbox(t.getNumber("hsize"))
-            proc.processTokenList(body)
-            t.mode.exit
+            // The header/footer runs in its own group, so a \font, \set or colour change in the running-head or
+            // -foot macro stays local to it and does not leak into the document — without this a `\def footline
+            // {\font … \the\pageno}` would leave the body font (and its baselineskip) changed for everything set
+            // after the page ships.
+            t.enter()
+            try
+              t.hbox(t.getNumber("hsize"))
+              proc.processTokenList(body)
+              t.mode.exit
+            finally t.exit()
           }
         case _ => null
 
