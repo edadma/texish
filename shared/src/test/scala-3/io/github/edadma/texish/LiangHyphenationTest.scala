@@ -205,6 +205,22 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
     }
   }
 
+  it should "ignore surrounding punctuation, so a short core does not hyphenate" in {
+    // The bracket and period are not part of the word; once stripped the core "Rom"/"Cor" is too short to break.
+    // Without stripping these broke as "(R-om." and "Cor-." against a scripture reference.
+    englishHyphenator.hyphenate("(Rom.") shouldBe empty
+    englishHyphenator.hyphenate("Cor.") shouldBe empty
+    englishHyphenator.hyphenate("(15:3") shouldBe empty
+  }
+
+  it should "hyphenate the letters of a word wrapped in punctuation, offset to the original" in {
+    // "computer" breaks at the same letters whether or not it carries a leading bracket and trailing period;
+    // every point shifts right by the one stripped leading character.
+    val bare = englishHyphenator.hyphenate("computer")
+    bare should not be empty
+    englishHyphenator.hyphenate("(computer).") shouldBe bare.map(_ + 1)
+  }
+
   it should "produce valid break pairs that reconstruct the word" in {
     expectedHyphenations.foreach { case (word, _) =>
       englishHyphenator(word) match

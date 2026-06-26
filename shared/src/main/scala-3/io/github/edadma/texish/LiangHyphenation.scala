@@ -15,10 +15,16 @@ class LiangHyphenation private (patterns: Map[String, IndexedSeq[Int]], minLeft:
 
   /** Find all valid hyphenation points in a word. */
   def hyphenate(word: String): IndexedSeq[Int] =
-    if word.length < minLeft + minRight then return IndexedSeq.empty
+    // Hyphenate only the alphabetic core: leading and trailing non-letters (an opening parenthesis or quote, a
+    // trailing period, the digits and colons of a reference) are not part of the word and must not count toward
+    // break positions — otherwise "(Rom." breaks as "(R-om." and the abbreviation "Cor." as "Cor-.". Strip them,
+    // hyphenate the core, and shift the points back so they index into the original word.
+    val first = word.indexWhere(_.isLetter)
+    if first < 0 then return IndexedSeq.empty
+    val core = word.substring(first, word.lastIndexWhere(_.isLetter) + 1)
+    if core.length < minLeft + minRight then return IndexedSeq.empty
 
-    val lowerWord = word.toLowerCase
-    val marked = s".$lowerWord."
+    val marked = s".${core.toLowerCase}."
     val values = Array.fill(marked.length + 1)(0)
 
     // Find all matching patterns and overlay values (take max)
@@ -30,13 +36,13 @@ class LiangHyphenation private (patterns: Map[String, IndexedSeq[Int]], minLeft:
             if pos < values.length then values(pos) = math.max(values(pos), v)
         }
 
-    // Odd values = hyphenation points, adjusted for '.' offset
+    // Odd values = hyphenation points, adjusted for the '.' marker and the stripped leading affix
     (for
       i <- 2 until (values.length - 2)
       if values(i) % 2 == 1
       charIdx = i - 2
-      if charIdx >= minLeft - 1 && charIdx < word.length - minRight
-    yield charIdx).toIndexedSeq
+      if charIdx >= minLeft - 1 && charIdx < core.length - minRight
+    yield charIdx + first).toIndexedSeq
 
   /**
    * Iterator of (before-with-hyphen, after) pairs.
