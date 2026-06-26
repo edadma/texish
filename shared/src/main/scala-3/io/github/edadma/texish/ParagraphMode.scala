@@ -234,10 +234,18 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
             // stranded at the line end before the box that did not; the run since that space moves to the
             // next line, the break TeX would have made. (Reached only on the greedy fallback, when
             // Knuth-Plass found no solution within the tolerance.)
+            //
+            // The back-up must leave real content on the line, or no box is consumed and the enclosing
+            // `while boxes.nonEmpty` spins forever. The opening \leftskip glue reports as a space, so when the
+            // first content box already fills the line and the next will not fit, the run scanned back is the
+            // whole line and the only "space" before it is that leading margin — backing up past it would
+            // empty the line and re-queue the same boxes. In that case keep the content here (an overfull line
+            // that makes progress) rather than backing up.
             if hbox.size == sizeBefore && !boxes.head.isSpace then
               val carry = ArrayBuffer[Box]()
               while hbox.nonEmpty && !hbox.last.isSpace do carry.prepend(hbox.removeLast())
-              if hbox.nonEmpty && hbox.last.isSpace && carry.nonEmpty then
+              if hbox.nonEmpty && hbox.last.isSpace && carry.nonEmpty && hbox.list.dropRight(1).exists(!_.isSpace)
+              then
                 hbox.removeLast()
                 boxes.insertAll(0, carry.toSeq)
               else carry.foreach(hbox.add)
