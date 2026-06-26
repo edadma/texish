@@ -42,6 +42,12 @@ class DocumentFeaturesTests extends AnyFreeSpec with Matchers:
   private def fontOf(boxes: Seq[Box], mark: String): Font =
     allChars(boxes).collectFirst { case c if c.text.contains(mark) => c.font }.get
 
+  private def leaders(b: Box): List[LeaderBox] = b match
+    case l: LeaderBox => List(l)
+    case h: HBox      => h.boxes.toList.flatMap(leaders)
+    case v: VBox      => v.boxes.toList.flatMap(leaders)
+    case _            => Nil
+
   "size declarations change the type size for the rest of the group and revert" in {
     val boxes = render("{\\large X} Y")
     fontOf(boxes, "X").size shouldBe (12.0 +- 1e-9)
@@ -109,4 +115,15 @@ class DocumentFeaturesTests extends AnyFreeSpec with Matchers:
   "a plain \\item with no label still uses the list marker" in {
     val boxes = render("\\begin{itemize}\\item one\\end{itemize}")
     text(boxes) should include("•")
+  }
+
+  // The contents leader must be grid-aligned (\leaders), not centred (\dotfill), so the dots fall on a fixed
+  // column and line up from row to row. tocformat / lofformat / lotformat all share the same \tocleader.
+  "the contents-line leaders are grid-aligned so dots line up between rows" in {
+    for fmt <- Seq("tocformat", "lofformat", "lotformat") do
+      val ls = render(s"\\$fmt{1}{1}{Methods}{4}").flatMap(leaders)
+      withClue(s"\\$fmt: ") {
+        ls should not be empty
+        all(ls.map(_.kind)) shouldBe LeaderKind.Aligned
+      }
   }

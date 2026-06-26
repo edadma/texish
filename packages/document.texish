@@ -235,9 +235,14 @@
 // prints the contents title above the list.
 \def tocindent lvl {\calc{(\lvl - 1) * 18}}
 
+// The leader between an entry and its folio uses \leaders (grid-aligned), not \dotfill (centred), so the dots fall
+// on a fixed column and line up from row to row, as a LaTeX contents does. The unit is a period centred in a
+// half-em cell; the fil glue spans whatever gap the line leaves.
+\def tocleader {\leaders\hbox to:0.5em {\hss.\hss}{0pt plus 1fil}}
+
 \def tocformat lvl num ttl pg {
   \set tocskip {\tocindent{\lvl}}
-  \hbox to:\hsize {\hskip \tocskip \num\hskip 8 \ttl\dotfill \pg}
+  \hbox to:\hsize {\hskip \tocskip \num\hskip 8 \ttl\tocleader\hskip 6 \pg}
 }
 
 \def tableofcontentstitle {Contents}
@@ -252,11 +257,11 @@
 // entry is a single float — so they print the number, the caption title, a dotted leader and the page. \listoffigs
 // / \listoftabs add the heading above the list, mirroring \contents.
 \def lofformat lvl num ttl pg {
-  \hbox to:\hsize {\num\hskip 8 \ttl\dotfill \pg}
+  \hbox to:\hsize {\num\hskip 8 \ttl\tocleader\hskip 6 \pg}
 }
 
 \def lotformat lvl num ttl pg {
-  \hbox to:\hsize {\num\hskip 8 \ttl\dotfill \pg}
+  \hbox to:\hsize {\num\hskip 8 \ttl\tocleader\hskip 6 \pg}
 }
 
 \def listoffigurestitle {List of Figures}
