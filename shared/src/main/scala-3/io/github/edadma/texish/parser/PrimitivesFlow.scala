@@ -256,6 +256,29 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("listoffigures", contentsListPrimitive("lof", "lofformat"))
   proc.registerPrimitive("listoftables", contentsListPrimitive("lot", "lotformat"))
 
+  // \contentslist - 2 args (list, format-macro): the general form of \tableofcontents. Replays the entries collected
+  // for any named list — the name passed to \addcontentsline — through a format macro named at the call site, invoked
+  // once per entry as macro{level}{number}{title}{page}, exactly as \tableofcontents drives \tocformat. A document
+  // that keeps several independent contents lists (a separate table of contents per language, say) files into each
+  // with \addcontentsline and replays each with its own \contentslist. Like the built-in lists it emits nothing on
+  // the first pass, when no entries have been collected yet.
+  proc.registerPrimitive(
+    "contentslist",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val list        = Value.display(evalArg(proc, pos))
+        val formatMacro = Value.display(evalArg(proc, pos))
+        val entries     = t.references.list(list)
+
+        if entries.nonEmpty then
+          val src = entries
+            .map(e => s"\\$formatMacro{${e.level}}{${e.number}}{${e.title}}{${e.page}}")
+            .mkString
+
+          proc.processContent(src)
+    },
+  )
+
   // footnote - 1 body arg: a raised marker number in the running text, with the body typeset at the foot of
   // whatever page the marker lands on. The body is typeset immediately, at footnotesize, into a block that rides
   // the vertical list as a zero-size insert (see InsertBox); the page builder counts its height against the page

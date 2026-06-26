@@ -36,6 +36,7 @@ The document is typeset twice over a shared label table, so forward references r
 | `\tableofcontents` `\contents` | a contents list built from the section headings |
 | `\listoffigures` `\listoftables` | lists of captioned figures / tables (`\listoffigs` `\listoftabs` add the heading) |
 | `\addcontentsline{list}{level}{number}{title}` `\tocentry{level}{number}{title}` | low-level: file an entry into a named list (`toc`/`lof`/`lot`) — sectioning and `\caption` call these |
+| `\contentslist{list}{format}` | low-level: replay any named list through a format macro called as `format{level}{number}{title}{page}` — the general form of `\tableofcontents`, for keeping several independent contents lists (e.g. one per language) |
 
 ## Text and markup
 
