@@ -61,3 +61,15 @@ class LigatureTests extends AnyFreeSpec with Matchers:
   "... sets a horizontal ellipsis" in {
     allText(render("wait...")) should include(`HORIZONTAL ELLIPSIS`)
   }
+
+  // The small-caps cut carries no f-ligature glyphs (it has no lowercase f), so it must not apply them: mapping
+  // "fi" to a glyph the font lacks dropped the pair from the output (a small-caps "fiable" set as "able").
+  "small caps does not form the fi ligature, so an f-pair survives intact" in {
+    val out = allText(render("\\smallcaps{fiable}"))
+    out should not include "ﬁ" // the ﬁ ligature
+    out should include("fi")
+  }
+
+  "the roman body face still forms the fi ligature" in {
+    allText(render("fiable")) should include("ﬁ")
+  }

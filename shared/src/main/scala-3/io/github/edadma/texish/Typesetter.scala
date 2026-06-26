@@ -440,9 +440,12 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
   // The small-caps cut of the body face, so \textsc / \scshape / \smallcaps set capitals-and-small-capitals in
   // the same family as the roman text. The oblique cut backs the small-caps shape inside italic context (\emph
-  // around \textsc), registered under the {smallcaps, italic} style so that combination resolves too.
-  loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-regular.otf", lmLigatures, Set("smallcaps"))
-  loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-oblique.otf", lmLigatures, Set("smallcaps", "italic"))
+  // around \textsc), registered under the {smallcaps, italic} style so that combination resolves too. Small caps
+  // gets only the text-representation ligatures (dashes, quotes) and not the f-ligatures (ﬁ, ﬂ, …): the cut has no
+  // lowercase f, so it carries no f-ligature glyphs, and applying them would map e.g. "fi" to a glyph the font
+  // lacks — dropping the pair from the output (a small-caps "fiable" set as "able").
+  loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-regular.otf", Ligatures.TEXT_REPRESENTATIONS, Set("smallcaps"))
+  loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-oblique.otf", Ligatures.TEXT_REPRESENTATIONS, Set("smallcaps", "italic"))
 
   // The typewriter and sans-serif members of the Latin Modern super-family, registered as the mono and sans
   // *roles* of the same `lmroman` typeface — so \texttt and \textsf select them by setting the role axis while
