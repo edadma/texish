@@ -1,0 +1,85 @@
+// calendar-demo.script — a comprehensive showcase of the calendar package.
+//
+// The calendar package draws month-grid calendars over the \picture layer. This demo
+// exercises every feature of \calendar: the default Sunday-start month, the Monday-start
+// (ISO) variant, the leap-year February, the today highlight, and the configuration
+// variables that restyle the box — colours, cell size and type sizes. We frame it as a
+// short article over the document format.
+
+\use{document}
+\use{calendar}
+
+\def headline {\textit{The calendar package} \hfil page \the\pageno}
+\def footline {\hfil — \the\pageno — \hfil}
+
+\title{The calendar Package}
+\author{Month grids drawn in the document language}
+\date{}
+\maketitle
+
+A \textit{calendar} is one \texttt{\\picture} box: a title bar with the month and year, a
+weekday header row, and a grid of day cells. It flows in the text like any other box, so
+it can be centred on a page, dropped into a paragraph, or tiled into a year planner. The
+whole package is the document language — \texttt{\\calc} does the date arithmetic, a pair
+of maps hold the names and month lengths, and the grid is \texttt{\\picture} lines and
+placed labels. There is no calendar-specific engine primitive.
+
+\section{A month}
+
+The call \texttt{\\calendar\{2026\}\{6\}} draws June 2026. Weeks start on Sunday and the
+weekend columns take a distinct ink.
+
+\vskip 10pt
+\centerline{\calendar{2026}{6}}
+
+\section{Weeks starting on Monday}
+
+Set \texttt{\\calweekstart} to \texttt{1} for the ISO convention: the header rotates so
+Monday leads and the weekend pair moves to the right of the grid. The change is scoped to
+the group, so it affects only this calendar.
+
+\vskip 10pt
+{\set calweekstart {1}
+\centerline{\calendar{2026}{6}}}
+
+\section{Leap years and the today highlight}
+
+February is twenty-nine days long exactly when the Gregorian rule says so — 2024 is a leap
+year. Setting \texttt{\\caltoday} draws a tinted cell behind that day; here the fourth is
+marked.
+
+\vskip 10pt
+{\set caltoday {4}\set calweekstart {1}
+\centerline{\calendar{2024}{2}}}
+
+\eject
+
+\section{Restyling}
+
+Every visual property is a configuration variable set with \texttt{\\set} after
+\texttt{\\use}. Below, a warmer palette, larger cells and a Monday start turn the same
+primitive into a wall-calendar page.
+
+\vskip 10pt
+{\set calcw {54}\set calch {46}
+ \set caltitleh {30}\set calheadh {22}
+ \set caltitlesize {17}\set calheadsize {11}\set caldaysize {14}
+ \set calweekstart {1}
+ \set caltitlebg {#9c4221}\set calheadbg {#fffaf0}\set calheadink {#7b341e}
+ \set calgrid {#dd9b6c}\set calweekendink {#b7791f}\set caltodayfill {#feebc8}
+ \set caltoday {25}
+ \centerline{\calendar{2026}{12}}}
+
+\section{A quarter, side by side}
+
+Because a calendar is just a box, a row of \texttt{\\calendar} calls in an \texttt{\\hbox}
+sets three months together — the start of a year planner.
+
+\vskip 10pt
+{\set calcw {26}\set calch {22}
+ \set caltitleh {20}\set calheadh {14}
+ \set caltitlesize {11}\set calheadsize {7}\set caldaysize {8}
+ \centerline{\hbox{\calendar{2026}{1}\hskip 12pt\calendar{2026}{2}\hskip 12pt\calendar{2026}{3}}}}
+
+Every calendar on these pages is one \texttt{\\picture} box, set by the same engine as the
+prose around it.

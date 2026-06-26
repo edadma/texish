@@ -1,0 +1,167 @@
+// calendar — month-grid calendars, drawn entirely in the document language over the
+// \picture vector-graphics layer. Import it with:
+//
+//     \use{calendar}
+//
+// A month is drawn by \calendar, which takes a year and a month number (1 = January):
+//
+//     \calendar{2026}{6}
+//
+// The result is one \picture box — a title bar with the month and year, a weekday
+// header row, and a grid of day cells — that flows in the text like any other box, so
+// it can sit in a paragraph, a \centerline, or a cell of a larger layout.
+//
+// The whole library is the document language: \calc computes the calendar arithmetic
+// (the weekday of the first via a standard congruence, the leap-year rule, the row and
+// column of each day), \map / \mapget hold the month and weekday names and the days in
+// each month, and the grid itself is \picture lines, rectangles and placed labels.
+// There is no calendar-specific engine primitive.
+
+// ---- Configuration (override with \set after \use, before \calendar) -----------
+// All sizes are in points (72 per inch). The grid is seven day-columns wide; its height
+// grows to the four, five or six week-rows the month needs.
+\set calcw {34}              // day-cell width  (grid column width)
+\set calch {30}              // day-cell height (grid row height)
+\set calheadh {18}           // weekday header-row height
+\set caltitleh {26}          // month/year title-bar height
+
+\set calweekstart {0}        // 0 = weeks start on Sunday, 1 = on Monday
+\set caltoday {0}            // a day number to highlight (0 = none)
+
+\set caltitlesize {14}       // month/year type size
+\set calheadsize {9}         // weekday-abbreviation size
+\set caldaysize {11}         // day-number size
+
+\set caltitlebg {#2c5282}    // title-bar fill
+\set caltitleink {white}     // month/year ink
+\set calheadbg {#edf2f7}     // weekday header fill
+\set calheadink {#2d3748}    // weekday-abbreviation ink
+\set calgrid {#cbd5e0}       // grid-line ink
+\set caltext {#1a202c}       // weekday day-number ink
+\set calweekendink {#c53030} // weekend (Sat/Sun) ink, header and day numbers
+\set caltodayfill {#fefcbf}  // highlight fill behind the \caltoday cell
+
+// ---- Name and length tables ----------------------------------------------------
+// Month names by number, weekday abbreviations by index (0 = Sunday … 6 = Saturday),
+// and the day count of each month with February at its common-year value of 28 — the
+// leap day is added separately so the table itself never needs a year.
+\set calmonthnames {\map{1 January 2 February 3 March 4 April 5 May 6 June 7 July 8 August 9 September 10 October 11 November 12 December}}
+\set calweekdaynames {\map{0 Sun 1 Mon 2 Tue 3 Wed 4 Thu 5 Fri 6 Sat}}
+\set calmonthdays {\map{1 31 2 28 3 31 4 30 5 31 6 30 7 31 8 31 9 30 10 31 11 30 12 31}}
+
+// ---- The calendar --------------------------------------------------------------
+// \calendar derives the month's shape — the weekday of the 1st, its length, the column
+// the 1st falls in and the number of week-rows — then opens a picture of the right size
+// and draws the title bar, the weekday header, the today highlight, the grid and the day
+// numbers. The group keeps the derived variables from leaking out.
+\def calendar year month {{
+  \set calY {\year}
+  \set calM {\month}
+
+  // Weekday of the 1st by the standard congruence (0 = Sunday … 6 = Saturday): January
+  // and February are counted as months 13 and 14 of the previous year so the leap day
+  // falls at the year's end, which is what makes the single floor-formula exact.
+  \set calLeapShift {\calc{floor((14 - calM) / 12)}}
+  \set calCongYear {\calc{calY - calLeapShift}}
+  \set calCongMonth {\calc{calM + 12 * calLeapShift - 2}}
+  \set calDow1 {\calc{(1 + calCongYear + floor(calCongYear / 4) - floor(calCongYear / 100) + floor(calCongYear / 400) + floor(31 * calCongMonth / 12)) % 7}}
+
+  // Leap year by the Gregorian rule, expressed without booleans: a divisor test gives 1
+  // when the remainder is zero and 0 otherwise, and the rule is divisible-by-4, except
+  // centuries, except every fourth century.
+  \set calDiv4 {\calc{1 - min(1, calY % 4)}}
+  \set calDiv100 {\calc{1 - min(1, calY % 100)}}
+  \set calDiv400 {\calc{1 - min(1, calY % 400)}}
+  \set calLeap {\calc{calDiv4 * (1 - calDiv100) + calDiv400}}
+
+  \set calDays {\mapget calmonthdays {\calM}}
+  \if {\= {\calM} {2}} \set calDays {\calc{28 + calLeap}} \fi
+
+  // The column the 1st falls in (0-based from the configured week start), and the number
+  // of week-rows the month spans once the leading blanks are taken into account.
+  \set calOffset {\calc{(calDow1 - calweekstart + 7) % 7}}
+  \set calRows {\calc{floor((calOffset + calDays - 1) / 7) + 1}}
+
+  \set calMonthName {\mapget calmonthnames {\calM}}
+
+  \set calWidth {\calc{7 * calcw}}
+  \set calGridTop {\calc{calRows * calch}}
+  \set calHeight {\calc{calRows * calch + calheadh + caltitleh}}
+
+  \picture width:{\calWidth} height:{\calHeight} {
+    \calTitleBar
+    \calHeaderRow
+    \calTodayCell
+    \calGridLines
+    \calDayNumbers
+  }
+}}
+
+// The title bar: an accent-filled band across the top with the month name and year
+// centred in it.
+\def calTitleBar {
+  \fill{\caltitlebg} \nostroke
+  \rect{0 \calc{calGridTop + calheadh} \calWidth \caltitleh}
+  \at anchor:center {\calc{calWidth / 2} \calc{calGridTop + calheadh + caltitleh / 2}}{{\textcolor{\caltitleink}{\font {lmroman} {\caltitlesize} {bold}{\calMonthName} \the\calY}}}}
+
+// The weekday header: a light band under the title with the seven day abbreviations,
+// each centred over its column. The label for a column is the weekday at the week-start
+// offset, so the row rotates when weeks start on Monday; the weekend ends keep their ink.
+\def calHeaderRow {
+  \fill{\calheadbg} \nostroke
+  \rect{0 \calGridTop \calWidth \calheadh}
+  \set calHeadY {\calc{calGridTop + calheadh / 2}}
+  \for\calHc{\range{0}{6}}{
+    \set calHx {\calc{(calHc + 0.5) * calcw}}
+    \set calHwi {\calc{(calweekstart + calHc) % 7}}
+    \set calHlabel {\mapget calweekdaynames {\calHwi}}
+    \set calHink {\calheadink}
+    \if {\= {\calHwi} {0}} \set calHink {\calweekendink} \fi
+    \if {\= {\calHwi} {6}} \set calHink {\calweekendink} \fi
+    \at anchor:center {\calHx \calHeadY}{{\textcolor{\calHink}{\font {lmroman} {\calheadsize} {bold}\calHlabel}}}
+  }}
+
+// The highlight behind the \caltoday cell, drawn before the grid lines so the lines stay
+// crisp on top of it. Nothing is drawn when \caltoday is 0 or out of the month's range.
+\def calTodayCell {
+  \if {\> {\caltoday} {0}} \if {\<= {\caltoday} {\calDays}}
+    \set calTlin {\calc{calOffset + caltoday - 1}}
+    \set calTr {\calc{floor(calTlin / 7)}}
+    \set calTc {\calc{calTlin % 7}}
+    \set calTx {\calc{calTc * calcw}}
+    \set calTyTop {\calc{calGridTop - calTr * calch}}
+    \fill{\caltodayfill} \nostroke
+    \rect{\calTx \calc{calTyTop - calch} \calcw \calch}
+  \fi \fi}
+
+// The day grid: eight vertical rules bounding the seven columns and one rule per row
+// boundary, drawn over the whole used area so empty leading and trailing cells are ruled
+// like the rest.
+\def calGridLines {
+  \nofill \stroke{\calgrid} \linewidth{0.6pt} \linecap{butt}
+  \for\calGc{\range{0}{7}}{
+    \set calGx {\calc{calGc * calcw}}
+    \line{\calGx 0  \calGx \calGridTop}
+  }
+  \for\calGr{\range{0}{\calRows}}{
+    \set calGy {\calc{calGridTop - calGr * calch}}
+    \line{0 \calGy  \calWidth \calGy}
+  }}
+
+// The day numbers, one per day of the month. Each day's position in the grid is its
+// offset from the 1st reduced to a row and column; the number sits in the cell's
+// top-right corner, the way a wall calendar leaves the rest of the cell free to write in.
+// Weekend numbers take the weekend ink.
+\def calDayNumbers {
+  \for\calDay{\range{1}{\calDays}}{
+    \set calLin {\calc{calOffset + calDay - 1}}
+    \set calRow {\calc{floor(calLin / 7)}}
+    \set calCol {\calc{calLin % 7}}
+    \set calXr {\calc{(calCol + 1) * calcw}}
+    \set calYtop {\calc{calGridTop - calRow * calch}}
+    \set calWi {\calc{(calweekstart + calCol) % 7}}
+    \set calInk {\caltext}
+    \if {\= {\calWi} {0}} \set calInk {\calweekendink} \fi
+    \if {\= {\calWi} {6}} \set calInk {\calweekendink} \fi
+    \at anchor:northeast {\calc{calXr - 4} \calc{calYtop - 3}}{{\textcolor{\calInk}{\font {lmroman} {\caldaysize} {regular}\the\calDay}}}
+  }}

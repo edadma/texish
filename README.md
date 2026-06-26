@@ -30,8 +30,10 @@ add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF a
 sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
 plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), railroad
 syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diagram per rule),
-and node-and-edge diagrams (`\use{diagram}`, with `flowchart`, `automaton` and `er` presets —
-block diagrams, flowcharts, state machines and entity-relationship diagrams).
+node-and-edge diagrams (`\use{diagram}`, with `flowchart`, `automaton` and `er` presets —
+block diagrams, flowcharts, state machines and entity-relationship diagrams), and month
+calendars (`\use{calendar}` — a month grid with leap-year arithmetic, a configurable week
+start, and a today highlight).
 
 **Documentation: [texish.edadma.dev](https://texish.edadma.dev/).**
 
