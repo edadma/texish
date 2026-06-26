@@ -9,6 +9,12 @@ abstract class VerticalMode extends ListBoxBuilder:
   protected val measure: Box => Double = _.height
   protected val skip: Double => Box    = VSpaceBox(_)
 
+  /** When set, `add` appends boxes without synthesising interline glue before them, because the caller is feeding
+    * a run that already carries its glue (e.g. a page's overflow re-contributed after a break). Off for ordinary
+    * contribution, where each box's interline glue is computed from the box before it.
+    */
+  protected var preglued = false
+
   /** Cutouts active on this galley — figures that running text flows around. They persist as paragraphs are added
     * (a tall figure wraps the paragraphs that follow it) and are cleared when the galley is shipped out.
     */
@@ -51,7 +57,7 @@ abstract class VerticalMode extends ListBoxBuilder:
     // read the last item, so a \vskip suppressed the interline and jammed the next line up against the previous.)
     val prevBox = boxes.findLast(b => !b.isInstanceOf[ControlBox] && !b.isInstanceOf[NoGlueBox] && !b.isSpace).orNull
 
-    if !box.isInstanceOf[ControlBox] && !box.isInstanceOf[NoGlueBox] && !box.isSpace && (prevBox ne null) then
+    if !preglued && !box.isInstanceOf[ControlBox] && !box.isInstanceOf[NoGlueBox] && !box.isSpace && (prevBox ne null) then
       val baselineskip = t.getGlue("baselineskip") - prevBox.descent - box.ascent
       val skip =
         if baselineskip.naturalSize <= t.getNumber("lineskiplimit") then t.getGlue("lineskip")

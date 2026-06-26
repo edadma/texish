@@ -150,8 +150,13 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
         dropRightInPlace(boxes.length - i)
         newpage()
         // the break item and any discardables after it vanish at the page top; re-adding through add lets
-        // material spanning several pages cascade into further breaks
-        carried.dropWhile(_.isSpace).foreach(this.add)
+        // material spanning several pages cascade into further breaks. The carried boxes already hold the
+        // interline glue computed when they were first contributed, so re-adding must not synthesize it again
+        // (that doubled the leading of the first carried line pair); preglued suppresses the second insertion.
+        val saved = preglued
+        preglued = true
+        try carried.dropWhile(_.isSpace).foreach(this.add)
+        finally preglued = saved
 
   /** The document is ending: ship whatever remains, but only if something does — a document that just ejected
     * its last page must not get a trailing blank one. Shipping goes through newpage (and so getDocument) like

@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, Builder, DocumentMode, Glue, Penalty, HeadlessTypesetter, VBox}
+import io.github.edadma.texish.{Box, Builder, DocumentMode, Glue, HBox, HeadlessTypesetter, Penalty, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -132,4 +132,30 @@ class PageBreakPrimitivesTests extends AnyFreeSpec with Matchers:
 
     proc.process("one\n\n\\eject two\n\n\\eject")
     t.getNumber("pageno") shouldBe 3.0
+  }
+
+  "a list item carried across a page break is not given doubled interline glue" in quietly {
+    val (t, doc, proc) = capturing()
+    t.set("hsize", 200.0) // a narrow column so each item wraps to two lines
+    t.set("vsize", 90.0)  // a short page so the list overflows and an item continues at the next page's top
+
+    // each \item is a two-line paragraph; the page builder carries an item's lines onto the next page and used
+    // to re-synthesise the interline glue they already carried, leaving two spacing boxes back to back between
+    // the item's first and second line — visible as ~2.9pt of extra leading on exactly that one line.
+    val items = (1 to 10).map(i => s"\\item word one two three four five six seven eight nine ten eleven twelve item $i")
+    proc.process("\\use{document}\n" + items.mkString("\\begin{itemize}\n", "\n", "\n\\end{itemize}\n"))
+    t.end()
+
+    doc.shipped.length should be >= 2
+
+    // The top-to-top advance between an item's first two lines is one baselineskip. Page 1 opens with a freshly
+    // set item; page 2 opens with an item the page builder carried over the break. The carried item's first two
+    // lines must advance by the same baselineskip — the bug re-synthesised the interline glue they already
+    // carried, so they sat one extra glue apart.
+    def firstItemAdvance(page: VBox): Double =
+      val tops     = page.boxes.toSeq.scanLeft(0.0)(_ + _.height)
+      val lineTops = page.boxes.toSeq.zip(tops).collect { case (_: HBox, top) => top }
+      lineTops(1) - lineTops(0)
+
+    firstItemAdvance(doc.shipped(1)) shouldBe firstItemAdvance(doc.shipped(0)) +- 0.01
   }
