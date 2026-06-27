@@ -31,13 +31,15 @@ jobs:
       - name: Checkout texish
         uses: actions/checkout@v7
 
-      # Scala Native links through the host's C/C++ toolchain. macOS runners
-      # already have clang + zlib from the Xcode tools; Linux needs them installed.
+      # Scala Native links through the host's C/C++ toolchain, and the CLI binds
+      # cairo, freetype and turbojpeg, so those system libraries must be present
+      # at link time. macOS runners already have clang + these libs; Linux needs
+      # them installed.
       - name: Install native toolchain (Linux)
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang zlib1g-dev
+          sudo apt-get install -y clang zlib1g-dev libcairo2-dev libfreetype-dev libturbojpeg0-dev
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
