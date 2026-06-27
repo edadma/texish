@@ -39,7 +39,20 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang zlib1g-dev libcairo2-dev libfreetype-dev libturbojpeg0-dev
+          sudo apt-get install -y clang zlib1g-dev libcairo2-dev libfreetype-dev cmake
+
+      # The turbojpeg binding uses the TurboJPEG 3 API (tj3*), which only exists
+      # in libjpeg-turbo 3.x. Ubuntu's apt package is still 2.x, so build 3.x from
+      # source and install it into the default prefix where -lturbojpeg finds it.
+      - name: Build libjpeg-turbo 3.x (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          git clone --depth 1 --branch 3.0.4 https://github.com/libjpeg-turbo/libjpeg-turbo.git
+          cmake -S libjpeg-turbo -B libjpeg-turbo/build \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DWITH_SIMD=0
+          cmake --build libjpeg-turbo/build -j
+          sudo cmake --install libjpeg-turbo/build
+          sudo ldconfig
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
