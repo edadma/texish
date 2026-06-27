@@ -28,7 +28,10 @@ jobs:
           # distros; newer glibc is not backward-compatible, older is forward-compatible.
           - { runner: ubuntu-22.04,     os: linux, arch: x86_64 }
           - { runner: ubuntu-22.04-arm, os: linux, arch: arm64  }
-          - { runner: macos-latest,     os: macos, arch: arm64  }
+          # Pin to explicit macOS images (not macos-latest) so the binary's
+          # deployment-target floor stays low and predictable instead of drifting
+          # up whenever GitHub moves the rolling label to a newer macOS.
+          - { runner: macos-14,         os: macos, arch: arm64  }
           - { runner: macos-13,         os: macos, arch: x86_64 }
     steps:
       - name: Checkout texish
