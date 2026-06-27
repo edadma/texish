@@ -37,7 +37,7 @@ A grammar is a list of rules, each `name ::= expression`. An expression is built
 | `a b c` | juxtaposition (sequence) | boxes in a row |
 | `a \| b \| c` | alternation (choice) | stacked alternatives joined by a fork |
 | `( … )` | grouping | (transparent — no box of its own) |
-| `x?` | optional | the item with a skip rail bypassing it |
+| `x?` | optional | the skip on the main line, the item on a track below |
 | `x*` | zero or more | a skip rail and a repeat loop |
 | `x+` | one or more | a repeat loop |
 
@@ -54,8 +54,9 @@ Two common grammar shapes are recognised and drawn the intuitive way rather than
   loop above it, instead of "`A` then zero-or-more of (`sep A`)". So
   `expression ::= term ( "|" term )*` shows a single `term` box with `|` on the loop.
 - **Optional choices** — `( A | B | C )?` folds the skip into the choice itself, as an empty
-  top branch on the main line with the alternatives forked below, rather than arching a
-  separate bypass over a nested choice.
+  top branch on the main line with the alternatives forked below, rather than nesting the
+  choice inside a separate optional. A plain `x?` draws the same way — the skip on the main
+  line, the item on a single track below — so one optional and an optional choice match.
 
 ## Customising the look
 

@@ -22,7 +22,7 @@
 //   a | b              alternation         (a fork, the branches stacked)
 //   a b                concatenation       (a and b in a row)
 //   ( ... )            grouping
-//   x?                 optional            (x with a rail bypassing it)
+//   x?                 optional            (a skip on the main line, x on a track below)
 //   x*                 zero or more        (x with a bypass and a return loop)
 //   x+                 one or more         (x with a return loop)
 //   "literal" 'lit'    a terminal          (a rounded "stadium" box)
@@ -179,8 +179,9 @@
 // Parser — recursive descent over the token stream (cursor rrP), building a tree in
 // maps keyed by a node id (counter rrId). Each parse routine leaves the id of the node
 // it built in rrRet. Node kinds: T terminal, N nonterminal, S sequence, C choice,
-// Q optional (?), R star (*), P plus (+). A child of a seq/choice is stored under the
-// numeric key id*1000+index; a wrapper's single child under rrSub.
+// R star (*), P plus (+), E empty branch (a choice's skip), L separated list. An optional
+// (?) is not its own kind: it is built as a choice with an empty skip branch. A child of a
+// seq/choice is stored under the numeric key id*1000+index; a wrapper's single child under rrSub.
 //   rrKind id -> kind   rrLabel id -> text (T/N)   rrCount id -> #children (S/C)
 //   rrChild id*1000+i -> child id   rrSub id -> child id (Q/R/P)
 
@@ -328,17 +329,25 @@
   \global\set rrRet {\wid}
 }}
 
-// An optional ( … )? whose body is a choice is the bottlecaps "optional choice": rather than
-// arch a bypass over a nested choice, fold the skip into the choice itself as an empty top
-// branch on the main line, with the real alternatives forked below it. Any other optional is
-// the ordinary bypass-over-the-item wrapper (Q).
+// An optional x? is the bottlecaps "optional choice": the skip is the straight main line and the
+// item rides a forked track below it — the same shape, and the same clean fork rails, whether the
+// optional wraps one item or a whole choice. When the body is already a choice, the skip is folded
+// in as an empty top branch on the main line; any other body is wrapped in a two-branch choice of
+// an empty skip and the item, so a single optional and an optional choice draw identically.
 \def rrOptional pid {{
   \set p {\pid}
   \if {\= {\mapget rrKind {\p}}{C}}
     \rrChoicePrependSkip{\p}
     \global\set rrRet {\p}
   \else
-    \rrWrap{Q}{\p}
+    \global\set rrId {\calc{rrId + 1}}\set eid {\rrId}
+    \global\mapset rrKind {\eid}{E}
+    \global\set rrId {\calc{rrId + 1}}\set cid {\rrId}
+    \global\mapset rrKind {\cid}{C}
+    \global\mapset rrChild {\calc{\cid * 1000}}{\eid}
+    \global\mapset rrChild {\calc{\cid * 1000 + 1}}{\p}
+    \global\mapset rrCount {\cid}{2}
+    \global\set rrRet {\cid}
   \fi
 }}
 \def rrChoicePrependSkip cid {{
@@ -520,21 +529,19 @@
   \fi
 }}
 
-// An optional / repetition wrapper is its child plus room on each side for the bypass
-// arcs, and extra height for a bypass above (? and *) and a return loop below (* and +).
+// A repetition wrapper is its child plus room on each side for the loop arcs, and extra height
+// for a bypass above (the skip of a *) and a return loop below (the repeat of a * or a +).
 \def rrMeasWrap id k {{
   \set nid {\id}
   \set c {\mapget rrSub {\nid}}
   \rrMeasure{\c}
   \set cu {\mapget rrUp {\c}}\set cd {\mapget rrDn {\c}}\set cw {\mapget rrW {\c}}
   \global\mapset rrW {\nid}{\calc{\cw + 2 * rrloopx}}
-  \if {\= {\k}{Q}}
-    \global\mapset rrUp {\nid}{\calc{\cu + rrloop}}\global\mapset rrDn {\nid}{\cd}
-  \else\if {\= {\k}{R}}
+  \if {\= {\k}{R}}
     \global\mapset rrUp {\nid}{\calc{\cu + rrloop}}\global\mapset rrDn {\nid}{\calc{\cd + rrloop}}
   \else
     \global\mapset rrUp {\nid}{\cu}\global\mapset rrDn {\nid}{\calc{\cd + rrloop}}
-  \fi\fi
+  \fi
 }}
 
 // ================================================================================
@@ -556,11 +563,10 @@
   \else\if {\= {\k}{X}}\rrDrawLeaf{\nid}{\bx}{\by}{2}
   \else\if {\= {\k}{S}}\rrDrawSeq{\nid}{\bx}{\by}
   \else\if {\= {\k}{C}}\rrDrawChoice{\nid}{\bx}{\by}
-  \else\if {\= {\k}{Q}}\rrDrawOpt{\nid}{\bx}{\by}
   \else\if {\= {\k}{R}}\rrDrawStar{\nid}{\bx}{\by}
   \else\if {\= {\k}{L}}\rrDrawL{\nid}{\bx}{\by}
   \else\if {\= {\k}{E}}
-  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi\fi\fi
+  \else\rrDrawPlus{\nid}{\bx}{\by}\fi\fi\fi\fi\fi\fi\fi\fi
 }}
 
 // A separated list: the item A on the main line, the separator B on a return loop above it,
@@ -718,22 +724,6 @@
   \fi
 }}
 
-// An optional item sits on the main line with a rail bypassing it above.
-\def rrDrawOpt id x y {{
-  \set nid {\id}\set bx {\x}\set by {\y}
-  \set c {\mapget rrSub {\nid}}
-  \set cw {\mapget rrW {\c}}
-  \set cu {\mapget rrUp {\c}}
-  \set xin {\calc{\bx + rrloopx}}
-  \set xout {\calc{\bx + rrloopx + \cw}}
-  \set xr {\calc{\xout + rrloopx}}
-  \set yt {\calc{\by + \cu + rrloop}}
-  \rrRail{\bx}{\by}{\xin}{\by}
-  \rrDraw{\c}{\xin}{\by}
-  \rrRail{\xout}{\by}{\xr}{\by}
-  \rrBypass{\bx}{\xr}{\by}{\yt}
-}}
-
 // Zero or more: a bypass above (skip) and a return loop below (repeat).
 \def rrDrawStar id x y {{
   \set nid {\id}\set bx {\x}\set by {\y}
@@ -775,7 +765,7 @@
 // \path; the bumps leave and rejoin the main line tangentially, a corner-radius in from each
 // end, so the join is seamless.
 
-// A bypass rail from (ax,y) up to height yt and across to (bx,y) — the skip over an item.
+// A bypass rail from (ax,y) up to height yt and across to (bx,y) — the skip over a starred item.
 // Unlike the return loop, a bypass does not turn back on itself: it leaves the main line in
 // the direction of travel (an off-ramp), humps over, and merges back, so every corner curves
 // forward rather than reversing.

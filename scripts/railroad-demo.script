@@ -116,8 +116,8 @@ distinct loop of rails.
 
 \subsection{Optional --- \texttt{?}}
 
-A trailing \texttt{?} makes an item \emph{optional}: it sits on the main line with a bypass rail
-arching over it, so the rail may skip it entirely.
+A trailing \texttt{?} makes an item \emph{optional}: the rail may skip it entirely, so the skip
+runs straight along the main line and the item rides a forked track just below it.
 
 \railroad{
   decl ::= "var" name "="? value
@@ -157,9 +157,9 @@ rails the EBNF would otherwise produce.
 
 \subsection{Optional choice}
 
-When an optional wraps a choice, \texttt{(a | b)?}, rather than arching one big bypass over the
-fork, the skip is folded \emph{into} the fork as an empty top branch on the main line, with the real
-alternatives below it.
+When an optional wraps a choice, \texttt{(a | b)?}, the skip is folded \emph{into} the fork as an
+empty top branch on the main line, with the real alternatives below it — one fork rather than a
+choice nested inside a separate optional. A plain optional draws the same way, so the two match.
 
 \railroad{
   visibility ::= ("public" | "private" | "protected")?
