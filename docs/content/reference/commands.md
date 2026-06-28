@@ -64,12 +64,23 @@ super-family, keeping weight and slope.
 | `\fontsize{size}` | change only the size, keeping the typeface and shape |
 | `\fontscale{factor}{style}` | re-select the current typeface at the current size × factor |
 | `\typeface{name}` | select a typeface by name |
+| `\loadfont{name}{path}` | register a font file from disk under a typeface name |
 | `\bold{…}` `\italic{…}` `\slanted{…}` `\smallcaps{…}` | shape-wrapping commands |
 | `\textrm{…}` `\textsf{…}` `\texttt{…}` | roman / sans / typewriter member of the super-family |
 | `\itshape` `\slshape` `\bfseries` `\scshape` | declare italic / slanted / bold / small-caps for the group |
 | `\upshape` `\mdseries` `\normalfont` | clear the shape axis / clear bold / return to the plain face |
 | `\rmfamily` `\sffamily` `\ttfamily` | declare roman / sans / typewriter for the group |
 | `\accent{mark}{char}` | combine an accent mark with a base character |
+
+## Chinese and CJK
+
+Chinese text has no spaces between characters, so the line breaker inserts its own break
+opportunities between adjacent CJK characters and applies kinsoku — a closing mark never starts a
+line and an opening mark never ends one — then justifies the line by stretching the inter-character
+space. This happens automatically for any run of CJK text; the line breaker is otherwise unchanged.
+Noto Serif CJK is bundled for setting it: `\font cjksc 12 regular` for Simplified Chinese and
+`\font cjktc 12 regular` for Traditional. Any other CJK font can be brought in with
+`\loadfont{name}{path}`.
 
 ## Text symbols
 
