@@ -9,13 +9,10 @@
 // can still justify) and applies kinsoku: a closing mark never starts a line, an
 // opening mark never ends one. The line breaker itself is unchanged.
 //
-// A CJK font is not bundled with texish, so this demo loads one from disk with the
-// new \loadfont primitive. The path below is a macOS system font; change it to any
-// CJK .ttf/.otf/.ttc on your machine.
+// texish bundles Noto Serif CJK for Chinese: \font cjksc for Simplified, cjktc for
+// Traditional. Any other CJK font can be brought in from disk with \loadfont {name} {path}.
 
 \use{document}
-
-\loadfont {cjk} {/System/Library/Fonts/Supplemental/Songti.ttc}
 
 \title{Chinese Typesetting in \TeXish}
 \author{The texish engine}
@@ -39,7 +36,7 @@ stretches the inter-character spaces so each line reaches the right margin.
 
 \medskip
 
-{\font cjk 12 regular
+{\font cjksc 12 regular
 这是一个关于中文排版的示例。texish 引擎现在能够在没有空格的情况下，把一整段中文文字断成多行，
 并且让每一行都对齐到右边的页边。每两个汉字之间都插入了一个宽度为零、但是可以伸缩的间隔，所以行末
 既不会溢出版心，也不会留下难看的空白。断行的位置遵守禁则：句号、逗号、问号等收尾的标点不会被排在
@@ -51,7 +48,19 @@ stretches the inter-character spaces so each line reaches the right margin.
 narrower column of a quotation:
 
 \begin{quote}
-{\font cjk 12 regular
+{\font cjksc 12 regular
 排版引擎把每个汉字当作一个独立的盒子，在盒子之间放入可伸缩的胶水，于是克努特的断行算法不需要任何
 改动，就能像处理英文那样处理中文，并且在两端对齐。}
 \end{quote}
+
+\section{Traditional Chinese}
+
+The bundled \texttt{cjktc} face sets Traditional Chinese; the same line breaking and kinsoku
+apply, since both are driven by the characters themselves, not by the choice of font.
+
+\medskip
+
+{\font cjktc 12 regular
+排版引擎把每個漢字當作一個獨立的盒子，在盒子之間放入可伸縮的膠水，於是克努特的斷行演算法不需要任何
+改動，就能像處理英文那樣處理中文，並且在兩端對齊。標點符號同樣遵守禁則：句號、逗號不會被排在一行的
+開頭，左括號「也不會被留在一行的末尾。}

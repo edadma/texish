@@ -351,6 +351,14 @@ abstract class Typesetter:
   overrideBaseline("gentium", 0.8)
   loadTypeface("pt", "fonts/PTSansNarrow/PTSansNarrow", "ﬁﬂ", Set(), "Regular", "Bold")
 
+  // Noto Serif CJK, the bundled Chinese faces for the CJK line breaking the engine does on its own (see
+  // CJK and KnuthPlass.appendCJKItems): \font cjksc 12 regular for Simplified, cjktc for Traditional. They
+  // are loaded by file rather than through loadTypeface, whose "-Style.ttf" naming and bundled-only weight
+  // set do not fit a single Regular cut. These are large faces — the host with no filesystem (the in-browser
+  // build) overrides loadBundledFonts and does not ship them.
+  loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Regular.ttf", Set.empty, Set.empty)
+  loadFont("cjktc", "fonts/NotoSerifCJK/NotoSerifTC-Regular.ttf", Set.empty, Set.empty)
+
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match
   // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall
