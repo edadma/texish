@@ -352,12 +352,15 @@ abstract class Typesetter:
   loadTypeface("pt", "fonts/PTSansNarrow/PTSansNarrow", "ﬁﬂ", Set(), "Regular", "Bold")
 
   // Noto Serif CJK, the bundled Chinese faces for the CJK line breaking the engine does on its own (see
-  // CJK and KnuthPlass.appendCJKItems): \font cjksc 12 regular for Simplified, cjktc for Traditional. They
+  // CJK and KnuthPlass.appendCJKItems): \font cjksc 12 regular for Simplified, cjktc for Traditional, each
+  // with a bold cut so \font cjksc 12 bold sets real bold rather than substituting the regular weight. They
   // are loaded by file rather than through loadTypeface, whose "-Style.ttf" naming and bundled-only weight
-  // set do not fit a single Regular cut. These are large faces — the host with no filesystem (the in-browser
-  // build) overrides loadBundledFonts and does not ship them.
+  // set do not fit these single hand-instanced cuts. These are large faces — the host with no filesystem (the
+  // in-browser build) overrides loadBundledFonts and does not ship them.
   loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Regular.ttf", Set.empty, Set.empty)
   loadFont("cjktc", "fonts/NotoSerifCJK/NotoSerifTC-Regular.ttf", Set.empty, Set.empty)
+  loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Bold.ttf", Set.empty, Set("bold"))
+  loadFont("cjktc", "fonts/NotoSerifCJK/NotoSerifTC-Bold.ttf", Set.empty, Set("bold"))
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match

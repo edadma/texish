@@ -79,8 +79,8 @@ opportunities between adjacent CJK characters and applies kinsoku — a closing 
 line and an opening mark never ends one — then justifies the line by stretching the inter-character
 space. This happens automatically for any run of CJK text; the line breaker is otherwise unchanged.
 Noto Serif CJK is bundled for setting it: `\font cjksc 12 regular` for Simplified Chinese and
-`\font cjktc 12 regular` for Traditional. Any other CJK font can be brought in with
-`\loadfont{name}{path}`.
+`\font cjktc 12 regular` for Traditional, each with a bold cut (`\font cjksc 12 bold`) for headings
+and labels. Any other CJK font can be brought in with `\loadfont{name}{path}`.
 
 ## Text symbols
 
