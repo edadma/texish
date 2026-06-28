@@ -156,6 +156,14 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         val p = math.max(penaltyBetween(lineIdx == 0, lineIdx == lines.length - 2), wrapPenalty(lineIdx))
         if p != 0 then t.modeStack(1) add Penalty(p)
 
+  // A line may break only at glue — the discardable, flexible interword space. A kern (an HSpaceBox, the box
+  // \kern and the inter-letter spacing of a wordmark produce) is also "space" in the isSpace sense: it is
+  // blank and not content, so it is discarded at boundaries and ignored by hasContent. But it is rigid and is
+  // not a legal breakpoint, so the greedy fallback must skip past it to the real glue, exactly as Knuth-Plass
+  // does (to the optimal breaker a kern is a plain rigid box). Without this, the negative kerns inside a
+  // wordmark like \TeX read as interword spaces and the greedy breaker splits the logo across a line.
+  private def isBreakSpace(b: Box): Boolean = b.isInstanceOf[Glue]
+
   private def buildLinesGreedy(hsize: Double): Unit =
     var first   = true
     var lineIdx = 0
@@ -243,8 +251,8 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
             // that makes progress) rather than backing up.
             if hbox.size == sizeBefore && !boxes.head.isSpace then
               val carry = ArrayBuffer[Box]()
-              while hbox.nonEmpty && !hbox.last.isSpace do carry.prepend(hbox.removeLast())
-              if hbox.nonEmpty && hbox.last.isSpace && carry.nonEmpty && hbox.list.dropRight(1).exists(!_.isSpace)
+              while hbox.nonEmpty && !isBreakSpace(hbox.last) do carry.prepend(hbox.removeLast())
+              if hbox.nonEmpty && isBreakSpace(hbox.last) && carry.nonEmpty && hbox.list.dropRight(1).exists(!_.isSpace)
               then
                 hbox.removeLast()
                 boxes.insertAll(0, carry.toSeq)
