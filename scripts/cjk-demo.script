@@ -1,0 +1,57 @@
+// cjk-demo — CJK (Chinese) line breaking in texish.
+//
+// Render with:  texish-cli scripts/cjk-demo.script
+//
+// texish breaks paragraphs the way Knuth TeX does — at spaces, penalties and
+// discretionaries. Chinese text has no interword spaces, so a run of it used to
+// arrive at the line breaker as one box and overflow the measure. The engine now
+// offers a break between adjacent CJK characters (as stretchable glue, so the line
+// can still justify) and applies kinsoku: a closing mark never starts a line, an
+// opening mark never ends one. The line breaker itself is unchanged.
+//
+// A CJK font is not bundled with texish, so this demo loads one from disk with the
+// new \loadfont primitive. The path below is a macOS system font; change it to any
+// CJK .ttf/.otf/.ttc on your machine.
+
+\use{document}
+
+\loadfont {cjk} {/System/Library/Fonts/Supplemental/Songti.ttc}
+
+\title{Chinese Typesetting in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{The problem}
+
+Knuth's line breaker finds breaks at glue, penalties and discretionary hyphens. Latin
+prose is full of interword glue, so it wraps naturally; a long word is split by Liang
+hyphenation. Chinese, written without spaces between characters, offers the breaker
+nothing to work with — the whole paragraph is one rigid box, and it runs off the edge of
+the page. The fix, following \texttt{xeCJK} and \texttt{luatexja} on the Unicode \TeX{}
+engines, is to insert the missing break opportunities between characters before the
+breaker runs.
+
+\section{The result}
+
+Below is a paragraph of Chinese set at twelve points. Every character is its own box, with
+a thin, stretchable space between neighbours; the breaker chooses where to wrap and
+stretches the inter-character spaces so each line reaches the right margin.
+
+\medskip
+
+{\font cjk 12 regular
+这是一个关于中文排版的示例。texish 引擎现在能够在没有空格的情况下，把一整段中文文字断成多行，
+并且让每一行都对齐到右边的页边。每两个汉字之间都插入了一个宽度为零、但是可以伸缩的间隔，所以行末
+既不会溢出版心，也不会留下难看的空白。断行的位置遵守禁则：句号、逗号、问号等收尾的标点不会被排在
+一行的开头，而左括号「这样的起首符号也不会被留在一行的末尾，它们总是跟随相邻的汉字一起移动。}
+
+\medskip
+
+\noindent The same paragraph wraps correctly at any measure, so it also works inside the
+narrower column of a quotation:
+
+\begin{quote}
+{\font cjk 12 regular
+排版引擎把每个汉字当作一个独立的盒子，在盒子之间放入可伸缩的胶水，于是克努特的断行算法不需要任何
+改动，就能像处理英文那样处理中文，并且在两端对齐。}
+\end{quote}

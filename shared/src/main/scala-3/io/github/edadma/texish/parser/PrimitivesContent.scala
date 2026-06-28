@@ -105,6 +105,23 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
     },
   )
 
+  // loadfont - 2 braced args: register a font file from disk under a typeface name so it can then be
+  // selected with \typeface or \font. Where the bundled families cover only Latin, this is how a document
+  // brings in a face the build does not ship — most importantly a CJK font, since the line breaker can wrap
+  // CJK text but has no glyphs to set it with until one is loaded.
+  proc.registerPrimitive(
+    "loadfont",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val name = evalArg(proc, pos)
+        val path = evalArg(proc, pos)
+        (name, path) match
+          case (Value.Text(nm), Value.Text(p)) =>
+            t.loadFont(nm, p, Set.empty, Set.empty)
+          case _ => handler.error("\\loadfont expects <name> <path>", pos)
+    },
+  )
+
   // fontsize - 1 braced arg: change only the type size, keeping the current typeface and shape/series. Unlike
   // \font, which re-selects all three, this is the size knob the LaTeX-style size declarations (\small, \large,
   // \Large …) are built on, so a size change inside bold or italic text keeps that style. selectFont also resets

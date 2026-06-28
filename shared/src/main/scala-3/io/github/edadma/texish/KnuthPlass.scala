@@ -318,6 +318,10 @@ object KnuthPlass:
           items += GlueItem(g, idx)
         case d: DiscretionaryBox =>
           items += DiscItem(d.pre, d.post, d.noBreak, hyphenpenalty, idx)
+        case cb: CharBox if CJK.hasCJK(cb.text) =>
+          // A run containing CJK has no interword spaces, so break it between characters instead of
+          // hyphenating it (Latin words inside the run keep their own spelling, just unbroken).
+          appendCJKItems(items, cb, idx)
         case cb: CharBox =>
           // Check for hyphenation opportunities, in the document's active language
           Hyphenation(hyphLang, cb.text) match
@@ -348,3 +352,41 @@ object KnuthPlass:
           items += BoxItem(box, idx)
 
     items.toSeq
+
+  // Expand a text run containing CJK into per-segment boxes joined by breakable, stretchable glue. A break
+  // is offered between two characters when CJK.breakableBetween allows it; characters kinsoku keeps together
+  // (a closing mark and what precedes it, an opening mark and what follows) stay in one box. The inserted
+  // glue has zero natural width — CJK is set solid, with no visible inter-character space — but carries a
+  // little stretch and shrink so a line can reach the measure; without any stretch every short CJK line
+  // would be infinitely bad and the paragraph would not break. The amounts are deliberately small (a sixth
+  // of a character of stretch, a twentieth of shrink) so the breaker is rewarded for packing each line
+  // nearly full — the even, solid grid CJK wants — rather than spreading characters loosely; the last line
+  // is left ragged by \parfillskip as usual.
+  private def appendCJKItems(items: ArrayBuffer[Item], cb: CharBox, idx: Int): Unit =
+    val text = cb.text
+
+    // Walk by codepoint so a surrogate pair (an Extension-B ideograph) is never split, keeping each
+    // character's substring alongside its codepoint for reassembly and for the kinsoku test.
+    val pieces = ArrayBuffer[String]()
+    val codes  = ArrayBuffer[Int]()
+    var i      = 0
+    while i < text.length do
+      val cp = text.codePointAt(i)
+      val n  = Character.charCount(cp)
+      pieces += text.substring(i, i + n)
+      codes += cp
+      i += n
+
+    val seg = new StringBuilder
+    def flush(): Unit =
+      if seg.nonEmpty then
+        items += BoxItem(cb.newCharBox(seg.toString), idx)
+        seg.setLength(0)
+
+    for j <- codes.indices do
+      seg ++= pieces(j)
+      if j < codes.length - 1 && CJK.breakableBetween(codes(j), codes(j + 1)) then
+        val charWidth = cb.newCharBox(pieces(j)).width
+        flush()
+        items += GlueItem(Glue(0, charWidth / 6.0, charWidth / 20.0), idx)
+    flush()
