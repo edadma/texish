@@ -1,0 +1,77 @@
+// hebrew-demo — right-to-left Hebrew typesetting in texish.
+//
+// Render with:  texish-cli scripts/hebrew-demo.script
+//
+// texish lays out and breaks every paragraph in logical (reading) order, exactly
+// as Knuth TeX does. For Hebrew that is not enough: the characters must also be
+// reordered into visual order for display. The engine now runs the Unicode
+// Bidirectional Algorithm (UAX #9) over each set line — choosing the paragraph's
+// base direction, resolving embedded numbers and Latin runs, and reversing the
+// right-to-left runs — and hands every backend glyphs already in visual order, so
+// the Cairo PDF, the JVM raster, the SVG and the in-browser canvas all agree.
+//
+// \rtl sets a right-to-left base (the paragraph flushes right and its last line
+// rags left); \ltr restores the default. The bundled Noto Serif Hebrew face is
+// selected with \font hebrew, in a regular and a bold cut. The text below is the
+// opening of John from Franz Delitzsch's Hebrew New Testament (public domain),
+// set unpointed — niqqud positioning is a later, separate addition.
+
+\use{document}
+
+\title{Right-to-Left Hebrew in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Hebrew paragraph}
+
+With a right-to-left base direction the engine reverses each run of Hebrew within
+a line, reorders the words, and aligns the whole paragraph to the right margin.
+The line breaker is untouched — it still finds its breaks at the interword glue,
+in logical order — and only the set lines are turned into visual order. Below are
+the first five verses of the Gospel of John, set as one flowing paragraph at
+fourteen points so the right-to-left justification shows across several lines.
+
+\medskip
+
+\rtl
+{\font hebrew 14 regular
+בראשית היה הדבר והדבר היה את האלהים ואלהים היה הדבר׃ הוא היה בראשית אצל האלהים׃
+הכל נהיה על־ידו ומבלעדיו לא נהיה כל־אשר נהיה׃ בו היו חיים והחיים היו אור בני האדם׃
+והאור בחשך זרח והחשך לא השיגו׃
+}
+\ltr
+
+\section{A bold cut}
+
+The bundled face ships a real bold weight, so emphasis is set by the font rather
+than faked. Here the opening words of the passage are set in bold Hebrew:
+
+\medskip
+
+\rtl
+{\font hebrew 18 bold
+בראשית היה הדבר׃
+}
+\ltr
+
+\section{Bidirectional text}
+
+Latin words and numbers keep their own left-to-right order inside a right-to-left
+line: the algorithm treats each as an embedded island and only the Hebrew around
+them reverses. The line below names the translation in Latin script and gives the
+chapter and verse range in digits, all within a Hebrew sentence.
+
+\medskip
+
+\rtl
+{\font hebrew 14 regular
+הבשורה על־פי יוחנן פרק 1 פסוקים 1 עד 5 בתרגום Delitzsch אל העברית׃
+}
+\ltr
+
+\section{Hebrew embedded in English}
+
+The reverse case needs no change of base direction. In an ordinary left-to-right
+paragraph a Hebrew word — here {\font hebrew 12 regular דבר}, meaning ``word'' —
+is reversed in place by the same algorithm, while the English around it is left
+exactly as it was.

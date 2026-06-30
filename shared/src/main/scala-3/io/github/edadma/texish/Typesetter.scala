@@ -362,6 +362,15 @@ abstract class Typesetter:
   loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Bold.ttf", Set.empty, Set("bold"))
   loadFont("cjktc", "fonts/NotoSerifCJK/NotoSerifTC-Bold.ttf", Set.empty, Set("bold"))
 
+  // Noto Serif Hebrew, the bundled face for right-to-left Hebrew: \font hebrew 12 sets it, with a bold cut
+  // so \font hebrew 12 bold is a real bold weight. These are static Regular and Bold instances drawn from
+  // the variable upstream (wght 400 and 700 at default width). The reordering into visual order is the
+  // engine's (see Bidi and ParagraphMode); the font supplies the glyphs and, for pointed text, the marks.
+  // Loaded by file because the single instanced cuts do not fit loadTypeface's "-Style.ttf" naming. As with
+  // the CJK faces, the filesystem-less in-browser build overrides loadBundledFonts and does not ship them.
+  loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf", Set.empty, Set.empty)
+  loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Bold.ttf", Set.empty, Set("bold"))
+
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match
   // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall
