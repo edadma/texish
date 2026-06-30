@@ -6,11 +6,15 @@ package io.github.edadma.texish.opentype
   * `fina` and `isol`. [[ArabicShaping]] decides which form each letter takes from its neighbours, and this
   * applies the matching feature to swap the nominal glyph for the shaped one.
   *
-  * Two substitution kinds are read: single substitution (lookup type 1), which maps one glyph to one glyph
-  * — the form features are built from these — and, so the shaper can grow into it, the structure is laid
-  * out to admit ligature substitution (type 4, for required ligatures such as lam-alef) later. Extension
-  * lookups (type 7) are followed to the real subtable. Contextual and chaining lookups are not handled;
-  * the four form features never need them.
+  * Four substitution kinds are read. Single substitution (type 1) maps one glyph to one — the form
+  * features are built from these. Multiple substitution (type 2) maps one glyph to a sequence — `ccmp`
+  * uses it to split a dotted letter into a dotless skeleton plus a separate dot. Context (type 5) and
+  * chaining-context (type 6) substitution match a glyph sequence, optionally with surrounding context, and
+  * apply nested lookups at chosen positions; the required-ligature feature `rlig` is built from these. In
+  * this font the lam-alef ligature is not a one-to-one ligature glyph but a contextual pair: where an
+  * initial lam meets a final alef, each is swapped for a specially shaped `.rlig` variant that together
+  * draw the ligature. Extension lookups (type 7) are followed to the real subtable. Only the coverage-based
+  * format 3 of the contextual kinds is read — the one this font (and modern Arabic fonts generally) uses.
   *
   * Unlike the mark positioning in [[Gpos]], which can run every lookup blindly, form selection must be
   * driven by feature: the same font has separate `init`/`medi`/`fina`/`isol` lookups and only the one
@@ -25,10 +29,23 @@ package io.github.edadma.texish.opentype
   * types parse to nothing and are skipped. Single substitution maps one glyph to one; multiple
   * substitution maps one glyph to a sequence — used both for `ccmp` decompositions (a dotted letter splits
   * into a dotless skeleton plus a separate dot mark) and, with a one-glyph sequence, for the contextual
-  * form features in fonts that build them as multiple substitutions. */
+  * form features in fonts that build them as multiple substitutions.
+  *
+  * Context and chaining-context substitution match a run of glyphs by coverage and apply nested lookups at
+  * positions within the match. `Context` matches the input run alone; `ChainContext` also requires the
+  * `backtrack` glyphs (in reverse, immediately before the input) and the `lookahead` glyphs (immediately
+  * after). Each `record` is a (position-within-input, lookup-index) pair: it runs that lookup on the glyph
+  * at that position, leaving the rest of the matched run in place. */
 private sealed trait SubstSubtable
 private final case class SingleSubst(map: Map[Int, Int])          extends SubstSubtable
 private final case class MultipleSubst(map: Map[Int, Array[Int]]) extends SubstSubtable
+private final case class ContextSubst(input: Array[Set[Int]], records: Array[(Int, Int)]) extends SubstSubtable
+private final case class ChainContextSubst(
+    backtrack: Array[Set[Int]],
+    input: Array[Set[Int]],
+    lookahead: Array[Set[Int]],
+    records: Array[(Int, Int)],
+) extends SubstSubtable
 
 object Gsub:
   // The contextual-form features, one per JoiningForm.
@@ -38,6 +55,11 @@ object Gsub:
   // splits a dotted letter into skeleton + dot) and localized forms. Run ahead of init/medi/fina so the
   // form applies to the resulting skeleton.
   private val PreFeatures = Seq("ccmp", "locl")
+
+  // Features applied after form selection, in order. Required ligatures — the lam-alef pair, formed here by
+  // contextual substitution of the connected lam and alef for their `.rlig` variants — run on the shaped
+  // glyphs, so their lookups match the contextual forms init/medi/fina already produced.
+  private val PostFeatures = Seq("rlig")
 
   /** Build a shaper from a font's raw `GSUB` bytes, or None when the font has no Arabic form features (so
     * the caller keeps the plain text path). */
@@ -77,7 +99,10 @@ final class Gsub(data: Array[Byte]):
     var buf = glyphs.zip(forms)
     for tag <- Gsub.PreFeatures do
       featureLookups.get(tag).foreach(idxs => buf = applyExpanding(buf, idxs))
-    buf.map((g, f) => substituteForm(g, f))
+    var out = buf.map((g, f) => substituteForm(g, f))
+    for tag <- Gsub.PostFeatures do
+      featureLookups.get(tag).foreach(idxs => out = applyFeature(out, idxs))
+    out
 
   /** Substitute a glyph for its shaped form, applying the feature named by `form`. Each lookup the feature
     * triggers is tried in order; a substitution subtable that covers the glyph replaces it (a form feature
@@ -108,7 +133,8 @@ final class Gsub(data: Array[Byte]):
     cur
 
   // The substitution one lookup makes to a single glyph: the replacement glyph sequence, or None if no
-  // subtable of the lookup covers the glyph.
+  // subtable of the lookup covers the glyph. Used by the composition pass, which never carries the context a
+  // contextual subtable needs — those are skipped here and handled by the buffer pass below.
   private def applyOne(li: Int, g: Int): Option[Array[Int]] =
     var res: Option[Array[Int]] = None
     val sts = lookups(li)
@@ -117,8 +143,95 @@ final class Gsub(data: Array[Byte]):
       sts(i) match
         case SingleSubst(m)   => m.get(g).foreach(x => res = Some(Array(x)))
         case MultipleSubst(m) => m.get(g).foreach(x => res = Some(x))
+        case _                => // contextual subtables need the surrounding run, not a single glyph
       i += 1
     res
+
+  // Apply a feature's lookups, in order, across the whole glyph buffer. Unlike the form features (driven
+  // per glyph by its resolved joining form) and the composition pass (a glyph at a time), a feature like
+  // `rlig` can match a run of glyphs in context, so each lookup scans the buffer left to right.
+  private def applyFeature(glyphs: Array[Int], idxs: Array[Int]): Array[Int] =
+    var cur = glyphs
+    for li <- idxs do cur = applyLookupOverBuffer(cur, li)
+    cur
+
+  // Run one lookup across the buffer: at each position try to apply it; on a match emit the replacement and
+  // skip past the glyphs it consumed, otherwise copy the glyph through and advance by one.
+  private def applyLookupOverBuffer(glyphs: Array[Int], li: Int): Array[Int] =
+    val out = scala.collection.mutable.ArrayBuffer.empty[Int]
+    var i   = 0
+    while i < glyphs.length do
+      applyLookupAt(glyphs, i, li) match
+        case Some((rep, consumed)) => out ++= rep; i += consumed
+        case None                  => out += glyphs(i); i += 1
+    out.toArray
+
+  // Try a lookup at one buffer position. Single and multiple substitution act on the glyph itself; context
+  // and chaining-context substitution match a run (with backtrack/lookahead for the chaining kind) and
+  // return the run with their nested lookups applied. The result is the replacement glyphs and the number
+  // of input glyphs consumed, or None if no subtable matches here.
+  private def applyLookupAt(glyphs: Array[Int], i: Int, li: Int): Option[(Array[Int], Int)] =
+    val sts = lookups(li)
+    var res: Option[(Array[Int], Int)] = None
+    var s   = 0
+    while res.isEmpty && s < sts.length do
+      sts(s) match
+        case SingleSubst(m)   => m.get(glyphs(i)).foreach(x => res = Some((Array(x), 1)))
+        case MultipleSubst(m) => m.get(glyphs(i)).foreach(x => res = Some((x, 1)))
+        case ContextSubst(input, records) =>
+          if matchRun(glyphs, i, input) then res = Some((applyRecords(glyphs, i, input.length, records), input.length))
+        case ChainContextSubst(bt, input, la, records) =>
+          if matchBacktrack(glyphs, i, bt) && matchRun(glyphs, i, input) &&
+            matchRun(glyphs, i + input.length, la)
+          then res = Some((applyRecords(glyphs, i, input.length, records), input.length))
+      s += 1
+    res
+
+  // Whether `covs` matches the glyphs starting at `start`, one coverage set per glyph in order.
+  private def matchRun(glyphs: Array[Int], start: Int, covs: Array[Set[Int]]): Boolean =
+    if start < 0 || start + covs.length > glyphs.length then false
+    else
+      var j  = 0
+      var ok = true
+      while ok && j < covs.length do
+        if !covs(j).contains(glyphs(start + j)) then ok = false
+        j += 1
+      ok
+
+  // Whether the backtrack coverages match the glyphs immediately before `i`. Backtrack is given in reverse
+  // text order: `bt(0)` is the glyph just before the input, `bt(1)` the one before that, and so on.
+  private def matchBacktrack(glyphs: Array[Int], i: Int, bt: Array[Set[Int]]): Boolean =
+    if i - bt.length < 0 then false
+    else
+      var j  = 0
+      var ok = true
+      while ok && j < bt.length do
+        if !bt(j).contains(glyphs(i - 1 - j)) then ok = false
+        j += 1
+      ok
+
+  // Apply a context match's nested lookups: copy the matched input run, then for each (position, lookup)
+  // record run that lookup on the glyph at that position. The records here substitute one glyph for one
+  // (the lam and the alef each take their `.rlig` form), so the run keeps its length.
+  private def applyRecords(glyphs: Array[Int], i: Int, inputLen: Int, records: Array[(Int, Int)]): Array[Int] =
+    val run = Array.tabulate(inputLen)(k => glyphs(i + k))
+    for (seqIdx, lookupIdx) <- records if seqIdx >= 0 && seqIdx < inputLen do
+      run(seqIdx) = substOne(run(seqIdx), lookupIdx)
+    run
+
+  // The single-substitution result a nested lookup gives for one glyph, or the glyph unchanged. Nested
+  // records in the Arabic required-ligature lookups select contextual `.rlig` variants, all single subs.
+  private def substOne(g: Int, li: Int): Int =
+    val sts  = lookups(li)
+    var out  = g
+    var s    = 0
+    var done = false
+    while !done && s < sts.length do
+      sts(s) match
+        case SingleSubst(m) => m.get(g).foreach { x => out = x; done = true }
+        case _              =>
+      s += 1
+    out
 
   // ─── parsing ────────────────────────────────────────────────────────────────
 
@@ -199,12 +312,15 @@ final class Gsub(data: Array[Byte]):
     subs.toVector.flatMap(so => parseSubtable(lookupType, so))
 
   // Dispatch one subtable by lookup type, following an extension (type 7) to the wrapped subtable. Single
-  // (type 1) and multiple (type 2) substitution are materialised — together they cover Arabic form
-  // selection and ccmp composition; other types are skipped.
+  // (type 1), multiple (type 2), context (type 5) and chaining-context (type 6) substitution are
+  // materialised — together they cover Arabic form selection, ccmp composition and the rlig ligature;
+  // other types, and the older formats 1/2 of the contextual kinds, are skipped.
   private def parseSubtable(lookupType: Int, off: Int): Option[SubstSubtable] =
     lookupType match
       case 1 => Some(parseSingle(off))
       case 2 => Some(parseMultiple(off))
+      case 5 => parseContext(off)
+      case 6 => parseChainContext(off)
       case 7 =>
         val c       = ByteCursor(data, off)
         c.u16 // substFormat (1)
@@ -242,3 +358,37 @@ final class Gsub(data: Array[Byte]):
       Array.fill(n)(s.u16)
     }
     MultipleSubst(cov.collect { case (g, i) if i < seqs.length => g -> seqs(i) })
+
+  // ContextSubstFormat3: a coverage per input glyph, then the nested-lookup records. Formats 1 and 2 (rule
+  // and class based) are not read — modern Arabic fonts use format 3 — so they parse to nothing.
+  private def parseContext(off: Int): Option[SubstSubtable] =
+    val c = ByteCursor(data, off)
+    if c.u16 != 3 then None
+    else
+      val glyphCount = c.u16
+      val substCount = c.u16
+      val covOffs    = Array.fill(glyphCount)(off + c.u16)
+      val records    = Array.fill(substCount) { val seq = c.u16; (seq, c.u16) }
+      Some(ContextSubst(covOffs.map(coverageSet), records))
+
+  // ChainContextSubstFormat3: backtrack, input and lookahead coverages, then the nested-lookup records.
+  // Backtrack coverages are stored in reverse text order. Formats 1 and 2 are not read.
+  private def parseChainContext(off: Int): Option[SubstSubtable] =
+    val c = ByteCursor(data, off)
+    if c.u16 != 3 then None
+    else
+      val backtrackOffs = Array.fill(c.u16)(off + c.u16)
+      val inputOffs     = Array.fill(c.u16)(off + c.u16)
+      val lookaheadOffs = Array.fill(c.u16)(off + c.u16)
+      val records       = Array.fill(c.u16) { val seq = c.u16; (seq, c.u16) }
+      Some(
+        ChainContextSubst(
+          backtrackOffs.map(coverageSet),
+          inputOffs.map(coverageSet),
+          lookaheadOffs.map(coverageSet),
+          records,
+        ),
+      )
+
+  // The set of glyphs a coverage table at `off` covers (the membership is all a contextual match needs).
+  private def coverageSet(off: Int): Set[Int] = Coverage.parse(data, off).keySet

@@ -12,8 +12,9 @@
 // uses for Hebrew points. The bidi reordering into visual order is unchanged.
 //
 // \rtl sets a right-to-left base; \ltr restores the default. \font arabic selects
-// the bundled face, in a regular and a bold cut. The text below is set unpointed —
-// vowel marks (harakat) and the required lam-alef ligature are later additions.
+// the bundled face, in a regular and a bold cut. The text below is set unpointed:
+// vowel marks (harakat) are a later addition. The required lam-alef ligature is
+// handled — where a lam meets an alef the two are woven into a single shape.
 
 \use{document}
 
@@ -37,6 +38,22 @@ logical order — and only the set lines are turned into visual order.
 اللغة العربية من أقدم اللغات في العالم. تكتب من اليمين إلى اليسار، وتتصل حروفها بعضها
 ببعض داخل الكلمة الواحدة. هذا النص مكتوب بخط النسخ بدون حركات، لتظهر أشكال الحروف
 المتصلة بوضوح عبر عدة أسطر.
+}
+\ltr
+
+\section{The lam-alef ligature}
+
+When a lam is immediately followed by an alef the pair forms a required ligature:
+the two letters are not set side by side but woven into one shape. The shaper sees
+the connected lam and alef and substitutes each for the contextual variant that
+nests them together. The words below each run on a lam-alef --- countries, dogs,
+welcome, and the negative particle:
+
+\medskip
+
+\rtl
+{\font arabic 16 regular
+بلاد   كلاب   أهلا   ولا
 }
 \ltr
 

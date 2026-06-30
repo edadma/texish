@@ -159,3 +159,82 @@ class GsubTests extends AnyFreeSpec with Matchers:
     // keeps its nominal glyph while the dot still splits off.
     g.shape(Array(10), Array(Isolated)) shouldBe Array(50, 60)
   }
+
+  /** A third fixture for contextual substitution — the way this font's `rlig` forms the lam-alef pair. An
+    * `isol` feature (covering an unrelated glyph) makes the table report form substitution so a shaper is
+    * built; an `rlig` feature drives a ContextSubstFormat3 lookup that matches the glyph pair 10,11 and runs
+    * a single substitution at each position: 10 → 110 (record at sequence 0) and 11 → 111 (record at
+    * sequence 1). All offsets are hand-computed and noted. */
+  private def sampleGsubContext: Array[Byte] =
+    val b = BE()
+    b.u16(1).u16(0).u16(10).u16(32).u16(58)          // header: version, scriptList, featureList, lookupList
+    b.u16(1).tag("arab").u16(8)                      // ScriptList @10: one 'arab' script, table at +8
+    b.u16(4).u16(0)                                  // Script @18: defaultLangSys at +4, no named langSys
+    b.u16(0).u16(0xffff).u16(2).u16(0).u16(1)        // LangSys @22: lookupOrder, required(none), features {0,1}
+    b.u16(2).tag("isol").u16(14).tag("rlig").u16(20) // FeatureList @32: isol → FL+14, rlig → FL+20
+    b.u16(0).u16(1).u16(0)                           // Feature isol @46 → lookup 0
+    b.u16(0).u16(1).u16(1)                           // Feature rlig @52 → lookup 1
+    b.u16(4).u16(10).u16(32).u16(70).u16(92)         // LookupList @58: four lookups at these offsets
+    // Lookup 0 @68 — type 1 single, glyph 99 → 199, present only so the table reports a form feature
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(199)                  // SingleSubstFormat2 @76
+    b.u16(1).u16(1).u16(99)                          // Coverage @84
+    // Lookup 1 @90 — type 5 ContextSubstFormat3: input [10][11], records (seq 0 → lookup 2)(seq 1 → lookup 3)
+    b.u16(5).u16(0).u16(1).u16(8)
+    b.u16(3).u16(2).u16(2).u16(18).u16(24).u16(0).u16(2).u16(1).u16(3) // @98: format, glyphCount, substCount, covOffs, records
+    b.u16(1).u16(1).u16(10)                          // input coverage 0 @116
+    b.u16(1).u16(1).u16(11)                          // input coverage 1 @122
+    // Lookup 2 @128 — type 1 single, 10 → 110
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(110)
+    b.u16(1).u16(1).u16(10)
+    // Lookup 3 @150 — type 1 single, 11 → 111
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(111)
+    b.u16(1).u16(1).u16(11)
+    b.result
+
+  "rlig contextual substitution swaps a matched pair for their variant glyphs" in {
+    val g = Gsub.from(Some(sampleGsubContext)).getOrElse(fail("expected a shaper"))
+    // 10 and 11 are outside the form feature's coverage, so form selection leaves them; rlig then matches
+    // the pair and substitutes each through its nested single substitution.
+    g.shape(Array(10, 11), Array(Isolated, Isolated)) shouldBe Array(110, 111)
+  }
+
+  "rlig leaves a pair it does not match untouched" in {
+    val g = Gsub.from(Some(sampleGsubContext)).getOrElse(fail("expected a shaper"))
+    g.shape(Array(10, 77), Array(Isolated, Isolated)) shouldBe Array(10, 77)
+  }
+
+  /** A fourth fixture for chaining-context substitution: an `rlig` feature whose ChainContextSubstFormat3
+    * lookup substitutes 11 → 211 only when 11 is immediately preceded by the backtrack glyph 10. */
+  private def sampleGsubChain: Array[Byte] =
+    val b = BE()
+    b.u16(1).u16(0).u16(10).u16(32).u16(58)          // header
+    b.u16(1).tag("arab").u16(8)                      // ScriptList @10
+    b.u16(4).u16(0)                                  // Script @18
+    b.u16(0).u16(0xffff).u16(2).u16(0).u16(1)        // LangSys @22, features {0,1}
+    b.u16(2).tag("isol").u16(14).tag("rlig").u16(20) // FeatureList @32
+    b.u16(0).u16(1).u16(0)                           // isol → lookup 0
+    b.u16(0).u16(1).u16(1)                           // rlig → lookup 1
+    b.u16(3).u16(8).u16(30).u16(68)                  // LookupList @58: three lookups
+    // Lookup 0 @66 — isol single 99 → 199
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(199)
+    b.u16(1).u16(1).u16(99)
+    // Lookup 1 @88 — type 6 ChainContextSubstFormat3: backtrack [10], input [11], record (seq 0 → lookup 2)
+    b.u16(6).u16(0).u16(1).u16(8)
+    b.u16(3).u16(1).u16(18).u16(1).u16(24).u16(0).u16(1).u16(0).u16(2) // @96: fmt, btCnt, btOff, inCnt, inOff, laCnt, substCnt, record
+    b.u16(1).u16(1).u16(10)                          // backtrack coverage @114
+    b.u16(1).u16(1).u16(11)                          // input coverage @120
+    // Lookup 2 @126 — single 11 → 211
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(211)
+    b.u16(1).u16(1).u16(11)
+    b.result
+
+  "rlig chaining substitution fires only with the required backtrack glyph" in {
+    val g = Gsub.from(Some(sampleGsubChain)).getOrElse(fail("expected a shaper"))
+    g.shape(Array(10, 11), Array(Isolated, Isolated)) shouldBe Array(10, 211) // 11 preceded by 10
+    g.shape(Array(12, 11), Array(Isolated, Isolated)) shouldBe Array(12, 11)  // backtrack absent
+  }
