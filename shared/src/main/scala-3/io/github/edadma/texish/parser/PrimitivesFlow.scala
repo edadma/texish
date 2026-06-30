@@ -13,6 +13,12 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("newpage", SimplePrimitive(() => t.newpage()))
   proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
   proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
+
+  // Paragraph writing direction. \rtl sets a right-to-left base — the paragraph flushes right and its
+  // words read right to left, with embedded Latin and numbers handled by the bidirectional algorithm —
+  // and \ltr restores the default left-to-right base. Like \leftskip, the setting persists until changed.
+  proc.registerPrimitive("rtl", SimplePrimitive(() => t.set("pardir", 1.0)))
+  proc.registerPrimitive("ltr", SimplePrimitive(() => t.set("pardir", 0.0)))
   proc.registerPrimitive("cr", SimplePrimitive(() => t.op("newLine")))
   proc.registerPrimitive("hfil", SimplePrimitive(() => t.fil))
   proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))

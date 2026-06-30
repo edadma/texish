@@ -96,6 +96,23 @@ object Bidi:
         else if isStrongLeft(cp) then L
         else ON
 
+  /** Whether a codepoint is a strong right-to-left character — a Hebrew or Arabic letter. Used to split a
+    * word box at a script boundary so each box is a single direction, and to decide whether a paragraph
+    * needs bidi processing at all. */
+  def isStrongR(cp: Int): Boolean =
+    classify(cp) match
+      case R | AL => true
+      case _      => false
+
+  /** Whether a string contains any strong right-to-left character, the test the paragraph builder uses to
+    * skip reordering on the common pure-left-to-right paragraph. */
+  def hasRtl(s: String): Boolean =
+    var i = 0
+    while i < s.length do
+      if isStrongR(s.charAt(i).toInt) then return true
+      i += 1
+    false
+
   /** Classify a whole string, one entry per char. Hebrew, Latin and Arabic are all in the Basic
     * Multilingual Plane, so per-char classification aligns one-to-one with the box text the line
     * builder will later hand in; astral codepoints (e.g. math alphanumerics) are not RTL and resolve

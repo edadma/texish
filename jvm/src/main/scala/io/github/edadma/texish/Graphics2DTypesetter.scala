@@ -80,7 +80,15 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
   // geometry goes through Shape so fractional coordinates and sizes rasterize by coverage: a rule thinner
   // than a device pixel (0.4pt at screen resolutions) still leaves proportional ink instead of truncating to
   // an integer height of zero
-  def drawString(text: String, x: Double, y: Double): Unit = g.drawString(text, x.toFloat, y.toFloat)
+  // Draw the run verbatim, left to right in the order given, applying no bidirectional reordering of its
+  // own: the engine has already put the characters in visual order, so a Hebrew or Arabic run arrives
+  // reversed and must be drawn as-is. (Graphics2D.drawString would re-apply the Unicode bidi algorithm and
+  // undo that.) createGlyphVector maps characters to glyphs one-to-one with no reordering or shaping, the
+  // same codepoint-order drawing the Cairo, SVG and canvas backends do, so all four agree glyph for glyph.
+  def drawString(text: String, x: Double, y: Double): Unit =
+    if text.nonEmpty then
+      val gv = g.getFont.createGlyphVector(frc, text)
+      g.drawGlyphVector(gv, x.toFloat, y.toFloat)
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
     g.draw(new java.awt.geom.Line2D.Double(x1, y1, x2, y2))
   def drawRect(x: Double, y: Double, width: Double, height: Double): Unit =

@@ -62,13 +62,17 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       bls = t.getGlue("baselineskip").naturalSize
       cutBands = galley.cutouts.flatMap(c => galley.cutoutBand(c).map((top, bottom) => (top, bottom, c.side, c.profile))).toSeq
 
+      // The paragraph's writing direction, decided once: whether to reorder at all, and at which base.
+      val base   = baseLevel
+      val doBidi = needsBidi(base)
+
       // Try Knuth-Plass optimal line breaking first
       KnuthPlass.breakParagraph(boxes.toSeq, hsize, t, n => { val (l, r) = cut(n); l + r }) match
         case Some(lines) if lines.nonEmpty =>
-          buildLinesFromOptimal(lines, hsize)
+          buildLinesFromOptimal(lines, hsize, base, doBidi)
         case _ =>
           // Fall back to greedy algorithm
-          buildLinesGreedy(hsize)
+          buildLinesGreedy(hsize, base, doBidi)
 
       t.indentParagraph = true
       // \hangindent / \hangafter apply to a single paragraph and revert afterwards, as in TeX;
@@ -120,11 +124,98 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     }
     if strands then t.getNumber("wrappenalty").toInt else 0
 
-  private def buildLinesFromOptimal(lines: Seq[Seq[Box]], hsize: Double): Unit =
+  /** The paragraph's base writing direction, read when it is broken: 0 left-to-right, 1 right-to-left
+    * (\rtl / \ltr set the `pardir` parameter). */
+  private def baseLevel: Int = if t.getNumber("pardir") == 1.0 then 1 else 0
+
+  /** Whether this paragraph needs bidirectional processing: a right-to-left base, or any right-to-left
+    * character somewhere in its content. A pure left-to-right paragraph with no such character — the
+    * overwhelmingly common case — skips reordering entirely and lays out exactly as before. */
+  private def needsBidi(base: Int): Boolean =
+    base == 1 || boxes.exists {
+      case c: CharBox => Bidi.hasRtl(c.text)
+      case _          => false
+    }
+
+  /** Reorder one line from logical into visual order under base direction `base`, in place.
+    *
+    * Reordering happens at character granularity, not box granularity: a Hebrew word arrives as a single
+    * box whose characters are in logical (reading) order, and they must be reversed within the box so the
+    * glyphs are drawn left to right in their visual positions. Every backend draws a run of glyphs in the
+    * order given, applying no reordering of its own, so texish owns the bidi here and hands each backend
+    * text already in visual order.
+    *
+    * Each character of each word box becomes one item, each interword glue (or other non-text box) one
+    * neutral item, giving a one-to-one map between items and the characters of the bidi string. The
+    * Unicode algorithm yields the visual order of those items; walking it, runs of characters sharing a
+    * font and colour recombine into word boxes (their text now in visual order) and glue and other boxes
+    * pass through at their visual positions. The resolution is per line, with the paragraph base as the
+    * surrounding direction — exact for a line whose direction the document fixes. */
+  private def reorderVisual(content: ArrayBuffer[Box], base: Int): Unit =
+    if content.isEmpty then return
+
+    // Flatten to items: one per character of a word box, one per non-text box. Item index equals
+    // character index in the bidi string, so the visual permutation indexes items directly.
+    val chars   = new StringBuilder
+    val srcChar = ArrayBuffer.empty[CharBox] // the source word box for a text item, else null
+    val srcBox  = ArrayBuffer.empty[Box]     // the box itself for a non-text item, else null
+    for b <- content do
+      b match
+        case c: CharBox =>
+          for ch <- c.text do
+            chars.append(ch)
+            srcChar += c
+            srcBox += null
+        case _ =>
+          chars.append(if b.isSpace then ' ' else '￼') // glue is neutral whitespace; anything else neutral
+          srcChar += null
+          srcBox += b
+
+    val order = Bidi.visualOrder(chars.toString, Some(base))
+
+    val out     = ArrayBuffer.empty[Box]
+    var runText = null: StringBuilder
+    var runSrc  = null: CharBox
+    def flushRun(): Unit =
+      if runText != null then
+        out += runSrc.newCharBox(runText.toString)
+        runText = null
+        runSrc = null
+    for vi <- order do
+      val c = srcChar(vi)
+      if c != null then
+        if runText != null && (runSrc.font != c.font || runSrc.color != c.color) then flushRun()
+        if runText == null then
+          runText = new StringBuilder
+          runSrc = c
+        runText.append(chars.charAt(vi))
+      else
+        flushRun()
+        out += srcBox(vi)
+    flushRun()
+
+    content.clear()
+    content ++= out
+
+  /** Set one line: reorder its content for a right-to-left or mixed line, then bracket it with the margin
+    * glue. \parfillskip — the stretchable glue that lets the last line fall short of full measure — sits
+    * at the trailing edge, which is the right under a left-to-right base and the left under a right-to-left
+    * base, so the last line rags toward the start of reading either way. */
+  private def emitLine(content: ArrayBuffer[Box], lineIdx: Int, isLast: Boolean, base: Int, doBidi: Boolean, hsize: Double): Box =
+    if doBidi then reorderVisual(content, base)
+    val hbox                      = new HBoxBuilder(t, hsize)
+    val (leftMargin, rightMargin) = lineMargins(lineIdx)
+    hbox add leftMargin
+    if isLast && base == 1 then hbox add t.getGlue("parfillskip")
+    content.foreach(hbox.add)
+    if isLast && base == 0 then hbox add t.getGlue("parfillskip")
+    hbox add rightMargin
+    hbox.result
+
+  private def buildLinesFromOptimal(lines: Seq[Seq[Box]], hsize: Double, base: Int, doBidi: Boolean): Unit =
     var first = true
 
     for (lineBoxes, lineIdx) <- lines.zipWithIndex do
-      val hbox    = new HBoxBuilder(t, hsize)
       val isLast  = lineIdx == lines.length - 1
       // marks and inserts migrate out of the line to the vertical list, where the page builder can see them
       val migrating = lineBoxes.collect { case m: MigratingBox => m }
@@ -133,15 +224,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       val content = ArrayBuffer.from(lineBoxes.iterator.filterNot(_.isInstanceOf[MigratingBox]))
       if content.nonEmpty && content.last.isSpace then content.remove(content.length - 1)
 
-      // \leftskip (and a left hanging indent) opens the line; the content, then \parfillskip on the
-      // last line, then \rightskip (and a right hanging indent) close it — the whole line set to hsize
-      val (leftMargin, rightMargin) = lineMargins(lineIdx)
-      hbox add leftMargin
-      content.foreach(hbox.add)
-      if isLast then hbox add t.getGlue("parfillskip")
-      hbox add rightMargin
-
-      val newLine = hbox.result
+      val newLine = emitLine(content, lineIdx, isLast, base, doBidi, hsize)
       t.modeStack(1) add newLine
 
       if first then
@@ -164,7 +247,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   // wordmark like \TeX read as interword spaces and the greedy breaker splits the logo across a line.
   private def isBreakSpace(b: Box): Boolean = b.isInstanceOf[Glue]
 
-  private def buildLinesGreedy(hsize: Double): Unit =
+  private def buildLinesGreedy(hsize: Double, base: Int, doBidi: Boolean): Unit =
     var first   = true
     var lineIdx = 0
 
@@ -262,10 +345,12 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
 
       if hbox.nonEmpty && hbox.last.isSpace then hbox.removeLast()
       if boxes.nonEmpty && boxes.head.isSpace then boxes.remove(0)
-      if boxes.isEmpty then hbox add t.getGlue("parfillskip")
-      hbox add rightMargin
 
-      val newLine = hbox.result
+      // Harvest the content the fit loop laid down — everything after the leading \leftskip — and set the
+      // line through the shared emitter, so a right-to-left or mixed line is reordered and \parfillskip
+      // lands on the correct edge, exactly as on the optimal path.
+      val content = ArrayBuffer.from(hbox.list.drop(1))
+      val newLine = emitLine(content, lineIdx, boxes.isEmpty, base, doBidi, hsize)
 
       // a greedy line is final exactly when it exhausted the paragraph's boxes. This penalty guards the break
       // before the line just built — line lineIdx — so the wrap check is for the break after line lineIdx-1.

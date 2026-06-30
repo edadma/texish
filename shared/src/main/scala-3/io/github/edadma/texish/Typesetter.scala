@@ -887,6 +887,7 @@ abstract class Typesetter:
       "parskip"       -> Glue(0, 1 * pt), // TeX's \parskip: 0pt plus 1pt between paragraphs
       "hangindent"    -> 0.0,
       "hangafter"     -> 1.0,
+      "pardir"        -> 0.0, // paragraph base writing direction: 0 left-to-right, 1 right-to-left
       "wrapsep"       -> 12 * pt, // gutter between a wrapped figure and the text flowing around it
       "hoffset"       -> 1 * in,
       "voffset"       -> 1 * in,
