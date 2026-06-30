@@ -87,8 +87,13 @@ final class Gpos(data: Array[Byte], gdefData: Option[Array[Byte]], val unitsPerE
   // ─── shaping ──────────────────────────────────────────────────────────────────
 
   /** Resolve where each glyph of a run is drawn. Walks left to right tracking the current base and the
-    * most recent mark; each mark attaches first to the base (type 4) and, failing that, to the preceding
-    * mark (type 6), taking the anchor offset for its class. Bases and unmatched marks get no offset. */
+    * most recent mark. A mark attaches to the preceding mark (type 6) when one is present and a
+    * mark-to-mark subtable covers the pair, and otherwise to the base (type 4), taking the anchor offset
+    * for its class. Mark-to-mark is tried first because it must win when both apply: a harakat stacks above
+    * a shadda or above a letter's own dots, not at the bare-consonant anchor the mark-to-base lookup would
+    * give it — OpenType applies `mkmk` after `mark`, so the stacking position overrides. A mark with no
+    * preceding mark (or one the mark-to-mark lookups do not cover) falls to the base. Bases and unmatched
+    * marks get no offset. */
   def position(glyphs: Array[Int]): Array[GlyphPlacement] =
     val n     = glyphs.length
     val out   = new Array[GlyphPlacement](n)
@@ -101,21 +106,7 @@ final class Gpos(data: Array[Byte], gdefData: Option[Array[Byte]], val unitsPerE
       if isMark(g) then
         var placed: GlyphPlacement = null
 
-        if lastBase >= 0 then
-          val base = glyphs(lastBase)
-          var s    = 0
-          while placed == null && s < markBaseSubs.length do
-            val st = markBaseSubs(s)
-            (st.markCov.get(g), st.baseCov.get(base)) match
-              case (Some(mi), Some(bi)) =>
-                val mr = st.marks(mi)
-                val ba = st.bases(bi)(mr.classId)
-                if ba != null then
-                  placed = GlyphPlacement(true, lastBase, (ba.x - mr.anchor.x) * scale, (ba.y - mr.anchor.y) * scale)
-              case _ =>
-            s += 1
-
-        if placed == null && lastMark >= 0 then
+        if lastMark >= 0 then
           val prev = glyphs(lastMark)
           var s    = 0
           while placed == null && s < markMarkSubs.length do
@@ -126,6 +117,20 @@ final class Gpos(data: Array[Byte], gdefData: Option[Array[Byte]], val unitsPerE
                 val ba = st.mark2s(m2)(mr.classId)
                 if ba != null then
                   placed = GlyphPlacement(true, lastMark, (ba.x - mr.anchor.x) * scale, (ba.y - mr.anchor.y) * scale)
+              case _ =>
+            s += 1
+
+        if placed == null && lastBase >= 0 then
+          val base = glyphs(lastBase)
+          var s    = 0
+          while placed == null && s < markBaseSubs.length do
+            val st = markBaseSubs(s)
+            (st.markCov.get(g), st.baseCov.get(base)) match
+              case (Some(mi), Some(bi)) =>
+                val mr = st.marks(mi)
+                val ba = st.bases(bi)(mr.classId)
+                if ba != null then
+                  placed = GlyphPlacement(true, lastBase, (ba.x - mr.anchor.x) * scale, (ba.y - mr.anchor.y) * scale)
               case _ =>
             s += 1
 

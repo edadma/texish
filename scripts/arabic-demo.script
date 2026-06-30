@@ -57,6 +57,23 @@ welcome, and the negative particle:
 }
 \ltr
 
+\section{Vowelled text}
+
+Arabic is normally set without vowels, but they may be written as marks above and
+below the letters: a fatha, kasra or damma for the short vowels, a sukun for none,
+and a shadda to double a consonant. Each mark is placed by the font's anchors --- the
+same mechanism that sets the Hebrew points --- so a letter carries both its
+identifying dots and a vowel at once, and a shadda and a vowel stack one above the
+other:
+
+\medskip
+
+\rtl
+{\font arabic 16 regular
+كَتَبَ الوَلَدُ. مُحَمَّد. الشَّمْس. بِسْمِ الرَّحِيم.
+}
+\ltr
+
 \section{A bold cut}
 
 The bundled face ships a real bold weight, so emphasis is set by the font rather
