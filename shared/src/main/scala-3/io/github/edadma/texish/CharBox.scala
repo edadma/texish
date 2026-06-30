@@ -10,7 +10,7 @@ import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, JoiningForm}
   * a font anchor relative to its base (see the GPOS shaper).
   *
   * Arabic letters take a contextual shape — initial, medial, final or isolated — chosen from their
-  * neighbours. When this box carries the resolved [[JoiningForm]] of each character (decided in memory
+  * neighbours. When this box carries the resolved `JoiningForm` of each character (decided in memory
   * order by the paragraph reorderer) and the font shapes Arabic, the box runs the characters through the
   * GSUB shaper: composition substitutions may split a dotted letter into a dotless skeleton plus a separate
   * dot, then the skeleton takes its connecting form. The resulting glyphs are laid out by their own
