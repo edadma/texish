@@ -54,6 +54,22 @@ than faked. Here the opening words of the passage are set in bold Hebrew:
 }
 \ltr
 
+\section{Pointed text}
+
+Hebrew is normally written without vowels, but scripture and teaching texts add
+niqqud — the points set above, below and inside the letters. They are combining
+marks with no width of their own, so the engine reads the font's anchor data to
+place each one on its consonant rather than letting it fall at the pen. Here is
+the opening of Genesis, pointed:
+
+\medskip
+
+\rtl
+{\font hebrew 16 regular
+בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ׃
+}
+\ltr
+
 \section{Bidirectional text}
 
 Latin words and numbers keep their own left-to-right order inside a right-to-left

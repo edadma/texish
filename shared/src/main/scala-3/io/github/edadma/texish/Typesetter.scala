@@ -2,7 +2,7 @@ package io.github.edadma.texish
 
 //import pprint.pprintln
 
-import io.github.edadma.texish.opentype.{ByteCursor, MathTable}
+import io.github.edadma.texish.opentype.{ByteCursor, Gpos, MathTable}
 import io.github.edadma.texish.parser.Value
 
 import scala.collection.mutable
@@ -170,6 +170,23 @@ abstract class Typesetter:
     * rasterizers expose no structured API for; see [[io.github.edadma.texish.opentype.MathTable]].
     */
   def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]]
+
+  // Parsed GPOS mark-positioning shapers, one per render font that has them. Parsing reads the GPOS, GDEF
+  // and head bytes once and is cached, since a paragraph of pointed Hebrew draws many runs in the same font.
+  private val markShaperCache = mutable.HashMap.empty[Any, Option[Gpos]]
+
+  /** The mark-positioning shaper for `font`, or None when the font has no GPOS mark lookups (every Latin
+    * text font) — in which case text draws through the plain advance-only path. Combining marks (Hebrew
+    * niqqud, Arabic marks) carry zero advance and are positioned by the font's anchors, which this reads. */
+  def markShaper(font: RenderFont): Option[Gpos] =
+    markShaperCache.getOrElseUpdate(
+      font, {
+        val upem = sfntTable(font, "head") match
+          case Some(b) if b.length >= 20 => ((b(18) & 0xff) << 8) | (b(19) & 0xff)
+          case _                         => 1000
+        Gpos.from(sfntTable(font, "GPOS"), sfntTable(font, "GDEF"), upem)
+      },
+    )
 
   def loadImage(path: String): (ImageHandle, Int, Int)
 

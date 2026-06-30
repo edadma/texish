@@ -113,6 +113,15 @@ object Bidi:
       i += 1
     false
 
+  /** Whether a string contains any non-spacing combining mark — Hebrew niqqud or Arabic marks — the test
+    * a character box uses to decide whether it must position marks rather than draw the run as a string. */
+  def hasMarks(s: String): Boolean =
+    var i = 0
+    while i < s.length do
+      if classify(s.charAt(i).toInt) == NSM then return true
+      i += 1
+    false
+
   /** Classify a whole string, one entry per char. Hebrew, Latin and Arabic are all in the Basic
     * Multilingual Plane, so per-char classification aligns one-to-one with the box text the line
     * builder will later hand in; astral codepoints (e.g. math alphanumerics) are not RTL and resolve

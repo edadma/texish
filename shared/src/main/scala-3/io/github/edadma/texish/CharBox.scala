@@ -23,7 +23,39 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color)
     if text.nonEmpty then
       t.setFont(font)
       t.setColor(color)
-      t.drawString(text, x, y)
+      val rf = font.renderFont.asInstanceOf[t.RenderFont]
+      t.markShaper(rf) match
+        case Some(shaper) if Bidi.hasMarks(text) => drawMarked(t, rf, shaper, x, y)
+        case _                                   => t.drawString(text, x, y)
+
+  /** Draw a run that carries combining marks (Hebrew niqqud) glyph by glyph, positioning each mark by its
+    * font anchor instead of letting it fall at the pen after its base. Base letters advance the pen and
+    * are drawn at the cursor; a mark advances nothing and is drawn relative to the origin of the glyph it
+    * attaches to, so a vowel point sits under (or a dagesh inside) its consonant. The text is already in
+    * visual order, so a left-to-right pass over the glyphs is correct. */
+  private def drawMarked(t: Typesetter, rf: t.RenderFont, shaper: io.github.edadma.texish.opentype.Gpos, x: Double, y: Double): Unit =
+    val cpBuf = scala.collection.mutable.ArrayBuffer.empty[Int]
+    var ci    = 0
+    while ci < text.length do
+      val cp = text.codePointAt(ci)
+      cpBuf += cp
+      ci += Character.charCount(cp)
+    val glyphs = cpBuf.toArray.map(cp => t.glyphIndex(rf, cp))
+    val places = shaper.position(glyphs)
+    val originX = new Array[Double](glyphs.length)
+    val originY = new Array[Double](glyphs.length)
+    var cursor  = x
+    var i       = 0
+    while i < glyphs.length do
+      val p = places(i)
+      val (ox, oy) =
+        if p.attach >= 0 then (originX(p.attach) + p.dxEm * font.size, originY(p.attach) - p.dyEm * font.size)
+        else (cursor, y)
+      t.drawGlyph(rf, glyphs(i), ox, oy)
+      originX(i) = ox
+      originY(i) = oy
+      if !p.isMark then cursor += t.glyphExtents(rf, glyphs(i)).xAdvance
+      i += 1
 
   def newCharBox(s: String): CharBox = new CharBox(t, s, font, color)
 
