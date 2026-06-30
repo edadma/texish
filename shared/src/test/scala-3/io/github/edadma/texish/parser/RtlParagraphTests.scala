@@ -87,6 +87,15 @@ class RtlParagraphTests extends AnyFreeSpec with Matchers:
     visual("Hello world") shouldBe "Hello world"
   }
 
+  "parentheses around right-to-left text are mirrored so they enclose it correctly" in {
+    // logical "(אב)" reverses to ")בא(" and the brackets mirror back, so the reader sees "(בא)".
+    visual(s"\\rtl ($A$B)") shouldBe s"($B$A)"
+  }
+
+  "brackets in a left-to-right paragraph are not mirrored" in {
+    visual("(ab)") shouldBe "(ab)"
+  }
+
   "\\ltr restores left-to-right after \\rtl" in {
     visual(s"\\rtl\\ltr Hello $A$B world") shouldBe s"Hello $B$A world"
   }

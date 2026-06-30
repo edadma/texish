@@ -154,11 +154,11 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   private def reorderVisual(content: ArrayBuffer[Box], base: Int): Unit =
     if content.isEmpty then return
 
-    // Flatten to items: one per character of a word box, one per non-text box. Item index equals
-    // character index in the bidi string, so the visual permutation indexes items directly.
+    // Flatten to characters, each remembering its source: a word box contributes its characters, and a glue
+    // or other box one neutral character. Character index lines up with the bidi string below.
     val chars   = new StringBuilder
-    val srcChar = ArrayBuffer.empty[CharBox] // the source word box for a text item, else null
-    val srcBox  = ArrayBuffer.empty[Box]     // the box itself for a non-text item, else null
+    val srcChar = ArrayBuffer.empty[CharBox] // the source word box for a text character, else null
+    val srcBox  = ArrayBuffer.empty[Box]     // the box itself for a non-text character, else null
     for b <- content do
       b match
         case c: CharBox =>
@@ -171,8 +171,28 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
           srcChar += null
           srcBox += b
 
-    val order = Bidi.visualOrder(chars.toString, Some(base))
+    val s      = chars.toString
+    val levels = Bidi.resolvedLevels(s, base)
 
+    // Group into reorder units. A base character and the non-spacing marks that follow it form one cluster,
+    // so reversing a right-to-left run does not strand a vowel point ahead of its consonant; a non-text box
+    // is its own unit. Each unit takes the level of its base character.
+    val unitChars = ArrayBuffer.empty[ArrayBuffer[Int]]
+    val unitLevel = ArrayBuffer.empty[Int]
+    var i         = 0
+    while i < s.length do
+      val isMark = srcChar(i) != null && Bidi.classify(s.charAt(i).toInt) == BidiClass.NSM
+      if isMark && unitChars.nonEmpty && srcChar(unitChars.last.head) != null then unitChars.last += i
+      else
+        unitChars += ArrayBuffer(i)
+        unitLevel += levels(i)
+      i += 1
+
+    val order = Bidi.reorderByLevels(unitLevel.toArray)
+
+    // Walk the units in visual order, recombining runs of one font and colour into word boxes whose text is
+    // now visual. A unit's own characters stay in logical order (base then marks); a right-to-left bracket
+    // is swapped for its mirror image (UAX #9 L4).
     val out     = ArrayBuffer.empty[Box]
     var runText = null: StringBuilder
     var runSrc  = null: CharBox
@@ -181,17 +201,21 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         out += runSrc.newCharBox(runText.toString)
         runText = null
         runSrc = null
-    for vi <- order do
-      val c = srcChar(vi)
-      if c != null then
-        if runText != null && (runSrc.font != c.font || runSrc.color != c.color) then flushRun()
+    for ui <- order do
+      val cis   = unitChars(ui)
+      val first = cis.head
+      if srcChar(first) != null then
+        val src = srcChar(first)
+        if runText != null && (runSrc.font != src.font || runSrc.color != src.color) then flushRun()
         if runText == null then
           runText = new StringBuilder
-          runSrc = c
-        runText.append(chars.charAt(vi))
+          runSrc = src
+        for ci <- cis do
+          val cp = s.charAt(ci).toInt
+          runText.append(if Bidi.isRtlLevel(levels(ci)) then Bidi.mirror(cp).toChar else cp.toChar)
       else
         flushRun()
-        out += srcBox(vi)
+        out += srcBox(first)
     flushRun()
 
     content.clear()

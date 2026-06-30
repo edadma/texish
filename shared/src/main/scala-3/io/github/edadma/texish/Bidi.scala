@@ -417,6 +417,45 @@ object Bidi:
       lo += 1
       hi -= 1
 
+  /** The resolved embedding level of every character of `s` under base direction `base`, after the
+    * paragraph rules and the per-line reset (L1). The paragraph builder reads these to decide which
+    * characters are right-to-left (an odd level) for mirroring, and which level a grapheme cluster takes. */
+  def resolvedLevels(s: String, base: Int): Array[Int] =
+    val classes = classifyString(s)
+    val cps     = new Array[Int](s.length)
+    var i       = 0
+    while i < s.length do { cps(i) = s.charAt(i).toInt; i += 1 }
+    val levels = resolveLevels(cps, classes, base)
+    applyL1(levels, classes, base)
+    levels
+
+  /** Whether `level` reads right-to-left (an odd embedding level). */
+  def isRtlLevel(level: Int): Boolean = (level & 1) == 1
+
+  /** The mirror image of a bracket or relation that the Unicode algorithm depicts mirrored in a
+    * right-to-left context (UAX #9 rule L4 / the Bidi_Mirroring property): an opening parenthesis is drawn
+    * as a closing one, a less-than as a greater-than, and so on. Characters without a mirror return
+    * unchanged. The set is the punctuation and relations that occur in running text; it is not the full
+    * Bidi_Mirroring table. */
+  def mirror(cp: Int): Int =
+    cp match
+      case 0x0028 => 0x0029; case 0x0029 => 0x0028 // ( )
+      case 0x005b => 0x005d; case 0x005d => 0x005b // [ ]
+      case 0x007b => 0x007d; case 0x007d => 0x007b // { }
+      case 0x003c => 0x003e; case 0x003e => 0x003c // < >
+      case 0x00ab => 0x00bb; case 0x00bb => 0x00ab // « »
+      case 0x2039 => 0x203a; case 0x203a => 0x2039 // ‹ ›
+      case 0x2264 => 0x2265; case 0x2265 => 0x2264 // ≤ ≥
+      case 0x2266 => 0x2267; case 0x2267 => 0x2266
+      case 0x226a => 0x226b; case 0x226b => 0x226a // ≪ ≫
+      case 0x2308 => 0x2309; case 0x2309 => 0x2308 // ⌈ ⌉
+      case 0x230a => 0x230b; case 0x230b => 0x230a // ⌊ ⌋
+      case 0x2329 => 0x232a; case 0x232a => 0x2329 // 〈 〉
+      case 0x3008 => 0x3009; case 0x3009 => 0x3008
+      case 0x300a => 0x300b; case 0x300b => 0x300a // 《 》
+      case 0x301a => 0x301b; case 0x301b => 0x301a // 〚 〛
+      case _      => cp
+
   /** Convenience for tests and the character-level path: classify `s`, pick or accept a base level,
     * resolve, and reorder, returning the visual-to-logical permutation. A `forcedBase` of Some(0|1)
     * overrides the automatic P2/P3 base direction. */
