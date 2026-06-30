@@ -98,3 +98,21 @@ class GsubArabicFontTests extends AnyFreeSpec with Matchers:
     glyphs should not contain lamMedi  // became the medial lam-alef rlig variant
     glyphs should not contain alefFina // became the final alef rlig variant
   }
+
+  "the pointed word Allah forms its single calligraphic ligature" in {
+    // alef, lam, lam, shadda, dagger-alef, heh: ccmp fuses the shadda and dagger into one mark, the lams
+    // take their initial and medial forms, and liga substitutes the whole run for the Allah ligature glyph.
+    // Six input characters collapsing to one glyph proves composition, form selection and the ligature all
+    // cooperate.
+    val cps    = Array(0x0627, 0x0644, 0x0644, 0x0651, 0x0670, 0x0647)
+    val glyphs = gsub.shape(cps.map(g), ArabicShaping.resolveForms(cps))
+    glyphs.length shouldBe 1
+  }
+
+  "the unpointed word Allah is left as four connected letters" in {
+    // Without the shadda and dagger-alef the ligature's components are not present, so the word stays as the
+    // ordinary connected alef-lam-lam-heh — the correct rendering for unpointed text.
+    val cps    = Array(0x0627, 0x0644, 0x0644, 0x0647)
+    val glyphs = gsub.shape(cps.map(g), ArabicShaping.resolveForms(cps))
+    glyphs.length shouldBe 4
+  }

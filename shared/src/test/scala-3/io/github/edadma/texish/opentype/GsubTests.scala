@@ -238,3 +238,72 @@ class GsubTests extends AnyFreeSpec with Matchers:
     g.shape(Array(10, 11), Array(Isolated, Isolated)) shouldBe Array(10, 211) // 11 preceded by 10
     g.shape(Array(12, 11), Array(Isolated, Isolated)) shouldBe Array(12, 11)  // backtrack absent
   }
+
+  /** A fifth fixture for ligature substitution (type 4): an `isol` feature for presence and a `liga` feature
+    * whose lookup ligates the three-glyph run 10,11,12 into the single glyph 200. */
+  private def sampleGsubLiga: Array[Byte] =
+    val b = BE()
+    b.u16(1).u16(0).u16(10).u16(32).u16(58)          // header
+    b.u16(1).tag("arab").u16(8)                      // ScriptList @10
+    b.u16(4).u16(0)                                  // Script @18
+    b.u16(0).u16(0xffff).u16(2).u16(0).u16(1)        // LangSys @22, features {0,1}
+    b.u16(2).tag("isol").u16(14).tag("liga").u16(20) // FeatureList @32
+    b.u16(0).u16(1).u16(0)                           // isol → lookup 0
+    b.u16(0).u16(1).u16(1)                           // liga → lookup 1
+    b.u16(2).u16(6).u16(28)                          // LookupList @58: two lookups
+    // Lookup 0 @64 — isol single 99 → 199
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(199)
+    b.u16(1).u16(1).u16(99)
+    // Lookup 1 @86 — type 4 ligature: 10 + [11, 12] → 200
+    b.u16(4).u16(0).u16(1).u16(8)
+    b.u16(1).u16(8).u16(1).u16(14)                   // LigatureSubstFormat1 @94: fmt, covOff8, setCount1, setOff14
+    b.u16(1).u16(1).u16(10)                          // Coverage @102: {10}
+    b.u16(1).u16(4)                                  // LigatureSet @108: ligCount1, ligOff4
+    b.u16(200).u16(3).u16(11).u16(12)                // Ligature @112: ligGlyph200, compCount3, tail[11,12]
+    b.result
+
+  "a liga ligature substitutes a glyph run for a single ligature glyph" in {
+    val g = Gsub.from(Some(sampleGsubLiga)).getOrElse(fail("expected a shaper"))
+    // 10,11,12 are outside the form feature, so they reach liga unchanged and ligate to 200.
+    g.shape(Array(10, 11, 12), Array(Isolated, Isolated, Isolated)) shouldBe Array(200)
+    // A run whose components do not all match is left alone (99 still takes its isol form).
+    g.shape(Array(10, 11, 99), Array(Isolated, Isolated, Isolated)) shouldBe Array(10, 11, 199)
+  }
+
+  /** A sixth fixture for a ligature nested inside a context — the mechanism the Arabic "Allah" composition
+    * uses, where a `ccmp` context matches two marks and a nested ligature fuses them, shortening the run
+    * before form selection. Here `ccmp` matches the pair 20,21 and a nested ligature lookup fuses them to
+    * the single glyph 210. */
+  private def sampleGsubNestedLig: Array[Byte] =
+    val b = BE()
+    b.u16(1).u16(0).u16(10).u16(32).u16(58)          // header
+    b.u16(1).tag("arab").u16(8)                      // ScriptList @10
+    b.u16(4).u16(0)                                  // Script @18
+    b.u16(0).u16(0xffff).u16(2).u16(0).u16(1)        // LangSys @22, features {0,1}
+    b.u16(2).tag("isol").u16(14).tag("ccmp").u16(20) // FeatureList @32
+    b.u16(0).u16(1).u16(0)                           // isol → lookup 0
+    b.u16(0).u16(1).u16(1)                           // ccmp → lookup 1
+    b.u16(3).u16(8).u16(30).u16(64)                  // LookupList @58: three lookups
+    // Lookup 0 @66 — isol single 99 → 199
+    b.u16(1).u16(0).u16(1).u16(8)
+    b.u16(2).u16(8).u16(1).u16(199)
+    b.u16(1).u16(1).u16(99)
+    // Lookup 1 @88 — type 5 ContextSubstFormat3: input [20][21], record (seq 0 → lookup 2)
+    b.u16(5).u16(0).u16(1).u16(8)
+    b.u16(3).u16(2).u16(1).u16(14).u16(20).u16(0).u16(2)
+    b.u16(1).u16(1).u16(20)                          // coverage0 @110
+    b.u16(1).u16(1).u16(21)                          // coverage1 @116
+    // Lookup 2 @122 — type 4 ligature: 20 + [21] → 210
+    b.u16(4).u16(0).u16(1).u16(8)
+    b.u16(1).u16(8).u16(1).u16(14)
+    b.u16(1).u16(1).u16(20)                          // Coverage @138: {20}
+    b.u16(1).u16(4)                                  // LigatureSet @144
+    b.u16(210).u16(2).u16(21)                        // Ligature @148: ligGlyph210, compCount2, tail[21]
+    b.result
+
+  "a ccmp context applies a nested ligature, shortening the run before form selection" in {
+    val g = Gsub.from(Some(sampleGsubNestedLig)).getOrElse(fail("expected a shaper"))
+    // ccmp matches [20,21] and its nested ligature fuses them into 210; the two-glyph run becomes one.
+    g.shape(Array(20, 21), Array(Isolated, Isolated)) shouldBe Array(210)
+  }

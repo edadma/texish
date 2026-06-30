@@ -74,6 +74,23 @@ other:
 }
 \ltr
 
+\section{The word for God}
+
+The word for God is the most frequent word in an Arabic Bible, and traditional
+typography draws it as a single tightly-bound ligature when the text is pointed. The
+engine forms it the way the font intends: the shadda and the superscript alef fuse
+into one mark, the two lams take their connecting forms, and the whole word becomes
+one calligraphic glyph. Shown first pointed, where the ligature forms, then unpointed,
+where it stays as four connected letters:
+
+\medskip
+
+\rtl
+{\font arabic 32 regular
+اللّٰه \quad الله
+}
+\ltr
+
 \section{A bold cut}
 
 The bundled face ships a real bold weight, so emphasis is set by the font rather
