@@ -884,7 +884,7 @@ abstract class Typesetter:
 
         push(paragraphMode)
 
-        if indentParagraph then paragraphMode add HSpaceBox(getNumber("parindent"))
+        if indentParagraph then paragraphMode add HSpaceBox(getNumber("parindent"), indent = true)
       case _ =>
 
     this

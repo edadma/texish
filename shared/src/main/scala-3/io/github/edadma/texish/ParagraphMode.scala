@@ -224,9 +224,18 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   /** Set one line: reorder its content for a right-to-left or mixed line, then bracket it with the margin
     * glue. \parfillskip — the stretchable glue that lets the last line fall short of full measure — sits
     * at the trailing edge, which is the right under a left-to-right base and the left under a right-to-left
-    * base, so the last line rags toward the start of reading either way. */
+    * base, so the last line rags toward the start of reading either way.
+    *
+    * The first-line indent pins to the leading edge of reading — the left under a left-to-right base, the
+    * right under a right-to-left one. The reorderer would otherwise treat it as neutral whitespace and sweep
+    * it to the wrong side, so it is lifted out before the reorder and put back at the leading edge after. */
   private def emitLine(content: ArrayBuffer[Box], lineIdx: Int, isLast: Boolean, base: Int, doBidi: Boolean, hsize: Double): Box =
+    val indent =
+      if doBidi && content.nonEmpty && (content.head match { case h: HSpaceBox => h.indent; case _ => false }) then
+        Some(content.remove(0))
+      else None
     if doBidi then reorderVisual(content, base)
+    indent.foreach(box => if base == 1 then content += box else content.insert(0, box))
     val hbox                      = new HBoxBuilder(t, hsize)
     val (leftMargin, rightMargin) = lineMargins(lineIdx)
     hbox add leftMargin

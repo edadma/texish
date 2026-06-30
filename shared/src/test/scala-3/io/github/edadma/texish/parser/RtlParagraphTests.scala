@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, CharBox, DocumentMode, Glue, HBox, HeadlessTypesetter, Typesetter, VBox}
+import io.github.edadma.texish.{Box, CharBox, DocumentMode, Glue, HBox, HSpaceBox, HeadlessTypesetter, Typesetter, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -98,4 +98,31 @@ class RtlParagraphTests extends AnyFreeSpec with Matchers:
 
   "\\ltr restores left-to-right after \\rtl" in {
     visual(s"\\rtl\\ltr Hello $A$B world") shouldBe s"Hello $B$A world"
+  }
+
+  // The first set line, an HBox holding the line's boxes left to right.
+  private def firstLine(boxes: Seq[Box]): HBox =
+    def collect(b: Box): List[HBox] = b match
+      case h: HBox if h.boxes.exists(_.isInstanceOf[CharBox]) => List(h)
+      case h: HBox                                            => h.boxes.toList.flatMap(collect)
+      case v: VBox                                            => v.boxes.toList.flatMap(collect)
+      case _                                                  => Nil
+    boxes.toList.flatMap(collect).head
+
+  // Which side of the text the first-line indent box sits on, read off the assembled line.
+  private def indentSide(src: String): String =
+    val bs        = firstLine(render(src)).boxes
+    val indentIdx = bs.indexWhere { case s: HSpaceBox => s.indent; case _ => false }
+    val charIdxs  = bs.indices.filter(i => bs(i).isInstanceOf[CharBox])
+    if indentIdx < 0 then "none"
+    else if indentIdx < charIdxs.head then "left"
+    else if indentIdx > charIdxs.last then "right"
+    else "middle"
+
+  "the first-line indent of a right-to-left paragraph sits on the right (leading) edge" in {
+    indentSide(s"\\rtl\\indent $A$B $G$D") shouldBe "right"
+  }
+
+  "the first-line indent of a left-to-right paragraph with embedded Hebrew stays on the left" in {
+    indentSide(s"\\indent Hello $A$B world") shouldBe "left"
   }
