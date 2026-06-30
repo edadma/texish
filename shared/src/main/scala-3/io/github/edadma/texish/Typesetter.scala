@@ -2,7 +2,7 @@ package io.github.edadma.texish
 
 //import pprint.pprintln
 
-import io.github.edadma.texish.opentype.{ByteCursor, Gpos, MathTable}
+import io.github.edadma.texish.opentype.{ByteCursor, Gpos, Gsub, MathTable}
 import io.github.edadma.texish.parser.Value
 
 import scala.collection.mutable
@@ -187,6 +187,17 @@ abstract class Typesetter:
         Gpos.from(sfntTable(font, "GPOS"), sfntTable(font, "GDEF"), upem)
       },
     )
+
+  // Parsed GSUB Arabic-form shapers, one per render font that carries the cursive-joining form features.
+  // Like the mark shaper this is read once and cached, since an Arabic paragraph draws many runs in one font.
+  private val gsubShaperCache = mutable.HashMap.empty[Any, Option[Gsub]]
+
+  /** The Arabic-form substitution shaper for `font`, or None when the font has no `init`/`medi`/`fina`/`isol`
+    * features (every non-Arabic font) — in which case Arabic text, if any, draws in its nominal (isolated)
+    * glyphs through the plain path. The joining forms themselves are decided font-free in
+    * [[io.github.edadma.texish.opentype.ArabicShaping]]; this turns a decided form into the shaped glyph. */
+  def gsubShaper(font: RenderFont): Option[Gsub] =
+    gsubShaperCache.getOrElseUpdate(font, Gsub.from(sfntTable(font, "GSUB")))
 
   def loadImage(path: String): (ImageHandle, Int, Int)
 
@@ -387,6 +398,16 @@ abstract class Typesetter:
   // the CJK faces, the filesystem-less in-browser build overrides loadBundledFonts and does not ship them.
   loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf", Set.empty, Set.empty)
   loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Bold.ttf", Set.empty, Set("bold"))
+
+  // Noto Naskh Arabic, the bundled face for right-to-left Arabic (and Persian, Urdu, … in the same script):
+  // \font arabic 12 sets it, with a bold cut so \font arabic 12 bold is a real bold weight. These are static
+  // Regular and Bold instances drawn from the variable upstream (wght 400 and 700). The Naskh style is the
+  // book hand the joining engine targets; the cursive forms come from the font's GSUB, selected per letter by
+  // the engine (see ArabicShaping and Gsub), and the bidi reordering into visual order is the engine's (see
+  // Bidi and ParagraphMode). Loaded by file, like the Hebrew and CJK cuts; the filesystem-less in-browser
+  // build overrides loadBundledFonts and does not ship them.
+  loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf", Set.empty, Set.empty)
+  loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Bold.ttf", Set.empty, Set("bold"))
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match

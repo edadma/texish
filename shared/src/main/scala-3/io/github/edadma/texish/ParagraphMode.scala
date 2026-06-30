@@ -1,5 +1,7 @@
 package io.github.edadma.texish
 
+import io.github.edadma.texish.opentype.{ArabicShaping, JoiningForm}
+
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
@@ -174,6 +176,16 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     val s      = chars.toString
     val levels = Bidi.resolvedLevels(s, base)
 
+    // Arabic cursive joining is decided here, in memory order, while the logical string is still intact: each
+    // character's contextual form (initial/medial/final/isolated) follows from its neighbours, and a form once
+    // decided is independent of the visual order the reorder below imposes. The resolved forms ride along into
+    // the visual runs so each Arabic CharBox can substitute its shaped glyphs. Characters in the Arabic blocks
+    // are all BMP, so a per-code-unit form array lines up with the per-code-unit run text built below. Null
+    // when the line has no Arabic, leaving every other script's path untouched.
+    val forms: Array[JoiningForm] =
+      if ArabicShaping.hasArabic(s) then ArabicShaping.resolveForms(Array.tabulate(s.length)(k => s.charAt(k).toInt))
+      else null
+
     // Group into reorder units. A base character and the non-spacing marks that follow it form one cluster,
     // so reversing a right-to-left run does not strand a vowel point ahead of its consonant; a non-text box
     // is its own unit. Each unit takes the level of its base character.
@@ -193,14 +205,17 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
     // Walk the units in visual order, recombining runs of one font and colour into word boxes whose text is
     // now visual. A unit's own characters stay in logical order (base then marks); a right-to-left bracket
     // is swapped for its mirror image (UAX #9 L4).
-    val out     = ArrayBuffer.empty[Box]
-    var runText = null: StringBuilder
-    var runSrc  = null: CharBox
+    val out      = ArrayBuffer.empty[Box]
+    var runText  = null: StringBuilder
+    var runSrc   = null: CharBox
+    var runForms = null: ArrayBuffer[JoiningForm] // resolved joining forms parallel to runText, when Arabic
     def flushRun(): Unit =
       if runText != null then
-        out += runSrc.newCharBox(runText.toString)
+        out += (if runForms != null then runSrc.newCharBox(runText.toString, runForms.toArray)
+                else runSrc.newCharBox(runText.toString))
         runText = null
         runSrc = null
+        runForms = null
     for ui <- order do
       val cis   = unitChars(ui)
       val first = cis.head
@@ -210,9 +225,11 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
         if runText == null then
           runText = new StringBuilder
           runSrc = src
+          if forms != null then runForms = ArrayBuffer.empty
         for ci <- cis do
           val cp = s.charAt(ci).toInt
           runText.append(if Bidi.isRtlLevel(levels(ci)) then Bidi.mirror(cp).toChar else cp.toChar)
+          if runForms != null then runForms += forms(ci)
       else
         flushRun()
         out += srcBox(first)

@@ -1,0 +1,76 @@
+// arabic-demo — right-to-left Arabic typesetting in texish.
+//
+// Render with:  texish-cli scripts/arabic-demo.script
+//
+// Arabic adds cursive joining on top of the right-to-left layout texish already
+// does for Hebrew. Each letter is drawn in one of four shapes — initial, medial,
+// final or isolated — chosen from whether it joins to its neighbours. The engine
+// decides each letter's form in reading order (Unicode Section 9.2 joining), then
+// asks the font's GSUB table for the matching glyph: the bundled Noto Naskh Arabic
+// face decomposes a dotted letter into a dotless skeleton plus a separate dot,
+// shapes the skeleton, and the engine places the dot with the same GPOS anchors it
+// uses for Hebrew points. The bidi reordering into visual order is unchanged.
+//
+// \rtl sets a right-to-left base; \ltr restores the default. \font arabic selects
+// the bundled face, in a regular and a bold cut. The text below is set unpointed —
+// vowel marks (harakat) and the required lam-alef ligature are later additions.
+
+\use{document}
+
+\title{Right-to-Left Arabic in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting an Arabic paragraph}
+
+With a right-to-left base direction the engine reverses each run of Arabic within a
+line, reorders the words, and aligns the paragraph to the right margin. Within a
+word the letters connect: the shaper picks each letter's initial, medial or final
+form so the run reads as one joined stroke rather than a row of separate signs. The
+line breaker is untouched — it still finds its breaks at the interword glue, in
+logical order — and only the set lines are turned into visual order.
+
+\medskip
+
+\rtl
+{\font arabic 14 regular
+اللغة العربية من أقدم اللغات في العالم. تكتب من اليمين إلى اليسار، وتتصل حروفها بعضها
+ببعض داخل الكلمة الواحدة. هذا النص مكتوب بخط النسخ بدون حركات، لتظهر أشكال الحروف
+المتصلة بوضوح عبر عدة أسطر.
+}
+\ltr
+
+\section{A bold cut}
+
+The bundled face ships a real bold weight, so emphasis is set by the font rather
+than faked. Here a short phrase is set in bold Arabic:
+
+\medskip
+
+\rtl
+{\font arabic 18 bold
+مرحبا بالعالم
+}
+\ltr
+
+\section{Bidirectional text}
+
+Latin words and numbers keep their own left-to-right order inside a right-to-left
+line: the algorithm treats each as an embedded island and only the Arabic around it
+reverses. The line below names a language in Latin script and gives a version number
+in digits, all within an Arabic sentence.
+
+\medskip
+
+\rtl
+{\font arabic 14 regular
+لغة البرمجة Scala تعمل على المنصة JVM ونسخة 3 منها تدعم العربية.
+}
+\ltr
+
+\section{Arabic embedded in English}
+
+The reverse case needs no change of base direction. In an ordinary left-to-right
+paragraph an Arabic word — here {\font arabic 12 regular كتاب}, meaning ``book'' —
+is shaped and reversed in place by the same algorithm, while the English around it
+is left exactly as it was.
