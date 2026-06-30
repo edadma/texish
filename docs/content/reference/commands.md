@@ -148,6 +148,7 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\kern` `\hskip` `\vskip` | rigid / glue spacing |
 | `\smallskip` `\medskip` `\bigskip` | named vertical gaps |
 | `\indent` `\noindent` | force / suppress the next paragraph's indent |
+| `\rtl` `\ltr` | set the paragraph base direction right-to-left / left-to-right (see [Right-to-left text](/guide/right-to-left/)) |
 | `\newpage` | end the current page and start a new one |
 | `\ignorespaces` | swallow the spaces that follow (at the end of a macro body) |
 | `\vfil` `\vfill` `\vss` `\hfil` `\hfill` `\hss` | stretchable fill |

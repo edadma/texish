@@ -54,6 +54,7 @@ the section a page covers.
 | `parfillskip` | `0pt plus 1fil` | glue that fills out a paragraph's last line |
 | `hangindent` | `0pt` | hanging-indent width (negative indents the right) |
 | `hangafter` | `1` | apply the hanging indent after this many lines |
+| `pardir` | `0` | paragraph base writing direction: `0` left-to-right, `1` right-to-left (set by `\ltr`/`\rtl`) |
 
 ## Inter-line and inter-word spacing
 

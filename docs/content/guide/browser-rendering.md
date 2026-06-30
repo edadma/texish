@@ -1,6 +1,6 @@
 ---
 title: "Rendering in the Browser"
-weight: 11
+weight: 12
 ---
 
 texish runs in the browser through its Scala.js build, so a web page can typeset math and
