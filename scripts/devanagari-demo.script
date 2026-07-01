@@ -63,6 +63,29 @@ kṣa, tra, jña, and the na-da half-form of \TeXish{}'s Hindi word:
 क्ष   त्र   ज्ञ   न्द
 }
 
+\section{Reph and below-base ra}
+
+The consonant \emph{ra} takes special forms when it joins another. A word-initial ra
+followed by the virama becomes a reph --- a small hook drawn above the following base,
+even though it is typed first --- as in these words for deed, duty, sun, and complete:
+
+\medskip
+
+{\font devanagari 16 regular
+कर्म   धर्म   सूर्य   पूर्ण
+}
+
+\medskip
+
+A ra after another consonant instead hangs below it, either fused into a single glyph
+or set as a small stroke beneath the base:
+
+\medskip
+
+{\font devanagari 16 regular
+प्र   क्र   द्र   ट्र   राष्ट्र
+}
+
 \section{Independent vowels and signs}
 
 A vowel that opens a syllable is written with its own independent letter, not a matra.

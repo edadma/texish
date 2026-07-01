@@ -105,8 +105,20 @@ object Devanagari:
     if base >= 0 then base else start
 
   /** The short-i vowel sign, the one dependent sign written after its consonant in memory but drawn before
-    * it. It is the only Devanagari sign that reorders. */
+    * it. It is the only dependent sign that reorders to the front of its cluster. */
   val ShortISign: Int = 0x093F
+
+  /** The consonant ra and the virama (halant) — together, at the head of a syllable, they form a reph.
+    * `Halant` names the virama codepoint to avoid clashing with the [[Category.Virama]] enum case. */
+  val Ra: Int     = 0x0930
+  val Halant: Int = 0x094D
+
+  /** Whether a cluster opens with a reph: a word-initial ra and virama followed by a base consonant. A
+    * reph's ra+virama is not drawn in place but as a mark above the syllable's base, so it is lifted out and
+    * shaped apart from the rest of the cluster. A ra+virama with nothing after it is a dead ra, not a reph. */
+  def startsWithReph(clusterCps: Array[Int]): Boolean =
+    clusterCps.length >= 3 && clusterCps(0) == Ra && clusterCps(1) == Halant &&
+      (2 until clusterCps.length).exists(i => category(clusterCps(i)) == Consonant)
 
   /** Move a cluster's pre-base short-i sign to the front of its shaped glyphs. The short-i is typed after its
     * base consonant but rendered before the whole cluster — ahead of any half-forms or conjuncts. Because no

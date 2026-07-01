@@ -75,3 +75,17 @@ class DevanagariTests extends AnyFreeSpec with Matchers:
     val cluster = cps("का") // ka aa-matra — the aa sign is post-base, no reordering
     reorderPreBaseMatra(cluster, Array(100, 250), 200).toList shouldBe List(100, 250)
   }
+
+  "a word-initial ra + virama before a base is a reph" in {
+    startsWithReph(cps("र्क")) shouldBe true   // ra virama ka — the ra is drawn as a reph over ka
+    startsWithReph(cps("र्म")) shouldBe true   // ra virama ma
+  }
+
+  "a ra + virama with no following consonant is not a reph" in {
+    startsWithReph(cps("र्")) shouldBe false  // a dead ra, nothing to sit over
+  }
+
+  "a ra that does not open the cluster is not a reph" in {
+    startsWithReph(cps("क्र")) shouldBe false // ka virama ra — the ra is below-base here, not a reph
+    startsWithReph(cps("रा")) shouldBe false  // ra with a vowel sign — an ordinary base, no virama
+  }

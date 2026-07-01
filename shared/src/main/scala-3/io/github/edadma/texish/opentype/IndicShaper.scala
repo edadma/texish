@@ -26,10 +26,12 @@ import scala.collection.mutable.ArrayBuffer
 object IndicShaper:
 
   // The basic-form features, applied in the order the OpenType Indic model prescribes: nukta composition,
-  // the akhand ligatures (ka-ssa, ja-nya), the reph and below-base forms of ra, the half-form, the vattu
+  // the akhand ligatures (ka-ssa, ja-nya), the rakaar and below-base forms of ra, the half-form, the vattu
   // variant, and the general conjunct. Half-forms and conjuncts are the ones Hindi leans on; the others are
-  // applied when present and simply do nothing on a font or cluster that has no use for them.
-  private val BasicFeatures = Seq("nukt", "akhn", "rphf", "rkrf", "blwf", "half", "vatu", "cjct")
+  // applied when present and simply do nothing on a font or cluster that has no use for them. The reph
+  // feature `rphf` is not run here: it must fire only on a cluster-initial ra, so it is applied on its own
+  // (see shapeCluster) rather than blindly across the buffer, where it would wrongly reph a medial ra.
+  private val BasicFeatures = Seq("nukt", "akhn", "rkrf", "blwf", "half", "vatu", "cjct")
 
   // The presentation features, applied after reordering: the pre-, above-, below- and post-base substitutions
   // that select the contextual glyph variants (including the width-matched short-i) and the halant and
@@ -53,12 +55,25 @@ final class IndicShaper(gsub: Gsub):
     for (s, e) <- Devanagari.clusters(cps) do out ++= shapeCluster(cps.slice(s, e), cmap)
     out.toArray
 
-  // Shape one cluster: nominal glyphs, then the basic-form features, then the pre-base short-i reordering,
-  // then the presentation features. Each feature acts on the small cluster buffer; the font's lookups are
-  // context-gated, so one that has nothing to do here leaves the run untouched.
+  // Shape one cluster: the reph, if the cluster opens with one, is lifted off and its ra+virama shaped into
+  // the reph mark; the rest is taken through the nominal glyphs, the basic-form features and the pre-base
+  // short-i reordering; the reph mark is appended after the base so it sits above the syllable; then the
+  // presentation features run over the whole run — selecting variants and, where the font has one, ligating
+  // the reph with an adjacent post-base sign. Each feature acts on the small cluster buffer; the font's
+  // lookups are context-gated, so one with nothing to do here leaves the run untouched. GPOS positions the
+  // reph and any other marks afterwards, in the caller.
   private def shapeCluster(clusterCps: Array[Int], cmap: Int => Int): Array[Int] =
-    var glyphs = clusterCps.map(cmap)
+    val reph    = Devanagari.startsWithReph(clusterCps)
+    val coreCps = if reph then clusterCps.drop(2) else clusterCps
+    var glyphs  = coreCps.map(cmap)
     for tag <- IndicShaper.BasicFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
-    glyphs = Devanagari.reorderPreBaseMatra(clusterCps, glyphs, cmap(Devanagari.ShortISign))
+    glyphs = Devanagari.reorderPreBaseMatra(coreCps, glyphs, cmap(Devanagari.ShortISign))
+    if reph then glyphs = glyphs ++ rephGlyphs(cmap)
     for tag <- IndicShaper.PresFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
     glyphs
+
+  // The reph mark for a cluster-initial ra + virama: the `rphf` feature ligates the two into the single reph
+  // glyph. A font without `rphf` leaves the two glyphs unchanged, which the caller appends as a graceful
+  // fallback rather than dropping the ra.
+  private def rephGlyphs(cmap: Int => Int): Array[Int] =
+    gsub.applyFeatureByTag(Array(cmap(Devanagari.Ra), cmap(Devanagari.Halant)), "rphf")

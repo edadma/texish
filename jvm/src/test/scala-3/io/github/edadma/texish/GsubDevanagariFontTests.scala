@@ -76,3 +76,35 @@ class GsubDevanagariFontTests extends AnyFreeSpec with Matchers:
     marks.size shouldBe 1
     places(marks.head).attach should be >= 0
   }
+
+  "a word-initial reph is moved past the base and set as an above-mark" in {
+    // नर्क (na | ra virama ka): the reph of the second syllable is not drawn in place but as a mark over its
+    // base ka. The shaped run is [na, ka, reph], the reph last, and GPOS attaches it to a base above the
+    // line. Before the fix the reph glyph led its syllable with no base before it and was dropped.
+    val glyphs = shape("नर्क")
+    glyphs.length shouldBe 3
+    glyphs.head shouldBe g(0x0928) // na, the first syllable, untouched
+    val places = gpos.position(glyphs)
+    places.last.isMark shouldBe true    // the reph is a mark…
+    places.last.attach should be >= 0   // …attached to its base
+    places.count(_.isMark) shouldBe 1
+  }
+
+  "a reph over a bare base keeps the base spacing and the reph floating above" in {
+    // कर्म (ka | ra virama ma) → [ka, ma, reph]: two spacing bases and the reph mark.
+    val glyphs = shape("कर्म")
+    glyphs.length shouldBe 3
+    val places = gpos.position(glyphs)
+    places(0).isMark shouldBe false // ka
+    places(1).isMark shouldBe false // ma
+    places(2).isMark shouldBe true  // reph
+  }
+
+  "a reph ligates with a following long-i sign" in {
+    // सर्दी (sa | ra virama da ii): the post-base long-i and the reph fuse into one spacing glyph, so the
+    // syllable is [da, ii+reph] with no separate reph mark — proof the presentation pass sees the reph next
+    // to the sign after it.
+    val glyphs = shape("सर्दी")
+    glyphs.length shouldBe 3        // sa, da, and the fused long-i-with-reph
+    gpos.position(glyphs).exists(_.isMark) shouldBe false
+  }
