@@ -164,6 +164,7 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\rlap` `\llap` | zero-width overlap boxes |
 | `\kern` `\hskip` `\vskip` | rigid / glue spacing |
 | `\smallskip` `\medskip` `\bigskip` | named vertical gaps |
+| `\par` | end the current paragraph (the explicit form of a blank line; useful inside a macro) |
 | `\indent` `\noindent` | force / suppress the next paragraph's indent |
 | `\rtl` `\ltr` | set the paragraph base direction right-to-left / left-to-right (see [Right-to-left text](/guide/right-to-left/)) |
 | `\newpage` | end the current page and start a new one |

@@ -14,6 +14,12 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
   proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
 
+  // \par ends the current paragraph — the explicit form of the blank line that ordinarily breaks a
+  // paragraph in the source. It ends the open paragraph (the same break \eject and the vertical glue
+  // commands trigger) so a following run starts a fresh one; where no paragraph is open it does nothing.
+  // Useful inside a macro, or anywhere a literal blank line would be awkward, as in TeX.
+  proc.registerPrimitive("par", SimplePrimitive(() => t.paragraph()))
+
   // Paragraph writing direction. \rtl sets a right-to-left base — the paragraph flushes right and its
   // words read right to left, with embedded Latin and numbers handled by the bidirectional algorithm —
   // and \ltr restores the default left-to-right base. Like \leftskip, the setting persists until changed.
