@@ -108,3 +108,23 @@ class GsubDevanagariFontTests extends AnyFreeSpec with Matchers:
     glyphs.length shouldBe 3        // sa, da, and the fused long-i-with-reph
     gpos.position(glyphs).exists(_.isMark) shouldBe false
   }
+
+  "a reph fuses with a pre-base short-i into one front glyph" in {
+    // र्कि (ra virama ka short-i): the reph joins the short-i already reordered to the front, and the
+    // presentation pass ligates the two into the single short-i-with-reph glyph that leads the syllable, with
+    // the base ka last. The font's ligature leaves a zero-width placeholder mark (as HarfBuzz does), which is
+    // harmless; what matters is the front glyph is the fused spacing glyph, not the plain short-i.
+    val glyphs = shape("र्कि")
+    glyphs.head should not equal g(0x093F)         // the front glyph is the fused short-i-with-reph…
+    glyphs.head should not equal g(0x0915)         // …not the plain short-i and not the base ka
+    glyphs should contain(g(0x0915))               // ka is present as the base
+    gpos.position(glyphs)(0).isMark shouldBe false // the fused front glyph is a spacing pre-base glyph
+  }
+
+  "a consonant with a nukta composes into one glyph" in {
+    // क़ (ka + nukta) composes to the precomposed qa (U+0958) through the nukt feature; ड़ (dda + nukta)
+    // to U+095C. One character pair, one glyph.
+    shape("क़").length shouldBe 1
+    shape("क़").head shouldBe g(0x0958)
+    shape("ड़").length shouldBe 1
+  }

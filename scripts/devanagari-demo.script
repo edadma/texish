@@ -86,6 +86,18 @@ or set as a small stroke beneath the base:
 प्र   क्र   द्र   ट्र   राष्ट्र
 }
 
+\section{Nukta consonants}
+
+A dot below a consonant --- the nukta --- marks a sound borrowed from Persian, Arabic
+or English. The base and its dot compose into a single letter, as in the everyday words
+for necessary, big, and study:
+
+\medskip
+
+{\font devanagari 16 regular
+क़   ज़   ड़   फ़   ज़रूरी   बड़ा   पढ़ाई
+}
+
 \section{Independent vowels and signs}
 
 A vowel that opens a syllable is written with its own independent letter, not a matra.
