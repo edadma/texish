@@ -87,19 +87,26 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   /** The left and right margin glue for the line whose 0-based number is `n`, from `\leftskip` /
     * `\rightskip`, a `\hangindent` selected by `\hangafter`, and the inset of any figure the line
     * flows around. The box builder still sets the whole line to `hsize`, so these insets push the
-    * justified text into the same narrowed measure the breaker chose its breaks against. A positive
-    * `\hangindent` indents on the left, a negative one on the right; a left figure adds to the left
-    * margin (text moves right past it), a right figure to the right. */
+    * justified text into the same narrowed measure the breaker chose its breaks against.
+    *
+    * `\leftskip` / `\rightskip` name the leading and trailing margin, not fixed physical sides: the
+    * leading edge is the left under a left-to-right base and the right under a right-to-left one, so a
+    * list indent set with `\leftskip` lands on the reading side either way — the base direction maps
+    * them onto the physical sides here. `\hangindent` stays physical (a positive value indents the
+    * left, a negative one the right), as does a figure cutout, both applied after that mapping. */
   private def lineMargins(n: Int): (Glue, Glue) =
-    val leftskip   = t.getGlue("leftskip")
-    val rightskip  = t.getGlue("rightskip")
     val hangindent = t.getNumber("hangindent")
     val hangafter  = t.getNumber("hangafter").toInt
     val hung       = if hangafter >= 0 then n >= hangafter else n < -hangafter
     val hang       = if hangindent != 0 && hung then hangindent else 0.0
     val (cutL, cutR) = cut(n)
-    val left       = if hang > 0 then leftskip + hang + cutL else leftskip + cutL
-    val right      = if hang < 0 then rightskip + -hang + cutR else rightskip + cutR
+    // \leftskip is the leading margin, \rightskip the trailing one; a right-to-left base puts the
+    // leading edge on the right, so swap which physical margin each feeds.
+    val (leftBase, rightBase) =
+      if t.getNumber("pardir") == 1.0 then (t.getGlue("rightskip"), t.getGlue("leftskip"))
+      else (t.getGlue("leftskip"), t.getGlue("rightskip"))
+    val left  = if hang > 0 then leftBase + hang + cutL else leftBase + cutL
+    val right = if hang < 0 then rightBase + -hang + cutR else rightBase + cutR
     (left, right)
 
   /** The page-break penalty between two consecutive lines of a paragraph: interlinepenalty everywhere, plus
