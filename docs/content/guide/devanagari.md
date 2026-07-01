@@ -68,4 +68,9 @@ paragraph needs nothing beyond selecting the font.
 }
 ```
 
+Because Devanagari sets left to right like a Latin text face, it uses the same TeX-style
+punctuation shorthands: `` `` `` and `''` become curly quotes, `--`/`---` en/em dashes, and
+`...` an ellipsis, all of which the bundled face carries. (The right-to-left Hebrew and Arabic
+faces do not — their quote conventions differ, so those documents type the marks literally.)
+
 The bundled `scripts/devanagari-demo.script` sets a full page covering each of these features.
