@@ -134,8 +134,8 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
     Hyphenation(Some("en-us"), "pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
   }
 
-  it should "bundle en-us, es, and fr patterns" in {
-    Hyphenation.embeddedLanguages should contain allOf ("en-us", "es", "fr")
+  it should "bundle en-us, es, fr, and pt patterns" in {
+    Hyphenation.embeddedLanguages should contain allOf ("en-us", "es", "fr", "pt")
     Hyphenation.enableEmbedded("xx-nope") shouldBe false // an unbundled tag reports failure, not an error
   }
 
@@ -147,6 +147,14 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
     points should not be None
     points.get should not be empty
     all(points.get.map((before, after) => before.stripSuffix("-") + after)) shouldBe "palabra"
+  }
+
+  it should "hyphenate Portuguese words once the embedded pt patterns are loaded" in {
+    Hyphenation.enableEmbedded("pt") shouldBe true
+    val points = Hyphenation(Some("pt"), "palavra").map(_.toList)
+    points should not be None
+    points.get should not be empty
+    all(points.get.map((before, after) => before.stripSuffix("-") + after)) shouldBe "palavra"
   }
 
   it should "select a hyphenation language per document, not globally" in {
