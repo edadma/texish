@@ -82,6 +82,15 @@ Noto Serif CJK is bundled for setting it: `\font cjksc 12 regular` for Simplifie
 `\font cjktc 12 regular` for Traditional, each with a bold cut (`\font cjksc 12 bold`) for headings
 and labels. Any other CJK font can be brought in with `\loadfont{name}{path}`.
 
+## Devanagari (Hindi)
+
+Devanagari text is shaped a syllable at a time: consonants fuse into conjuncts and half-forms, the
+short-i sign and a word-initial reph are reordered, a nukta composes with its consonant, and the
+vowel signs are positioned by the font — all automatically from text typed in Unicode order. Noto
+Serif Devanagari is bundled: `\font devanagari 12 regular` (or the alias `\font hindi`), with a
+bold cut (`\font devanagari 12 bold`). See [Devanagari (Hindi)](/guide/devanagari/) for the full
+treatment.
+
 ## Right-to-left scripts
 
 `\rtl` and `\ltr` set the paragraph base direction. Two faces are bundled, each in a regular and a
