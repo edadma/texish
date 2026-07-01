@@ -1,14 +1,15 @@
 ---
-title: "Right-to-left text (Hebrew)"
+title: "Right-to-left text"
 weight: 11
 ---
 
-texish sets right-to-left scripts — Hebrew today — alongside left-to-right text in the same
+texish sets right-to-left scripts — Hebrew and Arabic — alongside left-to-right text in the same
 paragraph. It lays out and breaks every paragraph in logical (reading) order, exactly as TeX
 does, then reorders each finished line into visual order with the Unicode Bidirectional
 Algorithm (UAX&nbsp;#9) before drawing it. Numbers and embedded Latin keep their own
-direction, brackets are mirrored, and pointed Hebrew has its niqqud positioned by the font's
-anchors.
+direction, brackets are mirrored, pointed Hebrew has its niqqud positioned by the font's
+anchors, and Arabic is shaped cursively — each letter connecting to its neighbours — with its
+vowel marks and ligatures.
 
 ## Base direction
 
@@ -84,8 +85,47 @@ they are positioned automatically:
 
 Unpointed Hebrew needs none of this and takes the plain text path, so it costs nothing.
 
+## Arabic
+
+Arabic is cursive: within a word the letters connect, and each takes one of four shapes —
+initial, medial, final or isolated — according to its neighbours. texish resolves each letter's
+form in reading order (Unicode joining) and asks the font's shaping tables for the matching
+glyph, so a run reads as one joined stroke rather than a row of separate signs. An Arabic face,
+Noto Serif–style Noto Naskh Arabic, is bundled in a regular and a bold cut; select it with
+`\font arabic`. Base direction, bidirectional islands and bracket mirroring all work exactly as
+for Hebrew.
+
+```texish
+\rtl
+{\font arabic 14 regular
+اللغة العربية تكتب من اليمين إلى اليسار، وتتصل حروفها بعضها ببعض داخل الكلمة.
+}
+\ltr
+```
+
+Two ligatures form automatically. Where a lam is followed by an alef the pair is drawn as its
+required lam-alef ligature rather than two separate letters. And when the text is pointed, the
+word for God — `الله` — is drawn as the single tightly-bound calligraphic ligature that
+traditional typography uses; unpointed, it stays as the ordinary connected letters.
+
+Arabic vowels (harakat) are combining marks placed by the same anchor mechanism as the Hebrew
+points, and they stack: a vowel written over a shadda sits above it, and a vowel clears a
+letter's own dots. Write the letters and marks in logical order and they are positioned
+automatically:
+
+```texish
+\rtl
+{\font arabic 16 regular
+كَتَبَ الوَلَدُ. مُحَمَّد. بِسْمِ الرَّحِيم.
+}
+\ltr
+```
+
+Persian, Urdu and the other languages written in the Arabic script are shaped by the same
+engine; a font that covers their letters will set them.
+
 ## Scope
 
-Hebrew — unpointed and pointed, on its own and mixed with left-to-right text — is supported on
-every backend. Arabic and the other cursive right-to-left scripts need joining and contextual
-shaping that texish does not yet do; they are not supported.
+Hebrew and Arabic — unpointed and pointed, on their own and mixed with left-to-right text — are
+supported on every backend. The bundled faces do not ship in the in-browser Scala.js build, to
+keep the download small.

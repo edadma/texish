@@ -82,6 +82,14 @@ Noto Serif CJK is bundled for setting it: `\font cjksc 12 regular` for Simplifie
 `\font cjktc 12 regular` for Traditional, each with a bold cut (`\font cjksc 12 bold`) for headings
 and labels. Any other CJK font can be brought in with `\loadfont{name}{path}`.
 
+## Right-to-left scripts
+
+`\rtl` and `\ltr` set the paragraph base direction. Two faces are bundled, each in a regular and a
+bold cut: `\font hebrew` (Noto Serif Hebrew) and `\font arabic` (Noto Naskh Arabic). Hebrew niqqud,
+Arabic cursive joining, the lam-alef and Allah ligatures, and Arabic harakat are all applied
+automatically from the text in logical order — see [Right-to-left text](/guide/right-to-left/) for
+the full treatment.
+
 ## Text symbols
 
 | Command | Symbol |
