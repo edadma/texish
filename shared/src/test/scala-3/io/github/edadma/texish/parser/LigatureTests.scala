@@ -62,6 +62,18 @@ class LigatureTests extends AnyFreeSpec with Matchers:
     allText(render("wait...")) should include(`HORIZONTAL ELLIPSIS`)
   }
 
+  // The bundled Devanagari face sets its punctuation like a Latin text face, so it enables the same text
+  // representations: a Hindi run written with the `` and '' shorthands gets real curly quotes, not literal
+  // grave accents and apostrophes. (The right-to-left Hebrew and Arabic faces intentionally do not, since
+  // their quote conventions differ, so this is asserted only for Devanagari.)
+  "the Devanagari face enables the curly-quote representations in a Hindi run" in {
+    val out = allText(render("\\font devanagari 12 regular ``हिन्दी''"))
+    out should include(`LEFT DOUBLE QUOTATION MARK`)
+    out should include(`RIGHT DOUBLE QUOTATION MARK`)
+    out should not include "``"
+    out should not include "''"
+  }
+
   // The small-caps cut carries no f-ligature glyphs (it has no lowercase f), so it must not apply them: mapping
   // "fi" to a glyph the font lacks dropped the pair from the output (a small-caps "fiable" set as "able").
   "small caps does not form the fi ligature, so an f-pair survives intact" in {

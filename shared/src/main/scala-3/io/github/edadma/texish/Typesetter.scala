@@ -427,10 +427,15 @@ abstract class Typesetter:
   // the engine's (see Devanagari and IndicShaper), and the font supplies the conjunct, half-form and vowel-sign
   // glyphs through its GSUB and positions the marks through its GPOS. Loaded by file, like the Hebrew, Arabic
   // and CJK cuts; the filesystem-less in-browser build overrides loadBundledFonts and does not ship them.
-  loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Set.empty, Set.empty)
-  loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Set.empty, Set("bold"))
-  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Set.empty, Set.empty)
-  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Set.empty, Set("bold"))
+  // Devanagari sets its punctuation like a Latin text face — the same curly quotes, en/em dashes and ellipsis,
+  // all of which this font carries — so it enables the text representations and the `` ``''/''`` `` and dash
+  // shorthands become the proper typographic characters, just as they do in the roman body. (The right-to-left
+  // Hebrew and Arabic faces do not: Hebrew's quotes are the mirrored pair and Arabic's are guillemets, so those
+  // documents type the marks literally rather than through the ASCII shorthands.)
+  loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match
