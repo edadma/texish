@@ -1,0 +1,138 @@
+// bengali-demo — Bengali–Assamese script typesetting in texish.
+//
+// Render with:  texish-cli scripts/bengali-demo.script
+//
+// The Bengali script is written left to right, so it needs none of the
+// bidirectional reordering Hebrew and Arabic do. What it needs instead is work
+// inside each syllable. A consonant carries an inherent vowel; a following vowel
+// sign (a matra) attaches above, below, before or after it; and a consonant joined
+// to the next by the hasant (the virama, U+09CD) fuses into a conjunct.
+//
+// The engine segments the run into orthographic syllables, then for each one asks
+// the bundled Noto Serif Bengali font's GSUB table to build the conjuncts, reorders
+// the pre-base i, e and ai signs — typed after their consonant but drawn before the
+// whole syllable — splits the two-part o and au signs into a front part and a
+// trailing part, and asks GSUB again for the width-matched vowel variants. The
+// below- and above-base signs, and the reph, are then placed with the same GPOS
+// anchors the engine uses for Hebrew points and Arabic dots.
+//
+// \font bengali selects the bundled face (also \font assamese), in a regular and a
+// bold cut. No \rtl is needed — the script is left to right.
+
+\use{document}
+
+\title{The Bengali--Assamese Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Bengali paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the consonants may fuse and the vowel signs attach around the base; between
+syllables the line breaker finds its breaks at the interword spaces exactly as for
+Latin text.
+
+\medskip
+
+{\font bengali 14 regular
+বাংলা একটি সমৃদ্ধ ভাষা। এটি বাঁ দিক থেকে ডান দিকে লেখা হয়। প্রতিটি অক্ষর একটি ব্যঞ্জন এবং
+তার সঙ্গের স্বর মিলে তৈরি হয়, আর দুটি ব্যঞ্জন হসন্ত দিয়ে যুক্ত হয়ে যুক্তাক্ষর গঠন করে।
+}
+
+\section{The pre-base vowel signs}
+
+The i, e and ai signs are typed after their consonant but drawn before it. In each word
+below the sign appears at the left of its syllable even though it follows the consonant
+in memory --- day, country, and made:
+
+\medskip
+
+{\font bengali 16 regular
+দিন   দেশ   তৈরি
+}
+
+\section{The two-part o and au signs}
+
+The o and au signs are single characters that render in two pieces --- an e-sign before
+the base and an aa-sign (for o) or a length mark (for au) after it. The engine splits
+them before shaping, as in these words for horse, total, and boat:
+
+\medskip
+
+{\font bengali 16 regular
+ঘোড়া   মোট   নৌকা
+}
+
+\section{Conjuncts}
+
+Two consonants joined by the hasant fuse into a conjunct. The classics --- student,
+knowledge, hardship, and the double-da of the word for learning:
+
+\medskip
+
+{\font bengali 16 regular
+ছাত্র   জ্ঞান   কষ্ট   বিদ্যা
+}
+
+\section{Reph, ya-phalaa and below-base ra}
+
+The consonant \emph{ra} takes special forms when it joins another. A word-initial ra
+followed by the hasant becomes a reph --- a small stroke drawn above the following base,
+though it is typed first --- as in the words for work and religion. A ya after the hasant
+becomes the post-base ya-phalaa, and a ra after another consonant hangs below it, as in
+love and village:
+
+\medskip
+
+{\font bengali 16 regular
+কর্ম   ধর্ম   মধ্য   প্রেম   গ্রাম
+}
+
+\section{Nukta consonants}
+
+A dot below a consonant --- the nukta --- forms the letters rra, rha and yya. The base
+and its dot compose into a single letter, as in the everyday words for big, car and river:
+
+\medskip
+
+{\font bengali 16 regular
+বড়   গাড়ি   নদী   আষাঢ়
+}
+
+\section{Independent vowels and signs}
+
+A vowel that opens a syllable is written with its own independent letter, not a matra.
+The below- and above-base signs stack onto their base:
+
+\medskip
+
+{\font bengali 16 regular
+অ আ ই ঈ উ ঊ এ ঐ ও ঔ
+}
+
+\medskip
+
+{\font bengali 16 regular
+কু কূ কে কৈ কো কৌ কং কঃ
+}
+
+\section{Assamese}
+
+The same script serves Assamese, which uses its own \emph{ro} and \emph{wo} letters. The
+\verb|\font assamese| alias selects the same face:
+
+\medskip
+
+{\font assamese 16 regular
+অসমীয়া ভাষা   ৰং   কামৰূপ
+}
+
+\section{A closing line}
+
+A greeting, set in the bold cut:
+
+\medskip
+
+{\font bengali 18 bold
+নমস্কার! এটি বাংলা লিপিতে লেখা হয়েছে।
+}

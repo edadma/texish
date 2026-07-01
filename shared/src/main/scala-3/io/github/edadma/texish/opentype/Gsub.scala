@@ -77,15 +77,15 @@ object Gsub:
       if g.hasFormSubstitution then Some(g) else None
     }
 
-  /** Build an Indic (Devanagari) shaper from a font's raw `GSUB` bytes, or None when the font has no
-    * Devanagari script table — a non-Indic font keeps the plain text path. The modern OpenType Indic tag
-    * `dev2` is preferred over the legacy `deva`. The same subtable parsing and lookup machinery the Arabic
-    * shaper uses is reused here; the Indic reordering and feature order live in
-    * `io.github.edadma.texish.opentype.IndicShaper`, which drives this by feature name. */
-  def fromIndic(gsub: Option[Array[Byte]]): Option[Gsub] =
+  /** Build an Indic shaper from a font's raw `GSUB` bytes for the script whose OpenType tags are `scriptTags`
+    * (Devanagari passes `dev2`, `deva`; Bengali passes `bng2`, `beng`), or None when the font carries none of
+    * those script tables — a font that does not shape the script keeps the plain text path. The same subtable
+    * parsing and lookup machinery the Arabic shaper uses is reused here; the Indic reordering and feature order
+    * live in `io.github.edadma.texish.opentype.IndicShaper`, which drives this by feature name. */
+  def fromIndic(gsub: Option[Array[Byte]], scriptTags: Seq[String]): Option[Gsub] =
     gsub.flatMap { data =>
-      val g = new Gsub(data, Seq("dev2", "deva"))
-      if g.isIndicScript then Some(g) else None
+      val g = new Gsub(data, scriptTags)
+      if g.boundToRequestedScript then Some(g) else None
     }
 
 /** Parses the language-system feature lookups of `data` (a `GSUB` table) on construction, binding to the
@@ -115,9 +115,9 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
   /** Whether the font carries at least one of the Arabic form features worth running. */
   def hasFormSubstitution: Boolean = Gsub.FormFeatures.exists(featureLookups.contains)
 
-  /** Whether the shaper bound to a Devanagari script table (`dev2` or `deva`), rather than falling back to a
-    * default script — the signal that this font actually shapes Indic text. */
-  def isIndicScript: Boolean = chosenScriptTag.exists(t => t == "dev2" || t == "deva")
+  /** Whether the shaper bound to one of its requested script tables, rather than falling back to a default
+    * script — the signal that this font actually shapes the script it was built for (Indic text). */
+  def boundToRequestedScript: Boolean = chosenScriptTag.exists(scriptTags.contains)
 
   /** Whether the chosen script's language system enables `tag`. */
   def hasFeature(tag: String): Boolean = featureLookups.contains(tag)
@@ -127,6 +127,18 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
     * Devanagari basic-form and presentation features by name; Arabic drives its features through `shape`. */
   def applyFeatureByTag(glyphs: Array[Int], tag: String): Array[Int] =
     featureLookups.get(tag).map(idxs => applyFeature(glyphs, idxs)).getOrElse(glyphs)
+
+  /** Apply feature `tag` to a single glyph position, returning the run with only that glyph possibly
+    * substituted. This is how the Indic shaper runs the word-position features `init` and `fina`: those select
+    * a distinct form of a pre-base or post-base vowel sign only when it is the first or last glyph of the word,
+    * so the feature must not fire on the same sign elsewhere in the word. The features are single
+    * substitutions, so the position is shaped on its own; a feature the font lacks, or one that does not cover
+    * the glyph, leaves the run unchanged. */
+  def applyFeatureByTagAt(glyphs: Array[Int], tag: String, index: Int): Array[Int] =
+    if index < 0 || index >= glyphs.length then glyphs
+    else
+      val sub = applyFeatureByTag(Array(glyphs(index)), tag)
+      if sub.length == 1 && sub(0) != glyphs(index) then glyphs.updated(index, sub(0)) else glyphs
 
   /** Shape a run of nominal glyphs (one per character, the font's cmap result) into the glyphs to draw,
     * given each character's resolved joining form. Composition substitutions run first — `ccmp` (and

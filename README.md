@@ -14,7 +14,9 @@ Liang hyphenation, CJK (Chinese) line breaking with kinsoku rules, right-to-left
 (`\rtl`/`\ltr` — Hebrew and Arabic, with Unicode bidirectional reordering, mirrored brackets,
 cursive Arabic joining and ligatures via GSUB, and GPOS positioning of niqqud and harakat vowel
 marks), Devanagari (Hindi) syllable shaping (`\font devanagari` — conjuncts and half-forms, short-i
-and reph reordering, nukta composition, and GPOS-positioned vowel signs), author break control
+and reph reordering, nukta composition, and GPOS-positioned vowel signs), Bengali–Assamese syllable
+shaping (`\font bengali` — conjuncts, pre-base i/e/ai reordering, two-part o/au decomposition,
+reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), author break control
 (`\discretionary` and leaders for dotted contents lines),
 and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout
 (`\columns`), and glue/kern spacing in a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`

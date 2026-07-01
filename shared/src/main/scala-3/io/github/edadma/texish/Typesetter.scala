@@ -199,14 +199,14 @@ abstract class Typesetter:
   def gsubShaper(font: RenderFont): Option[Gsub] =
     gsubShaperCache.getOrElseUpdate(font, Gsub.from(sfntTable(font, "GSUB")))
 
-  // Parsed Devanagari shapers, one per render font whose GSUB carries a Devanagari script. Read once and
-  // cached like the other shapers, since an Indic paragraph draws many runs in the same font.
+  // Parsed Indic shapers, one per render font whose GSUB carries an Indic script (Devanagari, Bengali, …).
+  // Read once and cached like the other shapers, since an Indic paragraph draws many runs in the same font.
   private val indicShaperCache = mutable.HashMap.empty[Any, Option[IndicShaper]]
 
-  /** The Devanagari shaper for `font`, or None when the font has no Devanagari script table (every
-    * non-Indic font) — in which case Devanagari text, if any, falls to the plain path and shows the font's
-    * nominal glyphs. The clustering and pre-base reordering are font-free (see
-    * [[io.github.edadma.texish.opentype.Devanagari]]); this drives the font's GSUB features around them. */
+  /** The Indic shaper for `font`, bound to whichever Indic script the font carries, or None when the font has
+    * no Indic script table (every non-Indic font) — in which case Indic text, if any, falls to the plain path
+    * and shows the font's nominal glyphs. The clustering and pre-base reordering are font-free (see
+    * [[io.github.edadma.texish.opentype.IndicScript]]); this drives the font's GSUB features around them. */
   def indicShaper(font: RenderFont): Option[IndicShaper] =
     indicShaperCache.getOrElseUpdate(font, IndicShaper.from(sfntTable(font, "GSUB")))
 
@@ -436,6 +436,19 @@ abstract class Typesetter:
   loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
   loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+
+  // Noto Serif Bengali, the bundled face for the Bengali–Assamese script: \font bengali 12 sets it, or the
+  // alias \font assamese 12, each with a bold cut. Static Regular and Bold instances drawn from the variable
+  // upstream (wght 400 and 700). Bengali is left to right; the engine does the cluster segmentation, the
+  // pre-base i/e/ai reordering and the two-part o/au decomposition (see Bengali and IndicShaper), and the font
+  // supplies the conjunct, ya-phalaa, reph and vowel-sign glyphs through its GSUB and positions the marks
+  // through its GPOS. Loaded by file like the other complex-script cuts; the in-browser build does not ship it.
+  // Like the Devanagari face it sets its punctuation as a Latin text face, so the curly-quote and dash
+  // shorthands become proper typographic characters in a Bengali run.
+  loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match

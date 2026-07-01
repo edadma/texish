@@ -22,7 +22,7 @@ class GsubDevanagariFontTests extends AnyFreeSpec with Matchers:
 
   "the font is recognised as a Devanagari shaper" in {
     IndicShaper.from(font.tableBytes("GSUB")) shouldBe defined
-    Gsub.fromIndic(font.tableBytes("GSUB")).get.isIndicScript shouldBe true
+    Gsub.fromIndic(font.tableBytes("GSUB"), Devanagari.scriptTags).get.boundToRequestedScript shouldBe true
   }
 
   "the Naskh Arabic face is not mistaken for a Devanagari shaper" in {

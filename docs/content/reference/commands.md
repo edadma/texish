@@ -91,6 +91,15 @@ Serif Devanagari is bundled: `\font devanagari 12 regular` (or the alias `\font 
 bold cut (`\font devanagari 12 bold`). See [Devanagari (Hindi)](/guide/devanagari/) for the full
 treatment.
 
+## Bengali–Assamese
+
+Bengali text is shaped a syllable at a time: consonants fuse into conjuncts, the pre-base i/e/ai
+signs are reordered, the two-part o and au signs are split into a front and a trailing part, a
+word-initial reph and a post-base ya-phalaa are formed, a nukta composes with its consonant, and the
+vowel signs are positioned by the font — all automatically from text typed in Unicode order. Noto
+Serif Bengali is bundled: `\font bengali 12 regular` (or the alias `\font assamese`), with a bold cut
+(`\font bengali 12 bold`). See [Bengali–Assamese](/guide/bengali/) for the full treatment.
+
 ## Right-to-left scripts
 
 `\rtl` and `\ltr` set the paragraph base direction. Two faces are bundled, each in a regular and a

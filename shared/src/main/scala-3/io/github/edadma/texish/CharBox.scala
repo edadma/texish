@@ -1,6 +1,6 @@
 package io.github.edadma.texish
 
-import io.github.edadma.texish.opentype.{Devanagari, GlyphPlacement, Gpos, JoiningForm}
+import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, JoiningForm}
 
 /** A run of text set in one font and colour. Latin text takes the plain path: the backend measures and
   * draws the string directly. Several scripts need the engine to place glyphs itself, and all end at the
@@ -15,12 +15,12 @@ import io.github.edadma.texish.opentype.{Devanagari, GlyphPlacement, Gpos, Joini
   * GSUB shaper: composition substitutions may split a dotted letter into a dotless skeleton plus a separate
   * dot, then the skeleton takes its connecting form.
   *
-  * Devanagari is left to right, so it carries no pre-resolved forms; the box detects it from the text and,
-  * when the font shapes Devanagari, runs the Indic shaper — clustering, conjunct and half-form substitution,
-  * the pre-base short-i reordering, and vowel-sign variant selection.
+  * Indic scripts (Devanagari, Bengali, …) are left to right, so they carry no pre-resolved forms; the box
+  * detects the script from the text and, when the font shapes it, runs the Indic shaper — clustering, conjunct
+  * and half-form substitution, the pre-base vowel-sign reordering, and vowel-sign variant selection.
   *
   * In every case the resulting glyphs are laid out by their own advances, and any marks (Hebrew points,
-  * Arabic dots, Devanagari below-base signs) are placed by the shared GPOS mark shaper. */
+  * Arabic dots, Indic below-base signs) are placed by the shared GPOS mark shaper. */
 class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color, val forms: Array[JoiningForm])
     extends ContentBox:
   def this(t: Typesetter, text: String, font: Font, color: Color) = this(t, text, font, color, null)
@@ -39,13 +39,12 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
           val nominal = Array.tabulate(text.length)(i => t.glyphIndex(rf, text.charAt(i).toInt))
           gs.shape(nominal, forms)
         case None => null
-    else if Devanagari.hasDevanagari(text) then
+    else
       t.indicShaper(rf) match
-        case Some(sh) =>
+        case Some(sh) if sh.handles(text) =>
           val cps = Array.tabulate(text.length)(i => text.charAt(i).toInt)
           sh.shape(cps, cp => t.glyphIndex(rf, cp))
-        case None => null
-    else null
+        case _ => null
 
   // Placement of each shaped glyph: where the marks attach to their bases (GPOS), or a run of bare advances
   // when the font has no mark positioning. Computed once for both metrics and drawing.
