@@ -103,3 +103,20 @@ object Devanagari:
       if category(cps(i)) == Consonant then base = i
       i += 1
     if base >= 0 then base else start
+
+  /** The short-i vowel sign, the one dependent sign written after its consonant in memory but drawn before
+    * it. It is the only Devanagari sign that reorders. */
+  val ShortISign: Int = 0x093F
+
+  /** Move a cluster's pre-base short-i sign to the front of its shaped glyphs. The short-i is typed after its
+    * base consonant but rendered before the whole cluster — ahead of any half-forms or conjuncts. Because no
+    * basic-form substitution consumes it, its glyph survives the earlier GSUB pass unchanged and is found by
+    * the glyph `iMatraGlyph` the font maps U+093F to; it is lifted out and prepended. When the cluster has no
+    * short-i, or its glyph is already first, the run is returned unchanged. `clusterCps` is the cluster's
+    * source codepoints, used only to tell whether a short-i is present. */
+  def reorderPreBaseMatra(clusterCps: Array[Int], glyphs: Array[Int], iMatraGlyph: Int): Array[Int] =
+    if !clusterCps.contains(ShortISign) then glyphs
+    else
+      val j = glyphs.indexOf(iMatraGlyph)
+      if j <= 0 then glyphs
+      else Array(iMatraGlyph) ++ glyphs.slice(0, j) ++ glyphs.slice(j + 1, glyphs.length)

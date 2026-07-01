@@ -69,16 +69,28 @@ object Gsub:
   // (`dlig`) are left off, as in conventional typesetting.
   private val PostFeatures = Seq("rlig", "liga")
 
-  /** Build a shaper from a font's raw `GSUB` bytes, or None when the font has no Arabic form features (so
-    * the caller keeps the plain text path). */
+  /** Build an Arabic shaper from a font's raw `GSUB` bytes, or None when the font has no Arabic form
+    * features (so the caller keeps the plain text path). */
   def from(gsub: Option[Array[Byte]]): Option[Gsub] =
     gsub.flatMap { data =>
-      val g = new Gsub(data)
+      val g = new Gsub(data, Seq("arab"))
       if g.hasFormSubstitution then Some(g) else None
     }
 
-/** Parses the form-feature lookups of `data` (a `GSUB` table) on construction. */
-final class Gsub(data: Array[Byte]):
+  /** Build an Indic (Devanagari) shaper from a font's raw `GSUB` bytes, or None when the font has no
+    * Devanagari script table — a non-Indic font keeps the plain text path. The modern OpenType Indic tag
+    * `dev2` is preferred over the legacy `deva`. The same subtable parsing and lookup machinery the Arabic
+    * shaper uses is reused here; the Indic reordering and feature order live in
+    * `io.github.edadma.texish.opentype.IndicShaper`, which drives this by feature name. */
+  def fromIndic(gsub: Option[Array[Byte]]): Option[Gsub] =
+    gsub.flatMap { data =>
+      val g = new Gsub(data, Seq("dev2", "deva"))
+      if g.isIndicScript then Some(g) else None
+    }
+
+/** Parses the language-system feature lookups of `data` (a `GSUB` table) on construction, binding to the
+  * first of `scriptTags` the font carries (Arabic passes `arab`; the Indic shaper passes `dev2`, `deva`). */
+final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
 
   // Lookups parsed by their index in the LookupList; an unparsed/irrelevant lookup yields an empty vector.
   private val lookups: Array[Vector[SubstSubtable]] =
@@ -91,11 +103,30 @@ final class Gsub(data: Array[Byte]):
       val lookupListOff = c.u16
       parseLookupList(lookupListOff)
 
-  // Feature tag → the lookup-list indices that feature triggers, for the Arabic default language system.
+  // The GSUB script table this shaper bound to (the first of `scriptTags` present, else a default script),
+  // recorded so a caller can tell an Indic font from one that only matched a default script. Set while
+  // parseFeatureMap runs during construction, so it must be declared before the feature map it feeds.
+  private var chosenScriptTag: Option[String] = None
+
+  // Feature tag → the lookup-list indices that feature triggers, for the chosen script's default language
+  // system.
   private val featureLookups: Map[String, Array[Int]] = parseFeatureMap()
 
   /** Whether the font carries at least one of the Arabic form features worth running. */
   def hasFormSubstitution: Boolean = Gsub.FormFeatures.exists(featureLookups.contains)
+
+  /** Whether the shaper bound to a Devanagari script table (`dev2` or `deva`), rather than falling back to a
+    * default script — the signal that this font actually shapes Indic text. */
+  def isIndicScript: Boolean = chosenScriptTag.exists(t => t == "dev2" || t == "deva")
+
+  /** Whether the chosen script's language system enables `tag`. */
+  def hasFeature(tag: String): Boolean = featureLookups.contains(tag)
+
+  /** Apply the lookups of feature `tag`, in order, across the whole glyph buffer, returning the substituted
+    * run (or the input unchanged when the font lacks the feature). This is how the Indic shaper runs the
+    * Devanagari basic-form and presentation features by name; Arabic drives its features through `shape`. */
+  def applyFeatureByTag(glyphs: Array[Int], tag: String): Array[Int] =
+    featureLookups.get(tag).map(idxs => applyFeature(glyphs, idxs)).getOrElse(glyphs)
 
   /** Shape a run of nominal glyphs (one per character, the font's cmap result) into the glyphs to draw,
     * given each character's resolved joining form. Composition substitutions run first — `ccmp` (and
@@ -309,9 +340,9 @@ final class Gsub(data: Array[Byte]):
   private def tag4(t: Long): String =
     String(Array(((t >> 24) & 0xff).toChar, ((t >> 16) & 0xff).toChar, ((t >> 8) & 0xff).toChar, (t & 0xff).toChar))
 
-  // Map every feature tag used by the Arabic script's default language system to the lookups it triggers.
+  // Map every feature tag used by the chosen script's default language system to the lookups it triggers.
   // The featureList holds (tag, lookups) for every feature; a language system selects a subset of them by
-  // index. The Arabic script ('arab') is preferred, then the default script, then the first one present.
+  // index. The script is chosen from the shaper's `scriptTags` (see langSysFeatureIndices).
   private def parseFeatureMap(): Map[String, Array[Int]] =
     if data.length < 10 then return Map.empty
     val c = ByteCursor(data, 0)
@@ -337,22 +368,22 @@ final class Gsub(data: Array[Byte]):
     out.map((k, v) => k -> v.toArray).toMap
 
   // The feature indices the chosen script's default language system enables, including its required
-  // feature if it names one.
+  // feature if it names one. The shaper's own script tags are preferred in order, then the default scripts,
+  // then whatever the font lists first; the chosen tag is recorded so callers can identify the script.
   private def langSysFeatureIndices(scriptListOff: Int): Array[Int] =
     if scriptListOff == 0 then return Array.empty
     val c           = ByteCursor(data, scriptListOff)
     val scriptCount = c.u16
     val records     = Array.fill(scriptCount) { val tag = tag4(c.u32); val off = c.u16; (tag, off) }
 
-    def scriptOffset(tag: String): Option[Int] = records.find(_._1 == tag).map(_._2)
-    val chosen = scriptOffset("arab")
-      .orElse(scriptOffset("DFLT"))
-      .orElse(scriptOffset("dflt"))
-      .orElse(records.headOption.map(_._2))
+    val prefs  = scriptTags ++ Seq("DFLT", "dflt")
+    val chosen = prefs.iterator.map(t => records.find(_._1 == t)).collectFirst { case Some(r) => r }
+      .orElse(records.headOption)
+    chosenScriptTag = chosen.map(_._1)
 
     chosen match
       case None => Array.empty
-      case Some(scriptOff) =>
+      case Some((_, scriptOff)) =>
         val s                 = ByteCursor(data, scriptListOff + scriptOff)
         val defaultLangSysOff = s.u16
         if defaultLangSysOff == 0 then Array.empty

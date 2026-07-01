@@ -1,10 +1,10 @@
 package io.github.edadma.texish
 
-import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, JoiningForm}
+import io.github.edadma.texish.opentype.{Devanagari, GlyphPlacement, Gpos, JoiningForm}
 
 /** A run of text set in one font and colour. Latin text takes the plain path: the backend measures and
-  * draws the string directly. Two scripts need the engine to place glyphs itself, and both end at the same
-  * positioned-glyph drawing.
+  * draws the string directly. Several scripts need the engine to place glyphs itself, and all end at the
+  * same positioned-glyph drawing.
   *
   * Hebrew niqqud are combining marks: the letters carry their own advances, and each mark is positioned by
   * a font anchor relative to its base (see the GPOS shaper).
@@ -13,8 +13,14 @@ import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, JoiningForm}
   * neighbours. When this box carries the resolved `JoiningForm` of each character (decided in memory
   * order by the paragraph reorderer) and the font shapes Arabic, the box runs the characters through the
   * GSUB shaper: composition substitutions may split a dotted letter into a dotless skeleton plus a separate
-  * dot, then the skeleton takes its connecting form. The resulting glyphs are laid out by their own
-  * advances, and any decomposed dots are placed by the same GPOS mark shaper Hebrew uses. */
+  * dot, then the skeleton takes its connecting form.
+  *
+  * Devanagari is left to right, so it carries no pre-resolved forms; the box detects it from the text and,
+  * when the font shapes Devanagari, runs the Indic shaper — clustering, conjunct and half-form substitution,
+  * the pre-base short-i reordering, and vowel-sign variant selection.
+  *
+  * In every case the resulting glyphs are laid out by their own advances, and any marks (Hebrew points,
+  * Arabic dots, Devanagari below-base signs) are placed by the shared GPOS mark shaper. */
 class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color, val forms: Array[JoiningForm])
     extends ContentBox:
   def this(t: Typesetter, text: String, font: Font, color: Color) = this(t, text, font, color, null)
@@ -22,25 +28,33 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
 
   private val rf = font.renderFont.asInstanceOf[t.RenderFont]
 
-  // The shaped Arabic glyph run — the glyphs to draw after composition and form substitution — when the box
-  // carries joining forms and the font shapes Arabic; otherwise null, and the box draws as ordinary text.
-  private val arabicGlyphs: Array[Int] =
-    if forms != null && text.nonEmpty then
+  // The shaped glyph run — the glyphs to draw after the script's substitutions — when the box needs the
+  // engine to place glyphs: an Arabic run whose joining forms the paragraph reorderer resolved, or a
+  // Devanagari run detected from the text. Otherwise null, and the box draws as ordinary text.
+  private val shapedGlyphs: Array[Int] =
+    if text.isEmpty then null
+    else if forms != null then
       t.gsubShaper(rf) match
         case Some(gs) =>
           val nominal = Array.tabulate(text.length)(i => t.glyphIndex(rf, text.charAt(i).toInt))
           gs.shape(nominal, forms)
         case None => null
+    else if Devanagari.hasDevanagari(text) then
+      t.indicShaper(rf) match
+        case Some(sh) =>
+          val cps = Array.tabulate(text.length)(i => text.charAt(i).toInt)
+          sh.shape(cps, cp => t.glyphIndex(rf, cp))
+        case None => null
     else null
 
-  // Placement of each shaped Arabic glyph: where the decomposed dots attach to their skeletons (GPOS), or a
-  // run of bare advances when the font has no mark positioning. Computed once for both metrics and drawing.
-  private val arabicPlaces: Array[GlyphPlacement] =
-    if arabicGlyphs == null then null
+  // Placement of each shaped glyph: where the marks attach to their bases (GPOS), or a run of bare advances
+  // when the font has no mark positioning. Computed once for both metrics and drawing.
+  private val shapedPlaces: Array[GlyphPlacement] =
+    if shapedGlyphs == null then null
     else
       t.markShaper(rf) match
-        case Some(sh) => sh.position(arabicGlyphs)
-        case None     => Array.fill(arabicGlyphs.length)(GlyphPlacement(false, -1, 0.0, 0.0))
+        case Some(sh) => sh.position(shapedGlyphs)
+        case None     => Array.fill(shapedGlyphs.length)(GlyphPlacement(false, -1, 0.0, 0.0))
 
   val TextExtents(_, yBearing, _, heightValue, advance, _) = t.getTextExtents(text, rf)
 
@@ -49,14 +63,14 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
   // pieces of text (as in the \TeX logo) lands on the same metrics it would in TeX. Using the ink width
   // instead silently dropped the leading and trailing side bearings of every run; justification mostly hid
   // it, but exact character spacing did not survive. The ink box still gives the vertical extents below.
-  // A shaped Arabic run measures by the sum of its base glyphs' advances; the marks add nothing.
+  // A shaped run measures by the sum of its base glyphs' advances; the marks add nothing.
   override val width: Double =
-    if arabicGlyphs == null then advance
+    if shapedGlyphs == null then advance
     else
       var w = 0.0
       var i = 0
-      while i < arabicGlyphs.length do
-        if !arabicPlaces(i).isMark then w += t.glyphExtents(rf, arabicGlyphs(i)).xAdvance
+      while i < shapedGlyphs.length do
+        if !shapedPlaces(i).isMark then w += t.glyphExtents(rf, shapedGlyphs(i)).xAdvance
         i += 1
       w
   override val xAdvance: Double = width
@@ -71,7 +85,7 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
       t.setFont(font)
       t.setColor(color)
       val rf = font.renderFont.asInstanceOf[t.RenderFont]
-      if arabicGlyphs != null then drawPositioned(arabicGlyphs, arabicPlaces, x, y)
+      if shapedGlyphs != null then drawPositioned(shapedGlyphs, shapedPlaces, x, y)
       else
         t.markShaper(rf) match
           case Some(shaper) if Bidi.hasMarks(text) => drawMarked(t, rf, shaper, x, y)

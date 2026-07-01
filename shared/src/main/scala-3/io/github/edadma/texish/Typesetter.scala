@@ -2,7 +2,7 @@ package io.github.edadma.texish
 
 //import pprint.pprintln
 
-import io.github.edadma.texish.opentype.{ByteCursor, Gpos, Gsub, MathTable}
+import io.github.edadma.texish.opentype.{ByteCursor, Gpos, Gsub, IndicShaper, MathTable}
 import io.github.edadma.texish.parser.Value
 
 import scala.collection.mutable
@@ -198,6 +198,17 @@ abstract class Typesetter:
     * [[io.github.edadma.texish.opentype.ArabicShaping]]; this turns a decided form into the shaped glyph. */
   def gsubShaper(font: RenderFont): Option[Gsub] =
     gsubShaperCache.getOrElseUpdate(font, Gsub.from(sfntTable(font, "GSUB")))
+
+  // Parsed Devanagari shapers, one per render font whose GSUB carries a Devanagari script. Read once and
+  // cached like the other shapers, since an Indic paragraph draws many runs in the same font.
+  private val indicShaperCache = mutable.HashMap.empty[Any, Option[IndicShaper]]
+
+  /** The Devanagari shaper for `font`, or None when the font has no Devanagari script table (every
+    * non-Indic font) — in which case Devanagari text, if any, falls to the plain path and shows the font's
+    * nominal glyphs. The clustering and pre-base reordering are font-free (see
+    * [[io.github.edadma.texish.opentype.Devanagari]]); this drives the font's GSUB features around them. */
+  def indicShaper(font: RenderFont): Option[IndicShaper] =
+    indicShaperCache.getOrElseUpdate(font, IndicShaper.from(sfntTable(font, "GSUB")))
 
   def loadImage(path: String): (ImageHandle, Int, Int)
 
@@ -408,6 +419,18 @@ abstract class Typesetter:
   // build overrides loadBundledFonts and does not ship them.
   loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf", Set.empty, Set.empty)
   loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Bold.ttf", Set.empty, Set("bold"))
+
+  // Noto Serif Devanagari, the bundled face for Devanagari (Hindi, Marathi, …): \font devanagari 12 sets it,
+  // or the alias \font hindi 12, each with a bold cut so \font devanagari 12 bold is a real bold weight. These
+  // are static Regular and Bold instances drawn from the variable upstream (wght 400 and 700). Devanagari is
+  // left to right, so no bidi is involved; the cluster segmentation and the pre-base short-i reordering are
+  // the engine's (see Devanagari and IndicShaper), and the font supplies the conjunct, half-form and vowel-sign
+  // glyphs through its GSUB and positions the marks through its GPOS. Loaded by file, like the Hebrew, Arabic
+  // and CJK cuts; the filesystem-less in-browser build overrides loadBundledFonts and does not ship them.
+  loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Set.empty, Set.empty)
+  loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Set.empty, Set("bold"))
+  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Set.empty, Set.empty)
+  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Set.empty, Set("bold"))
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match

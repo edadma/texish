@@ -1,0 +1,91 @@
+// devanagari-demo — Devanagari (Hindi) typesetting in texish.
+//
+// Render with:  texish-cli scripts/devanagari-demo.script
+//
+// Devanagari is written left to right, so it needs none of the bidirectional
+// reordering Hebrew and Arabic do. What it needs instead is work inside each
+// syllable. A consonant carries an inherent vowel; a following vowel sign (a
+// matra) attaches above, below, before or after it; and a consonant joined to the
+// next by the virama (the halant, U+094D) fuses into a conjunct or a half-form.
+//
+// The engine segments the run into orthographic syllables, then for each one asks
+// the bundled Noto Serif Devanagari font's GSUB table to build the conjuncts and
+// half-forms, reorders the short-i sign — typed after its consonant but drawn
+// before the whole syllable — and asks GSUB again for the width-matched vowel
+// variants. The below- and above-base signs are then placed with the same GPOS
+// anchors the engine uses for Hebrew points and Arabic dots.
+//
+// \font devanagari selects the bundled face (also \font hindi), in a regular and a
+// bold cut. No \rtl is needed — Devanagari is left to right.
+
+\use{document}
+
+\title{Devanagari in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Hindi paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the consonants may fuse and the vowel signs attach around the base; between
+syllables the line breaker finds its breaks at the interword spaces exactly as for
+Latin text.
+
+\medskip
+
+{\font devanagari 14 regular
+हिन्दी भारत की एक प्रमुख भाषा है। यह देवनागरी लिपि में लिखी जाती है, जो बाईं ओर से दाईं ओर
+लिखी जाती है। हर अक्षर एक व्यंजन और उसके साथ का स्वर मिलकर बनता है, और दो व्यंजन हलन्त
+से जुड़कर संयुक्त अक्षर बनाते हैं।
+}
+
+\section{The short-i reordering}
+
+The short-i sign is typed after its consonant but drawn before it. In each word below
+the sign appears at the left of its syllable even though it follows the consonant in
+memory --- heart, book, Hindi, and knowledge:
+
+\medskip
+
+{\font devanagari 16 regular
+दिल   किताब   हिन्दी   विद्या
+}
+
+\section{Conjuncts and half-forms}
+
+Two consonants joined by the virama fuse. Some become a single ligature glyph, others
+a half-form of the first consonant set against the full second. The classics ---
+kṣa, tra, jña, and the na-da half-form of \TeXish{}'s Hindi word:
+
+\medskip
+
+{\font devanagari 16 regular
+क्ष   त्र   ज्ञ   न्द
+}
+
+\section{Independent vowels and signs}
+
+A vowel that opens a syllable is written with its own independent letter, not a matra.
+The below-base and above-base signs stack onto their base:
+
+\medskip
+
+{\font devanagari 16 regular
+अ आ इ ई उ ऊ ए ऐ ओ औ
+}
+
+\medskip
+
+{\font devanagari 16 regular
+कु कू के कै को कौ कं कः
+}
+
+\section{A closing line}
+
+A greeting, set in the bold cut:
+
+\medskip
+
+{\font devanagari 18 bold
+नमस्ते! यह हिन्दी में लिखा गया है।
+}

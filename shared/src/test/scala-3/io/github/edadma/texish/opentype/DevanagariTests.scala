@@ -55,3 +55,23 @@ class DevanagariTests extends AnyFreeSpec with Matchers:
     val k = cps("क्ष")
     baseIndex(k, 0, 3) shouldBe 2 // ष is the base of the conjunct
   }
+
+  "the pre-base short-i moves to the front of its cluster's glyphs" in {
+    // कि — ka then the short-i. After the (empty here) basic pass the glyphs stand in memory order
+    // [ka, i]; the short-i is lifted to the front so it is drawn before its base, as Devanagari requires.
+    // The glyph ids are stand-ins: 100 for ka, 200 for the short-i sign U+093F.
+    val cluster = cps("कि")
+    reorderPreBaseMatra(cluster, Array(100, 200), 200).toList shouldBe List(200, 100)
+  }
+
+  "the pre-base short-i moves ahead of a half-form and its base" in {
+    // A conjunct cluster with a short-i: the sign jumps to the very front, before the half-form and the
+    // base alike (300 = half-form, 400 = base consonant, 200 = short-i U+093F).
+    val cluster = cps("न्दि") // na virama da short-i
+    reorderPreBaseMatra(cluster, Array(300, 400, 200), 200).toList shouldBe List(200, 300, 400)
+  }
+
+  "a cluster without a short-i is left untouched" in {
+    val cluster = cps("का") // ka aa-matra — the aa sign is post-base, no reordering
+    reorderPreBaseMatra(cluster, Array(100, 250), 200).toList shouldBe List(100, 250)
+  }
