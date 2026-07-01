@@ -126,3 +126,13 @@ class RtlParagraphTests extends AnyFreeSpec with Matchers:
   "the first-line indent of a left-to-right paragraph with embedded Hebrew stays on the left" in {
     indentSide(s"\\indent Hello $A$B world") shouldBe "left"
   }
+
+  // The (left, right) physical margin width of the first line, in points.
+  private def margins(src: String): (Double, Double) =
+    val bs = firstLine(render(src)).boxes
+    (bs.head.width, bs.last.width)
+
+  "\\leftskip indents the leading margin — the left under \\ltr, the right under \\rtl" in {
+    margins(s"\\set leftskip {30}\n$A$B $G$D") shouldBe (30.0, 0.0)
+    margins(s"\\rtl\\set leftskip {30}\n$A$B $G$D") shouldBe (0.0, 30.0)
+  }
