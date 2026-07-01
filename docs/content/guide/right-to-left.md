@@ -30,6 +30,11 @@ The line breaker is untouched — it still finds its breaks at the interword glu
 order. Only the set lines are turned into visual order, so justification, hyphenation of any
 embedded Latin, and page breaking all work as usual.
 
+Margin indentation follows the reading side. Under a right-to-left base `\leftskip` sets the
+leading (right) margin and `\rightskip` the trailing (left) one, so an indented block, and a
+list built with `\begin{itemize}` or `\begin{enumerate}`, indents from the right and hangs its
+markers on the right.
+
 ## The Hebrew font
 
 A Hebrew face, Noto Serif Hebrew, is bundled in a regular and a bold cut. Select it with
