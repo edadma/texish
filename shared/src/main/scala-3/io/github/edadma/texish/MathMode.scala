@@ -107,9 +107,12 @@ class MathMode(
     * list's style: `\dfrac`/`\tfrac` force the display (or text) gaps and shifts on, regardless of where the
     * fraction sits, and `\binom` stacks the operands with no rule (the parentheses are added by the caller).
     * The numerator and denominator are expected to have been set at the matching `num`/`denom` styles for the
-    * forced style. The font for the bar thickness, axis and shifts is this list's own, as in TeX. */
+    * forced style. The bar thickness, axis and shifts come from the font at the *forced* style's size — the
+    * operands are full-size even when the fraction sits in a script, so the constants must match them, just
+    * as TeX's `{\displaystyle\frac…}` takes everything from the forced style. */
   def makeFractionAt(numerator: Box, denominator: Box, display: Boolean, bar: Boolean): Box =
-    val params = mathFont.fractionParams(display)
+    val font   = fontForStyle(if display then MathStyle.Display else MathStyle.Text)
+    val params = font.fractionParams(display)
     new FractionBox(t, numerator, denominator, if bar then params else params.copy(ruleThickness = 0.0))
 
   /** Build a radical (`\sqrt`) over an already-laid-out radicand, using this list's font and style. The
@@ -131,7 +134,10 @@ class MathMode(
       if wide then mathFont.horizontalVariant(accentCodepoint, nucleus.width)
       else mathFont.glyphBox(accentCodepoint)
 
-    val shift = nucleus.ascent - mathFont.accentBaseHeight // the base's excess over the accent's design height
+    // The base's excess over the accent's design height — how far the accent must rise above where the font
+    // designed it to sit. Never negative: over a base *shorter* than the accent base height the accent stays
+    // at its design height rather than sinking into the nucleus (OpenType's AccentBaseHeight only ever raises).
+    val shift = math.max(0.0, nucleus.ascent - mathFont.accentBaseHeight)
 
     val nucleusAttach = nucleus match
       case g: GlyphBox => mathFont.topAccentAttachmentGlyph(g.glyph).getOrElse(nucleus.width / 2)
@@ -151,8 +157,9 @@ class MathMode(
     new MathBarBox(t, inner, gap = 3 * thickness, thickness, over)
 
   /** The style a matrix's cells are set in: a matrix sets its entries in text (or smaller) style, never the
-    * enlarged display style, so a matrix inside a display does not blow its entries up. */
-  def cellStyle: MathStyle = if style.isDisplay then MathStyle.Text else style
+    * enlarged display style, so a matrix inside a display does not blow its entries up. Crampedness carries
+    * through — a matrix under a radical keeps its cells cramped. */
+  def cellStyle: MathStyle = if style.isDisplay then MathStyle(MathSize.Text, style.cramped) else style
 
   /** Build a math array (`\matrix`, and the bracketed `\pmatrix`/`\bmatrix`/`\cases`): a grid of already-
     * laid-out cells, columns aligned and rows baseline-spaced, centred on the math axis so a delimiter set
@@ -231,10 +238,14 @@ class MathMode(
         val denStyle = style.denom
         val numFont  = fontForStyle(numStyle)
         val denFont  = fontForStyle(denStyle)
-        val num = HBox(MathList.translate(restyle(numeratorNodes, numFont), numFont, numStyle.cramped, numStyle.isDisplay))
-        val den = HBox(MathList.translate(restyle(nodes.toVector, denFont), denFont, denStyle.cramped, denStyle.isDisplay))
+        val num = HBox(
+          MathList.translate(restyle(numeratorNodes, numFont), numFont, numStyle.cramped, numStyle.isDisplay, numStyle.isScript),
+        )
+        val den = HBox(
+          MathList.translate(restyle(nodes.toVector, denFont), denFont, denStyle.cramped, denStyle.isDisplay, denStyle.isScript),
+        )
         val params = mathFont.fractionParams(style.isDisplay)
 
         new FractionBox(t, num, den, if bar then params else params.copy(ruleThickness = 0.0))
       case None =>
-        HBox(MathList.translate(nodes.toVector, mathFont, style.cramped, style.isDisplay))
+        HBox(MathList.translate(nodes.toVector, mathFont, style.cramped, style.isDisplay, style.isScript))

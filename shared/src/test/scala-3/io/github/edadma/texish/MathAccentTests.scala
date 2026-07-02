@@ -41,6 +41,20 @@ class MathAccentTests extends AnyFreeSpec with Matchers:
     rec.drawn.exists { case (g, _, _) => g == 0x1D465 } shouldBe true // and the math-italic x nucleus
   }
 
+  "an accent never sinks below its design height over a short nucleus" in {
+    // AccentBaseHeight is the tallest base that needs no raising — a base *shorter* than it must leave the
+    // accent at its design height, not pull it down into the nucleus. An empty box (ascent 0) is the
+    // extreme case: the accent draws exactly at the baseline-relative position the font designed.
+    val rec = new RecordingGlyphTypesetter
+    val bf  = base(rec)
+    val m   = new MathMode(rec, bf, MathStyle.Text)
+
+    m.makeAccent(0x0302, HBox(Vector.empty), wide = false).draw(rec, 0, 0) // baseline at y = 0
+
+    val accentY = rec.drawn.collectFirst { case (g, _, y) if g == 0x0302 => y }.get
+    accentY shouldBe (0.0 +- 0.001) // unshifted — not lowered by the (negative) base excess
+  }
+
   "an accented atom enters the list as an Ord atom" in {
     val t       = new HeadlessTypesetter
     val bf      = base(t)

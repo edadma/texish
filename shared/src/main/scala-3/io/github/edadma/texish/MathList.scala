@@ -75,9 +75,10 @@ object MathList:
     * attached when it has any — preceded by the automatic glue for the (previous atom, this atom) class pair.
     * Explicit spaces are emitted in place and do not break the atom adjacency the spacing is computed from.
     * `mf` is the font this list is set in (its size drives the spacing, its constants the script placement);
-    * `cramped` is whether the list's style is cramped, which lowers superscripts.
+    * `cramped` is whether the list's style is cramped, which lowers superscripts; `isScript` is whether the
+    * style is one of the two script sizes, which suppresses the medium and thick inter-atom spaces.
     */
-  def translate(nodes: Vector[MathNode], mf: MathFont, cramped: Boolean, isDisplay: Boolean): Vector[Box] =
+  def translate(nodes: Vector[MathNode], mf: MathFont, cramped: Boolean, isDisplay: Boolean, isScript: Boolean): Vector[Box] =
     val em                          = mf.size
     val out                         = ArrayBuffer[Box]()
     var prevAtom: Option[MathClass] = None
@@ -85,7 +86,7 @@ object MathList:
     for node <- normalizeBins(nodes) do
       node match
         case a: MathAtom =>
-          prevAtom.foreach(p => MathSpacing.glue(MathSpacing.code(p, a.cls), em).foreach(out += _))
+          prevAtom.foreach(p => MathSpacing.glue(MathSpacing.code(p, a.cls, isScript), em).foreach(out += _))
           out += nucleusBox(a, mf, cramped, isDisplay)
           prevAtom = Some(a.cls)
         case MathSpace(g) =>

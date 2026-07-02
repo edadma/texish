@@ -81,10 +81,13 @@ object MathScriptBox:
     * the OpenType MATH constants. Each result is a positive distance from the baseline. A superscript must
     * clear the baseline (`superscriptBottomMin`) and start high enough (`superscriptShiftUp`, or its cramped
     * variant); a subscript must drop far enough (`subscriptShiftDown`) and keep its top within
-    * `subscriptTopMax` of the baseline; the baseline-drop constants tie both to a tall boxed nucleus. When
-    * both are present the subscript is pushed down until the gap between them reaches `subSuperscriptGapMin`,
-    * and then, if the superscript's bottom sits below `superscriptBottomMaxWithSubscript`, the whole pair is
-    * lifted so the superscript clears that height — exactly rule 18f.
+    * `subscriptTopMax` of the baseline. The baseline-drop constants tie both to a tall *boxed* nucleus — a
+    * built-up sub-formula whose scripts must track its height. A single-glyph nucleus takes no baseline drop
+    * (rule 18a's char case): every letter's scripts sit at the same standard raise, so `x²` and `d²` line up
+    * rather than each superscript riding its own letter's ascender. When both scripts are present the
+    * subscript is pushed down until the gap between them reaches `subSuperscriptGapMin`, and then, if the
+    * superscript's bottom sits below `superscriptBottomMaxWithSubscript`, the whole pair is lifted so the
+    * superscript clears that height — exactly rule 18f.
     */
   def shifts(
       nucleus: Box,
@@ -93,18 +96,19 @@ object MathScriptBox:
       p: MathScriptParams,
       cramped: Boolean,
   ): (Double, Double) =
+    val boxedNucleus = !nucleus.isInstanceOf[GlyphBox]
+
     val supRaw =
       sup.map { s =>
         val base = if cramped then p.superscriptShiftUpCramped else p.superscriptShiftUp
-        math.max(math.max(base, nucleus.ascent - p.superscriptBaselineDropMax), p.superscriptBottomMin + s.descent)
+        val drop = if boxedNucleus then nucleus.ascent - p.superscriptBaselineDropMax else 0.0
+        math.max(math.max(base, drop), p.superscriptBottomMin + s.descent)
       }.getOrElse(0.0)
 
     val subRaw =
       sub.map { s =>
-        math.max(
-          math.max(p.subscriptShiftDown, nucleus.descent + p.subscriptBaselineDropMin),
-          s.ascent - p.subscriptTopMax,
-        )
+        val drop = if boxedNucleus then nucleus.descent + p.subscriptBaselineDropMin else 0.0
+        math.max(math.max(p.subscriptShiftDown, drop), s.ascent - p.subscriptTopMax)
       }.getOrElse(0.0)
 
     (sup, sub) match

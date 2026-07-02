@@ -4,7 +4,10 @@ class HBox(rawBoxes: Seq[Box]) extends ContentBox:
 
   // The line's height comes from its real content; a \vrule then runs to that height. Computing ascent/descent
   // from the non-vrule boxes first means a vrule never inflates the line — it spans whatever the content sets.
-  private val sizing   = rawBoxes.filterNot(_.isInstanceOf[VRule])
+  // Spaces and glue are excluded too: in a horizontal list they contribute width only, as in TeX. (Glue reports
+  // its natural size as `descent` so that vertical stacking advances by it; that must not leak into a line's
+  // depth — inter-atom math glue inflating a numerator's descent was exactly that leak.)
+  private val sizing   = rawBoxes.filterNot(b => b.isInstanceOf[VRule] || b.isSpace)
   val ascent: Double   = if sizing.isEmpty then 0 else sizing.map(_.ascent).max
   val descent: Double  = if sizing.isEmpty then 0 else sizing.map(_.descent).max
   val boxes: Seq[Box]  = rawBoxes.map { case v: VRule => v.sized(ascent, descent); case b => b }

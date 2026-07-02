@@ -123,6 +123,35 @@ class MathScriptTests extends AnyFreeSpec with Matchers:
     ordSup shouldBe (11.0 +- 0.001) // 6 + 5: the superscript is set out past the slanted nucleus
   }
 
+  "a glyph nucleus takes the standard script shifts; only a boxed nucleus tracks its own height" in {
+    // rule 18a: a single character's scripts sit at the standard raise/drop, so x² and d² line up; a
+    // built-up box (a fraction, a parenthesized group) pushes its scripts out past its own extent via the
+    // baseline-drop constants. Params are chosen so the drop terms would dominate if they applied.
+    val t     = new HeadlessTypesetter
+    val bf    = base(t)
+    val glyph = bf.glyphBox('d'.toInt)  // ascent 8, descent 2 on the stub
+    val boxed = HBox(Vector(glyph))     // identical metrics, but a box, not a char
+    val p = MathScriptParams(
+      superscriptShiftUp                = 5.0,
+      superscriptShiftUpCramped         = 4.0,
+      superscriptBottomMin              = 0.0,
+      superscriptBaselineDropMax        = 1.0, // boxed: ascent 8 − 1 = 7 > the standard 5
+      subscriptShiftDown                = 2.0,
+      subscriptTopMax                   = 100.0, // keep the script-top rule out of the way
+      subscriptBaselineDropMin          = 1.0,   // boxed: descent 2 + 1 = 3 > the standard 2
+      subSuperscriptGapMin              = 0.0,
+      superscriptBottomMaxWithSubscript = 0.0,
+      spaceAfterScript                  = 0.0,
+    )
+    val sup = Some(bf.glyphBox('2'.toInt))
+    val sub = Some(bf.glyphBox('0'.toInt))
+
+    MathScriptBox.shifts(glyph, sup, None, p, cramped = false)._1 shouldBe (5.0 +- 0.001)
+    MathScriptBox.shifts(boxed, sup, None, p, cramped = false)._1 shouldBe (7.0 +- 0.001)
+    MathScriptBox.shifts(glyph, None, sub, p, cramped = false)._2 shouldBe (2.0 +- 0.001)
+    MathScriptBox.shifts(boxed, None, sub, p, cramped = false)._2 shouldBe (3.0 +- 0.001)
+  }
+
   "a second script of the same kind on one atom is an error" in {
     val t  = new HeadlessTypesetter
     val bf = base(t)

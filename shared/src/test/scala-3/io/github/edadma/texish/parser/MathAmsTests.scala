@@ -56,6 +56,24 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
     rec2.rules shouldBe 0 // \binom stacks with no rule
   }
 
+  "a forced-style fraction takes its constants from the forced style, not the surrounding script size" in {
+    // \dfrac's operands are full-size wherever it sits; the bar thickness, axis and shifts must match them,
+    // so a \dfrac inside a superscript is geometrically identical to one in running text
+    def frac(parentStyle: MathStyle): FractionBox =
+      val t   = new HeadlessTypesetter
+      val bf  = base(t)
+      val m   = new MathMode(t, bf, parentStyle)
+      val num = part(t, bf, MathStyle.Display.num, 'a')
+      val den = part(t, bf, MathStyle.Display.denom, 'b')
+      m.makeFractionAt(num, den, display = true, bar = true).asInstanceOf[FractionBox]
+
+    val inScript = frac(MathStyle.Text.sup)
+    val inText   = frac(MathStyle.Text)
+
+    inScript.ascent shouldBe (inText.ascent +- 0.001)
+    inScript.descent shouldBe (inText.descent +- 0.001)
+  }
+
   "forcing display style opens the fraction gaps wider than text style" in {
     val t   = new HeadlessTypesetter
     val bf  = base(t)

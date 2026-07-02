@@ -138,16 +138,18 @@ object MathSymbols:
 
   // Control-sequence symbols: name (without the backslash) to codepoint and class.
   private val symbols: Map[String, (Int, MathClass)] = Map(
-    // Lowercase Greek — mathematical italic variables.
+    // Lowercase Greek — mathematical italic variables. Note the TeX convention for the two-form letters:
+    // \epsilon is the lunate ϵ (U+1D716) and \varepsilon the curly ε (U+1D700); \phi is the stroked ϕ
+    // (U+1D719) and \varphi the loopy φ (U+1D711) — the *symbol* codepoints, not the plain Greek letters.
     "alpha"   -> (0x1D6FC, Ord), "beta"  -> (0x1D6FD, Ord), "gamma"   -> (0x1D6FE, Ord),
-    "delta"   -> (0x1D6FF, Ord), "epsilon" -> (0x1D700, Ord), "zeta"  -> (0x1D701, Ord),
+    "delta"   -> (0x1D6FF, Ord), "epsilon" -> (0x1D716, Ord), "zeta"  -> (0x1D701, Ord),
     "eta"     -> (0x1D702, Ord), "theta" -> (0x1D703, Ord), "iota"    -> (0x1D704, Ord),
     "kappa"   -> (0x1D705, Ord), "lambda" -> (0x1D706, Ord), "mu"     -> (0x1D707, Ord),
     "nu"      -> (0x1D708, Ord), "xi"    -> (0x1D709, Ord), "pi"      -> (0x1D70B, Ord),
     "rho"     -> (0x1D70C, Ord), "sigma" -> (0x1D70E, Ord), "tau"     -> (0x1D70F, Ord),
-    "upsilon" -> (0x1D710, Ord), "phi"   -> (0x1D711, Ord), "chi"     -> (0x1D712, Ord),
+    "upsilon" -> (0x1D710, Ord), "phi"   -> (0x1D719, Ord), "chi"     -> (0x1D712, Ord),
     "psi"     -> (0x1D713, Ord), "omega" -> (0x1D714, Ord),
-    "varepsilon" -> (0x1D716, Ord), "vartheta" -> (0x1D717, Ord), "varphi" -> (0x1D719, Ord),
+    "varepsilon" -> (0x1D700, Ord), "vartheta" -> (0x1D717, Ord), "varphi" -> (0x1D711, Ord),
 
     // Uppercase Greek — upright, as in Computer Modern and Latin Modern math.
     "Gamma" -> (0x0393, Ord), "Delta" -> (0x0394, Ord), "Theta" -> (0x0398, Ord),

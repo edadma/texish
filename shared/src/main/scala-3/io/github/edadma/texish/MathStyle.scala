@@ -38,6 +38,10 @@ case class MathStyle(size: MathSize, cramped: Boolean):
   /** Whether this is display style — display fractions/radicals use the wider gaps and shifts. */
   def isDisplay: Boolean = size == Display
 
+  /** Whether this is one of the two script sizes, where the medium and thick inter-atom spaces (the
+    * TeXbook's parenthesized table entries) are suppressed. */
+  def isScript: Boolean = size == Script || size == ScriptScript
+
   private def scriptSize: MathSize = size match
     case Display | Text        => Script
     case Script | ScriptScript => ScriptScript

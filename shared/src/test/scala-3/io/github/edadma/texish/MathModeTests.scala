@@ -133,6 +133,68 @@ class MathModeTests extends AnyFreeSpec with Matchers:
     cls('7') shouldBe Some(MathClass.Ord)
   }
 
+  "inter-atom glue contributes only width to the formula box, never depth: a+b" in {
+    val box = mathBox { m => m.addChar('a'); m.addChar('+'); m.addChar('b') }
+
+    // the medium glue around '+' reports its natural size as `descent` for vertical stacking; in a
+    // horizontal box that must not leak into the formula's depth (it would raise numerators, oversize
+    // fences and radicals) — the depth is the glyphs' own
+    box.descent shouldBe (2.0 +- 0.001)
+    box.ascent shouldBe (8.0 +- 0.001)
+  }
+
+  "an explicit space wider than the glyphs still adds no depth: a\\quad b" in {
+    val box = mathBox { m => m.addChar('a'); m.addNode(MathSpace(Glue(100))); m.addChar('b') }
+
+    box.width shouldBe (6.0 + 100 + 6 +- 0.001)
+    box.descent shouldBe (2.0 +- 0.001)
+  }
+
+  "the two-form Greek letters follow the TeX convention: \\epsilon lunate, \\varepsilon curly" in {
+    val t  = new HeadlessTypesetter
+    val mf = mathFont(t)
+
+    def cp(name: String) = MathSymbols.commandNode(mf, name).map { case a: MathAtom => a.nucleusCp.get; case _ => -1 }
+
+    cp("epsilon") shouldBe Some(0x1D716)    // italic lunate epsilon symbol ϵ
+    cp("varepsilon") shouldBe Some(0x1D700) // italic curly ε
+    cp("phi") shouldBe Some(0x1D719)        // italic stroked phi symbol ϕ
+    cp("varphi") shouldBe Some(0x1D711)     // italic loopy φ
+  }
+
+  "medium and thick spaces vanish at script size, so a superscript's a+b packs tight" in {
+    val t = new HeadlessTypesetter
+    val m = new MathMode(t, mathFont(t), MathStyle.Text.sup) // script style, as inside x^{…}
+
+    m.addChar('a'); m.addChar('+'); m.addChar('b')
+    val box = m.result.asInstanceOf[HBox]
+
+    box.boxes should have length 3 // a, +, b — no glue: the parenthesized table entries are suppressed
+    box.width shouldBe (18.0 +- 0.001)
+  }
+
+  "thin operator spaces survive at script size: \\sin x in a superscript" in {
+    val t = new HeadlessTypesetter
+    val m = new MathMode(t, mathFont(t), MathStyle.Text.sup)
+
+    m.addCommand("sin") shouldBe true
+    m.addChar('x')
+    val box = m.result.asInstanceOf[HBox]
+
+    box.boxes should have length 3 // sin, thin glue, x — Op–Ord is unparenthesized in the TeXbook table
+    val scriptEm = 14.0 * 0.7
+    box.boxes(1).asInstanceOf[Glue].naturalSize shouldBe (3.0 / 18 * scriptEm +- 0.001)
+  }
+
+  "matrix cells keep the surrounding crampedness when display drops them to text size" in {
+    val t  = new HeadlessTypesetter
+    val mf = mathFont(t)
+
+    new MathMode(t, mf, MathStyle.Display).cellStyle shouldBe MathStyle.Text
+    new MathMode(t, mf, MathStyle.Display.cramp).cellStyle shouldBe MathStyle.Text.cramp
+    new MathMode(t, mf, MathStyle.Text.cramp).cellStyle shouldBe MathStyle.Text.cramp
+  }
+
   "translating draws each atom through the glyph seam at the spaced positions" in {
     val rec = new RecordingGlyphTypesetter
     val m   = new MathMode(rec, new MathFont(rec, rec.currentFont, None))
