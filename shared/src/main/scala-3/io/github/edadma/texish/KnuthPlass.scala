@@ -15,7 +15,8 @@ object KnuthPlass:
 
   import Item.*
 
-  // A potential breakpoint with its cost
+  // A potential breakpoint with its cost. `fitness` is the fitness class of the line ENDING at this break,
+  // kept so the next line can be charged \adjdemerits when adjacent lines jump more than one class.
   case class Breakpoint(
       position: Int,       // index in item list
       line: Int,           // which line number
@@ -23,6 +24,7 @@ object KnuthPlass:
       totalWidth: Double,
       totalStretch: Double,
       totalShrink: Double,
+      fitness: Int,
       previous: Breakpoint | Null,
   )
 
@@ -72,6 +74,15 @@ object KnuthPlass:
     val linepenalty      = t.getNumber("linepenalty")
     val adjdemerits      = t.getNumber("adjdemerits")
     val emergencystretch = t.getNumber("emergencystretch")
+    val parfillskip      = t.getGlue("parfillskip")
+
+    // Glue flexibility split by infinity order: finite (order 0) stretch/shrink enters the badness ratio,
+    // while any fil/fill component absorbs the whole surplus or deficit — a line containing \hfil is never
+    // under- or overfull, exactly as the setter will set it.
+    def finiteStr(g: Glue): Double = if g.stretchOrder == 0 then g.stretch else 0.0
+    def infStr(g: Glue): Double    = if g.stretchOrder > 0 then g.stretch else 0.0
+    def finiteShr(g: Glue): Double = if g.shrinkOrder == 0 then g.shrink else 0.0
+    def infShr(g: Glue): Double    = if g.shrinkOrder > 0 then g.shrink else 0.0
 
     // Per-line measure. \leftskip and \rightskip narrow every line by their natural size and lend it
     // their flexibility; \hangindent narrows the lines selected by \hangafter by |hangindent| (a
@@ -82,46 +93,87 @@ object KnuthPlass:
     val rightskip  = t.getGlue("rightskip")
     val hangindent = t.getNumber("hangindent")
     val hangafter  = t.getNumber("hangafter").toInt
-    val marginNat  = leftskip.naturalSize + rightskip.naturalSize
-    val marginStr  = leftskip.stretch + rightskip.stretch
-    val marginShr  = leftskip.shrink + rightskip.shrink
+    val marginNat    = leftskip.naturalSize + rightskip.naturalSize
+    val marginStr    = finiteStr(leftskip) + finiteStr(rightskip)
+    val marginStrInf = infStr(leftskip) + infStr(rightskip)
+    val marginShr    = finiteShr(leftskip) + finiteShr(rightskip)
+    val marginShrInf = infShr(leftskip) + infShr(rightskip)
     def hung(n: Int): Boolean = if hangafter >= 0 then n >= hangafter else n < -hangafter
     def measure(n: Int): Double =
       hsize - marginNat - (if hangindent != 0 && hung(n) then math.abs(hangindent) else 0.0) - extraInset(n)
 
-    // Convert boxes to items, expanding hyphenation points
-    val items = buildItems(boxes, hyphenpenalty, t.hyphenationLanguage)
+    // Glue and penalties are discardable: after a break, everything up to the next box or discretionary
+    // vanishes, so the following line never opens with an interword space or a stray \hskip.
+    def isDiscardable(it: Item): Boolean = it match
+      case _: GlueItem | _: PenaltyItem => true
+      case _                            => false
+
+    // Convert boxes to items, expanding hyphenation points. Trailing discardables are dropped, as TeX drops
+    // a paragraph's final glue before appending \parfillskip — otherwise a break at that last glue would
+    // offer a legal empty final line.
+    val allItems = buildItems(boxes, hyphenpenalty, t.hyphenationLanguage)
+    val items    = allItems.take(allItems.lastIndexWhere(it => !isDiscardable(it)) + 1)
 
     if items.isEmpty then return Some(Seq.empty)
 
-    // Cumulative width/stretch/shrink up to each position
-    val cumWidth   = new Array[Double](items.length + 1)
-    val cumStretch = new Array[Double](items.length + 1)
-    val cumShrink  = new Array[Double](items.length + 1)
-
-    cumWidth(0) = 0
-    cumStretch(0) = 0
-    cumShrink(0) = 0
+    // Cumulative width and flexibility up to each position. A penalty contributes NO width here: its width
+    // (the hyphen) counts only when the break is actually taken there, added explicitly at the break — a
+    // line merely passing through hyphenation points must not be measured wider than it renders.
+    val cumWidth      = new Array[Double](items.length + 1)
+    val cumStretch    = new Array[Double](items.length + 1)
+    val cumShrink     = new Array[Double](items.length + 1)
+    val cumStretchInf = new Array[Double](items.length + 1)
+    val cumShrinkInf  = new Array[Double](items.length + 1)
 
     for i <- items.indices do
+      cumWidth(i + 1) = cumWidth(i)
+      cumStretch(i + 1) = cumStretch(i)
+      cumShrink(i + 1) = cumShrink(i)
+      cumStretchInf(i + 1) = cumStretchInf(i)
+      cumShrinkInf(i + 1) = cumShrinkInf(i)
       items(i) match
         case BoxItem(box, _) =>
-          cumWidth(i + 1) = cumWidth(i) + box.width
-          cumStretch(i + 1) = cumStretch(i)
-          cumShrink(i + 1) = cumShrink(i)
+          cumWidth(i + 1) += box.width
         case GlueItem(glue, _) =>
-          cumWidth(i + 1) = cumWidth(i) + glue.naturalSize
-          cumStretch(i + 1) = cumStretch(i) + glue.stretch
-          cumShrink(i + 1) = cumShrink(i) + glue.shrink
-        case PenaltyItem(_, _, w, _) =>
-          cumWidth(i + 1) = cumWidth(i) + w
-          cumStretch(i + 1) = cumStretch(i)
-          cumShrink(i + 1) = cumShrink(i)
+          cumWidth(i + 1) += glue.naturalSize
+          cumStretch(i + 1) += finiteStr(glue)
+          cumShrink(i + 1) += finiteShr(glue)
+          cumStretchInf(i + 1) += infStr(glue)
+          cumShrinkInf(i + 1) += infShr(glue)
+        case PenaltyItem(_, _, _, _) => ()
         case DiscItem(_, _, noBreak, _, _) =>
           // unbroken, a discretionary occupies its no-break width; breaking trades it for `pre`+`post`
-          cumWidth(i + 1) = cumWidth(i) + noBreak.map(_.width).sum
-          cumStretch(i + 1) = cumStretch(i)
-          cumShrink(i + 1) = cumShrink(i)
+          cumWidth(i + 1) += noBreak.map(_.width).sum
+
+    // Where the line after a break at `breakPos` resumes: the first non-discardable item past the break.
+    val resumeAt = new Array[Int](items.length + 1)
+    resumeAt(items.length) = items.length
+    for i <- items.length - 1 to 0 by -1 do
+      resumeAt(i) = if isDiscardable(items(i)) then resumeAt(i + 1) else i
+    def lineStart(breakPos: Int): Int =
+      if breakPos < 0 then 0 else resumeAt(math.min(breakPos + 1, items.length))
+
+    // The width a broken discretionary opens the following line with (its `post` material).
+    def postWidth(breakPos: Int): Double =
+      if breakPos < 0 then 0.0
+      else
+        items(breakPos) match
+          case DiscItem(_, post, _, _, _) => post.map(_.width).sum
+          case _                          => 0.0
+
+    // Badness with infinity orders honoured: infinite stretch absorbs any deficit, infinite shrink any
+    // overrun, at zero badness; only the finite components enter the ratio.
+    def badnessOf(delta: Double, stretch: Double, stretchInf: Double, shrink: Double, shrinkInf: Double): Double =
+      if delta > 0 && stretchInf > 0 then 0.0
+      else if delta < 0 && shrinkInf > 0 then 0.0
+      else computeBadness(delta, stretch, shrink)
+
+    // The stretch/shrink ratio the fitness class is judged by — zero (a decent line) when infinite
+    // flexibility absorbed the difference.
+    def fitnessRatio(delta: Double, stretch: Double, stretchInf: Double, shrink: Double, shrinkInf: Double): Double =
+      if delta > 0 then if stretchInf > 0 then 0.0 else if stretch > 0 then delta / stretch else 0.0
+      else if delta < 0 then if shrinkInf > 0 then 0.0 else if shrink > 0 then delta / shrink else 0.0
+      else 0.0
 
     // One Knuth-Plass pass. A line may break at index i (after the active break a) only when its badness is
     // within `effTolerance`; `emergency` is extra per-line stretchability (TeX's \emergencystretch) lent to
@@ -129,6 +181,14 @@ object KnuthPlass:
     // badness instead of failing. Returns the least-demerit end breakpoint, or None if no chain of legal
     // breaks reaches the paragraph's end.
     def solve(effTolerance: Double, emergency: Double): Option[Breakpoint] =
+      // Keep only the best breakpoint for each (position, line, fitness) combination. Fitness stays in the
+      // key so a tight-ending and a loose-ending chain both survive — \adjdemerits may make either the
+      // better predecessor for the next line.
+      def prune(bs: ArrayBuffer[Breakpoint]): ArrayBuffer[Breakpoint] =
+        bs.groupBy(b => (b.position, b.line, b.fitness))
+          .map(_._2.minBy(_.totalDemerits))
+          .to(ArrayBuffer)
+
       // Active breakpoints - start with break at position -1 (before first item)
       var activeBreaks = ArrayBuffer[Breakpoint](
         Breakpoint(
@@ -138,6 +198,7 @@ object KnuthPlass:
           totalWidth = 0,
           totalStretch = 0,
           totalShrink = 0,
+          fitness = NormalFit,
           previous = null,
         ),
       )
@@ -149,8 +210,9 @@ object KnuthPlass:
         // Can we break here?
         val canBreak = item match
           case GlueItem(glue, _) if !glue.nobreak =>
-            // Can break before glue if preceded by non-glue
-            i > 0 && !items(i - 1).isInstanceOf[GlueItem]
+            // glue is a legal breakpoint only after a non-discardable item (a box or a discretionary), as
+            // in TeX — so \nobreak (an inhibiting penalty) before a space really does forbid the break
+            i > 0 && !isDiscardable(items(i - 1))
           case PenaltyItem(p, _, _, _) =>
             p < 10000 // Can break at penalty if not infinite
           case DiscItem(_, _, _, p, _) =>
@@ -158,75 +220,80 @@ object KnuthPlass:
           case _ => false
 
         if canBreak then
+          // A forcing penalty (\penalty-10000, \break) must be taken: it accepts any badness, and once
+          // processed every chain that would run a line past it is dropped.
+          val forced = item match
+            case PenaltyItem(p, _, _, _) => p <= -10000
+            case DiscItem(_, _, _, p, _) => p <= -10000
+            case _                       => false
+
           val newBreaks = ArrayBuffer[Breakpoint]()
 
           for a <- activeBreaks do
-            // Compute line width from a to i
-            val startPos = a.position + 1
-            val lineWidth = item match
-              case GlueItem(_, _) => cumWidth(i) - cumWidth(math.max(0, startPos))
+            // Compute line width from a to i; the line resumes after the previous break's discardables and
+            // opens with a broken discretionary's `post` material
+            val startPos = lineStart(a.position)
+            val lineWidth = postWidth(a.position) + (item match
+              case GlueItem(_, _) => cumWidth(i) - cumWidth(startPos)
               case PenaltyItem(_, _, w, _) =>
-                cumWidth(i) - cumWidth(math.max(0, startPos)) + w
+                cumWidth(i) - cumWidth(startPos) + w
               case DiscItem(pre, _, _, _, _) =>
                 // breaking here ends the line with `pre` instead of the disc's inline material
-                cumWidth(i) - cumWidth(math.max(0, startPos)) + pre.map(_.width).sum
-              case _ => cumWidth(i + 1) - cumWidth(math.max(0, startPos))
+                cumWidth(i) - cumWidth(startPos) + pre.map(_.width).sum
+              case _ => cumWidth(i + 1) - cumWidth(startPos))
 
-            val lineStretch = cumStretch(i) - cumStretch(math.max(0, startPos)) + marginStr + emergency
-            val lineShrink  = cumShrink(i) - cumShrink(math.max(0, startPos)) + marginShr
+            val lineStretch    = cumStretch(i) - cumStretch(startPos) + marginStr + emergency
+            val lineStretchInf = cumStretchInf(i) - cumStretchInf(startPos) + marginStrInf
+            val lineShrink     = cumShrink(i) - cumShrink(startPos) + marginShr
+            val lineShrinkInf  = cumShrinkInf(i) - cumShrinkInf(startPos) + marginShrInf
 
             val delta   = measure(a.line) - lineWidth
-            val badness = computeBadness(delta, lineStretch, lineShrink)
+            val badness = badnessOf(delta, lineStretch, lineStretchInf, lineShrink, lineShrinkInf)
 
-            if badness <= effTolerance then
+            if badness <= effTolerance || forced then
               val penalty = item match
                 case PenaltyItem(p, _, _, _) => p
                 case DiscItem(_, _, _, p, _) => p
                 case _                       => 0.0
 
-              val demerits = computeDemerits(badness, penalty, linepenalty)
-
-              // Compute fitness class for adjacent line penalty
-              val r = if delta > 0 && lineStretch > 0 then delta / lineStretch
-              else if delta < 0 && lineShrink > 0 then delta / lineShrink
-              else 0.0
-              val fitness = fitnessClass(r)
-
-              val totalDem = a.totalDemerits + demerits
+              val fitness  = fitnessClass(fitnessRatio(delta, lineStretch, lineStretchInf, lineShrink, lineShrinkInf))
+              var demerits = computeDemerits(badness, penalty, linepenalty)
+              if math.abs(fitness - a.fitness) > 1 then demerits += adjdemerits
 
               newBreaks += Breakpoint(
                 position = i,
                 line = a.line + 1,
-                totalDemerits = totalDem,
+                totalDemerits = a.totalDemerits + demerits,
                 totalWidth = cumWidth(i + 1),
                 totalStretch = cumStretch(i + 1),
                 totalShrink = cumShrink(i + 1),
+                fitness = fitness,
                 previous = a,
               )
 
-          // Add new breaks and prune dominated ones
-          if newBreaks.nonEmpty then
-            activeBreaks ++= newBreaks
-            // Keep only the best breakpoint for each (position, line) combination
-            activeBreaks = activeBreaks
-              .groupBy(b => (b.position, b.line))
-              .map(_._2.minBy(_.totalDemerits))
-              .to(ArrayBuffer)
+          // Add new breaks and prune dominated ones; a forced break replaces the actives outright
+          if forced then activeBreaks = prune(newBreaks)
+          else if newBreaks.nonEmpty then activeBreaks = prune(activeBreaks ++ newBreaks)
 
-      // Find the best final breakpoint
-      // Add a virtual break at the end
+      // Find the best final breakpoint: a virtual break at the end. The last line carries \parfillskip —
+      // normally infinitely stretchable, so a short final line (even a single word) is perfectly fine,
+      // exactly as the line will be set.
       val endBreaks = ArrayBuffer[Breakpoint]()
       for a <- activeBreaks do
-        val startPos    = a.position + 1
-        val lineWidth   = cumWidth(items.length) - cumWidth(math.max(0, startPos))
-        val lineStretch = cumStretch(items.length) - cumStretch(math.max(0, startPos)) + marginStr + emergency
-        val lineShrink  = cumShrink(items.length) - cumShrink(math.max(0, startPos)) + marginShr
-        val delta       = measure(a.line) - lineWidth
-        val badness     = computeBadness(delta, lineStretch, lineShrink)
+        val startPos       = lineStart(a.position)
+        val lineWidth      = cumWidth(items.length) - cumWidth(startPos) + postWidth(a.position) + parfillskip.naturalSize
+        val lineStretch    = cumStretch(items.length) - cumStretch(startPos) + marginStr + emergency + finiteStr(parfillskip)
+        val lineStretchInf = cumStretchInf(items.length) - cumStretchInf(startPos) + marginStrInf + infStr(parfillskip)
+        val lineShrink     = cumShrink(items.length) - cumShrink(startPos) + marginShr + finiteShr(parfillskip)
+        val lineShrinkInf  = cumShrinkInf(items.length) - cumShrinkInf(startPos) + marginShrInf + infShr(parfillskip)
+        val delta          = measure(a.line) - lineWidth
+        val badness        = badnessOf(delta, lineStretch, lineStretchInf, lineShrink, lineShrinkInf)
 
-        // Last line is more tolerant (uses parfillskip)
+        // Last line is more tolerant
         if badness <= 10000 then
-          val demerits = computeDemerits(math.min(badness, effTolerance), 0, linepenalty)
+          val fitness  = fitnessClass(fitnessRatio(delta, lineStretch, lineStretchInf, lineShrink, lineShrinkInf))
+          var demerits = computeDemerits(math.min(badness, effTolerance), 0, linepenalty)
+          if math.abs(fitness - a.fitness) > 1 then demerits += adjdemerits
           endBreaks += Breakpoint(
             position = items.length,
             line = a.line + 1,
@@ -234,6 +301,7 @@ object KnuthPlass:
             totalWidth = cumWidth(items.length),
             totalStretch = cumStretch(items.length),
             totalShrink = cumShrink(items.length),
+            fitness = fitness,
             previous = a,
           )
 
@@ -298,7 +366,9 @@ object KnuthPlass:
           case _ =>
 
       lines += lineBoxes.toSeq
-      startIdx = breakPos + 1  // Skip the break item (glue, penalty, or discretionary)
+      // Skip the break item and the discardables after it (glue, penalties) — the same items the solver's
+      // lineStart excluded from the next line's measure
+      startIdx = lineStart(breakPos)
 
     // Handle the last line (from last break to end)
     if startIdx < items.length || pendingPost.nonEmpty then
@@ -316,6 +386,9 @@ object KnuthPlass:
       box match
         case g: Glue =>
           items += GlueItem(g, idx)
+        case p: Penalty =>
+          // an explicit \penalty / \nobreak / \break marker: a break control, not content
+          items += PenaltyItem(p.penalty.toDouble, false, 0, idx)
         case d: DiscretionaryBox =>
           items += DiscItem(d.pre, d.post, d.noBreak, hyphenpenalty, idx)
         case cb: CharBox if CJK.hasCJK(cb.text) =>

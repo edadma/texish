@@ -194,14 +194,19 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       else null
 
     // Group into reorder units. A base character and the non-spacing marks that follow it form one cluster,
-    // so reversing a right-to-left run does not strand a vowel point ahead of its consonant; a non-text box
-    // is its own unit. Each unit takes the level of its base character.
+    // so reversing a right-to-left run does not strand a vowel point ahead of its consonant; the low half of
+    // a surrogate pair likewise rides with its high half, so an astral character (an emoji, a plane-1
+    // letter) is never split and re-drawn as two broken code units by a run reversal. A non-text box is its
+    // own unit. Each unit takes the level of its base character.
     val unitChars = ArrayBuffer.empty[ArrayBuffer[Int]]
     val unitLevel = ArrayBuffer.empty[Int]
     var i         = 0
     while i < s.length do
-      val isMark = srcChar(i) != null && Bidi.classify(s.charAt(i).toInt) == BidiClass.NSM
-      if isMark && unitChars.nonEmpty && srcChar(unitChars.last.head) != null then unitChars.last += i
+      val isText = srcChar(i) != null
+      val isMark = isText && Bidi.classify(s.charAt(i).toInt) == BidiClass.NSM
+      val isPairTail = isText && Character.isLowSurrogate(s.charAt(i)) &&
+        i > 0 && Character.isHighSurrogate(s.charAt(i - 1)) && (srcChar(i - 1) eq srcChar(i))
+      if (isMark || isPairTail) && unitChars.nonEmpty && srcChar(unitChars.last.head) != null then unitChars.last += i
       else
         unitChars += ArrayBuffer(i)
         unitLevel += levels(i)
@@ -401,7 +406,9 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       line()
 
       if hbox.nonEmpty && hbox.last.isSpace then hbox.removeLast()
-      if boxes.nonEmpty && boxes.head.isSpace then boxes.remove(0)
+      // discard everything discardable after the break — a run of spaces (an explicit \hskip after the
+      // interword space, say) must not open the next line, exactly as on the optimal path
+      while boxes.nonEmpty && boxes.head.isSpace do boxes.remove(0)
 
       // Harvest the content the fit loop laid down — everything after the leading \leftskip — and set the
       // line through the shared emitter, so a right-to-left or mixed line is reordered and \parfillskip

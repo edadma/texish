@@ -336,11 +336,14 @@ object Bidi:
     val opens  = scala.collection.mutable.ArrayBuffer.empty[(Int, Int)] // (expected-close codepoint, index)
     val pairs  = scala.collection.mutable.ArrayBuffer.empty[(Int, Int)]
     var i      = 0
-    while i < cps.length do
+    var halted = false // BD16: an opener with the stack full stops bracket processing for the rest of the run
+    while i < cps.length && !halted do
       if types(i) == ON then
         val cp    = cps(i)
         val close = matchingBracket(cp)
-        if close >= 0 && opens.length < 63 then opens.append((close, i))
+        if close >= 0 then
+          if opens.length < 63 then opens.append((close, i))
+          else halted = true // keep the pairs found so far, per the spec
         else
           // Is this a closing bracket that matches something open?
           var s = opens.length - 1

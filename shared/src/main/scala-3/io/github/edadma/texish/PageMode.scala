@@ -120,6 +120,7 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     val glueStretch = boxes.scanLeft(0.0)((a, b) => a + (b match { case g: Glue if g.stretchOrder == 0 => g.stretch; case _ => 0.0 }))
     val glueShrink  = boxes.scanLeft(0.0)((a, b) => a + (b match { case g: Glue if g.shrinkOrder == 0 => g.shrink; case _ => 0.0 }))
     val canFill     = boxes.scanLeft(false)((a, b) => a || (b match { case g: Glue => g.stretchOrder >= 1; case _ => false }))
+    val canShrinkInf = boxes.scanLeft(false)((a, b) => a || (b match { case g: Glue => g.shrinkOrder >= 1; case _ => false }))
 
     val Infeasible = Double.PositiveInfinity
 
@@ -133,7 +134,8 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
           else math.min(10000.0, 100.0 * math.pow(short / glueStretch(i), 3))
         else
           val over = natural - vsize
-          if over <= glueShrink(i) + 1e-6 && glueShrink(i) > 1e-6 then
+          if canShrinkInf(i) then 0.0 // a \vss in the prefix absorbs any overrun
+          else if over <= glueShrink(i) + 1e-6 && glueShrink(i) > 1e-6 then
             math.min(10000.0, 100.0 * math.pow(over / glueShrink(i), 3))
           else Infeasible
       val penalty = boxes(i) match { case p: Penalty => p.penalty.toDouble; case _ => 0.0 }

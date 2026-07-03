@@ -7,7 +7,7 @@ trait HorizontalMode extends Builder:
     if nonEmpty then
       (last, box) match
         case (l: CharBox, b: CharBox)
-            if b.text == " " &&
+            if b.text == " " && l.text.nonEmpty &&
               !(l.text.last == '.' && Abbreviation(l.text.dropRight(1))) &&
               ".!?:;".contains(l.text.last) =>
           super.add(t.getGlue("xspaceskip"))

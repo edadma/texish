@@ -36,9 +36,11 @@ class DocumentMode(val t: Typesetter) extends Mode:
 
     val folds = vfolds * hfolds
 
+    // the panel position within the CURRENT sheet: both coordinates come from the per-sheet fold index, so
+    // every sheet's panels start again at the top-left rather than marching off the bottom of sheet two
     val fold   = page % folds
-    val hfold  = page % hfolds
-    val vfold  = page / hfolds
+    val hfold  = fold % hfolds
+    val vfold  = fold / hfolds
     val width  = t.getNumber("paperwidth") / hfolds
     val height = t.getNumber("paperheight") / vfolds
 
