@@ -14,20 +14,20 @@ class GsubDevanagariFontTests extends AnyFreeSpec with Matchers:
 
   private val font =
     new OtfFont(Files.readAllBytes(Paths.get("fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf")))
-  private val shaper = IndicShaper.from(font.tableBytes("GSUB")).get
+  private val shaper = IndicShaper.from(font.tableBytes("GSUB"), font.tableBytes("GDEF")).get
   private val gpos   = Gpos.from(font.tableBytes("GPOS"), font.tableBytes("GDEF"), font.unitsPerEm).get
 
   private def g(cp: Int): Int          = font.glyphIndex(cp)
   private def shape(word: String): Array[Int] = shaper.shape(word.toArray.map(_.toInt), g)
 
   "the font is recognised as a Devanagari shaper" in {
-    IndicShaper.from(font.tableBytes("GSUB")) shouldBe defined
-    Gsub.fromIndic(font.tableBytes("GSUB"), Devanagari.scriptTags).get.boundToRequestedScript shouldBe true
+    IndicShaper.from(font.tableBytes("GSUB"), font.tableBytes("GDEF")) shouldBe defined
+    Gsub.fromIndic(font.tableBytes("GSUB"), font.tableBytes("GDEF"), Devanagari.scriptTags).get.boundToRequestedScript shouldBe true
   }
 
   "the Naskh Arabic face is not mistaken for a Devanagari shaper" in {
     val arabic = new OtfFont(Files.readAllBytes(Paths.get("fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf")))
-    IndicShaper.from(arabic.tableBytes("GSUB")) shouldBe None
+    IndicShaper.from(arabic.tableBytes("GSUB"), arabic.tableBytes("GDEF")) shouldBe None
   }
 
   "the short-i sign is reordered before its base consonant" in {
@@ -88,6 +88,16 @@ class GsubDevanagariFontTests extends AnyFreeSpec with Matchers:
     places.last.isMark shouldBe true    // the reph is a mark…
     places.last.attach should be >= 0   // …attached to its base
     places.count(_.isMark) shouldBe 1
+  }
+
+  "a Devanagari reph follows a post-base aa sign — its position is per-script" in {
+    // र्मा (ra, virama, ma, aa) → [ma, aa, reph], confirmed with hb-shape: unlike Bengali, the Devanagari
+    // reph closes the cluster, after the post-base vowel sign.
+    val glyphs = shape("र्मा")
+    glyphs.length shouldBe 3
+    glyphs(0) shouldBe g(0x092E) // ma
+    glyphs(1) shouldBe g(0x093E) // the aa sign stays right after its base
+    gpos.position(glyphs).last.isMark shouldBe true // the reph, above the syllable
   }
 
   "a reph over a bare base keeps the base spacing and the reph floating above" in {

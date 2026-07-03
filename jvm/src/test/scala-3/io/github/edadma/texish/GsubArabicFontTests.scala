@@ -18,7 +18,7 @@ class GsubArabicFontTests extends AnyFreeSpec with Matchers:
   import JoiningForm.*
 
   private val font = new OtfFont(Files.readAllBytes(Paths.get("fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf")))
-  private val gsub = Gsub.from(font.tableBytes("GSUB")).get
+  private val gsub = Gsub.from(font.tableBytes("GSUB"), font.tableBytes("GDEF")).get
   private val gpos = Gpos.from(font.tableBytes("GPOS"), font.tableBytes("GDEF"), font.unitsPerEm).get
 
   private def g(cp: Int): Int = font.glyphIndex(cp)
@@ -97,6 +97,23 @@ class GsubArabicFontTests extends AnyFreeSpec with Matchers:
     val glyphs   = gsub.shape(cps.map(g), ArabicShaping.resolveForms(cps))
     glyphs should not contain lamMedi  // became the medial lam-alef rlig variant
     glyphs should not contain alefFina // became the final alef rlig variant
+  }
+
+  "the lam-alef ligature still forms across an intervening vowel mark" in {
+    // لَا — lam, fatha, alef. The font's rlig lookup carries IGNORE_MARKS, so the contextual pair must match
+    // across the fatha exactly as HarfBuzz does (verified with hb-shape: uni0644.init.rlig, uni064E,
+    // uni0627.fina.rlig); the fatha survives in place, attached to the lam half of the ligature by GPOS.
+    def shaped(word: String): Array[Int] =
+      val cps = word.toArray.map(_.toInt)
+      gsub.shape(cps.map(g), ArabicShaping.resolveForms(cps))
+
+    val plain   = shaped("لا")  // the unpointed pair: [lam.rlig, alef.rlig]
+    val pointed = shaped("لَا") // the same pair with a fatha between the letters
+
+    pointed.length shouldBe 3
+    pointed(0) shouldBe plain(0)  // the lam still takes its .rlig form
+    pointed(2) shouldBe plain(1)  // and the alef its .rlig form
+    pointed(1) shouldBe g(0x064e) // the fatha stays put between them
   }
 
   "the pointed word Allah forms its single calligraphic ligature" in {

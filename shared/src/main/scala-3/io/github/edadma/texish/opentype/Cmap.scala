@@ -96,9 +96,15 @@ object Cmap:
     (cp: Int) =>
       if cp < 0 || cp > 0xffff then 0
       else
-        var seg = 0
-        while seg < segCount && endCode(seg) < cp do seg += 1
-        if seg >= segCount || startCode(seg) > cp then 0
+        // binary search for the first segment whose endCode covers cp — this lookup sits in the
+        // per-character hot path, and a text font can carry hundreds of segments
+        var lo = 0
+        var hi = segCount - 1
+        while lo < hi do
+          val mid = (lo + hi) >>> 1
+          if endCode(mid) < cp then lo = mid + 1 else hi = mid
+        val seg = lo
+        if seg >= segCount || endCode(seg) < cp || startCode(seg) > cp then 0
         else if idRangeOff(seg) == 0 then (cp + idDelta(seg)) & 0xffff
         else
           // idRangeOffset indexes into glyphIdArray, which directly follows the idRangeOffset array; the offset

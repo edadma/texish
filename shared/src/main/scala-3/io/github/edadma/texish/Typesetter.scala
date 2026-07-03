@@ -197,7 +197,7 @@ abstract class Typesetter:
     * glyphs through the plain path. The joining forms themselves are decided font-free in
     * [[io.github.edadma.texish.opentype.ArabicShaping]]; this turns a decided form into the shaped glyph. */
   def gsubShaper(font: RenderFont): Option[Gsub] =
-    gsubShaperCache.getOrElseUpdate(font, Gsub.from(sfntTable(font, "GSUB")))
+    gsubShaperCache.getOrElseUpdate(font, Gsub.from(sfntTable(font, "GSUB"), sfntTable(font, "GDEF")))
 
   // Parsed Indic shapers, one per render font whose GSUB carries an Indic script (Devanagari, Bengali, …).
   // Read once and cached like the other shapers, since an Indic paragraph draws many runs in the same font.
@@ -208,7 +208,7 @@ abstract class Typesetter:
     * and shows the font's nominal glyphs. The clustering and pre-base reordering are font-free (see
     * [[io.github.edadma.texish.opentype.IndicScript]]); this drives the font's GSUB features around them. */
   def indicShaper(font: RenderFont): Option[IndicShaper] =
-    indicShaperCache.getOrElseUpdate(font, IndicShaper.from(sfntTable(font, "GSUB")))
+    indicShaperCache.getOrElseUpdate(font, IndicShaper.from(sfntTable(font, "GSUB"), sfntTable(font, "GDEF")))
 
   def loadImage(path: String): (ImageHandle, Int, Int)
 

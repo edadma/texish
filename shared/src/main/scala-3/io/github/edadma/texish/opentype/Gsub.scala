@@ -69,31 +69,39 @@ object Gsub:
   // (`dlig`) are left off, as in conventional typesetting.
   private val PostFeatures = Seq("rlig", "liga")
 
-  /** Build an Arabic shaper from a font's raw `GSUB` bytes, or None when the font has no Arabic form
-    * features (so the caller keeps the plain text path). */
-  def from(gsub: Option[Array[Byte]]): Option[Gsub] =
+  /** Build an Arabic shaper from a font's raw `GSUB` (and `GDEF`) bytes, or None when the font has no Arabic
+    * form features (so the caller keeps the plain text path). */
+  def from(gsub: Option[Array[Byte]], gdef: Option[Array[Byte]] = None): Option[Gsub] =
     gsub.flatMap { data =>
-      val g = new Gsub(data, Seq("arab"))
+      val g = new Gsub(data, Seq("arab"), Gdef.from(gdef))
       if g.hasFormSubstitution then Some(g) else None
     }
 
-  /** Build an Indic shaper from a font's raw `GSUB` bytes for the script whose OpenType tags are `scriptTags`
-    * (Devanagari passes `dev2`, `deva`; Bengali passes `bng2`, `beng`), or None when the font carries none of
-    * those script tables — a font that does not shape the script keeps the plain text path. The same subtable
-    * parsing and lookup machinery the Arabic shaper uses is reused here; the Indic reordering and feature order
-    * live in `io.github.edadma.texish.opentype.IndicShaper`, which drives this by feature name. */
-  def fromIndic(gsub: Option[Array[Byte]], scriptTags: Seq[String]): Option[Gsub] =
+  /** Build an Indic shaper from a font's raw `GSUB` (and `GDEF`) bytes for the script whose OpenType tags are
+    * `scriptTags` (Devanagari passes `dev2`, `deva`; Bengali passes `bng2`, `beng`), or None when the font
+    * carries none of those script tables — a font that does not shape the script keeps the plain text path.
+    * The same subtable parsing and lookup machinery the Arabic shaper uses is reused here; the Indic
+    * reordering and feature order live in `io.github.edadma.texish.opentype.IndicShaper`, which drives this
+    * by feature name. */
+  def fromIndic(gsub: Option[Array[Byte]], gdef: Option[Array[Byte]], scriptTags: Seq[String]): Option[Gsub] =
     gsub.flatMap { data =>
-      val g = new Gsub(data, scriptTags)
+      val g = new Gsub(data, scriptTags, Gdef.from(gdef))
       if g.boundToRequestedScript then Some(g) else None
     }
 
+// One lookup: its subtables plus the flag that governs which glyphs its matching skips over. `markFilterSet`
+// names the GDEF mark glyph set a USE_MARK_FILTERING_SET lookup filters by (meaningful only when that flag
+// bit is on).
+private final case class SubstLookup(flag: Int, markFilterSet: Int, subtables: Vector[SubstSubtable])
+
 /** Parses the language-system feature lookups of `data` (a `GSUB` table) on construction, binding to the
-  * first of `scriptTags` the font carries (Arabic passes `arab`; the Indic shaper passes `dev2`, `deva`). */
-final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
+  * first of `scriptTags` the font carries (Arabic passes `arab`; the Indic shaper passes `dev2`, `deva`).
+  * `gdef` supplies the glyph classes lookup flags filter matching by — with [[Gdef.empty]] nothing is
+  * filtered and matching is plain adjacency. */
+final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.empty):
 
   // Lookups parsed by their index in the LookupList; an unparsed/irrelevant lookup yields an empty vector.
-  private val lookups: Array[Vector[SubstSubtable]] =
+  private val lookups: Array[SubstLookup] =
     if data.length < 10 then Array.empty
     else
       val c = ByteCursor(data, 0)
@@ -102,6 +110,36 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
       c.u16        // featureList offset (read below)
       val lookupListOff = c.u16
       parseLookupList(lookupListOff)
+
+  // ─── lookup-flag glyph filtering ─────────────────────────────────────────────
+  //
+  // A lookup's flag names glyph classes its matching is blind to: an IGNORE_MARKS ligature matches its
+  // components across an intervening vowel point exactly as if the point were not there (the point survives,
+  // attached to the result). This is how Noto Naskh forms lam-alef in vocalized text — the rlig contextual
+  // pair matches across the fatha — and how the Indic presentation ligatures match across a nukta.
+
+  /** Whether lookup `lk`'s matching skips over glyph `g`. */
+  private def skips(lk: SubstLookup, g: Int): Boolean =
+    val flag = lk.flag
+    if (flag & 0xff1e) == 0 then false // no filtering bits set — the common case
+    else
+      gdef.glyphClass(g) match
+        case 1 => (flag & 0x0002) != 0 // IGNORE_BASE_GLYPHS
+        case 2 => (flag & 0x0004) != 0 // IGNORE_LIGATURES
+        case 3 =>
+          if (flag & 0x0008) != 0 then true // IGNORE_MARKS
+          else if (flag & 0x0010) != 0 then // USE_MARK_FILTERING_SET: skip marks NOT in the named set
+            !gdef.markGlyphSets.lift(lk.markFilterSet).exists(_.contains(g))
+          else
+            val attachType = (flag >> 8) & 0xff // MarkAttachmentType: keep only marks of this attach class
+            attachType != 0 && gdef.markAttachClass(g) != attachType
+        case _ => false
+
+  // The first non-skipped position at or after `from` (glyphs.length when none).
+  private def nextAt(glyphs: Array[Int], from: Int, lk: SubstLookup): Int =
+    var p = from
+    while p < glyphs.length && skips(lk, glyphs(p)) do p += 1
+    p
 
   // The GSUB script table this shaper bound to (the first of `scriptTags` present, else a default script),
   // recorded so a caller can tell an Indic font from one that only matched a default script. Set while
@@ -194,7 +232,7 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
       val of = scala.collection.mutable.ArrayBuffer.empty[JoiningForm]
       var i  = 0
       while i < gs.length do
-        applyLookupAt(gs, i, li) match
+        applyLookupAt(gs, i, li, og) match
           case Some((rep, consumed, perInput)) =>
             var k = 0
             while k < rep.length do
@@ -212,7 +250,7 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
   // (or one-element many) and never need a ligature or the surrounding run.
   private def applyOne(li: Int, g: Int): Option[Array[Int]] =
     var res: Option[Array[Int]] = None
-    val sts = lookups(li)
+    val sts = lookups(li).subtables
     var i   = 0
     while res.isEmpty && i < sts.length do
       sts(i) match
@@ -231,120 +269,210 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
     cur
 
   // Run one lookup across the buffer: at each position try to apply it; on a match emit the replacement and
-  // skip past the glyphs it consumed, otherwise copy the glyph through and advance by one.
+  // skip past the glyphs it consumed, otherwise copy the glyph through and advance by one. The output built
+  // so far is what a chaining match's backtrack is checked against — the glyphs already produced, as the
+  // spec has it — so an earlier match in the same pass is seen in its substituted form.
   private def applyLookupOverBuffer(glyphs: Array[Int], li: Int): Array[Int] =
     val out = scala.collection.mutable.ArrayBuffer.empty[Int]
     var i   = 0
     while i < glyphs.length do
-      applyLookupAt(glyphs, i, li) match
+      applyLookupAt(glyphs, i, li, out) match
         case Some((rep, consumed, _)) => out ++= rep; i += consumed
         case None                     => out += glyphs(i); i += 1
     out.toArray
 
   // Try a lookup at one buffer position. Single, multiple and ligature substitution act on the glyph (and,
   // for a ligature, the glyphs that follow); context and chaining-context substitution match a run (with
-  // backtrack/lookahead for the chaining kind) and return the run with their nested lookups applied. The
-  // result is the replacement glyphs, the number of input glyphs consumed, and whether each replacement
+  // backtrack/lookahead for the chaining kind) and return the run with their nested lookups applied. All
+  // matching skips the glyphs the lookup's flag ignores; a lookup never *begins* at a glyph it skips. The
+  // result is the replacement glyphs, the number of input glyphs consumed (the whole span, including any
+  // skipped glyphs matched across — they survive inside the replacement), and whether each replacement
   // glyph carries its own input position's form (true for a context run, false when one source glyph drives
-  // the whole replacement); or None if no subtable matches here.
-  private def applyLookupAt(glyphs: Array[Int], i: Int, li: Int): Option[(Array[Int], Int, Boolean)] =
-    val sts = lookups(li)
+  // the whole replacement); or None if no subtable matches here. `prior` is the output already emitted for
+  // the glyphs before `i` — what a chaining match's backtrack is checked against.
+  private def applyLookupAt(
+      glyphs: Array[Int],
+      i: Int,
+      li: Int,
+      prior: collection.IndexedSeq[Int],
+  ): Option[(Array[Int], Int, Boolean)] =
+    val lk = lookups(li)
+    if skips(lk, glyphs(i)) then return None
+    val sts = lk.subtables
     var res: Option[(Array[Int], Int, Boolean)] = None
     var s   = 0
     while res.isEmpty && s < sts.length do
       sts(s) match
         case SingleSubst(m)   => m.get(glyphs(i)).foreach(x => res = Some((Array(x), 1, false)))
         case MultipleSubst(m) => m.get(glyphs(i)).foreach(x => res = Some((x, 1, false)))
-        case LigatureSubst(l) => tryLigature(glyphs, i, l).foreach((lig, n) => res = Some((Array(lig), n, false)))
+        case LigatureSubst(l) => tryLigature(glyphs, i, l, lk).foreach((rep, n) => res = Some((rep, n, false)))
         case ContextSubst(input, records) =>
-          if matchRun(glyphs, i, input) then
-            res = Some((applyRecords(glyphs, i, input.length, records), input.length, true))
+          matchInput(glyphs, i, input, lk).foreach { pos =>
+            res = Some((applyRecords(glyphs, i, pos, records), pos.last - i + 1, true))
+          }
         case ChainContextSubst(bt, input, la, records) =>
-          if matchBacktrack(glyphs, i, bt) && matchRun(glyphs, i, input) &&
-            matchRun(glyphs, i + input.length, la)
-          then res = Some((applyRecords(glyphs, i, input.length, records), input.length, true))
+          matchInput(glyphs, i, input, lk).foreach { pos =>
+            if matchBacktrack(prior, bt, lk) && matchLookahead(glyphs, pos.last, la, lk) then
+              res = Some((applyRecords(glyphs, i, pos, records), pos.last - i + 1, true))
+          }
       s += 1
     res
 
-  // Whether `covs` matches the glyphs starting at `start`, one coverage set per glyph in order.
-  private def matchRun(glyphs: Array[Int], start: Int, covs: Array[Set[Int]]): Boolean =
-    if start < 0 || start + covs.length > glyphs.length then false
+  // The buffer positions the input coverages match starting at `i` — the first coverage must cover the
+  // glyph at `i` itself, each later coverage the next non-skipped glyph — or None when the run does not
+  // match.
+  private def matchInput(glyphs: Array[Int], i: Int, covs: Array[Set[Int]], lk: SubstLookup): Option[Array[Int]] =
+    if covs.isEmpty || !covs(0).contains(glyphs(i)) then None
     else
-      var j  = 0
+      val pos = new Array[Int](covs.length)
+      pos(0) = i
+      var j  = 1
+      var p  = i + 1
       var ok = true
       while ok && j < covs.length do
-        if !covs(j).contains(glyphs(start + j)) then ok = false
+        p = nextAt(glyphs, p, lk)
+        if p >= glyphs.length || !covs(j).contains(glyphs(p)) then ok = false
+        else
+          pos(j) = p
+          p += 1
+          j += 1
+      if ok then Some(pos) else None
+
+  // Whether the backtrack coverages match the non-skipped glyphs at the end of `prior` — the output already
+  // produced before the match position, so a pair this same pass substituted is seen in its substituted
+  // form. Backtrack is given in reverse text order: `bt(0)` matches the closest preceding glyph, `bt(1)` the
+  // one before that, and so on.
+  private def matchBacktrack(prior: collection.IndexedSeq[Int], bt: Array[Set[Int]], lk: SubstLookup): Boolean =
+    var p  = prior.length - 1
+    var j  = 0
+    var ok = true
+    while ok && j < bt.length do
+      while p >= 0 && skips(lk, prior(p)) do p -= 1
+      if p < 0 || !bt(j).contains(prior(p)) then ok = false
+      else
+        p -= 1
         j += 1
-      ok
+    ok
 
-  // Whether the backtrack coverages match the glyphs immediately before `i`. Backtrack is given in reverse
-  // text order: `bt(0)` is the glyph just before the input, `bt(1)` the one before that, and so on.
-  private def matchBacktrack(glyphs: Array[Int], i: Int, bt: Array[Set[Int]]): Boolean =
-    if i - bt.length < 0 then false
-    else
-      var j  = 0
-      var ok = true
-      while ok && j < bt.length do
-        if !bt(j).contains(glyphs(i - 1 - j)) then ok = false
+  // Whether the lookahead coverages match the non-skipped glyphs after the input's last matched position.
+  private def matchLookahead(glyphs: Array[Int], lastInput: Int, la: Array[Set[Int]], lk: SubstLookup): Boolean =
+    var p  = lastInput + 1
+    var j  = 0
+    var ok = true
+    while ok && j < la.length do
+      p = nextAt(glyphs, p, lk)
+      if p >= glyphs.length || !la(j).contains(glyphs(p)) then ok = false
+      else
+        p += 1
         j += 1
-      ok
+    ok
 
-  // Apply a context match's nested lookups: copy the matched input run, then for each (position, lookup)
-  // record run that lookup on the glyph at that position. A record may substitute one glyph for one (the lam
-  // and the alef each take their `.rlig` form) or ligate adjacent glyphs (a shadda and a following
-  // dagger-alef into one composed mark), so the run can shorten; later records read the run as it then
-  // stands. Returns the resulting run; the caller still advances by the original input length.
-  private def applyRecords(glyphs: Array[Int], i: Int, inputLen: Int, records: Array[(Int, Int)]): Array[Int] =
-    var run = Array.tabulate(inputLen)(k => glyphs(i + k))
-    for (seqIdx, lookupIdx) <- records if seqIdx >= 0 && seqIdx < run.length do
-      applyNestedAt(run, seqIdx, lookupIdx) match
-        case Some((rep, consumed)) =>
-          run = run.slice(0, seqIdx) ++ rep ++ run.slice(seqIdx + consumed, run.length)
-        case None =>
-    run
+  // Apply a context match's nested lookups over the matched span. The span runs from `i` to the last
+  // matched input position; skipped glyphs inside it pass through unchanged. Each element is tagged with
+  // its logical input index (-1 for a skipped pass-through), and each (position, lookup) record runs its
+  // lookup on the element still carrying that logical index — a record may substitute one glyph for one
+  // (the lam and the alef each take their `.rlig` form) or ligate glyphs (a shadda and a following
+  // dagger-alef into one composed mark), so the span can shorten; later records read it as it then stands.
+  // Returns the resulting glyphs; the caller advances by the original span length.
+  private def applyRecords(glyphs: Array[Int], i: Int, positions: Array[Int], records: Array[(Int, Int)]): Array[Int] =
+    val buf     = scala.collection.mutable.ArrayBuffer.empty[Int]
+    val logical = scala.collection.mutable.ArrayBuffer.empty[Int]
+    var k = i
+    while k <= positions.last do
+      buf += glyphs(k)
+      logical += positions.indexOf(k)
+      k += 1
+    for (seqIdx, lookupIdx) <- records do
+      val pos = logical.indexOf(seqIdx)
+      if pos >= 0 then applyNestedAt(buf, logical, pos, lookupIdx)
+    buf.toArray
 
-  // The substitution a nested lookup makes at one position in a run: a single (one glyph), multiple (one to
-  // many) or ligature (many to one) replacement and the count of glyphs it consumed, or None if the lookup
-  // does not apply. Nested context lookups are not followed (none of the Arabic lookups nest one).
-  private def applyNestedAt(run: Array[Int], pos: Int, li: Int): Option[(Array[Int], Int)] =
-    val sts = lookups(li)
-    var res: Option[(Array[Int], Int)] = None
-    var s   = 0
-    while res.isEmpty && s < sts.length do
+  // The substitution a nested lookup makes at one element of a working span: a single (one glyph), multiple
+  // (one to many) or ligature (many to one) replacement, spliced in place. A nested ligature matches its
+  // components with the nested lookup's own flag, so it too can reach across skipped glyphs, which stay in
+  // the span after the ligature. Nested context lookups are not followed (no bundled font nests one).
+  private def applyNestedAt(
+      buf: scala.collection.mutable.ArrayBuffer[Int],
+      logical: scala.collection.mutable.ArrayBuffer[Int],
+      pos: Int,
+      li: Int,
+  ): Unit =
+    val lk = lookups(li)
+    if skips(lk, buf(pos)) then return
+    val sts  = lk.subtables
+    var done = false
+    var s    = 0
+    while !done && s < sts.length do
       sts(s) match
-        case SingleSubst(m)   => m.get(run(pos)).foreach(x => res = Some((Array(x), 1)))
-        case MultipleSubst(m) => m.get(run(pos)).foreach(x => res = Some((x, 1)))
-        case LigatureSubst(l) => tryLigature(run, pos, l).foreach((lig, n) => res = Some((Array(lig), n)))
-        case _                =>
+        case SingleSubst(m) =>
+          m.get(buf(pos)).foreach { x => buf(pos) = x; done = true }
+        case MultipleSubst(m) =>
+          m.get(buf(pos)).foreach { x =>
+            val keep = logical(pos)
+            buf.remove(pos); logical.remove(pos)
+            buf.insertAll(pos, x)
+            logical.insertAll(pos, Array.tabulate(x.length)(k => if k == 0 then keep else -1))
+            done = true
+          }
+        case LigatureSubst(l) =>
+          l.get(buf(pos)).foreach { set =>
+            var k = 0
+            while !done && k < set.length do
+              val (tail, lig) = set(k)
+              // match the tail against the following non-skipped elements, collecting their indices
+              val matched = scala.collection.mutable.ArrayBuffer.empty[Int]
+              var p  = pos + 1
+              var j  = 0
+              var ok = true
+              while ok && j < tail.length do
+                while p < buf.length && skips(lk, buf(p)) do p += 1
+                if p >= buf.length || buf(p) != tail(j) then ok = false
+                else
+                  matched += p
+                  p += 1
+                  j += 1
+              if ok then
+                buf(pos) = lig
+                for m <- matched.reverseIterator do { buf.remove(m); logical.remove(m) }
+                done = true
+              k += 1
+          }
+        case _ =>
       s += 1
-    res
 
-  // The ligature a lookup forms starting at `i`, if any: the first matching ligature whose remaining
-  // components equal the glyphs that follow, as the ligature glyph and the number of glyphs it consumes
-  // (including the first). Components match exactly and in order — the Arabic ligatures include a composed
-  // mark as a component, so marks are not skipped.
-  private def tryLigature(glyphs: Array[Int], i: Int, ligatures: Map[Int, Array[(Array[Int], Int)]]): Option[(Int, Int)] =
+  // The ligature a lookup forms starting at `i`, if any: the first ligature whose remaining components
+  // match the following non-skipped glyphs. Returns the replacement — the ligature glyph followed by the
+  // skipped glyphs the match reached across (a vowel point inside the span survives, drawn attached to the
+  // ligature) — and the whole span consumed, components and skipped glyphs alike.
+  private def tryLigature(
+      glyphs: Array[Int],
+      i: Int,
+      ligatures: Map[Int, Array[(Array[Int], Int)]],
+      lk: SubstLookup,
+  ): Option[(Array[Int], Int)] =
     ligatures.get(glyphs(i)) match
       case None => None
       case Some(set) =>
-        var res: Option[(Int, Int)] = None
+        var res: Option[(Array[Int], Int)] = None
         var k   = 0
         while res.isEmpty && k < set.length do
           val (tail, lig) = set(k)
-          if matchExact(glyphs, i + 1, tail) then res = Some((lig, tail.length + 1))
+          var p    = i + 1
+          var j    = 0
+          var last = i
+          var ok   = true
+          while ok && j < tail.length do
+            p = nextAt(glyphs, p, lk)
+            if p >= glyphs.length || glyphs(p) != tail(j) then ok = false
+            else
+              last = p
+              p += 1
+              j += 1
+          if ok then
+            val retained = (i + 1 to last).iterator.filter(x => skips(lk, glyphs(x))).map(glyphs).toArray
+            res = Some((Array(lig) ++ retained, last - i + 1))
           k += 1
         res
-
-  // Whether `comps` equals the glyphs starting at `start`, exactly and in order.
-  private def matchExact(glyphs: Array[Int], start: Int, comps: Array[Int]): Boolean =
-    if start + comps.length > glyphs.length then false
-    else
-      var j  = 0
-      var ok = true
-      while ok && j < comps.length do
-        if glyphs(start + j) != comps(j) then ok = false
-        j += 1
-      ok
 
   // ─── parsing ────────────────────────────────────────────────────────────────
 
@@ -409,20 +537,22 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String]):
 
   // Parse the whole LookupList, keeping the substitution kinds the shaper understands so the array stays
   // index-aligned with the lookup indices the feature map refers to.
-  private def parseLookupList(lookupListOff: Int): Array[Vector[SubstSubtable]] =
+  private def parseLookupList(lookupListOff: Int): Array[SubstLookup] =
     if lookupListOff == 0 then return Array.empty
     val lc        = ByteCursor(data, lookupListOff)
     val lookupCnt = lc.u16
     val offsets   = Array.fill(lookupCnt)(lookupListOff + lc.u16)
     offsets.map(parseLookup)
 
-  private def parseLookup(off: Int): Vector[SubstSubtable] =
+  private def parseLookup(off: Int): SubstLookup =
     val l          = ByteCursor(data, off)
     val lookupType = l.u16
-    l.u16 // lookupFlag
-    val subCount = l.u16
-    val subs     = Array.fill(subCount)(off + l.u16)
-    subs.toVector.flatMap(so => parseSubtable(lookupType, so))
+    val flag       = l.u16
+    val subCount   = l.u16
+    val subs       = Array.fill(subCount)(off + l.u16)
+    // when USE_MARK_FILTERING_SET is on, the set index follows the subtable offsets
+    val markFilterSet = if (flag & 0x0010) != 0 then l.u16 else 0
+    SubstLookup(flag, markFilterSet, subs.toVector.flatMap(so => parseSubtable(lookupType, so)))
 
   // Dispatch one subtable by lookup type, following an extension (type 7) to the wrapped subtable. Single
   // (type 1), multiple (type 2), ligature (type 4), context (type 5) and chaining-context (type 6)

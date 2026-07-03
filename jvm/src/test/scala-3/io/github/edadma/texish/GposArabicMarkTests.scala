@@ -15,7 +15,7 @@ import org.scalatest.matchers.should.Matchers
 class GposArabicMarkTests extends AnyFreeSpec with Matchers:
 
   private val font = new OtfFont(Files.readAllBytes(Paths.get("fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf")))
-  private val gsub = Gsub.from(font.tableBytes("GSUB")).get
+  private val gsub = Gsub.from(font.tableBytes("GSUB"), font.tableBytes("GDEF")).get
   private val gpos = Gpos.from(font.tableBytes("GPOS"), font.tableBytes("GDEF"), font.unitsPerEm).get
 
   private def g(cp: Int): Int = font.glyphIndex(cp)

@@ -34,12 +34,13 @@ object IndicShaper:
   // Bengali the Bengali ones), so at most one matches.
   private val scripts: Seq[IndicScript] = Seq(Devanagari, Bengali)
 
-  /** Build an Indic shaper from a font's raw `GSUB` bytes by finding which Indic script the font shapes, or
-    * None when the font carries no Indic script table — the caller then leaves the text on the plain path. */
-  def from(gsub: Option[Array[Byte]]): Option[IndicShaper] =
+  /** Build an Indic shaper from a font's raw `GSUB` (and `GDEF`) bytes by finding which Indic script the font
+    * shapes, or None when the font carries no Indic script table — the caller then leaves the text on the
+    * plain path. */
+  def from(gsub: Option[Array[Byte]], gdef: Option[Array[Byte]] = None): Option[IndicShaper] =
     gsub.flatMap { data =>
       scripts.iterator
-        .flatMap(sc => Gsub.fromIndic(Some(data), sc.scriptTags).map(g => new IndicShaper(sc, g)))
+        .flatMap(sc => Gsub.fromIndic(Some(data), gdef, sc.scriptTags).map(g => new IndicShaper(sc, g)))
         .nextOption()
     }
 
@@ -79,7 +80,16 @@ final class IndicShaper(val script: IndicScript, gsub: Gsub):
     for tag <- script.basicFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
     val preBaseGlyph = coreCps.find(script.preBaseMatras.contains).map(cmap).getOrElse(-1)
     glyphs = script.reorderPreBaseMatra(coreCps, glyphs, preBaseGlyph)
-    if reph then glyphs = glyphs ++ rephGlyphs(cmap)
+    if reph then
+      val rg = rephGlyphs(cmap)
+      // where the reph lands is a per-script convention: at the cluster's very end, or — Bengali — between
+      // the base and a post-base vowel sign, so র্মা sets ma, reph, aa rather than trailing the reph
+      val at =
+        if script.rephBeforePostBase then
+          val postGlyphs = coreCps.filter(script.postBaseMatras.contains).map(cmap).toSet
+          if postGlyphs.isEmpty then -1 else glyphs.indexWhere(postGlyphs.contains)
+        else -1
+      glyphs = if at >= 0 then glyphs.patch(at, rg, 0) else glyphs ++ rg
     for tag <- script.presFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
     glyphs
 

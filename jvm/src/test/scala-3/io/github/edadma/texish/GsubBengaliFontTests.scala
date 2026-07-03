@@ -15,7 +15,7 @@ class GsubBengaliFontTests extends AnyFreeSpec with Matchers:
 
   private val font =
     new OtfFont(Files.readAllBytes(Paths.get("fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf")))
-  private val shaper = IndicShaper.from(font.tableBytes("GSUB")).get
+  private val shaper = IndicShaper.from(font.tableBytes("GSUB"), font.tableBytes("GDEF")).get
   private val gpos   = Gpos.from(font.tableBytes("GPOS"), font.tableBytes("GDEF"), font.unitsPerEm).get
 
   private def g(cp: Int): Int                 = font.glyphIndex(cp)
@@ -25,15 +25,15 @@ class GsubBengaliFontTests extends AnyFreeSpec with Matchers:
   private val Ka = 0x0995
 
   "the font is recognised as a Bengali shaper" in {
-    IndicShaper.from(font.tableBytes("GSUB")) shouldBe defined
+    IndicShaper.from(font.tableBytes("GSUB"), font.tableBytes("GDEF")) shouldBe defined
     shaper.script shouldBe Bengali
-    Gsub.fromIndic(font.tableBytes("GSUB"), Bengali.scriptTags).get.boundToRequestedScript shouldBe true
+    Gsub.fromIndic(font.tableBytes("GSUB"), font.tableBytes("GDEF"), Bengali.scriptTags).get.boundToRequestedScript shouldBe true
   }
 
   "the Devanagari face is not mistaken for a Bengali run, and vice versa" in {
     // Each Indic font binds to its own script: the Devanagari shaper handles Devanagari text, not Bengali.
     val deva = new OtfFont(Files.readAllBytes(Paths.get("fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf")))
-    IndicShaper.from(deva.tableBytes("GSUB")).get.handles("বাংলা") shouldBe false
+    IndicShaper.from(deva.tableBytes("GSUB"), deva.tableBytes("GDEF")).get.handles("বাংলা") shouldBe false
     shaper.handles("বাংলা") shouldBe true
     shaper.handles("hello") shouldBe false
   }
@@ -113,6 +113,17 @@ class GsubBengaliFontTests extends AnyFreeSpec with Matchers:
     places.last.isMark shouldBe true
     places.last.attach should be >= 0
     places.count(_.isMark) shouldBe 1
+  }
+
+  "a reph sits between the base and a post-base aa sign, which keeps its word-final form" in {
+    // র্মা (ra, virama, ma, aa) → [ma, reph, aa.fina], confirmed with hb-shape: the Bengali reph is inserted
+    // before the post-base vowel sign, not after it, and the aa — still the word's last glyph — takes its
+    // fina form.
+    val glyphs = shape("র্মা")
+    glyphs.length shouldBe 3
+    glyphs(0) shouldBe g(0x09AE)         // ma
+    glyphs(1) shouldBe shape("র্ক").last // the reph glyph, the same one র্ক sets over its ka
+    glyphs(2) should not equal g(0x09BE) // the aa in its fina form, not the plain sign
   }
 
   "কিন্তু segments into two clusters and reorders the first i sign" in {

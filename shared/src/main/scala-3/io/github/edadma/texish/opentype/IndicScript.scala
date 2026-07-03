@@ -76,6 +76,17 @@ trait IndicScript:
     * glyph of a word, matching the word-position semantics of `fina`. */
   def finaFeature: Option[String] = None
 
+  /** Whether a cluster's reph is inserted before its post-base vowel signs rather than at the cluster's very
+    * end. Reph position is a per-script convention: Devanagari draws the reph after everything (র্মা-style
+    * words don't arise there with a trailing sign the reph must precede), while Bengali sets it between the
+    * base and a post-base sign — র্মা renders ma, reph, aa. A script that turns this on must also supply
+    * [[postBaseMatras]], the signs the reph slots in front of. */
+  def rephBeforePostBase: Boolean = false
+
+  /** The dependent vowel signs that stay after the base — where a [[rephBeforePostBase]] script's reph is
+    * inserted in front of. Unused (and empty) for a script whose reph closes the cluster. */
+  def postBaseMatras: Set[Int] = Set.empty
+
   /** Whether a run contains letters or signs of this script worth shaping (a digit or punctuation mark alone
     * does not need the Indic path). */
   def has(text: String): Boolean =

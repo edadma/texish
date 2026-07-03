@@ -83,3 +83,11 @@ object Bengali extends IndicScript:
 
   /** The word-final form of the post-base aa, ii and length signs, chosen by `fina` on the last glyph. */
   override def finaFeature: Option[String] = Some("fina")
+
+  /** The Bengali reph sits between the base and a post-base vowel sign: র্মা renders ma, reph, aa — not with
+    * the reph trailing the aa. (Verified against HarfBuzz with the bundled Noto Serif Bengali.) */
+  override def rephBeforePostBase: Boolean = true
+
+  /** The post-base signs the reph is inserted in front of: aa, ii and the au length mark — the signs that
+    * stay after the base as spacing glyphs (and that `fina` gives word-final forms). */
+  override def postBaseMatras: Set[Int] = Set(0x09BE, 0x09C0, 0x09D7)

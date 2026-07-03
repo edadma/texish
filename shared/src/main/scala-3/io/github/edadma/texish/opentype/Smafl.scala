@@ -57,17 +57,25 @@ object Smafl:
         cp += 1
 
       // Walk the MATH constructions in a fixed order, giving each no-codepoint variant/assembly glyph the next
-      // private-use codepoint. A glyph shared between constructions is assigned once (first occurrence wins).
+      // FREE private-use codepoint — a font may already map parts of the PUA itself (STIX-style fonts do), and
+      // assigning over an existing mapping would put two glyphs on one codepoint in the rebuilt cmap. A glyph
+      // shared between constructions is assigned once (first occurrence wins).
       val assigned = scala.collection.mutable.LinkedHashMap.empty[Int, SmaflEntry] // glyph → entry
+      val usedCps  = existing.iterator.map(_._1).filter(c => c >= PuaBase && c <= 0xf8ff).to(scala.collection.mutable.HashSet)
       var next     = PuaBase
+
+      def nextFreePua(): Int =
+        while next <= 0xf8ff && usedCps.contains(next) do next += 1
+        if next > 0xf8ff then sys.error("SMaFL: ran out of private-use codepoints (U+E000–F8FF)")
+        val cp = next
+        next += 1
+        cp
 
       def baseCodepoint(gid: Int): Int = font.codepointForGlyph(gid).getOrElse(0x110000 + gid)
 
       def take(glyph: Int, base: Int, axis: Char, kind: String, index: Int, advance: Double, ext: Boolean): Unit =
         if glyph != 0 && !hasCp.contains(glyph) && !assigned.contains(glyph) then
-          assigned(glyph) = SmaflEntry(next, glyph, base, axis, kind, index, advance, ext)
-          next += 1
-          if next > 0xf8ff then sys.error("SMaFL: ran out of private-use codepoints (U+E000–F8FF)")
+          assigned(glyph) = SmaflEntry(nextFreePua(), glyph, base, axis, kind, index, advance, ext)
 
       def walk(constructions: Map[Int, GlyphConstruction], axis: Char): Unit =
         for (baseGid, gc) <- constructions.toVector.sortBy((bg, _) => baseCodepoint(bg)) do

@@ -65,8 +65,14 @@ object SfntWriter:
     * preserved. A `DSIG` digital signature, if present, should be dropped by the caller — editing the font
     * invalidates it. */
   def rebuild(original: Array[Byte], replace: Map[String, Array[Byte]], drop: Set[String] = Set.empty): Array[Byte] =
-    val sfnt         = Sfnt(original)
-    val sfntVersion  = ByteCursor(original, 0).u32
+    val sfnt = Sfnt(original)
+    // The version tag of the FONT's offset table. For a TrueType Collection Sfnt reads the first font's
+    // directory, so the version must come from that same offset table — the file's first four bytes would be
+    // 'ttcf', which is not a valid sfntVersion for the flattened single-font output built here.
+    val sfntVersion =
+      val c = ByteCursor(original, 0)
+      if c.u32 == 0x74746366L then { c.seek(12); ByteCursor(original, c.u32.toInt).u32 } // 'ttcf' → first font
+      else ByteCursor(original, 0).u32
 
     // Assemble the final tag → bytes set: originals (minus dropped), with replacements overlaid, plus any
     // brand-new tables the caller supplied.

@@ -251,7 +251,10 @@ final class CffOutlines(data: Array[Byte], cffOffset: Int):
               if idx >= 0 && idx < globalSubrs.count then
                 val (s, e) = globalSubrs.range(idx); exec(s, e, depth + 1)
             case 11 => return // return from subr
-            case 14 => // endchar (seac-style accent composition is deprecated and not emitted)
+            case 14 => // endchar. The deprecated seac form (endchar with adx/ady/bchar/achar operands, composing
+              // an accented glyph from two standard-encoded glyphs) is not implemented: such a glyph renders
+              // empty. No bundled CFF font contains one (verified across Latin Modern, Bravura and Petaluma);
+              // supporting it would need the charset and the Standard Encoding table parsed.
               if !widthParsed && (stack.length == 1 || stack.length == 5) then stack.remove(0)
               widthParsed = true
               closeOpen()
