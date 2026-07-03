@@ -24,9 +24,14 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
     else if !suppressed then
       typesetter.mode match
         case m: MathMode =>
-          // in math, each character is a symbol classified into its own atom — not a string to shape
+          // in math, each character is a symbol classified into its own atom — not a string to shape. Walk by
+          // code point so an astral symbol (the math alphanumerics live beyond the BMP) is one atom, not two
+          // meaningless surrogate halves.
           var i = 0
-          while i < s.length do { m.addChar(s.charAt(i).toInt); i += 1 }
+          while i < s.length do
+            val cp = s.codePointAt(i)
+            m.addChar(cp)
+            i += Character.charCount(cp)
         case _: PictureMode =>
           // a picture body is drawing commands, not prose; stray text between them is insignificant
           ()

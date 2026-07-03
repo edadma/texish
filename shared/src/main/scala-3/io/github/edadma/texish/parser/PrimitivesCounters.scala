@@ -23,11 +23,13 @@ private[parser] object Counters:
       case other         => proc.handler.error(s"Expected a number, got ${Value.display(other)}", pos)
 
   /** Zero every counter whose parent is `parent`, then recurse, so a single `\stepcounter` cascades down the whole
-    * reset list (section → subsection → subsubsection, …). */
-  def resetWithin(proc: Processor, parent: String): Unit =
-    for (child, p) <- proc.counterParent if p == parent do
+    * reset list (section → subsection → subsubsection, …). `seen` carries the ancestors already reset on this
+    * cascade: a reset-list cycle (a within b, b within a) zeroes each counter once and stops, instead of
+    * recursing forever. */
+  def resetWithin(proc: Processor, parent: String, seen: Set[String] = Set.empty): Unit =
+    for (child, p) <- proc.counterParent if p == parent && !seen.contains(child) && child != parent do
       proc.counterValues(child) = 0
-      resetWithin(proc, child)
+      resetWithin(proc, child, seen + parent)
 
 /** `\newcounter{name}` — declare a counter, initialized to zero. */
 object NewCounterPrimitive extends Primitive:

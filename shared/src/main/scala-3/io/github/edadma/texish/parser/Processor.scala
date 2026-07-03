@@ -218,10 +218,17 @@ class Processor(val handler: Handler):
       case e: RuntimeException =>
         handler.error(Option(e.getMessage).getOrElse(e.toString), Token.pos(token))
 
+  // Open groups seen at dispatch, so a stray `}` is reported at its own position instead of unbalancing the
+  // handler's scope stack (whose eventual underflow would surface much later as a cryptic empty-stack crash).
+  private var groupDepth = 0
+
   private def handleBeginGroup(pos: CharReader): Unit =
+    groupDepth += 1
     handler.enterScope()
 
   private def handleEndGroup(pos: CharReader): Unit =
+    if groupDepth == 0 then handler.error("Unmatched '}'", pos)
+    groupDepth -= 1
     handler.exitScope()
 
   private def handleControlSeq(name: String, pos: CharReader): Unit =
@@ -396,13 +403,17 @@ class Processor(val handler: Handler):
         // Include the braces so processTokenList will trigger enterScope/exitScope
         Vector(begin) ++ readBalancedGroup() :+ Token.EndGroup(begin.pos)
       case _ =>
+        // The whitespace after an unbraced argument is consumed — deliberate texish semantics (pinned by
+        // ProcessorTests and relied on by the packages), though it diverges from TeX, where the space after
+        // `\upcase a b` would be document content. Brace the argument to keep a following space.
         val tok = Vector(nextToken())
-        skipSpaces() // consume trailing whitespace after non-braced argument
+        skipSpaces()
         tok
 
   /** Read a single math script field, the argument of a `^` or `_`: a braced group is the whole group; a
-    * control sequence is that one token; a run of text contributes only its first character, the rest pushed
-    * back to be read normally — so `x^2y` makes `2` the script and `y` a following atom, as in TeX. */
+    * control sequence is that one token; a run of text contributes only its first character (its first code
+    * point, so an astral symbol's surrogate pair stays whole), the rest pushed back to be read normally — so
+    * `x^2y` makes `2` the script and `y` a following atom, as in TeX. */
   def readScriptField(pos: CharReader): Vector[Token] =
     skipSpaces()
     if !hasMoreTokens then handler.error("Expected a superscript or subscript", pos)
@@ -411,8 +422,12 @@ class Processor(val handler: Handler):
       case Token.BeginGroup(_) => readArgument(pos)
       case Token.Text(s, p) =>
         nextToken()
-        if s.length > 1 then tokenSources.push(TokenListSource(Vector(Token.Text(s.substring(1), p))))
-        Vector(Token.Text(s.substring(0, 1), p))
+        val n =
+          if Character.isHighSurrogate(s.charAt(0)) && s.length > 1 && Character.isLowSurrogate(s.charAt(1))
+          then 2
+          else 1
+        if s.length > n then tokenSources.push(TokenListSource(Vector(Token.Text(s.substring(n), p))))
+        Vector(Token.Text(s.substring(0, n), p))
       case _ => Vector(nextToken())
 
   /** Push tokens back onto the source stack so the next reads see them first — used after peeking past a
@@ -743,8 +758,8 @@ class Processor(val handler: Handler):
                 lastResult = Value.Nil
                 val savedSuppress = handler.outputSuppressed
                 handler.suppressOutput(true)
-                prim.execute(this, csPos)
-                handler.suppressOutput(savedSuppress)
+                try prim.execute(this, csPos)
+                finally handler.suppressOutput(savedSuppress)
                 val r = getResult
                 if r == Value.Nil then Value.Undefined else r
               case None => Value.Undefined
@@ -770,25 +785,29 @@ class Processor(val handler: Handler):
             primitives.get(name) match
               case Some(prim) =>
                 // Push remaining tokens as a source for the primitive to read its arguments from, then clean it up.
-                // Track the pushed source by identity: reading an unbraced argument ends with a skipSpaces that can
-                // exhaust and pop this source already, so popping whatever is now on top would over-pop into the
-                // enclosing source. Only pop our own source, and only if the primitive left it on top unexhausted.
+                // Track the pushed source by identity: argument reading skips spaces, which can exhaust and pop
+                // this source already, so popping whatever is now on top would over-pop into the enclosing
+                // source. Only pop our own source, and only if the primitive left it on top unexhausted.
                 val rest       = tokens.tail
                 val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
                 restSource.foreach(tokenSources.push)
                 lastResult = Value.Nil
                 val savedSuppress = handler.outputSuppressed
                 handler.suppressOutput(true)
-                prim.execute(this, csPos)
-                handler.suppressOutput(savedSuppress)
+                try prim.execute(this, csPos)
+                finally handler.suppressOutput(savedSuppress)
                 restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
                 val r = getResult
                 if r == Value.Nil then evalTokens(tokens, handler) else r
               case None =>
-                // Check if it's a variable
+                // A variable followed by more tokens is a text interpolation: concatenate the value's display
+                // with the rest (`\set y {\x tail}` keeps " tail") instead of silently dropping the tail. A tail
+                // of nothing but whitespace is not content — the value passes through with its type intact.
                 handler.get(name) match
                   case Value.Undefined => evalTokens(tokens, handler)
-                  case v => v
+                  case v =>
+                    if tokens.tail.forall(t => t.isInstanceOf[Token.Space] || t.isInstanceOf[Token.Newline]) then v
+                    else evalTokens(tokens, handler)
 
       case _ =>
         // Simple tokens - just interpret as text/number

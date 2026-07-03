@@ -163,8 +163,11 @@ object IfPrimitive extends Primitive:
 
 object IfxPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    // \ifx compares two tokens for equality
+    // \ifx compares the next two tokens for equality; interword spaces are separators, not operands, so
+    // `\ifx \a \a` compares the two control sequences rather than a space against the first of them
+    proc.skipSpaces()
     val tok1 = proc.nextToken()
+    proc.skipSpaces()
     val tok2 = proc.nextToken()
     val equal = (tok1, tok2) match
       case (Token.ControlSeq(n1, _), Token.ControlSeq(n2, _)) => n1 == n2
@@ -184,9 +187,11 @@ object FiPrimitive extends Primitive:
 
 object ThePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    // \the outputs the value of a variable
+    // \the outputs the value of a variable, and sets it as the result so it composes in an expression
+    // (`\set x {\the\pageno}` stores the value, not Nil)
     val name = proc.readControlSeqName(pos)
     val value = proc.handler.get(name)
+    proc.setResult(value)
     proc.handler.text(Value.display(value))
 
 /** Strip the outer brace pair that readArgument preserves for scoping. Value

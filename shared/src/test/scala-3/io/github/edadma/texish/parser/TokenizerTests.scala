@@ -53,6 +53,26 @@ class TokenizerTests extends AnyFreeSpec with Matchers:
       pair.next().asInstanceOf[Token.Text].s shouldBe ","
     }
 
+    "a math-space control symbol does not absorb following punctuation" in {
+      // symbolic control sequences are one character (bar the three comparison operators), so `\;(x)` is the
+      // thick math space applied to `(x)`, not an unknown command named `;(`
+      val tok = Tokenizer("\\;(x)")
+      tok.next().asInstanceOf[Token.ControlSeq].name shouldBe ";"
+      tok.next().asInstanceOf[Token.Text].s shouldBe "(x)"
+
+      val neg = Tokenizer("\\!(y)") // `!` joins only a following '='
+      neg.next().asInstanceOf[Token.ControlSeq].name shouldBe "!"
+      neg.next().asInstanceOf[Token.Text].s shouldBe "(y)"
+    }
+
+    "a CRLF line ending is a single Newline token" in {
+      val tok = Tokenizer("a\r\nb")
+      tok.next().asInstanceOf[Token.Text].s shouldBe "a"
+      tok.next() shouldBe a[Token.Newline]
+      tok.next().asInstanceOf[Token.Text].s shouldBe "b"
+      tok.next() shouldBe a[Token.EOF]
+    }
+
     "should tokenize groups" in {
       val tok = Tokenizer("{hello}")
       tok.next() shouldBe a[Token.BeginGroup]

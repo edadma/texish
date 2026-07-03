@@ -151,10 +151,10 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
       // Active characters take precedence over default special handling (except \ { } and // comments)
       if isActive(c) then readActive()
       else c match
-        case '\\' => readControlSeq()
-        case '{'  => readBeginGroup()
-        case '}'  => readEndGroup()
-        case '\n' => readNewline()
+        case '\\'        => readControlSeq()
+        case '{'         => readBeginGroup()
+        case '}'         => readEndGroup()
+        case '\n' | '\r' => readNewline()
         case _ if c.isWhitespace => readSpace()
         case _                   => readText()
 
@@ -181,19 +181,16 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
         reader = reader.next
       Token.ControlSeq(name.toString, pos)
     else if isSymbolic(reader.ch) then
-      // Symbolic control sequence — a run of symbolic characters (so the comparison operators `\!=`, `\<=` and
-      // `\>=` read as one token), with one exception: a comma never joins a symbolic control sequence. `\,` is
-      // always the lone thin-space control symbol, so `\,(` tokenizes as `\,` then `(`, not as a control
-      // sequence named `,(` — there is no multi-character symbolic control sequence containing a comma.
-      val name  = new StringBuilder
-      val comma = reader.ch == ','
-      name.append(reader.ch)
+      // Symbolic control sequence — a single symbolic character, with exactly three two-character exceptions:
+      // the comparison operators `\!=`, `\<=` and `\>=`. Fusing whole symbolic runs would swallow following
+      // punctuation — `\;(x)` must read as `\;` then `(x)`, not a control sequence named `;(` — and no other
+      // multi-character symbolic control sequence exists.
+      val first = reader.ch
       reader = reader.next
-      if !comma then
-        while !reader.eoi && isSymbolic(reader.ch) && reader.ch != ',' do
-          name.append(reader.ch)
-          reader = reader.next
-      Token.ControlSeq(name.toString, pos)
+      if (first == '!' || first == '<' || first == '>') && !reader.eoi && reader.ch == '=' then
+        reader = reader.next
+        Token.ControlSeq(s"$first=", pos)
+      else Token.ControlSeq(first.toString, pos)
     else
       // Single special character escape like \{ or \}
       val c = reader.ch
@@ -216,15 +213,22 @@ class Tokenizer(input: CharReader, activeChars: Set[Char] = Set('~')):
     reader = reader.next
     Token.Active(c, pos)
 
+  // A line ending is one Newline token whether the source uses LF or CRLF (a lone CR — classic Mac — also
+  // counts). Letting the CR fall through to readSpace would make every CRLF line end a Space token *and* a
+  // Newline token: a doubled interword space at each line break, and a blank line that no longer reads as the
+  // two consecutive Newlines a paragraph break looks for.
   private def readNewline(): Token =
     val pos = reader
-    reader = reader.next
+    if reader.ch == '\r' then
+      reader = reader.next
+      if !reader.eoi && reader.ch == '\n' then reader = reader.next
+    else reader = reader.next
     Token.Newline(pos)
 
   private def readSpace(): Token =
     val pos = reader
     val sb = new StringBuilder
-    while !reader.eoi && reader.ch.isWhitespace && reader.ch != '\n' do
+    while !reader.eoi && reader.ch.isWhitespace && reader.ch != '\n' && reader.ch != '\r' do
       sb.append(reader.ch)
       reader = reader.next
     Token.Space(sb.toString, pos)

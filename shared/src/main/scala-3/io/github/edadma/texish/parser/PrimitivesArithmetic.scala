@@ -110,15 +110,25 @@ private def orderMismatch(a: Value, b: Value, num: (Double, Double) => Boolean, 
     case (Some(x), Some(y)) => num(x, y)
     case _                  => proc.handler.error(s"Cannot compare ${Value.display(a)} and ${Value.display(b)}", pos)
 
+/** Equality across value kinds, shared by `\=` and `\!=` so they stay exact negations. Same-kind values compare
+  * directly; a kind mismatch falls back to numeric comparison when both sides interpret as numbers — the same
+  * coercion the ordering comparisons apply, so `\={\x}{5}` is true whether `\x` holds `Num(5)` or `Text("5")`
+  * (a sequence element is text-typed even when it looks numeric). A non-numeric kind mismatch is simply unequal. */
+private def valuesEqual(a: Value, b: Value): Boolean =
+  (a, b) match
+    case (Value.Num(x), Value.Num(y))   => x == y
+    case (Value.Text(x), Value.Text(y)) => x == y
+    case (Value.Bool(x), Value.Bool(y)) => x == y
+    case _ =>
+      (Value.number(a), Value.number(b)) match
+        case (Some(x), Some(y)) => x == y
+        case _                  => false
+
 object EqPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val a = proc.evalArgumentExpr(pos)
     val b = proc.evalArgumentExpr(pos)
-    val result = (a, b) match
-      case (Value.Num(x), Value.Num(y)) => x == y
-      case (Value.Text(x), Value.Text(y)) => x == y
-      case (Value.Bool(x), Value.Bool(y)) => x == y
-      case _ => false
+    val result = valuesEqual(a, b)
     proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")
 
@@ -170,10 +180,6 @@ object NePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val a = proc.evalArgumentExpr(pos)
     val b = proc.evalArgumentExpr(pos)
-    val result = (a, b) match
-      case (Value.Num(x), Value.Num(y)) => x != y
-      case (Value.Text(x), Value.Text(y)) => x != y
-      case (Value.Bool(x), Value.Bool(y)) => x != y
-      case _ => true
+    val result = !valuesEqual(a, b)
     proc.setResult(Value.Bool(result))
     if result then proc.handler.text("true") else proc.handler.text("false")

@@ -18,10 +18,12 @@ object ForPrimitive extends Primitive:
     // Read body
     val bodyTokens = proc.readArgument(pos)
 
-    // Get items to iterate
+    // Get items to iterate. A string iterates by code point, so an astral symbol (an emoji, a math letter)
+    // is one iteration rather than two broken surrogate halves. A map iterates in its own entry order — \map
+    // literals and \mapset build insertion-ordered maps, so entries visit as declared.
     val items: Vector[Value] = seqValue match
       case Value.Seq(items) => items
-      case Value.Text(s) => s.map(c => Value.Text(c.toString)).toVector
+      case Value.Text(s) => codePointStrings(s).map(Value.Text.apply)
       case Value.Map(entries) => entries.map((k, v) => Value.Map(Map("key" -> Value.Text(k), "value" -> v))).toVector
       case Value.Nil | Value.Undefined => Vector.empty
       case _ => Vector(seqValue)
@@ -72,9 +74,18 @@ object IncludePrimitive extends Primitive:
     if path.isEmpty then
       proc.handler.error("\\include requires a file path", pos)
 
+    // A relative path resolves against the directory of the document being processed (as \use does), so a
+    // document includes its neighbours regardless of where the CLI was launched from. If nothing is there,
+    // the path is tried as given (absolute paths and CWD-relative invocations keep working).
+    val resolved =
+      try
+        val beside = Path(proc.currentDir) / path
+        if beside.exists && beside.isFile then beside.toPlatformString else path
+      catch case _: Throwable => path
+
     // Read the file and push its tokens onto the source stack
     try
-      val fileReader = CharReader.fromFile(path)
+      val fileReader = CharReader.fromFile(resolved)
       val tokenizer = Tokenizer(fileReader)
       proc.pushTokenizer(tokenizer)
     catch

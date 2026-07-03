@@ -67,6 +67,21 @@ def parseGlue(s: String, fontUnit: String => Option[Double] = _ => None): Option
         else Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder)
     case _ => None
 
+/** Split a string into its code points, each returned as a string — one element per typed character, keeping a
+  * surrogate pair (an astral symbol, an emoji) together where a char-by-char split would break it into two
+  * lone surrogates. Manual scan because `String.codePoints()` is a java.util.stream API that Scala.js lacks. */
+def codePointStrings(s: String): Vector[String] =
+  val out = Vector.newBuilder[String]
+  var i   = 0
+  while i < s.length do
+    val n =
+      if Character.isHighSurrogate(s.charAt(i)) && i + 1 < s.length && Character.isLowSurrogate(s.charAt(i + 1))
+      then 2
+      else 1
+    out += s.substring(i, i + n)
+    i += n
+  out.result()
+
 // Helper to evaluate tokens to a value
 def evalTokens(tokens: Vector[Token], handler: Handler): Value =
   stripOuterBraces(tokens) match
@@ -80,13 +95,19 @@ def evalTokens(tokens: Vector[Token], handler: Handler): Value =
       // Multiple tokens - concatenate as text including spaces. An active character that stands for
       // itself outside its special mode (notably #, which is only a placeholder inside \halign)
       // contributes its character, so a value like the colour {#808080} keeps its leading # instead of
-      // collapsing to a bare number that then reads as a dimension.
+      // collapsing to a bare number that then reads as a dimension. A control sequence contributes the
+      // display of the variable it names, so `\set greeting {Hello \name}` interpolates rather than
+      // silently dropping the reference; an unset name (or a macro, which cannot expand here) adds nothing.
       val text = tokens.map {
         case Token.Text(s, _)   => s
         case Token.Space(s, _)  => s
         case Token.Newline(_)   => "\n"
         case Token.Active(c, _) => c.toString
-        case _                  => ""
+        case Token.ControlSeq(name, _) =>
+          handler.get(name) match
+            case Value.Undefined | Value.Nil | Value.Macro(_, _, _) => ""
+            case v                                                  => Value.display(v)
+        case _ => ""
       }.mkString
       if text.isEmpty then Value.Nil
       else parseGlue(text, handler.fontUnit).getOrElse(Value.Text(text)) // a braced glue spec like {12pt plus 2pt} arrives here
