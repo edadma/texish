@@ -82,6 +82,38 @@ class CairoSeamTests extends AnyFreeSpec with Matchers:
     inkOnRow(dash = true) should be < inkOnRow(dash = false)
   }
 
+  "drawRect strokes the rectangle's border and leaves its interior empty" in {
+    // this was an empty stub: debug boxes (\showboxes) were invisible on the native backends
+    val (t, s) = page()
+
+    t.setColor(Color("black"))
+    t.setLineWidth(2)
+    t.drawRect(20, 20, 50, 30)
+
+    luminance(s, 45, 20) should be < 60  // on the top edge
+    luminance(s, 20, 35) should be < 60  // on the left edge
+    luminance(s, 45, 35) should be > 240 // the interior stays unfilled
+    luminance(s, 80, 60) should be > 240 // outside the rectangle
+  }
+
+  "an image loaded twice reuses one surface" in {
+    // a multi-pass document re-runs \includegraphics each pass; without the cache every pass decoded and
+    // leaked a fresh surface
+    val (t, _) = page()
+
+    val png = "/tmp/texish-cairo-image-cache-test.png"
+    val src = io.github.edadma.libcairo.imageSurfaceCreate(io.github.edadma.libcairo.Format.ARGB32, 8, 8)
+    src.writeToPNG(png)
+    src.destroy()
+
+    val (h1, w1, _) = t.loadImage(png)
+    val (h2, _, _)  = t.loadImage(png)
+    w1 shouldBe 8
+    assert(h1 eq h2, "the second load must return the cached surface, not a new decode")
+
+    t.destroy() // frees the cached surface exactly once — a double free would crash here
+  }
+
   // A full PictureBox replayed through the real backend: a rect drawn near the bottom of the box's own y-up
   // space must land near the bottom of the page, confirming the y-up→device flip points the right way.
   "a PictureBox draws its display list with y up, origin at the bottom" in {

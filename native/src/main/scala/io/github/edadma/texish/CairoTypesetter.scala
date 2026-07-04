@@ -67,7 +67,9 @@ abstract class CairoTypesetter extends Typesetter:
     ctx.lineTo(x2, y2)
     ctx.stroke()
 
-  def drawRect(x: Double, y: Double, width: Double, height: Double): Unit = ()
+  def drawRect(x: Double, y: Double, width: Double, height: Double): Unit =
+    ctx.rectangle(x, y, width, height)
+    ctx.stroke()
 
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
     ctx.rectangle(x, y, width, height)
@@ -106,12 +108,29 @@ abstract class CairoTypesetter extends Typesetter:
 
   def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]] = font.ft.loadSfntTable(tag)
 
-  def loadImage(path: String): (ImageHandle, Int, Int) =
-    val loaded =
-      if path.toLowerCase.endsWith(".jpg") || path.toLowerCase.endsWith(".jpeg") then loadJpeg(path)
-      else imageSurfaceCreateFromPNG(path).reference
+  // Every image surface this backend creates is owned here and freed by destroyImages at teardown. Images
+  // loaded from a file are also cached by path, so a multi-pass document (Passes re-runs \includegraphics
+  // every pass) decodes each file once and reuses the surface instead of leaking one copy per pass.
+  private val imageCache  = scala.collection.mutable.Map[String, (Surface, Int, Int)]()
+  private val ownedImages = scala.collection.mutable.ArrayBuffer[Surface]()
 
-    (loaded, loaded.getWidth, loaded.getHeight)
+  def loadImage(path: String): (ImageHandle, Int, Int) =
+    imageCache.getOrElseUpdate(
+      path, {
+        val loaded =
+          if path.toLowerCase.endsWith(".jpg") || path.toLowerCase.endsWith(".jpeg") then loadJpeg(path)
+          else imageSurfaceCreateFromPNG(path)
+        ownedImages += loaded
+        (loaded, loaded.getWidth, loaded.getHeight)
+      },
+    )
+
+  /** Free every image surface this backend created. Called by the subclasses' destroy, so the surfaces live
+    * exactly as long as the typesetter that handed them out. */
+  protected def destroyImages(): Unit =
+    ownedImages.foreach(_.destroy())
+    ownedImages.clear()
+    imageCache.clear()
 
   // Cairo reads PNG itself but knows nothing about JPEG, so decode the JPEG with TurboJPEG straight into a
   // freshly created ARGB32 surface's own pixel buffer (zero-copy). TurboJPEG's BGRA output sets every alpha
@@ -130,7 +149,7 @@ abstract class CairoTypesetter extends Typesetter:
     try decoder.decompress(bytes, surface.getData, surface.getStride, turbojpeg.PixelFormat.BGRA)
     finally decoder.close()
     surface.markDirty()
-    surface.reference
+    surface
 
   def drawImage(image: ImageHandle, x: Double, y: Double, w: Double, h: Double): Unit =
     ctx.save()
@@ -168,7 +187,8 @@ abstract class CairoTypesetter extends Typesetter:
         x += 1
       y += 1
     surface.markDirty()
-    surface.reference
+    ownedImages += surface
+    surface
 
   // Picture-graphics seam — thin pass-throughs onto the Cairo context, which models exactly this vocabulary.
 

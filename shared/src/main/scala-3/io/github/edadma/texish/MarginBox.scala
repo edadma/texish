@@ -6,4 +6,6 @@ class MarginBox(box: Box, top: Double, right: Double, bottom: Double, left: Doub
   val descent: Double = box.descent + bottom
   val xAdvance: Double = width
 
-  def draw(t: Typesetter, x: Double, y: Double): Unit = box.draw(t, x, y)
+  // the left margin shifts the content right; the top margin needs no shift because ascent grows upward
+  // from the unchanged baseline
+  def draw(t: Typesetter, x: Double, y: Double): Unit = box.draw(t, x + left, y)

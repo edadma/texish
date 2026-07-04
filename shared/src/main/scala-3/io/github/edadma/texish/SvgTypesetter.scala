@@ -64,9 +64,10 @@ final class SvgPage(val width: Double, val height: Double):
   /** The assembled standalone `<svg>` document, available once the page has been ejected. */
   var svg: String = ""
 
-/** A vector path under construction in the picture seam, recorded in user coordinates and flattened through
-  * the CTM only when painted, so a path built before a transform and filled after it draws where a rasterizer
-  * would draw it. */
+/** A vector path under construction in the picture seam. Coordinates are stored already pushed through the
+  * CTM — frozen when the segment is added, exactly as Cairo and the canvas freeze theirs — so a transform set
+  * between building a path and painting it affects only later segments and the stroke pen, never geometry
+  * already recorded. */
 private enum SvgPathCmd:
   case M(x: Double, y: Double)
   case L(x: Double, y: Double)
@@ -314,7 +315,7 @@ class SvgTypesetter extends Typesetter:
       .append("\" x2=\"").append(fmt(bx)).append("\" y2=\"").append(fmt(by))
       .append("\" stroke=\"").append(cssColor(curColor)).append('"')
       .append(opacityAttr("stroke-opacity", curColor))
-      .append(" stroke-width=\"").append(fmt(curLineWidth)).append("\"/>\n")
+      .append(" stroke-width=\"").append(fmt(curLineWidth * ctmScale)).append("\"/>\n")
 
   def drawRect(x: Double, y: Double, width: Double, height: Double): Unit =
     val pts = rectCorners(x, y, width, height)
@@ -322,7 +323,7 @@ class SvgTypesetter extends Typesetter:
       .append("<polygon points=\"").append(pts)
       .append("\" fill=\"none\" stroke=\"").append(cssColor(curColor)).append('"')
       .append(opacityAttr("stroke-opacity", curColor))
-      .append(" stroke-width=\"").append(fmt(curLineWidth)).append("\"/>\n")
+      .append(" stroke-width=\"").append(fmt(curLineWidth * ctmScale)).append("\"/>\n")
 
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit =
     val pts = rectCorners(x, y, width, height)
@@ -354,13 +355,15 @@ class SvgTypesetter extends Typesetter:
     clipDepth = 0 :: clipDepth
 
   override def grestore(): Unit =
-    var opened = clipDepth.head
-    while opened > 0 do
-      page.content.append("</g>\n")
-      opened -= 1
-    clipDepth = clipDepth.tail
+    // gsave pushes the state and clip frames together, so both pop only on a match: an unbalanced grestore is
+    // ignored (as the other backends' state stacks ignore it) instead of underflowing the clip-frame list
     gstack match
       case s :: rest =>
+        var opened = clipDepth.head
+        while opened > 0 do
+          page.content.append("</g>\n")
+          opened -= 1
+        clipDepth = clipDepth.tail
         gstack = rest
         ctm = s.ctm
         curColor = s.color
@@ -375,11 +378,18 @@ class SvgTypesetter extends Typesetter:
   override def scale(sx: Double, sy: Double): Unit     = ctm = ctm * SvgMatrix.scale(sx, sy)
   override def rotate(radians: Double): Unit           = ctm = ctm * SvgMatrix.rotate(radians)
 
-  override def newPath(): Unit                    = path = ArrayBuffer.empty
-  override def moveTo(x: Double, y: Double): Unit = path += SvgPathCmd.M(x, y)
-  override def lineTo(x: Double, y: Double): Unit = path += SvgPathCmd.L(x, y)
+  override def newPath(): Unit = path = ArrayBuffer.empty
+  override def moveTo(x: Double, y: Double): Unit =
+    val (dx, dy) = ctm(x, y)
+    path += SvgPathCmd.M(dx, dy)
+  override def lineTo(x: Double, y: Double): Unit =
+    val (dx, dy) = ctm(x, y)
+    path += SvgPathCmd.L(dx, dy)
   override def curveTo(c1x: Double, c1y: Double, c2x: Double, c2y: Double, x: Double, y: Double): Unit =
-    path += SvgPathCmd.C(c1x, c1y, c2x, c2y, x, y)
+    val (a1, b1) = ctm(c1x, c1y)
+    val (a2, b2) = ctm(c2x, c2y)
+    val (ax, ay) = ctm(x, y)
+    path += SvgPathCmd.C(a1, b1, a2, b2, ax, ay)
   override def closePath(): Unit = path += SvgPathCmd.Z
 
   // Flatten the arc to cubic Béziers (≤90° per segment) on the same parametric circle Cairo traces, so both
@@ -394,14 +404,14 @@ class SvgTypesetter extends Typesetter:
     val k     = 4.0 / 3.0 * math.tan(delta / 4)
     val sx    = cx + r * math.cos(a0)
     val sy    = cy + r * math.sin(a0)
-    if path.isEmpty then path += SvgPathCmd.M(sx, sy) else path += SvgPathCmd.L(sx, sy)
+    if path.isEmpty then moveTo(sx, sy) else lineTo(sx, sy)
     var theta = a0
     var i     = 0
     while i < nseg do
       val t2  = theta + delta
       val p2x = cx + r * math.cos(t2)
       val p2y = cy + r * math.sin(t2)
-      path += SvgPathCmd.C(
+      curveTo(
         cx + r * math.cos(theta) - k * r * math.sin(theta),
         cy + r * math.sin(theta) + k * r * math.cos(theta),
         p2x + k * r * math.sin(t2),
@@ -421,12 +431,14 @@ class SvgTypesetter extends Typesetter:
     if !preserve then path = ArrayBuffer.empty
 
   override def strokePath(): Unit =
+    // the pen takes the CTM at stroke time, as Cairo's does
+    val s = ctmScale
     page.content
       .append("<path d=\"").append(pathData())
       .append("\" fill=\"none\" stroke=\"").append(cssColor(curColor)).append('"')
       .append(opacityAttr("stroke-opacity", curColor))
-      .append(" stroke-width=\"").append(fmt(curLineWidth)).append('"')
-      .append(strokeAttrs())
+      .append(" stroke-width=\"").append(fmt(curLineWidth * s)).append('"')
+      .append(strokeAttrs(s))
       .append("/>\n")
     path = ArrayBuffer.empty
 
@@ -444,26 +456,35 @@ class SvgTypesetter extends Typesetter:
   override def setLineCap(cap: LineCap): Unit   = curCap = cap
   override def setLineJoin(join: LineJoin): Unit = curJoin = join
 
-  /** The current path as SVG path data, every point pushed through the CTM into device space. */
+  /** The current path as SVG path data. The stored coordinates are already device space (frozen through the
+    * CTM when each segment was added), so they are emitted as they are. */
   private def pathData(): String =
     val d = new StringBuilder
     for cmd <- path do
       cmd match
-        case SvgPathCmd.M(x, y)                 => moveCmd(d, ctm(x, y))
-        case SvgPathCmd.L(x, y)                 => lineCmd(d, ctm(x, y))
-        case SvgPathCmd.C(x1, y1, x2, y2, x, y) => curveCmd(d, ctm(x1, y1), ctm(x2, y2), ctm(x, y))
+        case SvgPathCmd.M(x, y)                 => moveCmd(d, (x, y))
+        case SvgPathCmd.L(x, y)                 => lineCmd(d, (x, y))
+        case SvgPathCmd.C(x1, y1, x2, y2, x, y) => curveCmd(d, (x1, y1), (x2, y2), (x, y))
         case SvgPathCmd.Z                       => d.append("Z")
     d.toString
 
-  private def strokeAttrs(): String =
+  /** The CTM's mean linear scale — the factor a rasterizer applies to the pen when stroking under this
+    * transform. Path geometry is emitted in device space, so the scalar stroke width and dash lengths must be
+    * scaled the same way or strokes render thinner than on the PDF and raster backends. Exact for uniform
+    * scale and rotation; the geometric mean for an anisotropic scale, whose elliptical pen SVG's scalar
+    * stroke-width cannot represent. */
+  private def ctmScale: Double = math.sqrt(math.abs(ctm.a * ctm.d - ctm.b * ctm.c))
+
+  private def strokeAttrs(scale: Double): String =
     val sb = new StringBuilder
     if curDash.nonEmpty then
+      // dash lengths live in user space like the pen width, so they carry the same CTM scale
       sb.append(" stroke-dasharray=\"")
       for (v, i) <- curDash.zipWithIndex do
         if i > 0 then sb.append(',')
-        sb.append(fmt(v))
+        sb.append(fmt(v * scale))
       sb.append('"')
-      if curDashPhase != 0 then sb.append(" stroke-dashoffset=\"").append(fmt(curDashPhase)).append('"')
+      if curDashPhase != 0 then sb.append(" stroke-dashoffset=\"").append(fmt(curDashPhase * scale)).append('"')
     curCap match
       case LineCap.Butt   => sb.append(" stroke-linecap=\"butt\"")
       case LineCap.Round  => sb.append(" stroke-linecap=\"round\"")

@@ -5,7 +5,9 @@ private val RGBRegex = "#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})".r
 case class Color(red: Double, green: Double, blue: Double, alpha: Double):
   def this(r: Int, g: Int, b: Int, a: Int) = this(r / 255.0, g / 255.0, b / 255.0, a / 255.0)
 
-  private def toInt(v: Double) = (v * 255).toInt
+  // round to the nearest channel value (truncation mapped 0.5 to 127 while Cairo, fed the raw double,
+  // rendered 128 — a one-step colour mismatch between backends), clamped to the byte range
+  private def toInt(v: Double) = math.max(0, math.min(255, math.round(v * 255).toInt))
 
   def redInt: Int = toInt(red)
   def greenInt: Int = toInt(green)

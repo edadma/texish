@@ -73,6 +73,60 @@ class Graphics2DSeamTests extends AnyFreeSpec with Matchers:
     inkOnRow(dash = true) should be < inkOnRow(dash = false)
   }
 
+  "getTextExtents of an empty string reports zero extents instead of crashing" in {
+    // TextLayout rejects ""; the other backends return zeros, and CharBox can legitimately construct empty
+    val (t, _) = page()
+    val face   = t.loadFont("fonts/LatinModernRoman/lmroman10-regular.otf")
+    val rf     = t.makeFont(face, 12.0)
+
+    t.getTextExtents("", rf) shouldBe TextExtents(0, 0, 0, 0, 0, 0)
+  }
+
+  "drawLine ends at its endpoints (butt caps), matching the PDF and SVG backends" in {
+    // square caps (the old AWT default) extended each end by half the line width, making every \underline
+    // and rule fraction longer on this backend than on the others
+    val (t, img) = page()
+
+    t.setColor(Color("black"))
+    t.setLineWidth(6)
+    t.drawLine(20, 50, 80, 50)
+
+    luminance(img.getRGB(50, 50)) should be < 60  // on the line
+    luminance(img.getRGB(22, 50)) should be < 60  // just inside the start
+    luminance(img.getRGB(18, 50)) should be > 200 // just before the start — a square cap would paint this
+    luminance(img.getRGB(82, 50)) should be > 200 // just past the end
+  }
+
+  "path geometry freezes when a segment is added — a later transform moves only the pen" in {
+    // Cairo and the canvas record segments in the space current at add time; this backend must agree, or a
+    // path built before \scale and filled after it lands in a different place per backend
+    val (t, img) = page()
+
+    t.setColor(Color("black"))
+    t.newPath()
+    t.moveTo(20, 20); t.lineTo(40, 20); t.lineTo(40, 40); t.lineTo(20, 40); t.closePath()
+    t.scale(2, 2) // set after the segments were added
+    t.fillPath(false)
+
+    luminance(img.getRGB(30, 30)) should be < 60  // the square stayed where it was built…
+    luminance(img.getRGB(60, 60)) should be > 240 // …not doubled out to (40..80)
+  }
+
+  "the stroke pen takes the transform at stroke time" in {
+    val (t, img) = page()
+
+    t.setColor(Color("black"))
+    t.setLineWidth(2)
+    t.gsave()
+    t.scale(3, 3)
+    t.newPath(); t.moveTo(5, 20); t.lineTo(30, 20) // device: (15,60)–(90,60)
+    t.strokePath()
+    t.grestore()
+
+    luminance(img.getRGB(50, 60)) should be < 60  // a 6-device-unit pen covers the row
+    luminance(img.getRGB(50, 55)) should be > 240 // two points above the 6-wide stroke — clear
+  }
+
   // A full PictureBox replayed through the real backend: a rect drawn near the bottom of the box's own y-up
   // space must land near the bottom of the page, confirming the y-up→device flip points the right way.
   "a PictureBox draws its display list with y up, origin at the bottom" in {

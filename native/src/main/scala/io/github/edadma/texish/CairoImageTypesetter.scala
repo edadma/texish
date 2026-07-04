@@ -62,6 +62,7 @@ class CairoImageTypesetter(dpi: Double = 100) extends CairoTypesetter:
   def ejectPageTarget(): Unit = surface.flush()
 
   def destroy(): Unit =
+    destroyImages()
     if ready then ctx.destroy()
     // collected page surfaces belong to the caller; only an uncollected scratch is the backend's to free
     if ready && !pageStarted then surface.destroy()

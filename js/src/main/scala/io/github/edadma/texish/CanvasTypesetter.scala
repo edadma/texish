@@ -57,7 +57,9 @@ class CanvasTypesetter extends Typesetter with EmbeddedFontSet:
   private var curFont: CanvasRenderFont = uninitialized
   private var curLineWidth: Double   = 1.0
   private var curDash: Seq[Double]   = Nil
-  private var curCap: LineCap        = LineCap.Square
+  // butt caps by default, matching the Cairo (PDF) and SVG backends, so a rule or underline spans exactly
+  // its endpoints on every backend
+  private var curCap: LineCap        = LineCap.Butt
   private var curJoin: LineJoin      = LineJoin.Miter
 
   private final case class GState(color: Color, lineWidth: Double, dash: Seq[Double], cap: LineCap, join: LineJoin)

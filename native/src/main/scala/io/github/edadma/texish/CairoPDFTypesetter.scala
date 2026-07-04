@@ -21,5 +21,6 @@ class CairoPDFTypesetter(val output: String) extends CairoTypesetter:
   override def endLink(): Unit              = ctx.tagEnd(Tags.LINK)
 
   def destroy(): Unit =
+    destroyImages()
     ctx.destroy()
     surface.destroy()

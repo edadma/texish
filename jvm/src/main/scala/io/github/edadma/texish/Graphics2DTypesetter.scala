@@ -59,6 +59,8 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
     // advances the drawn text drifts off the measured positions, a glyph or two per word, eating interword space
     g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
     g.scale(deviceScale, deviceScale)
+    baseTransform = g.getTransform // the page's point space; picture paths freeze into it (see `frozen`)
+    rebuildStroke() // a fresh Graphics2D defaults to square caps; apply this backend's butt-cap default
 
   def createPageTarget: Any =
     newPageImage()
@@ -100,6 +102,8 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
     AwtFace(java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path)), path)
 
   def getTextExtents(text: String, font: RenderFont): TextExtents =
+    // TextLayout rejects an empty string; an empty run simply has no extent (as the other backends report)
+    if text.isEmpty then return TextExtents(0, 0, 0, 0, 0, 0)
     val layout = new TextLayout(text, font.font, frc)
     val bounds = layout.getBounds
 
@@ -181,10 +185,16 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
   private var path: GeneralPath = new GeneralPath
 
-  // BasicStroke(width) defaults to square caps and miter joins; mirror that so an engine rule drawn through
-  // setLineWidth keeps rendering exactly as before this seam existed.
+  // The page's base transform (the device scale set at page creation). Picture-path coordinates are frozen
+  // into this space when each segment is added, matching Cairo and the canvas, and the path is painted under
+  // it — so a transform set between building a path and painting it affects only later segments and the pen.
+  private var baseTransform: AffineTransform = uninitialized
+
+  // Butt caps by default, matching the Cairo (PDF) and SVG backends, so a rule or underline drawn through
+  // drawLine spans exactly its endpoints on every backend. (BasicStroke's own default is square caps, which
+  // extended each end by half the line width.)
   private var lineWidth: Float        = 1f
-  private var lineCap: Int            = BasicStroke.CAP_SQUARE
+  private var lineCap: Int            = BasicStroke.CAP_BUTT
   private var lineJoin: Int           = BasicStroke.JOIN_MITER
   private var dashArray: Array[Float] = null
   private var dashPhase: Float        = 0f
@@ -230,12 +240,42 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
   override def scale(sx: Double, sy: Double): Unit     = g.scale(sx, sy)
   override def rotate(radians: Double): Unit           = g.rotate(radians)
 
-  override def newPath(): Unit                    = path = new GeneralPath
-  override def moveTo(x: Double, y: Double): Unit = path.moveTo(x, y)
-  override def lineTo(x: Double, y: Double): Unit = path.lineTo(x, y)
+  /** Freeze a user-space point into the page's point space (the base transform's user space): segment
+    * coordinates are fixed when the segment is added, as Cairo and the canvas fix theirs, so a transform set
+    * between building a path and painting it affects only later segments and the stroke pen. */
+  private def frozen(x: Double, y: Double): java.awt.geom.Point2D.Double =
+    val pt = new java.awt.geom.Point2D.Double(x, y)
+    g.getTransform.transform(pt, pt)
+    baseTransform.inverseTransform(pt, pt)
+    pt
+
+  /** Paint under the page's base transform — the space the frozen path coordinates live in — leaving the
+    * live transform (and the clip, which Java2D keeps in device space) untouched. */
+  private def withBaseTransform(body: => Unit): Unit =
+    val saved = g.getTransform
+    g.setTransform(baseTransform)
+    try body
+    finally g.setTransform(saved)
+
+  /** The mean linear scale of the live transform relative to the page base — the factor Cairo applies to the
+    * pen when stroking under the same transform. Exact for uniform scale and rotation; the geometric mean for
+    * an anisotropic scale, whose elliptical pen a scalar-width BasicStroke cannot make. */
+  private def ctmScale: Double =
+    math.sqrt(math.abs(g.getTransform.getDeterminant / baseTransform.getDeterminant))
+
+  override def newPath(): Unit = path = new GeneralPath
+  override def moveTo(x: Double, y: Double): Unit =
+    val p = frozen(x, y)
+    path.moveTo(p.x, p.y)
+  override def lineTo(x: Double, y: Double): Unit =
+    val p = frozen(x, y)
+    path.lineTo(p.x, p.y)
 
   override def curveTo(c1x: Double, c1y: Double, c2x: Double, c2y: Double, x: Double, y: Double): Unit =
-    path.curveTo(c1x, c1y, c2x, c2y, x, y)
+    val a = frozen(c1x, c1y)
+    val b = frozen(c2x, c2y)
+    val c = frozen(x, y)
+    path.curveTo(a.x, a.y, b.x, b.y, c.x, c.y)
 
   // Approximate the arc with cubic Béziers (≤90° per segment) using the same parametric circle
   // point = (cx + r·cosθ, cy + r·sinθ) that Cairo's native arc traces, so both backends draw the same curve
@@ -252,7 +292,7 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
 
     val sx = cx + r * math.cos(a0)
     val sy = cy + r * math.sin(a0)
-    if path.getCurrentPoint == null then path.moveTo(sx, sy) else path.lineTo(sx, sy)
+    if path.getCurrentPoint == null then moveTo(sx, sy) else lineTo(sx, sy)
 
     var theta = a0
     var i     = 0
@@ -262,7 +302,7 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
       val p1y = cy + r * math.sin(theta)
       val p2x = cx + r * math.cos(t2)
       val p2y = cy + r * math.sin(t2)
-      path.curveTo(
+      curveTo(
         p1x - k * r * math.sin(theta),
         p1y + k * r * math.cos(theta),
         p2x + k * r * math.sin(t2),
@@ -276,15 +316,34 @@ class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
   override def closePath(): Unit = path.closePath()
 
   override def fillPath(preserve: Boolean): Unit =
-    g.fill(path)
+    withBaseTransform(g.fill(path))
     if !preserve then path = new GeneralPath
 
   override def strokePath(): Unit =
-    g.draw(path)
+    // the pen takes the live transform at stroke time, as Cairo's does: the path is painted in the base
+    // space it was frozen into, with the width and dash lengths carrying the transform's scale
+    val s = ctmScale
+    withBaseTransform {
+      val savedStroke = g.getStroke
+      g.setStroke(
+        if dashArray == null || dashArray.isEmpty then new BasicStroke((lineWidth * s).toFloat, lineCap, lineJoin)
+        else
+          new BasicStroke(
+            (lineWidth * s).toFloat,
+            lineCap,
+            lineJoin,
+            10f,
+            dashArray.map(v => (v * s).toFloat),
+            (dashPhase * s).toFloat,
+          ),
+      )
+      g.draw(path)
+      g.setStroke(savedStroke)
+    }
     path = new GeneralPath
 
   override def clipPath(): Unit =
-    g.clip(path)
+    withBaseTransform(g.clip(path))
     path = new GeneralPath
 
   override def setDash(pattern: Seq[Double], offset: Double): Unit =

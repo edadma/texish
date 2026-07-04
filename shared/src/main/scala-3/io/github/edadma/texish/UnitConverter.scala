@@ -22,8 +22,12 @@ class UnitConverter(t: Typesetter):
     case "ex" => value * t.currentFont.xHeight // Ex units (based on current font x-height)
     case _    => throw new IllegalArgumentException(s"Unknown unit: $unit")
 
+  /** Express a point length in traditional pica notation: whole picas, the leftover points, and the
+    * "NpM" string compositors write (30pt = 2 picas 6 points = "2p6"). */
   def toPicas(points: Double): (Double, Double, String) =
-    val picas           = points / 12
-    val remainingPoints = points % 12
+    val picas           = math.floor(points / 12)
+    val remainingPoints = points - picas * 12
 
-    (picas, points, f"${picas}p${remainingPoints}")
+    (picas, remainingPoints, s"${fmtNum(picas)}p${fmtNum(remainingPoints)}")
+
+  private def fmtNum(v: Double): String = if v.isWhole then v.toLong.toString else v.toString

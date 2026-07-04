@@ -141,6 +141,98 @@ class SvgTypesetterTests extends AnyFreeSpec with Matchers:
     page.svg should include("L60 60")
   }
 
+  "the stroke pen scales with the CTM like the raster backends' pens" in {
+    // under scale(10,10) a 2pt pen must stroke 20 device units wide, and dash lengths scale the same way —
+    // before the fix the path coordinates were transformed but the width and dashes were not, so SVG strokes
+    // came out ten times thinner than PDF/PNG under \scale
+    val t    = new SvgTypesetter
+    t.init(200, 200)
+    val page = t.createPageTarget.asInstanceOf[SvgPage]
+
+    t.gsave()
+    t.scale(10, 10)
+    t.setColor(Color("black"))
+    t.setLineWidth(2)
+    t.setDash(Seq(3.0), 0)
+    t.newPath()
+    t.moveTo(1, 1); t.lineTo(15, 1)
+    t.strokePath()
+    t.grestore()
+    t.ejectPageTarget()
+
+    page.svg should include("stroke-width=\"20\"")
+    page.svg should include("stroke-dasharray=\"30\"")
+  }
+
+  "drawLine's stroke width carries the CTM scale too" in {
+    val t    = new SvgTypesetter
+    t.init(200, 200)
+    val page = t.createPageTarget.asInstanceOf[SvgPage]
+
+    t.gsave()
+    t.scale(3, 3)
+    t.setLineWidth(1)
+    t.drawLine(0, 0, 10, 10)
+    t.grestore()
+    t.ejectPageTarget()
+
+    page.svg should include("stroke-width=\"3\"")
+  }
+
+  "path geometry freezes when a segment is added — a later transform moves only the pen" in {
+    // Cairo and the canvas record segments in the space current when they are added; the SVG backend must
+    // agree, or a path built before \scale and stroked after it draws in a different place per backend.
+    val t    = new SvgTypesetter
+    t.init(200, 200)
+    val page = t.createPageTarget.asInstanceOf[SvgPage]
+
+    t.gsave()
+    t.setLineWidth(1)
+    t.newPath()
+    t.moveTo(10, 10); t.lineTo(20, 10)
+    t.scale(2, 2) // set after the segments were added
+    t.strokePath()
+    t.grestore()
+    t.ejectPageTarget()
+
+    page.svg should include("M10 10")      // the geometry stayed where it was built…
+    page.svg should include("stroke-width=\"2\"") // …while the pen took the new transform
+    (page.svg should not).include("M20 20")
+  }
+
+  "an unbalanced grestore is ignored instead of closing clip groups it does not own" in {
+    val t    = new SvgTypesetter
+    t.init(200, 200)
+    val page = t.createPageTarget.asInstanceOf[SvgPage]
+
+    t.gsave()
+    t.newPath()
+    t.moveTo(0, 0); t.lineTo(50, 0); t.lineTo(50, 50); t.closePath()
+    t.clipPath()
+    t.grestore()
+    noException should be thrownBy t.grestore() // one more than was saved
+    t.ejectPageTarget()
+
+    countOf(page.svg, "<g clip-path") shouldBe countOf(page.svg, "</g>")
+  }
+
+  "an underline leaves the pen width it found" in {
+    val t    = new SvgTypesetter
+    t.init(200, 200)
+    val page = t.createPageTarget.asInstanceOf[SvgPage]
+
+    new UnderlineBox(t, RuleBox(t, 20, 2, 0)).draw(t, 10, 50)
+    t.setColor(Color("black"))
+    t.newPath()
+    t.moveTo(0, 100); t.lineTo(100, 100)
+    t.strokePath()
+    t.ejectPageTarget()
+
+    // the underline draws at its own 0.8, and the stroke after it is back at the default 1pt pen
+    page.svg should include("stroke-width=\"0.8\"")
+    page.svg should include("stroke-width=\"1\"")
+  }
+
   private def countOf(s: String, sub: String): Int =
     var i = 0; var n = 0
     while { i = s.indexOf(sub, i); i >= 0 } do
