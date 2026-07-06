@@ -102,7 +102,7 @@ forbids one, `-10000` forces one.
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `footnotesep` | `1em` | space above the footnote separator rule |
-| `footnotesize` | `0.8` | footnote text size, as a fraction of the surrounding font |
+| `footnotescale` | `0.8` | footnote text size, as a fraction of the surrounding font |
 | `footnoteno` | `0` | the footnote counter, advanced by each `\footnote` |
 
 ## Floats

@@ -64,6 +64,9 @@ class Processor(val handler: Handler):
   registerPrimitive("include", IncludePrimitive)
   registerPrimitive("use", UsePrimitive)
 
+  // Scripture: translate a USFM file into calls on the `usfm` package's macros and typeset it
+  registerPrimitive("usfm", UsfmPrimitive)
+
   // Arithmetic primitives
   registerPrimitive("+", AddPrimitive)
   registerPrimitive("-", SubPrimitive)

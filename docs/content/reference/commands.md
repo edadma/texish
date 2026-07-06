@@ -352,6 +352,25 @@ palette colour, and a label adds a legend entry.
 | `\newcounter` `\setcounter` `\addtocounter` `\stepcounter` `\value` `\counterwithin` | named counters; `\counterwithin` resets a child when its parent steps |
 | `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph`/`\fnsymbol` | format a number as digits / roman / letters / footnote symbols |
 | `\use{name}` `\include{path}` | load a format / include raw input |
+| `\usfm{path}` | typeset a Scripture file in USFM format through the `\usfm…` macros *(`\use{usfm}`)* |
+
+## Scripture *(`\use{usfm}`)*
+
+`\usfm{path}` reads a book in USFM (the Unified Standard Format Markers that Bible translations
+are exchanged in) and typesets it, resolving the path beside the document as `\include` does. Every
+visible decision is a redefinable macro, so a document sets the appearance with ordinary commands
+*before* the call — `\def usfmwj t {\t}` to drop the red-letter words of Jesus, `\set usfmqbase {24}`
+for a deeper poetry indent, and so on. The defaults give a print-Bible page: a large chapter figure,
+superscript verse numbers, bold section headings with italic reference lines, justified prose and
+ragged poetry, real footnotes, and the words of Jesus in red.
+
+| Macro | Styles |
+|-------|--------|
+| `\usfmmt{n}{…}` `\usfms{n}{…}` `\usfmr{n}{…}` `\usfmd{n}{…}` | book title / section heading / reference line / psalm superscription |
+| `\usfmc{N}` `\usfmv{N}` | the chapter figure and the verse number |
+| `\usfmp{n}` `\usfmm{n}` `\usfmq{n}` `\usfmli{n}` `\usfmb` | indented / flush paragraph, poetry line by level, list item, stanza break |
+| `\usfmwj{…}` `\usfmref{disp}{target}` `\usfmnd{…}` | words of Jesus, a cross-reference link, the name of God |
+| `\usfmfootnote{…}` with `\usfmfr` `\usfmft` `\usfmfqa` `\usfmfv` | a footnote and its reference / text / alternative / verse-number parts |
 
 ## Railroad diagrams *(`\use{railroad}`)*
 

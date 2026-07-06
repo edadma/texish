@@ -305,7 +305,7 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         t.set("footnoteno", n.toDouble)
 
         val textFont = t.currentFont
-        val noteFont = t.makeFont(textFont.typeface, textFont.size * t.getNumber("footnotesize"), textFont.style)
+        val noteFont = t.makeFont(textFont.typeface, textFont.size * t.getNumber("footnotescale"), textFont.style)
 
         // the marker: the footnote number in the smaller footnote font, raised a third of an em
         t.currentFont = noteFont
@@ -322,6 +322,13 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         t.set("baselineskip", Glue(noteFont.size * 1.2))
         t.set("spaceskip", Glue(noteFont.space, 1))
         t.set("xspaceskip", Glue(noteFont.space * 1.5, 1))
+        // The note is set on its own measure, flush at the foot, whatever the indentation of the line the marker
+        // fell on — a marker inside a poetry line, a list item or a quotation must not carry that block's
+        // leftskip / indent into the note. The scope above restores them for the surrounding text.
+        t.set("leftskip", ZeroGlue)
+        t.set("rightskip", ZeroGlue)
+        t.set("parindent", 0.0)
+        t.set("hangindent", 0.0)
         t.vbox()
         t.noindent add t.charBox(s"$n.")
         t.add(t.getGlue("spaceskip"))

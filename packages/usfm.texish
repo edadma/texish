@@ -1,0 +1,146 @@
+// usfm — typeset Scripture from a USFM (Unified Standard Format Markers) file.
+//
+// Load it and hand the \usfm primitive a file:
+//
+//     \use{usfm}
+//     \usfm{john.usfm}
+//
+// The primitive translates the file's markers into calls on the \usfm… macros defined below, so every visible
+// decision — the chapter figure, the verse number, the poetry indents, the section headings, the footnotes, the
+// words of Jesus — is an ordinary macro a document can redefine before the call. Set the appearance with plain
+// texish commands first; then typeset the book:
+//
+//     \use{usfm}
+//     \def usfmwj t {\t}          // words of Jesus in plain black rather than red
+//     \set usfmqbase {24}          // a deeper poetry indent
+//     \usfm{psalms.usfm}
+//
+// The format builds on `document`, so its title, sectioning and size commands are available too.
+
+\use{document}
+
+// ---- Body defaults --------------------------------------------------------------
+// A 10pt body on a 12pt baseline. A document overrides any of these before \usfm{…}.
+\font lmroman 10 regular
+\set baselineskip {12}
+\set parindent {15}
+
+// ---- Book identity --------------------------------------------------------------
+// \h records the running book name in \usfmbook (for a document that wants a running head); \toc entries are not
+// printed. Both are redefinable.
+\def usfmbook {}
+\def usfmh n t {\gdef usfmbook {\t}}
+\def usfmtoc n t {}
+
+// ---- Titles ---------------------------------------------------------------------
+// \mt1 is the book title; higher \mt levels are its subtitles (which appear above it in the file), set smaller.
+// \ms is a major section title such as a psalter's book division, \mr its reference line.
+\def usfmmt n t {\par\if {\> {\n} {1}}\medskip\centerline{\font lmroman 13 regular \t}\smallskip\else\bigskip\centerline{\font lmroman 22 bold \t}\medskip\fi}
+\def usfmmte n t {\usfmmt{\n}{\t}}
+\def usfmms n t {\par\bigskip\centerline{\font lmroman 14 bold \t}\smallskip}
+\def usfmmr n t {\par\centerline{\font lmroman 10 italic \t}\medskip}
+
+// ---- Section headings -----------------------------------------------------------
+// \s is a section heading (bold); \r the parallel-passage references beneath it (small italic); \d a psalm's
+// descriptive title, or superscription, which can carry its own \v; \qa an acrostic heading; \sp a speaker label.
+\def usfms n t {\par\medskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip}
+\def usfmr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip}
+\def usfmsr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip}
+\def usfmd n t {\par\smallskip\leftline{\font lmroman 10 italic \t}\nobreak\smallskip}
+\def usfmsp n t {\par\smallskip\leftline{\font lmroman 10 bold \t}\nobreak\smallskip}
+\def usfmqa n t {\par\smallskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip}
+\def usfmcl n t {\par\medskip\centerline{\font lmroman 13 bold \t}\smallskip}
+\def usfmcp n t {}
+
+// ---- Chapters and verses --------------------------------------------------------
+// A chapter number is held until the next body paragraph, which opens with it set as a large figure (\usfmchapfig)
+// — so the number leads the chapter's first paragraph, after any heading. A verse number is a small bold
+// superscript (\usfmversenum). Redefine either macro to restyle.
+\set usfmchappending {0}
+\def usfmchapno {}
+\def usfmchapfig {{\font lmroman 20 bold \usfmchapno}\hskip 5 }
+\def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
+\def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
+\def usfmversenum n {{\bold \textsup{\n}}\hskip 1.5 }
+\def usfmv n {\usfmversenum{\n}}
+
+// ---- Body paragraphs ------------------------------------------------------------
+// \p is an indented paragraph; a chapter's first paragraph opens flush with the chapter figure instead. \m, \pmo
+// and \nb run flush left; \pc is centred. Each resets the paragraph shape it needs so a preceding poetry line's
+// ragged margins do not leak in.
+\def usfmprose {\set leftskip {0}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {15}}
+\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\noindent\usfmchapfig\else\indent\fi}
+\def usfmm n {\par\usfmprose\noindent\usfmchapmaybe}
+\def usfmpmo n {\usfmm{\n}}
+\def usfmpm n {\usfmm{\n}}
+\def usfmpo n {\usfmm{\n}}
+\def usfmmi n {\usfmm{\n}}
+\def usfmcls n {\usfmm{\n}}
+\def usfmnb n {\par\usfmprose\noindent}
+\def usfmpi n {\par\usfmprose\set leftskip {\calc{\n * 12}}\noindent\usfmchapmaybe}
+\def usfmpc n {\par\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\noindent\usfmchapmaybe}
+\def usfmpmc n {\usfmpc{\n}}
+
+// ---- Poetry ---------------------------------------------------------------------
+// Each poetry line is set on its own line, indented by its level: usfmqbase for level 1, a further usfmqstep for
+// each level beyond, ragged along the right. \qr flushes right (a Selah); \b is a stanza break.
+\set usfmqbase {18}
+\set usfmqstep {18}
+\def usfmpoetry {\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}}
+\def usfmq n {\par\usfmpoetry\set leftskip {\calc{usfmqbase + (\n - 1) * usfmqstep}}\noindent\usfmchapmaybe}
+\def usfmqm n {\usfmq{\n}}
+\def usfmqd n {\usfmq{\n}}
+\def usfmqc n {\par\usfmpoetry\set leftskip {0 plus 1fil}\noindent\usfmchapmaybe}
+\def usfmqr n {\par\usfmpoetry\set leftskip {0 plus 1fil}\set rightskip {0}\set parfillskip {0}\noindent\usfmchapmaybe}
+\def usfmpr n {\usfmqr{\n}}
+\def usfmpmr n {\usfmqr{\n}}
+\def usfmph n {\par\usfmprose\set leftskip {\calc{\n * 18}}\noindent\usfmchapmaybe}
+\def usfmb {\par\smallskip}
+
+// ---- Lists ----------------------------------------------------------------------
+\def usfmli n {\par\set leftskip {\calc{\n * 18}}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {0}\noindent\usfmchapmaybe}
+\def usfmlim n {\usfmli{\n}}
+
+// ---- Inline character styles ----------------------------------------------------
+// Words of Jesus are red by default (the red-letter convention) — \def usfmwj t {\t} for plain text. A cross-
+// reference prints its display text, its canonical target available as a second argument for a linking document.
+\def usfmwj t {\textcolor{#c0281e}{\t}}
+\def usfmref d t {\d}
+\def usfmnd t {\textsc{\t}}
+\def usfmadd t {\emph{\t}}
+\def usfmbk t {\emph{\t}}
+\def usfmtl t {\emph{\t}}
+\def usfmqt t {\t}
+\def usfmqs t {\emph{\t}}
+\def usfmsc t {\textsc{\t}}
+\def usfmem t {\emph{\t}}
+\def usfmit t {\emph{\t}}
+\def usfmbd t {\textbf{\t}}
+\def usfmbdit t {\textbf{\emph{\t}}}
+\def usfmsup t {\textsup{\t}}
+\def usfmk t {\emph{\t}}
+\def usfmrq t {\emph{\t}}
+\def usfmw t {\t}
+\def usfmfv t {{\bold \textsup{\t}}}
+
+// ---- Footnotes ------------------------------------------------------------------
+// A footnote rides the foot of its page through the engine's \footnote, set small. Its parts: \fr the origin
+// reference (bold), \ft explanatory text (roman), \fqa an alternative rendering (italic), \fv a verse number
+// inside the note. \usfmxref renders a cross-reference note the same way.
+\def usfmfootnote b {\footnote{\font lmroman 8 regular \b}}
+\def usfmxref b {\footnote{\font lmroman 8 regular \b}}
+\def usfmfr t {{\bold \t} }
+\def usfmft t {\t}
+\def usfmfq t {\emph{\t}}
+\def usfmfqa t {\emph{\t}}
+\def usfmfqb t {\emph{\t}}
+\def usfmfk t {\textsc{\t}}
+\def usfmfl t {\t}
+\def usfmfp t {\t}
+\def usfmfw t {\t}
+\def usfmfdc t {\t}
+\def usfmfm t {\t}
+\def usfmxo t {{\bold \t} }
+\def usfmxt t {\t}
+\def usfmxq t {\emph{\t}}
+\def usfmxk t {\textsc{\t}}

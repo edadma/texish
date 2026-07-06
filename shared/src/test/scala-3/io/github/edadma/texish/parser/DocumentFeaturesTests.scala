@@ -61,6 +61,13 @@ class DocumentFeaturesTests extends AnyFreeSpec with Matchers:
     fontOf(render("{\\Huge X}"), "X").size shouldBe (25.0 +- 1e-9)
   }
 
+  "\\footnote sets its note under the document package, where \\footnotesize is a size macro" in {
+    // The engine reads the footnote scale from `footnotescale`; the document package's `\footnotesize` is a size
+    // declaration under a different name. Before they were separated, this threw "footnotesize is not a number".
+    val boxes = render("Body text.\\footnote{A note.}")
+    text(boxes) should include("Body")
+  }
+
   "\\textsl sets the slanted shape, \\textsc small caps, \\textsf the sans role" in {
     fontOf(render("\\textsl{X} Y"), "X").style should contain("slanted")
     fontOf(render("\\textsc{X} Y"), "X").style should contain("smallcaps")

@@ -72,6 +72,24 @@ class FootnoteTests extends AnyFreeSpec with Matchers:
     texts(note).take(3) shouldBe List("1.", "down", "low")
   }
 
+  "the footnote body is set flush even when the marker falls in an indented paragraph" in {
+    val (t, _, proc) = fixture()
+    t.set("leftskip", 40.0)
+
+    proc.process("indented \\footnote{note body} text")
+    t.paragraph()
+
+    val items = t.mode.asInstanceOf[Builder].list
+    val note  = items.collectFirst { case i: InsertBox => i }.get.content.asInstanceOf[VBox]
+
+    // the note's first line opens with the "1." marker, with no leading indent glue carried in from the
+    // surrounding paragraph's leftskip
+    val firstLine   = note.boxes.collectFirst { case h: HBox => h }.get
+    val leadingWide = firstLine.boxes.takeWhile(b => !b.isInstanceOf[CharBox]).map(_.width).sum
+    leadingWide shouldBe 0.0 +- 1e-9
+    firstLine.boxes.collectFirst { case c: CharBox => c.text }.get shouldBe "1."
+  }
+
   "the footnote counter numbers markers in order" in {
     val (t, _, proc) = fixture()
 
