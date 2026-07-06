@@ -12,7 +12,7 @@ package io.github.edadma.texish
   *   - `\smash`    — keep width, draw the ink, but report zero height and depth so it overlaps its neighbours
   *                   vertically rather than spreading the line.
   */
-class PhantomBox(inner: Box, keepWidth: Boolean, keepHeight: Boolean, visible: Boolean) extends Box:
+class PhantomBox(val inner: Box, keepWidth: Boolean, keepHeight: Boolean, visible: Boolean) extends Box:
   val ascent: Double   = if keepHeight then inner.ascent else 0.0
   val descent: Double  = if keepHeight then inner.descent else 0.0
   val width: Double    = if keepWidth then inner.width else 0.0

@@ -48,6 +48,7 @@ The document is typeset twice over a shared label table, so forward references r
 | `\color{name}` `\textcolor{name}{…}` | pen colour (CSS name or `#RRGGBB`) |
 | `\href{url}{text}` `\url{url}` | clickable links (real PDF annotations) |
 | `\TeX` `\LaTeX` `\TeXish` | the logos *(`\use{document}`)* |
+| `\dropcap[lines][gap]{X}{rest}` | drop cap spanning `lines` lines (default 2), sized by measurement; `rest` continues the word through the redefinable `\dropcaptext` (small caps by default) *(`\use{document}`)* |
 | `` ``…'' `` `--` `---` `...` `~` | quotes, dashes, ellipsis, tie |
 | `\$` `\&` `\#` `\%` `\{` `\}` `\\` `\~` | literal special characters (`$ & # % { } \ ~`) |
 

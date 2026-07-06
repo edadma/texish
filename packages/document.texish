@@ -56,6 +56,46 @@
 \def rlap m {\hbox to:0 {\m\hss}}
 \def llap m {\hbox to:0 {\hss\m}}
 
+// ---- Drop caps -------------------------------------------------------------------
+// \dropcap[lines][gap]{L}{orem} opens a paragraph with an oversized initial: the
+// letter is enlarged until it spans the given number of lines — its top on the first
+// line's cap height, its baseline on the baseline of the last spanned line — and the
+// opening lines are indented around it (a \hangindent selected by a negative
+// \hangafter, so the carve-out ends by itself when the paragraph does). The optional
+// arguments are positional: [lines] is how many lines the letter spans (default 2) and
+// [gap] the space in points between the letter and the carved text (default 3), so
+// \dropcap{L}{orem}, \dropcap[3]{L}{orem} and \dropcap[3][6]{L}{orem} are all valid.
+// The last mandatory argument is the rest of the opening word, set through
+// \dropcaptext — small capitals by default, redefinable like \foliostyle.
+//
+// The size is measured, not guessed: an X of the surrounding font gives the cap
+// height, the letter is test-set once at a reference size, and the ratio of the target
+// height — (lines − 1) baselines plus that cap height — to the measured height gives
+// the final size. Any typeface, weight and leading therefore come out aligned; a
+// descender (Q, J) hangs below the last spanned baseline, as a metal initial would.
+// The letter is placed in a zero-width overlap box, smashed so the first line keeps
+// its own height and lowered onto the last spanned baseline. Under a right-to-left
+// base the carve-out and the letter move to the right edge, mirroring \item's marker.
+// The paragraph should run at least `lines` lines, or it ends before the letter does.
+\def dropcaptext t {\textsc{\t}}
+\def dropcap [lines:2] [gap:3] letter text {//
+\setbox dropcapxbox \hbox{X}//
+\set dropcapcap {\ht dropcapxbox}//
+\set dropcapdrop {\calc{(\lines - 1) * baselineskip}}//
+\setbox dropcaprefbox \hbox{\fontsize{100}\letter}//
+\set dropcaprefht {\ht dropcaprefbox}//
+\setbox dropcapbox \hbox{\fontsize{\calc{100 * (dropcapdrop + dropcapcap) / dropcaprefht}}\letter}//
+\set dropcapwd {\wd dropcapbox}//
+\set hangafter {\calc{0 - \lines}}//
+\if {\> {\calc{pardir}} {0}}//
+\set hangindent {\calc{0 - dropcapwd - \gap}}//
+\noindent\rlap{\kern \gap\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}}\dropcaptext{\text}//
+\else//
+\set hangindent {\calc{dropcapwd + \gap}}//
+\noindent\llap{\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}\kern \gap}\dropcaptext{\text}//
+\fi//
+}//
+
 // ---- Font-size declarations ----------------------------------------------------
 // LaTeX's size-changing declarations, on a 10pt base. Each switches the type size for
 // the rest of the current group — use one inside { … } or an environment — keeping the
