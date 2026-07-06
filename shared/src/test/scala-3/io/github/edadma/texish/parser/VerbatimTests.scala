@@ -82,6 +82,30 @@ class VerbatimTests extends AnyFreeSpec with Matchers:
       proc.process("\\verb|x|")
       t.currentFont shouldBe before
     }
+
+    "keeps the text that follows the closing delimiter on the same run" in {
+      // the sentence-ending punctuation of "… through \verb|\textcolor|." must survive
+      val (t, proc) = fixture()
+      proc.process("a \\verb|x|. b\n")
+      val texts = t.added.collect { case c: CharBox => c.text }
+      texts should contain inOrder ("x", ".", " ", "b")
+    }
+
+    "keeps the interword space after the verbatim text" in {
+      // "\verb|x| to" is two words; the space between them is real
+      val (t, proc) = fixture()
+      proc.process("a \\verb|x| b\n")
+      val texts = t.added.collect { case c: CharBox => c.text }
+      texts.mkString shouldBe "a x b"
+    }
+
+    "leaves the surrounding glue parameters untouched" in {
+      // the mono switch refreshes \baselineskip; without its own scope that write survived the \verb and
+      // silently replaced a document's leading
+      val (t, proc) = fixture()
+      proc.process("\\set baselineskip {14}\\verb|x| after")
+      Value.number(proc.handler.get("baselineskip")) shouldBe Some(14.0)
+    }
   }
 
   "verbatim environment" - {

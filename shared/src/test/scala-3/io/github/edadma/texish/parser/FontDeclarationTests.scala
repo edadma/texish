@@ -147,3 +147,20 @@ class FontDeclarationTests extends AnyFreeSpec with Matchers:
     val y = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("Y") => c }.get
     y.font.size shouldBe (14.0 +- 1e-9) // back to the default size after the group closes
   }
+
+  private def text(boxes: Seq[Box]): String = boxes.toList.flatMap(chars).map(_.text).mkString(" ")
+
+  "a shape wrapper leaves the surrounding leading untouched" in {
+    // re-selecting a font refreshes \baselineskip as a glue; the switch and its restore run in the wrapper's
+    // own scope, so a document's \set baselineskip survives — a second \dropcap in the same document reads it
+    for wrap <- Seq("bold", "italic", "smallcaps", "slanted") do
+      withClue(s"\\$wrap: ") {
+        text(render(s"\\set baselineskip {14}a \\$wrap{x} b[\\calc{baselineskip}]")) should include("[14]")
+      }
+  }
+
+  "\\calc reads a glue-valued parameter as its natural size" in {
+    // \fontsize at top level rewrites \baselineskip as Glue(1.2 × size); \calc must coerce it, as TeX does
+    // when \baselineskip appears in a dimen context
+    text(render("\\fontsize{10}[\\calc{2 * baselineskip}]")) should include("[24]")
+  }

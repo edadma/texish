@@ -11,55 +11,31 @@ import io.github.edadma.texish.*
 private[parser] def registerFontShapePrimitives(proc: Processor, handler: TypesetterHandler): Unit =
   val t = handler.typesetter
 
-  // bold - 1 body arg
-  proc.registerPrimitive(
-    "bold",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        t.bold()
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        t.nobold()
-    },
-  )
+  // The shape-wrapping commands (\bold / \italic / \smallcaps / \slanted), each taking one body argument. The
+  // switch runs inside its own scope: re-selecting a font also refreshes the glue parameters that track it
+  // (\baselineskip, \spaceskip), and without the enclosing scope those writes — from both the switch and the
+  // restore — would land in the surrounding scope, silently replacing a document's own leading. The body's
+  // braces open a further scope of their own, as at any { } in the input.
+  def shapeText(name: String, switch: Typesetter => Unit): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          val body = proc.readArgument(pos)
+          t.enter()
+          switch(t)
+          proc.processTokenList(body)
+          t.exit()
+      },
+    )
 
-  // italic - 1 body arg
-  proc.registerPrimitive(
-    "italic",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        t.italic()
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        t.noitalic()
-    },
-  )
-
-  // smallcaps - 1 body arg
-  proc.registerPrimitive(
-    "smallcaps",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        t.smallcaps()
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        t.nosmallcaps()
-    },
-  )
-
-  // slanted - 1 body arg: set its content in the slanted (oblique) shape, the upright body face sheared rather
-  // than the separately-drawn italic. The shape axis: \slanted and \italic both flip it, so this is the
-  // text-mode partner of \italic for a face that has a slanted cut (Latin Modern Roman does).
-  proc.registerPrimitive(
-    "slanted",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        t.slanted()
-        proc.processTokenList(body) // scoping happens automatically from { } tokens
-        t.noslanted()
-    },
-  )
+  shapeText("bold", _.bold())
+  shapeText("italic", _.italic())
+  shapeText("smallcaps", _.smallcaps())
+  // \slanted sets its content in the slanted (oblique) shape, the upright body face sheared rather than the
+  // separately-drawn italic. The shape axis: \slanted and \italic both flip it, so this is the text-mode
+  // partner of \italic for a face that has a slanted cut (Latin Modern Roman does).
+  shapeText("slanted", _.slanted())
 
   // Font-shape and -series declarations (LaTeX \itshape / \bfseries / …). Unlike \italic{…} and \bold{…}, which
   // wrap an argument, these flip the current font for the *rest of the enclosing group* and take no argument. Font
@@ -163,10 +139,12 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
       def execute(proc: Processor, pos: CharReader): Unit =
         val s = proc.readVerb(pos)
         handler.flushPendingSpace()
-        val saved = t.currentFont
+        // the mono switch runs in its own scope, like the shape wrappers: selecting a font refreshes the
+        // glue parameters that track it, and those writes must not survive into the surrounding text
+        t.enter()
         t.mono()
         val box = new CharBox(t, s, t.currentFont, t.currentColor)
-        t.currentFont = saved
+        t.exit()
         handler.addBox(box)
     },
   )

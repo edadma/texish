@@ -78,6 +78,10 @@ object Value:
     case Num(n)   => Some(n)
     case Dimen(p) => Some(p)
     case Text(s)  => s.trim.toDoubleOption.orElse(parseDimension(s.trim).collect { case Dimen(p) => p })
+    // A glue reads as its natural size, the way TeX coerces \baselineskip in a dimen context — engine
+    // parameters like \baselineskip are glue-valued, and \calc{2 * baselineskip} must work against them.
+    case Glue(n, _, _, _, _)              => Some(n)
+    case Native(g: io.github.edadma.texish.Glue) => Some(g.naturalSize)
     case _        => None
 
   /** Convert a value to its display string */
