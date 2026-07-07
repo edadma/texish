@@ -256,7 +256,7 @@ the remainder, so the frame closes by construction.
 
 | Option | Effect |
 |--------|--------|
-| `paper:<name>` | a named sheet: `letter`, `legal`, `a3`, `a4`, `a5` |
+| `paper:<name>` | a named sheet: `letter`, `legal`, `a3`, `a4`, `a5`, `a6` |
 | `paperwidth:<dim>` `paperheight:<dim>` | the sheet size explicitly |
 | `landscape:on` `portrait:on` | swap the sheet to its wider / taller orientation |
 | `margin:<dim>` | one length for all four margins (`hmargin`/`vmargin` for one axis) |
@@ -266,6 +266,26 @@ the remainder, so the frame closes by construction.
 | `headsep:` `footskip:<dim>` | the running-head and running-foot gaps |
 
 Example: `\geometry paper:a4 margin:2cm` or `\geometry left:2in right:1in top:1.5in bottom:1in`.
+
+## Page arrangement
+
+`\arrange` chooses how finished logical pages are placed onto physical sheets — the output
+routine. The default ships one page per sheet; `booklet` and `nup` group several. It must
+appear in the preamble, before any content, because the arrangement fixes the physical sheet
+size when the output surface is created. Imposition happens in box space, above the rendering
+backend, so it works on every output target.
+
+| Form | Effect |
+|------|--------|
+| `\arrange simple` | one logical page per sheet (the default) |
+| `\arrange booklet` | pages two-up in saddle-stitch folding order on a sheet twice as wide; the whole book nests as one signature |
+| `\arrange booklet signature:<4k>` | fold into fixed groups of `4k` pages instead of one nested stack |
+| `\arrange nup rows:<r> cols:<c>` | tile an `r`×`c` grid of pages per sheet, in reading order |
+
+A booklet sets the logical page with `\geometry` and lets the arrangement size the sheet: for a
+pocket A6 booklet folded from A5 paper, `\geometry paper:a6 margin:10mm` then `\arrange booklet`
+gives A5-landscape sheets carrying two A6 pages each. Print double-sided, fold, nest, and staple,
+and the pages read in order. A run is padded with blank pages to a whole number of sheets.
 
 ## Images and graphics
 

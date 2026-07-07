@@ -374,7 +374,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
         opts.get("paper").map(Value.display).foreach { name =>
           t.paperSize(name) match
             case Some((w, h)) => pw = w; ph = h
-            case None => handler.error(s"\\geometry: unknown paper size '$name' (letter, legal, a3, a4, a5)", pos)
+            case None => handler.error(s"\\geometry: unknown paper size '$name' (letter, legal, a3, a4, a5, a6)", pos)
         }
         dim("paperwidth").foreach(pw = _)
         dim("paperheight").foreach(ph = _)
@@ -400,5 +400,47 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
           t.setGlobal("vsize", vs)
           dim("headsep").foreach(t.setGlobal("headsep", _))
           dim("footskip").foreach(t.setGlobal("footskip", _))
+    },
+  )
+
+  // arrange - choose the page arrangement (output routine): how finished logical pages are placed onto physical
+  // sheets. The default is one page per sheet; `booklet` sets pages two-up in saddle-stitch folding order on a sheet
+  // twice as wide, and `nup` tiles a grid. It must appear in the preamble, before any content, because the arrangement
+  // fixes the physical sheet size when the output surface is created. Examples:
+  //   \arrange booklet                 % \geometry paper:a6 pages, two-up on an A5-landscape sheet
+  //   \arrange booklet signature:16    % fold into 16-page groups instead of one nested stack
+  //   \arrange nup rows:2 cols:2        % four logical pages to a sheet
+  proc.registerPrimitive(
+    "arrange",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val mode = proc
+          .readArgument(pos)
+          .map {
+            case Token.Text(s, _)  => s
+            case Token.Space(s, _) => s
+            case _                 => ""
+          }
+          .mkString
+          .trim
+          .toLowerCase
+        val opts = proc.readOptionalParams(pos)
+        def intOpt(key: String): Option[Int] = opts.get(key).flatMap(Value.number).map(_.toInt)
+
+        if t.contentStarted then handler.error("\\arrange must appear before any page content", pos)
+        else
+          mode match
+            case "simple" => t.getDocument.arrangement = SimpleArrangement
+            case "booklet" =>
+              intOpt("signature") match
+                case Some(s) if s <= 0 || s % 4 != 0 =>
+                  handler.error("\\arrange booklet: signature must be a positive multiple of 4", pos)
+                case sig => t.getDocument.arrangement = new BookletArrangement(sig)
+            case "nup" =>
+              val rows = intOpt("rows").getOrElse(1)
+              val cols = intOpt("cols").getOrElse(1)
+              if rows < 1 || cols < 1 then handler.error("\\arrange nup: rows and cols must be positive", pos)
+              else t.getDocument.arrangement = new NupArrangement(rows, cols)
+            case other => handler.error(s"\\arrange: unknown arrangement '$other' (simple, booklet, nup)", pos)
     },
   )

@@ -76,6 +76,12 @@ abstract class Typesetter:
   var indentParagraph: Boolean                             = false // todo: this should go into page mode maybe
   private var contentInitialized                           = false
 
+  /** Whether page content has begun — the output surface, sized from the page arrangement, has been created. The
+    * arrangement and page size are fixed at that point, so `\arrange` and a sheet-resizing `\geometry` are only
+    * meaningful in the preamble, before this turns true.
+    */
+  def contentStarted: Boolean = contentInitialized
+
   protected def ensureInitializedForContent(): Unit = {
     if (!contentInitialized) {
       // Get dimensions from variables (with sensible defaults)
@@ -92,7 +98,12 @@ abstract class Typesetter:
           case _: Exception => 11 * in
         }
 
-      init(width, height)
+      // The physical surface is sized by the page arrangement, not the logical page: a booklet lays two A6 pages on
+      // one A5-landscape sheet, so the sheet is wider than a page. With the default one-page-per-sheet arrangement
+      // the sheet is the page, and this is the plain paper size.
+      val (sheetWidth, sheetHeight) = document.arrangement.sheetSize(width, height)
+
+      init(sheetWidth, sheetHeight)
       contentInitialized = true
     }
   }
@@ -609,6 +620,7 @@ abstract class Typesetter:
     case "a3"     => Some((297 * mm, 420 * mm))
     case "a4"     => Some((210 * mm, 297 * mm))
     case "a5"     => Some((148 * mm, 210 * mm))
+    case "a6"     => Some((105 * mm, 148 * mm))
     case _        => None
 
   infix def get(name: String): Option[Value] = scopes.top.get(name)

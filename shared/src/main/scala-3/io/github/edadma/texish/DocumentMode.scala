@@ -1,88 +1,80 @@
 package io.github.edadma.texish
 
-import io.github.edadma.texish.parser.Value
-
 import scala.collection.mutable.ArrayBuffer
-import scala.compiletime.uninitialized
 
+/** The bottom of the mode stack: it receives each finished logical page from [[PageMode]] and drives it to the
+  * output. A page is first composed into a page-sized [[SheetBox]] — its body placed at the text origin with the
+  * running header and footer around it — then handed to the current [[Arrangement]], which decides how pages fall
+  * onto physical sheets and ships each sheet through [[shipout]]. With the default [[SimpleArrangement]] that is one
+  * page per sheet; a booklet or n-up arrangement groups several.
+  */
 class DocumentMode(val t: Typesetter) extends Mode:
-  val printedPages   = new ArrayBuffer[Any]
-  var page: Int      = 0
-  var eject: Boolean = false
+  val printedPages = new ArrayBuffer[Any]
+
+  /** The output routine: how composed pages are placed onto sheets. Set once in the preamble (before content) by
+    * `\arrange`; defaults to one page per sheet.
+    */
+  var arrangement: Arrangement = SimpleArrangement
+
+  /** Count of logical pages composed so far — a running total distinct from `pageno`, which is a renumberable
+    * folio. Advanced as each page is handed to the arrangement.
+    */
+  var page: Int = 0
 
   def init(): Unit = ()
 
-  def layout(b: Box): Box = b
+  /** The logical page size — the paper a single page is set on, which an arrangement tiles onto larger sheets. */
+  def pageSize: (Double, Double) = (t.getNumber("paperwidth"), t.getNumber("paperheight"))
 
   infix def add(box: Box): Unit =
-    // pageno is a logical folio, not the physical sheet index: it starts at 1 and is advanced by one after each
-    // page ships, so shipout-time material (running headers and footers) reads the shipping page's number here,
-    // before the advance. Because it is never reassigned from `page`, a document may renumber pages the way plain
-    // TeX lets you assign \pageno — e.g. lowercase-roman front matter, then \set pageno {1} to restart the body.
-    // The advance is global (like TeX's \global\advance\count0): a page can ship while an environment group (a
-    // list, a quote) is open, and a plain `set` would write only that group's scope and be rolled back when it
-    // closes — leaving the next page to ship with a stale folio.
-    t.get("layout") match
-      case Some(Value.Text("zfold")) => handleZFoldLayout(box)
-      case _                         => handleSimpleLayout(box)
-
+    // The header and footer are resolved here, while `pageno` still holds the shipping page's folio, so running
+    // material reads the right number even when the arrangement ships the composed page much later (a booklet
+    // buffers every page until the last is known). The composed page carries them with it wherever it lands.
+    arrangement.add(composePage(box), this)
     page += 1
+
+    // pageno is a logical folio, not the physical sheet index: it starts at 1 and advances by one after each page
+    // is composed, so the next page reads the next folio. Because it is never reassigned from a physical counter, a
+    // document may renumber pages the way plain TeX assigns \pageno — lowercase-roman front matter, then \set pageno
+    // {1} to restart the body. The advance is global (like \global\advance\count0): a page can compose while an
+    // environment group is open, and a plain `set` would write only that group's scope and be rolled back when it
+    // closes, leaving the next page with a stale folio.
     t.setGlobal("pageno", t.getNumber("pageno").toInt + 1)
 
-  // panels share a physical sheet, so running headers/footers (pageDecorator) don't apply to this layout
-  def handleZFoldLayout(b: Box): Unit =
-    val hfolds = 3
-    val vfolds = 2
-
-    val folds = vfolds * hfolds
-
-    // the panel position within the CURRENT sheet: both coordinates come from the per-sheet fold index, so
-    // every sheet's panels start again at the top-left rather than marching off the bottom of sheet two
-    val fold   = page % folds
-    val hfold  = fold % hfolds
-    val vfold  = fold / hfolds
-    val width  = t.getNumber("paperwidth") / hfolds
-    val height = t.getNumber("paperheight") / vfolds
-
-    if fold == 0 then
-      printedPages += t.createPageTarget
-      eject = true
-
-    t.draw(
-      layout(b),
-      hfold * width + t.getNumber("hoffset"),
-      vfold * height + t.getNumber("voffset"),
-    )
-
-    if fold == folds - 1 then
-      t.ejectPageTarget()
-      eject = false
-
-  def handleSimpleLayout(b: Box): Unit =
-    printedPages += t.createPageTarget
-
+  /** Assemble one logical page into a single page-sized box: the body at the text origin, and — when a page
+    * decorator is installed — the running header above the text block and the footer below it. Positions match what
+    * the page builder computes from `hoffset`/`voffset`/`headsep`/`vsize`/`footskip`, so a composed simple page ships
+    * to exactly the coordinates a directly drawn one would.
+    */
+  private def composePage(body: Box): SheetBox =
+    val pw      = t.getNumber("paperwidth")
+    val ph      = t.getNumber("paperheight")
     val hoffset = t.getNumber("hoffset")
     val voffset = t.getNumber("voffset")
-    val dec     = t.pageDecorator
+    val placed  = ArrayBuffer[(Box, Double, Double)]((body, hoffset, voffset))
 
+    val dec = t.pageDecorator
     if dec ne null then
       val (header, footer) = dec()
 
-      if header ne null then t.draw(header, hoffset, voffset - t.getNumber("headsep") - header.height)
+      if header ne null then placed += ((header, hoffset, voffset - t.getNumber("headsep") - header.height))
       // anchored to vsize, not the body box height, so the footer sits at the same place on a short final page
-      if footer ne null then t.draw(footer, hoffset, voffset + t.getNumber("vsize") + t.getNumber("footskip"))
+      if footer ne null then placed += ((footer, hoffset, voffset + t.getNumber("vsize") + t.getNumber("footskip")))
 
-    t.draw(
-      layout(b),
-      hoffset,
-      voffset,
-    )
+    new SheetBox(pw, ph, placed.toSeq)
+
+  /** Ship one box as one physical sheet: open a page target, paint the box at its origin, and close the target,
+    * collecting it into [[printedPages]]. This is texish's `\shipout` — the sole primitive that commits ink to a
+    * sheet. Every arrangement funnels through here, so imposition lives entirely above it in box space and needs no
+    * cooperation from the rendering backend.
+    */
+  def shipout(sheet: Box): Unit =
+    printedPages += t.createPageTarget
+    t.draw(sheet, 0, 0)
     t.ejectPageTarget()
 
   override def done(): Unit =
     pop
-
-    if eject then
-      t.ejectPageTarget()
+    arrangement.flush(this)
 
   def result: Box = ???

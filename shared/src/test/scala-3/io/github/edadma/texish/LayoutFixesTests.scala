@@ -9,8 +9,8 @@ import scala.collection.mutable.ArrayBuffer
   * charged to lines that merely pass through hyphenation points, the final line judged without
   * `\parfillskip`, glue infinity orders ignored in badness, discardables leaking onto the next line after a
   * break, a broken discretionary's `post` not opening the following line, explicit penalties inert in
-  * horizontal lists, `\adjdemerits` unused, the z-fold layout marching off the second sheet, surrogate pairs
-  * split by the bidi reorder, and an empty text box crashing the sentence-space rule. All on the fixed-metric
+  * horizontal lists, `\adjdemerits` unused, surrogate pairs split by the bidi reorder, and an empty text box
+  * crashing the sentence-space rule. All on the fixed-metric
   * [[HeadlessTypesetter]] (glyphs 6 wide, ascent 8, descent 2; default font 14pt).
   */
 class LayoutFixesTests extends AnyFreeSpec with Matchers:
@@ -135,28 +135,6 @@ class LayoutFixesTests extends AnyFreeSpec with Matchers:
 
     t.set("adjdemerits", 1e6)
     KnuthPlass.breakParagraph(para, 100.0, t).get.head.count(_.isInstanceOf[W]) shouldBe 3
-  }
-
-  "z-fold panels restart at the sheet's top-left on the second sheet" in {
-    class Probe extends ContentBox:
-      var drawnAt: Option[(Double, Double)] = None
-      val width: Double                     = 0
-      val xAdvance: Double                  = 0
-      val ascent: Double                    = 0
-      val descent: Double                   = 0
-      def draw(t: Typesetter, x: Double, y: Double): Unit = drawnAt = Some((x, y))
-
-    val t = new HeadlessTypesetter
-    t.set("layout", "zfold")
-    val doc = new DocumentMode(t)
-
-    for _ <- 0 until 6 do doc.add(new Probe) // fill the six panels of sheet one
-    val seventh = new Probe
-    doc.add(seventh) // the first panel of sheet two
-
-    val (x, y) = seventh.drawnAt.get
-    x shouldBe (t.getNumber("hoffset") +- 1e-9)
-    y shouldBe (t.getNumber("voffset") +- 1e-9) // top-left again — not two panel-heights below the sheet
   }
 
   // A vertical galley that also records the line boxes the paragraph contributes to it.
