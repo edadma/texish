@@ -68,7 +68,7 @@
 \def usfmchapfig {\bfseries\dropcap[2][3]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
 \def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
-\def usfmversenum n {{\bold \textsup{\n}}\hskip 1.5 }
+\def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\hskip 1.5 }
 \def usfmv n {\usfmversenum{\n}}
 
 // ---- Body paragraphs ------------------------------------------------------------
