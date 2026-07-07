@@ -951,6 +951,15 @@ abstract class Typesetter:
 
     this
 
+  // Leave vertical mode for a horizontal command. In TeX a horizontal command — a character, inline glue like
+  // \hskip, a shifted box like a superscript — seen while the main vertical list is being built begins a paragraph:
+  // \parindent is inserted (unless \noindent set it flush), \everypar runs, and the material lands in that
+  // paragraph rather than stranding on the vertical list. This is that transition. It respects the running indent
+  // state, so the paragraph a verse number or other inline item opens sets flush after a heading and indented after
+  // a body paragraph, exactly as prose does. A no-op inside a paragraph or box. A bare \hbox is *not* a horizontal
+  // command — it is a legal vertical-list item — and does not call this; that is why \hbox and \hskip differ here.
+  def leaveVmode: Typesetter = start
+
   def indent: Typesetter =
     indentParagraph = true
     start

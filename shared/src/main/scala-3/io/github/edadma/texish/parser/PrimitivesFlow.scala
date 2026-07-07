@@ -14,6 +14,12 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("noindent", SimplePrimitive(() => t.noindent))
   proc.registerPrimitive("indent", SimplePrimitive(() => t.indent))
 
+  // \leavevmode begins a paragraph if one is not open, respecting the running \indent state — TeX's macro of the
+  // same name, made a primitive here. Use it before inline material that would otherwise strand on the vertical
+  // list, chiefly a box (a paragraph led by a superscript or an \hbox) where a plain character would have left
+  // vertical mode on its own. Horizontal glue and shifted boxes leave vertical mode themselves (see leaveVmode).
+  proc.registerPrimitive("leavevmode", SimplePrimitive(() => t.leaveVmode))
+
   // \par ends the current paragraph — the explicit form of the blank line that ordinarily breaks a
   // paragraph in the source. It ends the open paragraph (the same break \eject and the vertical glue
   // commands trigger) so a following run starts a fresh one; where no paragraph is open it does nothing.
@@ -26,9 +32,9 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
   proc.registerPrimitive("rtl", SimplePrimitive(() => t.set("pardir", 1.0)))
   proc.registerPrimitive("ltr", SimplePrimitive(() => t.set("pardir", 0.0)))
   proc.registerPrimitive("cr", SimplePrimitive(() => t.op("newLine")))
-  proc.registerPrimitive("hfil", SimplePrimitive(() => t.fil))
-  proc.registerPrimitive("hfill", SimplePrimitive(() => t.fill))
-  proc.registerPrimitive("hss", SimplePrimitive(() => t.add(InfGlue)))
+  proc.registerPrimitive("hfil", SimplePrimitive(() => { t.leaveVmode; t.fil }))
+  proc.registerPrimitive("hfill", SimplePrimitive(() => { t.leaveVmode; t.fill }))
+  proc.registerPrimitive("hss", SimplePrimitive(() => { t.leaveVmode; t.add(InfGlue) }))
 
   // \ldots / \dots — a text ellipsis (the … glyph) or, in math, low dots. The math font carries no … glyph
   // (unlike the centred \cdots, which keeps its own), so the low dots are built from three period glyphs spaced a
@@ -313,7 +319,7 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         val marker = t.charBox(n.toString)
 
         t.currentFont = textFont
-        t.start add ShiftBox(marker, -textFont.size / 3)
+        t.leaveVmode add ShiftBox(marker, -textFont.size / 3)
 
         // the body is typeset now, into its own vertical box at the footnote size, behind a "N." prefix; the
         // scope brackets the font switch and its dependent spacing so the surrounding text resumes unaffected

@@ -227,7 +227,9 @@ private[parser] def registerRegisterPrimitives(proc: Processor, handler: Typeset
   proc.registerPrimitive("qquad", mathSpace(36))
 
   // lower / raise - shift the following box (an \hbox or \vbox) down / up by a dimension, e.g.
-  // \lower.5ex\hbox{E}. The box keeps its own width and height; only where it draws moves.
+  // \lower.5ex\hbox{E}. The box keeps its own width and height; only where it draws moves. A shifted box is
+  // horizontal material, so in vertical mode it begins a paragraph (leaveVmode) — a raised box like a superscript
+  // that leads a paragraph opens it, rather than stranding on the vertical list — unlike a bare \hbox.
   proc.registerPrimitive(
     "lower",
     new Primitive {
@@ -236,7 +238,7 @@ private[parser] def registerRegisterPrimitives(proc: Processor, handler: Typeset
         points(proc.evalArgumentExpr(pos)) match
           case Some(d) =>
             readBoxArg(proc, handler, t, pos) match
-              case b: Box => t.add(ShiftBox(b, d))
+              case b: Box => t.leaveVmode; t.add(ShiftBox(b, d))
               case null   => handler.error("\\lower expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\lower expects a dimension", argPos)
     },
@@ -249,7 +251,7 @@ private[parser] def registerRegisterPrimitives(proc: Processor, handler: Typeset
         points(proc.evalArgumentExpr(pos)) match
           case Some(d) =>
             readBoxArg(proc, handler, t, pos) match
-              case b: Box => t.add(ShiftBox(b, -d))
+              case b: Box => t.leaveVmode; t.add(ShiftBox(b, -d))
               case null   => handler.error("\\raise expects a box (\\hbox or \\vbox)", argumentPos(proc, pos))
           case None => handler.error("\\raise expects a dimension", argPos)
     },

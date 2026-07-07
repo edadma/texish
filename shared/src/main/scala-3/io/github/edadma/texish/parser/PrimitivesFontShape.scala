@@ -124,6 +124,10 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
         t.exit()
         if box ne null then
           val shift = if drop then base.size * subDrop else -(base.size * supRise)
+          // a script is a shifted box, i.e. horizontal material: in vertical mode it opens a paragraph rather than
+          // stranding on the vertical list, so a paragraph led by a superscript (a verse number, a footnote-style
+          // mark) sets with the running indent.
+          t.leaveVmode
           handler.addBox(new ShiftBox(box, shift))
     }
   proc.registerPrimitive("textsub", scriptPrimitive(drop = true))

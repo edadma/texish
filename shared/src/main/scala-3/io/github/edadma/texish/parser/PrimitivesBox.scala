@@ -25,14 +25,16 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
     },
   )
 
-  // hskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable
+  // hskip - glue spec: dimension with optional plus/minus continuation, braced glue, or glue variable. Horizontal
+  // glue, so in vertical mode it begins a paragraph (leaveVmode) rather than joining the vertical list — the
+  // counterpart of \vskip, which ends a paragraph.
   proc.registerPrimitive(
     "hskip",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         val argPos = argumentPos(proc, pos)
         glueArg(proc, pos) match
-          case Some(g) => t.add(g)
+          case Some(g) => t.leaveVmode; t.add(g)
           case None    => handler.error("\\hskip expects a dimension or glue", argPos)
     },
   )
