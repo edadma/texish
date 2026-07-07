@@ -1,4 +1,4 @@
-// usfm-booklet — the whole first chapter of John set as a pocket booklet. The page is A6; \arrange booklet
+// usfm-booklet — the first two chapters of John set as a pocket booklet. The page is A6; \arrange booklet
 // imposes the pages two-up, in saddle-stitch folding order, onto A5-landscape sheets. Print the result double-
 // sided, fold each sheet down the middle, and nest and staple them, and the pages read in order — a little A6
 // booklet made from folded A5 paper.
@@ -10,6 +10,6 @@
 \geometry paper:a6 margin:10mm
 \arrange booklet
 
-\usfm{john1.usfm}
+\usfm{john12.usfm}
 
 \vfill\eject
