@@ -37,19 +37,21 @@
 // \ms is a major section title such as a psalter's book division, \mr its reference line.
 \def usfmmt n t {\par\if {\> {\n} {1}}\medskip\centerline{\font lmroman 13 regular \t}\smallskip\else\bigskip\centerline{\font lmroman 22 bold \t}\medskip\fi}
 \def usfmmte n t {\usfmmt{\n}{\t}}
-\def usfmms n t {\par\bigskip\centerline{\font lmroman 14 bold \t}\smallskip\set usfmheadfirst {1}}
-\def usfmmr n t {\par\centerline{\font lmroman 10 italic \t}\medskip\set usfmheadfirst {1}}
+\def usfmms n t {\par\bigskip\centerline{\font lmroman 14 bold \t}\smallskip\noindent}
+\def usfmmr n t {\par\centerline{\font lmroman 10 italic \t}\medskip\noindent}
 
 // ---- Section headings -----------------------------------------------------------
 // \s is a section heading (bold); \r the parallel-passage references beneath it (small italic); \d a psalm's
 // descriptive title, or superscription, which can carry its own \v; \qa an acrostic heading; \sp a speaker label.
-\def usfms n t {\par\medskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\set usfmheadfirst {1}}
-\def usfmr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip\set usfmheadfirst {1}}
-\def usfmsr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip\set usfmheadfirst {1}}
-\def usfmd n t {\par\smallskip\leftline{\font lmroman 10 italic \t}\nobreak\smallskip\set usfmheadfirst {1}}
-\def usfmsp n t {\par\smallskip\leftline{\font lmroman 10 bold \t}\nobreak\smallskip\set usfmheadfirst {1}}
-\def usfmqa n t {\par\smallskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\set usfmheadfirst {1}}
-\def usfmcl n t {\par\medskip\centerline{\font lmroman 13 bold \t}\smallskip\set usfmheadfirst {1}}
+// Each ends with \noindent, as document's own \section does: that opens an empty paragraph left flush, so the body
+// paragraph that follows the heading sets flush too, without \p needing to know a heading came before it.
+\def usfms n t {\par\medskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\noindent}
+\def usfmr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip\noindent}
+\def usfmsr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip\noindent}
+\def usfmd n t {\par\smallskip\leftline{\font lmroman 10 italic \t}\nobreak\smallskip\noindent}
+\def usfmsp n t {\par\smallskip\leftline{\font lmroman 10 bold \t}\nobreak\smallskip\noindent}
+\def usfmqa n t {\par\smallskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\noindent}
+\def usfmcl n t {\par\medskip\centerline{\font lmroman 13 bold \t}\smallskip\noindent}
 \def usfmcp n t {}
 
 // ---- Chapters and verses --------------------------------------------------------
@@ -65,27 +67,25 @@
 \def usfmchapno {}
 \def usfmchapfig {\bfseries\dropcap[2][3]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
-// usfmheadfirst is raised by every heading and consumed by the next body paragraph: the first paragraph after a
-// heading sets flush left, the convention that the heading already marks the break so a paragraph indent would be
-// redundant. Every paragraph shape clears it, so a later \p — a genuine new paragraph — indents as usual.
-\set usfmheadfirst {0}
-\def usfmchapmaybe {\set usfmheadfirst {0}\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
+\def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
 \def usfmversenum n {{\bold \textsup{\n}}\hskip 1.5 }
 \def usfmv n {\usfmversenum{\n}}
 
 // ---- Body paragraphs ------------------------------------------------------------
-// \p is an indented paragraph; a chapter's first paragraph opens flush with the chapter figure instead. \m, \pmo
-// and \nb run flush left; \pc is centred. Each resets the paragraph shape it needs so a preceding poetry line's
-// ragged margins do not leak in.
+// \p is an indented paragraph — except a chapter's first paragraph, which opens flush with the chapter figure, and
+// the first paragraph after a heading, which stays flush because the heading left the indent off (see above). \p
+// itself forces neither: it lets the running indent state decide, indenting after a body paragraph and setting
+// flush after a heading or chapter figure. \m, \pmo and \nb run flush left; \pc is centred. Each resets the
+// paragraph shape it needs so a preceding poetry line's ragged margins do not leak in.
 \def usfmprose {\set leftskip {0}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {15}}
-\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\set usfmheadfirst {0}\noindent\usfmchapfig\else\if {\> {\calc{usfmheadfirst}} {0}}\set usfmheadfirst {0}\noindent\else\indent\fi\fi}
+\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\noindent\usfmchapfig\fi}
 \def usfmm n {\par\usfmprose\noindent\usfmchapmaybe}
 \def usfmpmo n {\usfmm{\n}}
 \def usfmpm n {\usfmm{\n}}
 \def usfmpo n {\usfmm{\n}}
 \def usfmmi n {\usfmm{\n}}
 \def usfmcls n {\usfmm{\n}}
-\def usfmnb n {\par\usfmprose\set usfmheadfirst {0}\noindent}
+\def usfmnb n {\par\usfmprose\noindent}
 \def usfmpi n {\par\usfmprose\set leftskip {\calc{\n * 12}}\noindent\usfmchapmaybe}
 \def usfmpc n {\par\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\noindent\usfmchapmaybe}
 \def usfmpmc n {\usfmpc{\n}}
