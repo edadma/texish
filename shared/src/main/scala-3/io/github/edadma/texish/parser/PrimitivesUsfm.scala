@@ -263,7 +263,8 @@ object Usfm:
 
     // Collect a character span up to its matching \name*, translating nested spans and footnotes inside it.
     private def captureSpan(name: String): Unit =
-      var done = false
+      val (spanBase, _) = splitLevel(name)
+      var done          = false
       while !done && i < buf.length do
         buf(i) match
           case Marker(nm, true) if nm == name =>
@@ -280,6 +281,15 @@ object Usfm:
             else if b == "ref" then
               i += 1
               emitRef()
+            else if b == "v" || b == "c" then
+              // A verse or chapter number inside a character span — the BSB writes \wj \v 39 …\wj*, opening the
+              // words-of-Jesus span before the verse. The number is editorial, not part of the span's styling, so
+              // suspend the span, set the number outside it, and resume: the number stays black even though the
+              // words around it are red.
+              i += 1
+              sb.append("}")
+              sb.append(s"\\usfm$b{${escape(leadingWord())}}")
+              sb.append(s"\\usfm$spanBase{")
             else if charBases(b) then
               i += 1
               sb.append(s"\\usfm$b{")

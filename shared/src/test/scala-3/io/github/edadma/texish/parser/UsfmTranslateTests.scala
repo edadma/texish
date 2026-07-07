@@ -49,6 +49,11 @@ class UsfmTranslateTests extends AnyFreeSpec with Matchers:
     tr("\\p \\wj Follow Me.\\wj* Now") shouldBe "\\usfmp{1}\\usfmwj{Follow Me.} Now"
   }
 
+  "a verse number inside a words-of-Jesus span is set outside it, so it stays black" in {
+    tr("\\p \\wj \\v 39 Come and see.\\wj*") shouldBe
+      "\\usfmp{1}\\usfmwj{}\\usfmv{39}\\usfmwj{Come and see.}"
+  }
+
   "a cross-reference splits display text from its canonical target" in {
     tr("\\r (\\ref Genesis 1:1|GEN 1:1\\ref*)") shouldBe
       "\\usfmr{1}{(\\usfmref{Genesis 1:1}{GEN 1:1})}"
