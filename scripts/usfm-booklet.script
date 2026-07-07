@@ -1,13 +1,14 @@
-// usfm-booklet — the first two chapters of John set as a pocket booklet. The page is A6; \arrange booklet
-// imposes the pages two-up, in saddle-stitch folding order, onto A5-landscape sheets. Print the result double-
-// sided, fold each sheet down the middle, and nest and staple them, and the pages read in order — a little A6
-// booklet made from folded A5 paper.
+// usfm-booklet — the first two chapters of John set as a pocket booklet. The page is a quarter of a US Letter
+// sheet (4.25 x 5.5 in); \arrange booklet imposes the pages two-up, in saddle-stitch folding order, onto
+// half-letter-landscape (8.5 x 5.5 in) sheets. Print double-sided, fold each sheet down the middle, and nest and
+// staple them, and the pages read in order — a pocket booklet folded from half-letter paper. (For A-series paper
+// use `\geometry paper:a6 top:10mm left:10mm right:10mm bottom:16mm footskip:5mm` instead — A6 pages on A5.)
 
 \use{usfm}
 
 \usehyphenation{en-us}
 
-\geometry paper:a6 margin:10mm
+\geometry paperwidth:4.25in paperheight:5.5in top:0.4in left:0.4in right:0.4in bottom:0.6in footskip:0.2in
 \arrange booklet
 
 \usfm{john12.usfm}
