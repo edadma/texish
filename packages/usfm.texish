@@ -54,11 +54,14 @@
 
 // ---- Chapters and verses --------------------------------------------------------
 // A chapter number is held until the next body paragraph, which opens with it set as a large figure (\usfmchapfig)
-// — so the number leads the chapter's first paragraph, after any heading. A verse number is a small bold
-// superscript (\usfmversenum). Redefine either macro to restyle.
+// — so the number leads the chapter's first paragraph, after any heading. The figure is document's \dropcap with an
+// empty word-remainder: the number is enlarged until it spans two lines (its top on the first line's cap height,
+// its baseline on the second) and the opening lines are carved around it. \bold sets the numeral in the body's bold
+// weight; \normalfont hands the verse text back at the regular weight. A verse number is a small bold superscript
+// (\usfmversenum). Redefine \usfmchapfig — e.g. \dropcap[3] for a three-line figure — to restyle.
 \set usfmchappending {0}
 \def usfmchapno {}
-\def usfmchapfig {{\font lmroman 20 bold \usfmchapno}\hskip 5 }
+\def usfmchapfig {\bold\dropcap[2][5]{\usfmchapno}{}\normalfont}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
 \def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
 \def usfmversenum n {{\bold \textsup{\n}}\hskip 1.5 }
