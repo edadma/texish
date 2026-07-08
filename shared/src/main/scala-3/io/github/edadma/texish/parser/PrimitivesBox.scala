@@ -2,6 +2,7 @@ package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.texish.*
+import io.github.edadma.qr.{Ecc, QrCode}
 
 /** Box-construction primitives: vertical and horizontal glue (\vskip / \hskip) and rules (\hrule / \vrule),
   * the box builders (\hbox / \vbox / \vtop / \mbox / \makebox / \parbox and the \minipage pair), length
@@ -442,5 +443,53 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
               if rows < 1 || cols < 1 then handler.error("\\arrange nup: rows and cols must be positive", pos)
               else t.getDocument.arrangement = new NupArrangement(rows, cols)
             case other => handler.error(s"\\arrange: unknown arrangement '$other' (simple, booklet, nup)", pos)
+    },
+  )
+
+  // qrcode - {data} plus optional params: encode the argument text as a QR Code and add it as a square box of
+  // filled cells. The symbol is drawn in vector rectangles (crisp on every backend) with a light quiet zone around
+  // it. Options: ecc (l/m/q/h, default q — the smudge-tolerant quartile level), cell (per-module size, default
+  // 3pt), quiet (border width in modules, default 4), dark and light (colours; dark defaults to the current colour
+  // like a rule, light to white — use light:none for a transparent background). Examples:
+  //   \qrcode{https://example.com}
+  //   \qrcode[ecc:h cell:4pt dark:navy]{HELLO}
+  proc.registerPrimitive(
+    "qrcode",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        // Both the [options] and the {data} are read verbatim off live input, in that order: the data is a URL as
+        // often as not, whose // would otherwise start a comment (and %, ~ and friends must survive into the
+        // encoded bytes unchanged), so it is taken raw exactly as \href/\url take their targets. A raw body cannot
+        // follow token-parsed options, so the bracket is parsed by hand into simple space-separated key:value pairs.
+        val opts: Map[String, String] =
+          proc.readOptionalRawBracket() match
+            case None => Map.empty
+            case Some(s) =>
+              s.trim.split("\\s+").filter(_.nonEmpty).map { entry =>
+                entry.indexOf(':') match
+                  case -1 => handler.error(s"\\qrcode: option '$entry' must be key:value", pos)
+                  case i  => entry.substring(0, i) -> entry.substring(i + 1)
+              }.toMap
+        val data = proc.readRawArgument(pos)
+
+        val ecc = opts.get("ecc").map(_.toLowerCase) match
+          case Some("l") => Ecc.Low
+          case Some("m") => Ecc.Medium
+          case Some("q") => Ecc.Quartile
+          case Some("h") => Ecc.High
+          case None      => Ecc.Quartile
+          case Some(bad) => handler.error(s"\\qrcode: unknown ecc level '$bad' (l, m, q, h)", pos)
+
+        val cell  = opts.get("cell").map(s => resolveLength(proc, t, s, pos, "\\qrcode")).getOrElse(3.0)
+        val quiet = opts.get("quiet").map(_.toInt).getOrElse(4)
+        val dark  = opts.get("dark").map(Color(_)).getOrElse(t.currentColor)
+        val light = opts.get("light").map(_.toLowerCase) match
+          case Some("none") | Some("transparent") => Color.TRANSPARENT
+          case Some(name)                         => Color(name)
+          case None                               => Color("white")
+
+        if cell <= 0 then handler.error("\\qrcode: cell size must be positive", pos)
+        else if quiet < 0 then handler.error("\\qrcode: quiet zone must be non-negative", pos)
+        else t.add(new QrBox(QrCode.encodeText(data, ecc), cell, quiet, dark, light))
     },
   )
