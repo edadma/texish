@@ -61,15 +61,17 @@
 // its baseline on the second) and the opening lines are carved around it. The weight is set with the \bfseries /
 // \mdseries declarations rather than \bold{…}: \dropcap sets \hangindent for the paragraph, and \bold{…} would run
 // the whole call inside a group whose close reverts that \hangindent before the paragraph breaks — the declarations
-// change weight without opening a group, so the carve survives. A verse number is a small bold superscript
-// (\usfmversenum). Redefine \usfmchapfig — e.g. \dropcap[3] for a three-line figure — to restyle.
+// change weight without opening a group, so the carve survives. Verse numbers are small bold superscripts
+// (\usfmversenum) — except verse 1's, which is omitted: the chapter figure already marks where the first verse
+// begins, as in most printed Bibles. A verse marked with a range (1-2) is not verse 1 and keeps its number.
+// Redefine \usfmchapfig — e.g. \dropcap[3] for a three-line figure — to restyle.
 \set usfmchappending {0}
 \def usfmchapno {}
-\def usfmchapfig {\bfseries\dropcap[2][3]{\usfmchapno}{}\mdseries}
+\def usfmchapfig {\bfseries\dropcap[2][5]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
 \def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
 \def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\hskip 1.5 }
-\def usfmv n {\usfmversenum{\n}}
+\def usfmv n {\if {\= {\n} {1}}\else\usfmversenum{\n}\fi}
 
 // ---- Body paragraphs ------------------------------------------------------------
 // \p is an indented paragraph — except a chapter's first paragraph, which opens flush with the chapter figure, and

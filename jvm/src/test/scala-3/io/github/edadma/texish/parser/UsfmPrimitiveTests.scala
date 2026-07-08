@@ -67,3 +67,22 @@ class UsfmPrimitiveTests extends AnyFreeSpec with Matchers:
 
     handler.result should include("<wj>Follow Me.</wj> he said.")
   }
+
+  // The package sets no number on verse 1 — the chapter figure already marks the first verse — but keeps every later
+  // number, and keeps a range (1-2), which is not verse 1. This exercises the gating the package's \usfmv performs;
+  // \usfmversenum itself is a typesetter macro, so a text stub stands in for the printed superscript.
+  "the usfm verse macro omits verse 1's number but prints the rest" in {
+    val handler = new StringHandler
+    val proc    = new Processor(handler)
+    proc.process(
+      """\def usfmversenum n {[v\n]}
+        |\def usfmv n {\if {\= {\n} {1}}\else\usfmversenum{\n}\fi}
+        |\usfmv{1}first \usfmv{2}second \usfmv{1-2}range""".stripMargin,
+    )
+
+    val out = handler.result
+    out should not include "[v1]"
+    out should include("first")
+    out should include("[v2]second")
+    out should include("[v1-2]range")
+  }
