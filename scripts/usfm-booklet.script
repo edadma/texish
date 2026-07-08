@@ -1,17 +1,17 @@
-// usfm-booklet — the first two chapters of John set as a pocket booklet, with covers. The page is a quarter of a
-// US Letter sheet (4.25 x 5.5 in); \arrange booklet imposes the pages two-up, in saddle-stitch folding order, onto
-// half-letter-landscape (8.5 x 5.5 in) sheets. Print double-sided, fold each sheet down the middle, and nest and
-// staple them, and the pages read in order — a pocket booklet folded from half-letter paper. (For A-series paper
-// use `\geometry paper:a6 top:10mm left:10mm right:10mm bottom:16mm footskip:5mm` instead — A6 pages on A5.)
+// usfm-booklet — the first two chapters of John set as a pocket booklet, with covers. Each page is A6 (105 x 148 mm);
+// \arrange booklet imposes the pages two-up, in saddle-stitch folding order, onto A5-landscape (210 x 148 mm) sheets.
+// Print double-sided, fold each sheet down the middle, and nest and staple them, and the pages read in order — an A6
+// pocket booklet folded from A5 paper. (For a quarter-US-Letter booklet on half-letter sheets use
+// `\geometry paperwidth:4.25in paperheight:5.5in top:0.4in left:0.4in right:0.4in bottom:0.6in footskip:0.2in` instead.)
 //
 // Twelve folios in all: a framed front cover, a colophon, the nine pages of John 1–2, and a QR-code back cover —
-// exactly one saddle-stitched signature.
+// exactly one saddle-stitched signature: three A5 sheets, six PDF pages.
 
 \use{usfm}
 
 \usehyphenation{en-us}
 
-\geometry paperwidth:4.25in paperheight:5.5in top:0.4in left:0.4in right:0.4in bottom:0.6in footskip:0.2in
+\geometry paper:a6 top:10mm left:10mm right:10mm bottom:16mm footskip:5mm
 \arrange booklet
 
 // The front matter carries no folio number: an empty \footline suppresses the centred page number document prints
@@ -27,7 +27,7 @@
 // breaker treats glue at the top of a page.
 {
 \color{#4E6E8C}
-\centerline{\fbox{\vbox to:316 {
+\centerline{\fbox{\vbox to:340 {
   \vfil
   \makebox[208pt][c]{\color{#333333}\font lmroman 13 regular \textsc{The Gospel According to}}
   \vskip 16pt
@@ -46,7 +46,7 @@
 // ---- Inside front cover / colophon (folio 2) ----------------------------------
 // Publication information, set quietly and centred low on the page: the Scripture text's source and the imprint.
 {
-\vbox to:324 {
+\vbox to:346 {
   \vfil
   \centerline{\font lmroman 10 regular Scripture text from the}
   \smallskip
