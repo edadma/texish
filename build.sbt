@@ -37,18 +37,8 @@ ThisBuild / description := "A TeX-style document layout and PDF rendering engine
 
 ThisBuild / publishTo := sonatypePublishToBundle.value
 
-// The QR Code generator is a separate, publishable, zero-dependency library. Until it is released to Central it
-// is consumed as a local source dependency (per-platform), so \qrcode works from a fresh checkout of both repos
-// side by side. Once qr is on Central these three refs become an ordinary `"io.github.edadma" %%% "qr"` line.
-lazy val qrJVMRef    = ProjectRef(file("../qr"), "qrJVM")
-lazy val qrJSRef     = ProjectRef(file("../qr"), "qrJS")
-lazy val qrNativeRef = ProjectRef(file("../qr"), "qrNative")
-
 lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("."))
-  .jvmConfigure(_.dependsOn(qrJVMRef))
-  .jsConfigure(_.dependsOn(qrJSRef))
-  .nativeConfigure(_.dependsOn(qrNativeRef))
   .settings(
     name := "texish",
     scalacOptions ++=
@@ -68,6 +58,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       "io.github.edadma" %%% "cross_platform" % "0.1.7",
       "io.github.edadma" %%% "path"           % "0.0.6",
       "io.github.edadma" %%% "highlighter"    % "0.0.10",
+      "io.github.edadma" %%% "qr"             % "0.0.1",
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
