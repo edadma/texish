@@ -19,7 +19,7 @@ shaping (`\font bengali` — conjuncts, pre-base i/e/ai reordering, two-part o/a
 reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), author break control
 (`\discretionary` and leaders for dotted contents lines),
 and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout
-(`\columns`), and glue/kern spacing in a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
+(`\columns`), page imposition onto physical sheets (`\arrange` — saddle-stitch booklets and n-up), and glue/kern spacing in a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
 layer over the engine's primitives, with macros, a standard prelude/"format", `\hbox`/`\vbox`,
 `\kern`, `\lower`/`\raise`, the `\TeX` and `\TeXish` logos, units like `pt`/`in`/`em`/`ex`, and
 more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM, a
@@ -33,8 +33,8 @@ A document format (`\use{document}`) supplies the article furniture — title bl
 sections, cross-references and a table of contents (`\label`/`\ref`/`\pageref`, `\tableofcontents`,
 resolved by typesetting the document twice over a shared label table), lists, quotations, figures
 and tables with captions, and footnotes — and bundled packages
-add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), text
-sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
+add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), QR
+codes (`\qrcode`), text sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
 plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), railroad
 syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diagram per rule),
 node-and-edge diagrams (`\use{diagram}`, with `flowchart`, `automaton` and `er` presets —
@@ -166,7 +166,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.17.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.18.0"
 ```
 
 ## License
