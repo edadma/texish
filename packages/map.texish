@@ -1,0 +1,281 @@
+// map — geographic maps, written entirely in the document language over the \picture
+// vector-graphics layer. Import it with:
+//
+//     \use{map}
+//
+// A map is set up by declaring the geographic window in longitude/latitude, then drawn
+// by \map, whose body holds the base linework plus any overlay and furniture:
+//
+//     \mapbounds{33.5}{29.2}{37.8}{34.8}
+//     \map{
+//       \basemap                        // pre-projected coast/rivers/land (see below)
+//       \place{35.23}{31.78}{Jerusalem}
+//       \route[firebrick]{35.29 32.79  35.30 31.90  35.23 31.78}
+//       \graticule{1}
+//       \scalebar{50}
+//       \neatline
+//     }
+//
+// PROJECTION. The map uses the Web Mercator projection — the one the whole MapLibre /
+// OpenStreetMap tile ecosystem uses — because it is *separable*: the page x of a point
+// depends only on its longitude, its page y only on its latitude. So the projection is
+// two one-argument macros, \mapx and \mapy, exactly parallel to plot's \px / \py. The
+// formula is
+//
+//     mx = radians(lon)                       X = (mx - mapMx0) * mapScale
+//     my = ln(tan(pi/4 + radians(lat)/2))     Y = (my - mapMy0) * mapScale
+//
+// evaluated by \calc (which has rad, ln, tan and pi). North is up and page y grows up,
+// so no flip is needed. Because the projection is a plain macro, an author writes real
+// longitude/latitude everywhere — \place{35.23}{31.78}{Jerusalem} lands the label at the
+// true coordinate — which is what makes an overlay of hand-entered points (ancient sites,
+// a journey route, a boundary) a first-class input.
+//
+// BASE LINEWORK. Coastlines, rivers, lakes and land polygons run to tens of thousands of
+// vertices — far too many to project one \calc at a time. They are therefore projected
+// *offline* (from GeoJSON / vector tiles) into a \basemap macro of pre-projected \moveto /
+// \lineto paths in the picture's own point coordinates, and \include-d beside the document.
+// The offline projector MUST use this same Web Mercator formula, the same bounds, and the
+// same mapMaxW / mapMaxH fit, so its baked coordinates coincide with what \mapx / \mapy
+// compute at run time for the overlay. The base file sets the size configuration and calls
+// \mapbounds itself, so the two sides cannot drift.
+//
+// There is no map-specific engine primitive: \calc does the projection arithmetic, \for and
+// \seq/\head/\tail walk coordinate lists, and the drawing is ordinary \picture paths, shapes
+// and \at labels.
+
+// ---- Configuration (override with \set after \use, before \map) ----------------
+// The fit box, in points (72 per inch). \mapbounds scales the projected window to fit
+// inside mapMaxW × mapMaxH, keeping Mercator's aspect ratio, so one of the two is met
+// exactly and the picture is at most this big.
+\set mapMaxW {360}
+\set mapMaxH {480}
+
+\set mapdrawsea {1}         // fill the whole frame with the sea colour before the body
+\set mapdotr {1.5}          // radius of a \place / \marker dot, in points
+\set maplabelgap {3}        // gap between a dot and its label, in points
+
+// ---- Colour palette ------------------------------------------------------------
+// A muted printed-atlas palette. Water is a pale blue, land a warm cream, ink near-black.
+\set mapsea {#d3e4f0}       // sea and lake fill
+\set mapland {#f5f1e6}      // land fill
+\set mapcoast {#59564d}     // coastline stroke
+\set mapriver {#6f97bd}     // river and lake-edge stroke
+\set mapborder {#b7a99a}    // political boundary stroke
+\set mapink {#2b2b2b}       // labels, dots, neatline, scale bar
+\set maproute {#a03323}     // default \route colour
+\set mapmarker {#a03323}    // default \marker / \place dot colour
+
+// ---- Label typography ----------------------------------------------------------
+\set maplabelfamily {lmroman}
+\set maplabelsize {8.5}
+\set maplabelshape {regular}
+\set mapwatershape {italic}     // hydrography is conventionally set in italic
+\set mapfurnituresize {7.5}     // scale-bar and graticule numerals
+
+// ================================================================================
+// Projection
+// ================================================================================
+
+// \mapbounds{lon0}{lat0}{lon1}{lat1} — declare the geographic window (south-west corner
+// lon0/lat0, north-east corner lon1/lat1) and derive the projection. Everything is stored
+// \global so it survives the \for scopes inside \map. mapW / mapH are the picture size;
+// mapScale, mapMx0, mapMy0 are the projection constants \mapx / \mapy read; mapClat is the
+// centre latitude, used by \scalebar; mapPtPerLon is page points per degree of longitude,
+// constant across the map because x is linear in longitude.
+\def mapbounds lonw lats lone latn {
+  \global\set mapLon0 {\calc{\lonw}}
+  \global\set mapLat0 {\calc{\lats}}
+  \global\set mapLon1 {\calc{\lone}}
+  \global\set mapLat1 {\calc{\latn}}
+  \global\set mapClat {\calc{(mapLat0 + mapLat1) / 2}}
+
+  \global\set mapMx0 {\calc{rad(mapLon0)}}
+  \global\set mapMy0 {\calc{ln(tan(pi/4 + rad(mapLat0)/2))}}
+  \global\set mapMx1 {\calc{rad(mapLon1)}}
+  \global\set mapMy1 {\calc{ln(tan(pi/4 + rad(mapLat1)/2))}}
+
+  \set mapMW {\calc{mapMx1 - mapMx0}}
+  \set mapMH {\calc{mapMy1 - mapMy0}}
+  \set mapScaleW {\calc{mapMaxW / mapMW}}
+  \set mapScaleH {\calc{mapMaxH / mapMH}}
+  \global\set mapScale {\mapScaleW}
+  \if {\< {\mapScaleH} {\mapScaleW}} \global\set mapScale {\mapScaleH} \fi
+
+  \global\set mapW {\calc{mapMW * mapScale}}
+  \global\set mapH {\calc{mapMH * mapScale}}
+  \global\set mapPtPerLon {\calc{rad(1) * mapScale}}
+}
+
+// \mapx{lon} / \mapy{lat} — project a coordinate to a page point. Each takes one number
+// (or a variable name, resolved by \calc). Separable Web Mercator: x is linear in radians
+// of longitude, y is the log-tangent of latitude, both shifted to the window's SW corner.
+\def mapx lon {\calc{(rad(\lon) - mapMx0) * mapScale}}
+\def mapy lat {\calc{(ln(tan(pi/4 + rad(\lat)/2)) - mapMy0) * mapScale}}
+
+// ================================================================================
+// The map frame
+// ================================================================================
+
+// \map{body} — open a picture the size of the projected window, clip to it, lay down the
+// sea, and run the body (base linework, overlay, furniture) on top. The clip keeps a
+// coastline or a route that runs to the very edge from spilling a hairline into the margin.
+\def map body {{
+  \picture width:{\mapW} height:{\mapH} {
+    \clip{ \moveto{0 0} \lineto{\mapW 0} \lineto{\mapW \mapH} \lineto{0 \mapH} \close }
+    \if {\= {\mapdrawsea} {1}}
+      \nostroke \fill{\mapsea}
+      \path{ \moveto{0 0} \lineto{\mapW 0} \lineto{\mapW \mapH} \lineto{0 \mapH} \close }
+    \fi
+    \body
+  }
+}}
+
+// ================================================================================
+// Overlay — hand-entered longitude/latitude, projected at run time
+// ================================================================================
+
+// \place[anchor]{lon}{lat}{name} — a dot at the coordinate with a label beside it. The
+// default anchor `auto` puts the label on the side that keeps it inside the frame: to the
+// right of a point in the western half, to the left of one in the eastern half. An explicit
+// anchor (west, east, north, south, …) overrides, for hand-tuning a crowded cluster.
+\def place [anchor:auto] lon lat name {
+  \set plX {\mapx{\lon}}
+  \set plY {\mapy{\lat}}
+  \nostroke \fill{\mapmarker}
+  \circle{\plX \plY \mapdotr}
+  \set plAnchor {\anchor}
+  \if {\= {\anchor} {auto}}
+    \if {\< {\plX} {\calc{mapW / 2}}} \set plAnchor {west} \else \set plAnchor {east} \fi
+  \fi
+  \if {\= {\plAnchor} {west}}
+    \at anchor:west {\calc{plX + mapdotr + maplabelgap} \plY}{\maplabelfont{\name}}
+  \else \if {\= {\plAnchor} {east}}
+    \at anchor:east {\calc{plX - mapdotr - maplabelgap} \plY}{\maplabelfont{\name}}
+  \else \if {\= {\plAnchor} {north}}
+    \at anchor:south {\plX \calc{plY + mapdotr + maplabelgap}}{\maplabelfont{\name}}
+  \else
+    \at anchor:north {\plX \calc{plY - mapdotr - maplabelgap}}{\maplabelfont{\name}}
+  \fi \fi \fi
+}
+
+// \marker[colour]{lon}{lat} — just the dot, no label, for a point that a separate \at or
+// \place labels (or that needs none). With no colour it uses mapmarker.
+\def marker [color:?] lon lat {
+  \mapPickColor{\color}{\mapmarker}
+  \nostroke \fill{\mapCurColor}
+  \circle{\mapx{\lon} \mapy{\lat} \mapdotr}
+}
+
+// \label[anchor]{lon}{lat}{text} — set typeset text at a coordinate with no dot: an area
+// name (a sea, a region), a legend note, a gloss. Defaults to a centred anchor.
+\def label [anchor:center] lon lat text {
+  \at anchor:{\anchor} {\mapx{\lon} \mapy{\lat}}{\maplabelfont{\text}}
+}
+
+// \route[colour]{lon lat  lon lat  …} — a polyline through a list of coordinate pairs, for
+// a journey, a road, a border segment. Coordinates are projected as the path is built.
+\def route [color:?] pts {
+  \mapPickColor{\color}{\maproute}
+  \nofill \stroke{\mapCurColor} \linewidth{1.4pt} \linejoin{round} \linecap{round}
+  \path{\mapWalkLine{\seq{\pts}}}
+}
+
+// \region[fillcolour]{lon lat  lon lat  …} — a filled, closed polygon of coordinate pairs:
+// a territory, a lake, a zone. Semi-transparent so base linework beneath still reads.
+\def region [color:?] pts {
+  \mapPickColor{\color}{\mapland}
+  \fill{\mapCurColor} \nostroke \fillopacity{0.45}
+  \group{\path{\mapWalkLine{\seq{\pts}}\close}}
+}
+
+// Walk a flat "lon lat lon lat …" sequence two values at a time, emitting a \moveto for
+// the first pair and a \lineto for each pair after. Recursion (not \for) avoids opening a
+// picture scope per vertex.
+\def mapWalkLine items {
+  \if {\size{\items}}
+    \set mwLon {\head{\items}}
+    \set mwLat {\head{\tail{\items}}}
+    \moveto{\mapx{\mwLon} \mapy{\mwLat}}
+    \mapWalkRest{\tail{\tail{\items}}}
+  \fi}
+\def mapWalkRest items {
+  \if {\size{\items}}
+    \set mwLon {\head{\items}}
+    \set mwLat {\head{\tail{\items}}}
+    \lineto{\mapx{\mwLon} \mapy{\mwLat}}
+    \mapWalkRest{\tail{\tail{\items}}}
+  \fi}
+
+// ================================================================================
+// Furniture
+// ================================================================================
+
+// \graticule[step] — longitude/latitude grid every `step` degrees (default 1). Meridians
+// are vertical (constant projected x), parallels horizontal (constant projected y), because
+// Web Mercator keeps them axis-aligned. Lines run at the whole multiples of `step` inside
+// the window; the count is computed so the \for covers them without overshooting the frame.
+\def graticule [step:1] {
+  \nofill \stroke{\mapborder} \linewidth{0.3pt} \linetype{dotted}
+  \set grLo0 {\calc{ceil(mapLon0 / (\step)) * (\step)}}
+  \set grNLon {\calc{floor((mapLon1 - grLo0) / (\step) + 0.0001)}}
+  \for\i{\range{0}{\grNLon}}{
+    \set grLon {\calc{grLo0 + \i * (\step)}}
+    \set grX {\mapx{\grLon}}
+    \line{\grX 0  \grX \mapH}
+  }
+  \set grLa0 {\calc{ceil(mapLat0 / (\step)) * (\step)}}
+  \set grNLat {\calc{floor((mapLat1 - grLa0) / (\step) + 0.0001)}}
+  \for\j{\range{0}{\grNLat}}{
+    \set grLat {\calc{grLa0 + \j * (\step)}}
+    \set grY {\mapy{\grLat}}
+    \line{0 \grY  \mapW \grY}
+  }
+  \linetype{solid}
+}
+
+// \scalebar[km]{x}{y} — a bar `km` kilometres long (default 50) with end ticks and a label,
+// its left end at page point (x, y). Kilometres map to points through the true scale at the
+// centre latitude: a degree of longitude there is 111.320·cos(lat) km wide and mapPtPerLon
+// points wide, giving km-per-point, hence the bar's length in points.
+\def scalebar [km:50] x y {
+  \set sbKm {\calc{\km}}
+  \set sbKmPerDegLon {\calc{111.320 * cosd(mapClat)}}
+  \set sbKmPerPt {\calc{sbKmPerDegLon / mapPtPerLon}}
+  \set sbLen {\calc{sbKm / sbKmPerPt}}
+  \nofill \stroke{\mapink} \linewidth{1.2pt} \linecap{butt}
+  \line{\x \y  \calc{(\x) + sbLen} \y}
+  \line{\x \calc{(\y) - 2}  \x \calc{(\y) + 2}}
+  \line{\calc{(\x) + sbLen} \calc{(\y) - 2}  \calc{(\x) + sbLen} \calc{(\y) + 2}}
+  \at anchor:west {\calc{(\x) + sbLen + 3} \y}{\mapfurniturefont{\round{\sbKm}{0} km}}
+}
+
+// \northarrow{x}{y} — a small upward arrow with an N above it, centred on (x, y). Web
+// Mercator is north-up, so the arrow is simply vertical.
+\def northarrow x y {
+  \nofill \stroke{\mapink} \linewidth{1pt} \linecap{round} \linejoin{round}
+  \arrow{\x \calc{(\y) - 9}  \x \calc{(\y) + 9}}
+  \at anchor:south {\x \calc{(\y) + 11}}{\mapfurniturefont{N}}
+}
+
+// \neatline — the frame rectangle, drawn last so it sits cleanly over the linework edges.
+\def neatline {
+  \nofill \stroke{\mapink} \linewidth{1pt}
+  \rect{0 0 \mapW \mapH}
+}
+
+// ================================================================================
+// Internal helpers
+// ================================================================================
+
+// \maplabelfont{text} — set text in the configured label face. \mapwaterfont uses the
+// water (italic) shape for hydrography names; \mapfurniturefont is the small numeral face
+// for the scale bar and north arrow.
+\def maplabelfont text {{\font {\maplabelfamily} {\maplabelsize} {\maplabelshape}\text}}
+\def mapwaterfont text {{\font {\maplabelfamily} {\maplabelsize} {\mapwatershape}\text}}
+\def mapfurniturefont text {{\font {\maplabelfamily} {\mapfurnituresize} {regular}\text}}
+
+// Resolve an optional colour argument: `?` (the bracket default, meaning "not given") takes
+// the supplied fallback, anything else is used as written. The result lands in mapCurColor.
+\def mapPickColor c fallback {
+  \if {\= {\c} {?}} \set mapCurColor {\fallback} \else \set mapCurColor {\c} \fi}
