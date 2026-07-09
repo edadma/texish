@@ -1,9 +1,0 @@
-\use{usfm}
-
-\usehyphenation{en-us}
-
-\geometry paper:a5 margin:0.6in
-
-\usfm{john1.usfm}
-
-\vfill\eject
