@@ -1017,12 +1017,15 @@ abstract class Typesetter:
       "belowdisplayskip" -> Glue(currentFont.size * 0.83 * pt, currentFont.size * 0.17 * pt, currentFont.size * 0.17 * pt),
 
       // footnotes (see InsertBox): the space above the separator rule, the footnote text size as a fraction
-      // of the surrounding font, and the footnote counter advanced by each \footnote. The scale is
-      // `footnotescale`, not `footnotesize`, so it does not collide with the LaTeX-style `\footnotesize` size
-      // declaration a document package defines under that name.
-      "footnotesep"   -> Glue(currentFont.size * pt),
-      "footnotescale" -> 0.8,
-      "footnoteno"    -> 0.0,
+      // of the surrounding font, the leading of the note as a multiple of that reduced size, and the footnote
+      // counter advanced by each \footnote. The scale is `footnotescale`, not `footnotesize`, so it does not
+      // collide with the LaTeX-style `\footnotesize` size declaration a document package defines under that name.
+      // `footnoteleading` is tighter than the body's 1.2 on purpose: a footnote reads as a compact aside, not a
+      // scaled-down copy of the running text.
+      "footnotesep"     -> Glue(currentFont.size * pt),
+      "footnotescale"   -> 0.8,
+      "footnoteleading" -> 1.1,
+      "footnoteno"      -> 0.0,
 
       // top floats (see FloatBox): the space between two floats stacked in a page's float area, and the space
       // between that float area and the body text below it

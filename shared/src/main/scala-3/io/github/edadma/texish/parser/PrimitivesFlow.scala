@@ -329,7 +329,7 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         // scope brackets the font switch and its dependent spacing so the surrounding text resumes unaffected
         t.enter()
         t.currentFont = noteFont
-        t.set("baselineskip", Glue(noteFont.size * 1.2))
+        t.set("baselineskip", Glue(noteFont.size * t.getNumber("footnoteleading")))
         t.set("spaceskip", interwordGlue(noteFont.space))
         t.set("xspaceskip", xinterwordGlue(noteFont.space))
         // The note is set on its own measure, flush at the foot, whatever the indentation of the line the marker
