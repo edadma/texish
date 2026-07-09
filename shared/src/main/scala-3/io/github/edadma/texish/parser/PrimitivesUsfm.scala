@@ -117,6 +117,9 @@ object Usfm:
       if c == '\\' then
         flush()
         i += 1
+        // USFM nests a character marker inside another by prefixing a plus (`\+w …\+w*` inside `\wj`). The nesting
+        // is transparent to translation — `\+w` behaves exactly like `\w` — so drop the plus and read the name.
+        if i < n && src.charAt(i) == '+' then i += 1
         val name = new StringBuilder
         while i < n && (src.charAt(i).isLetter || src.charAt(i).isDigit) do
           name += src.charAt(i)
@@ -271,8 +274,21 @@ object Usfm:
             i += 1
             done = true
           case Txt(s) =>
-            sb.append(escape(s))
-            i += 1
+            // USFM 3.0 attributes: a pipe within a character span begins its attribute list (e.g.
+            // `\w word|strong="G2532"\w*`), which runs to the span's close and carries no visible content. Keep the
+            // word before the pipe and drop the attributes, then run on to the closing marker.
+            val bar = s.indexOf('|')
+            if bar < 0 then
+              sb.append(escape(s))
+              i += 1
+            else
+              sb.append(escape(s.substring(0, bar)))
+              i += 1
+              var atClose = false
+              while i < buf.length && !atClose do
+                buf(i) match
+                  case Marker(nm2, true) if nm2 == name => atClose = true
+                  case _                                => i += 1
           case Marker(nm, false) =>
             val (b, _) = splitLevel(nm)
             if b == "f" || b == "fe" then

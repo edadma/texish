@@ -54,6 +54,16 @@ class UsfmTranslateTests extends AnyFreeSpec with Matchers:
       "\\usfmp{1}\\usfmwj{}\\usfmv{39}\\usfmwj{Come and see.}"
   }
 
+  "a word marker drops its USFM 3.0 attributes and keeps the word" in {
+    tr("\\p \\w Au|strong=\"G1722\"\\w* commencement") shouldBe
+      "\\usfmp{1}\\usfmw{Au} commencement"
+  }
+
+  "a plus-nested character marker translates like its unnested form, attributes stripped" in {
+    tr("\\p \\wj \\+w Celui|strong=\"G3588\"\\+w* qui\\wj*") shouldBe
+      "\\usfmp{1}\\usfmwj{\\usfmw{Celui} qui}"
+  }
+
   "a cross-reference splits display text from its canonical target" in {
     tr("\\r (\\ref Genesis 1:1|GEN 1:1\\ref*)") shouldBe
       "\\usfmr{1}{(\\usfmref{Genesis 1:1}{GEN 1:1})}"
