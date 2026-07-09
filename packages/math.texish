@@ -14,22 +14,22 @@
 // The inverse trigonometric operators and the probability operator, set upright like the built-in \sin, \log
 // and \lim. Each is an ordinary operator name; \operatorname keeps the letters roman and gives the run the
 // spacing of an operator.
-\def arcsin {\operatorname{arcsin}}//
-\def arccos {\operatorname{arccos}}//
-\def arctan {\operatorname{arctan}}//
-\def Pr {\operatorname{Pr}}//
+\def arcsin {\operatorname{arcsin}}
+\def arccos {\operatorname{arccos}}
+\def arctan {\operatorname{arctan}}
+\def Pr {\operatorname{Pr}}
 
 // The modular arithmetic forms. \bmod is the binary operator in "a mod b" --- \mathbin makes the upright "mod"
 // a true binary operator, so it takes a medium space on either side; \pmod sets a parenthesised "(mod m)" after
 // a quad of space, the way a congruence is closed off; \mod and \pod are its unparenthesised and
 // bare-parenthesised cousins.
-\def bmod {\mathbin{\operatorname{mod}}}//
-\def pmod m {\quad(\operatorname{mod}\,\m)}//
-\def mod m {\quad\operatorname{mod}\,\m}//
-\def pod m {\quad(\m)}//
+\def bmod {\mathbin{\operatorname{mod}}}
+\def pmod m {\quad(\operatorname{mod}\,\m)}
+\def mod m {\quad\operatorname{mod}\,\m}
+\def pod m {\quad(\m)}
 
 // The implication arrows of a proof, each a heavy arrow with a thick space on either side so it reads as a
 // connective between whole statements rather than a symbol inside one.
-\def implies {\;\Rightarrow\;}//
-\def impliedby {\;\Leftarrow\;}//
-\def iff {\;\Leftrightarrow\;}//
+\def implies {\;\Rightarrow\;}
+\def impliedby {\;\Leftarrow\;}
+\def iff {\;\Leftrightarrow\;}

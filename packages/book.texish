@@ -95,7 +95,7 @@
   \centerline{\font lmroman 28 bold \t}
   \vfil
   \eject
-  \noindent
+  \noindent\par
 }
 
 // ---- Chapters ------------------------------------------------------------------
@@ -121,7 +121,7 @@
   \leftline{\font lmroman 24 bold \t}
   \mark{\t}
   \vskip 20pt plus 4pt minus 2pt
-  \noindent
+  \noindent\par
 }
 
 // ---- Running head --------------------------------------------------------------
@@ -152,11 +152,11 @@
 // prefix — "Figure 1.2: ...". The captionkind / captioncounter scratch variables are
 // set by the document package's \figure / \table wrappers; this only widens the
 // number printed by \caption to match the per-chapter counters declared above.
-\def caption text {{//
-\stepcounter \captioncounter//
-\global\set currentlabel {\cat{\arabic{\value{chapter}}}{\cat{.}{\arabic{\value \captioncounter}}}}//
-\global\set currentlabeltype {\captionkind}//
-\global\set currentlabelname {\text}//
-\addcontentsline{\captionlist}{1}{\cat{\arabic{\value{chapter}}}{\cat{.}{\arabic{\value \captioncounter}}}}{\text}//
-\the\captionkind \arabic{\value{chapter}}.\arabic{\value \captioncounter}: \text//
-}}//
+\def caption text {{
+\stepcounter \captioncounter
+\global\set currentlabel {\cat{\arabic{\value{chapter}}}{\cat{.}{\arabic{\value \captioncounter}}}}
+\global\set currentlabeltype {\captionkind}
+\global\set currentlabelname {\text}
+\addcontentsline{\captionlist}{1}{\cat{\arabic{\value{chapter}}}{\cat{.}{\arabic{\value \captioncounter}}}}{\text}
+\the\captionkind \arabic{\value{chapter}}.\arabic{\value \captioncounter}: \text
+}}

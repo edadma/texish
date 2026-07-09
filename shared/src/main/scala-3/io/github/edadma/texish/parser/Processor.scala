@@ -37,6 +37,12 @@ class Processor(val handler: Handler):
   // file is a no-op — dependency diamonds load once.
   private val loadedModules = mutable.Set[String]()
 
+  // True while a module (\use) is loading. A module is code, not prose: an isolated source newline between the
+  // statements of a captured macro/environment body is insignificant, the way a trailing // makes it. While this
+  // is set, a captured body has its lone newlines dropped (see moduleBody), so package code needs no line-end
+  // comments to stop a line break becoming a stray interword space when the macro later runs in a document.
+  var inModuleLoad: Boolean = false
+
   // Named counters (LaTeX-style \newcounter/\stepcounter/\value, …). Counters are global by definition — TeX never
   // restores them at group exit — so they live in plain maps here rather than the scoped variable store.
   // counterValues maps a counter name to its current integer; counterParent maps a child counter to the parent
@@ -681,15 +687,41 @@ class Processor(val handler: Handler):
     * are drained — control returns to the enclosing document at the same stack depth. Suppression and the directory
     * stack are restored even if loading raises. */
   def loadModule(content: String, dir: String): Unit =
-    val saved    = handler.outputSuppressed
-    val minDepth = tokenSources.size
+    val saved       = handler.outputSuppressed
+    val savedModule = inModuleLoad
+    val minDepth    = tokenSources.size
     dirStack.push(dir)
     tokenSources.push(TokenizerSource(Tokenizer(content, activeChars)))
     handler.suppressOutput(true)
+    inModuleLoad = true
     try processTokensUntilDepth(minDepth)
     finally
       handler.suppressOutput(saved)
+      inModuleLoad = savedModule
       dirStack.pop()
+
+  /** Filter a macro/environment body captured while a module is loading. An isolated source newline between two
+    * statements of package code is dropped — outside a paragraph it never mattered, and inside one it would
+    * become a stray interword space when the macro later runs, which is why hand-written packages terminate every
+    * body line with `//`. A blank line (a run of two or more newlines) is kept, so an intentional paragraph break
+    * inside a body still ends the paragraph. Outside module loading the body is returned unchanged. */
+  def moduleBody(body: Vector[Token]): Vector[Token] =
+    if !inModuleLoad then body
+    else
+      val out = Vector.newBuilder[Token]
+      val n   = body.length
+      var i   = 0
+      while i < n do
+        body(i) match
+          case _: Token.Newline =>
+            var j = i
+            while j < n && body(j).isInstanceOf[Token.Newline] do j += 1
+            if j - i >= 2 then out ++= body.slice(i, j) // blank line: a real paragraph break, keep it
+            i = j
+          case t =>
+            out += t
+            i += 1
+      out.result()
 
   /** Process tokens until stack depth reaches minDepth */
   private def processTokensUntilDepth(minDepth: Int): Unit =

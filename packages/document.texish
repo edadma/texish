@@ -78,23 +78,23 @@
 // base the carve-out and the letter move to the right edge, mirroring \item's marker.
 // The paragraph should run at least `lines` lines, or it ends before the letter does.
 \def dropcaptext t {\textsc{\t}}
-\def dropcap [lines:2] [gap:3] letter text {//
-\setbox dropcapxbox \hbox{X}//
-\set dropcapcap {\ht dropcapxbox}//
-\set dropcapdrop {\calc{(\lines - 1) * baselineskip}}//
-\setbox dropcaprefbox \hbox{\fontsize{100}\letter}//
-\set dropcaprefht {\ht dropcaprefbox}//
-\setbox dropcapbox \hbox{\fontsize{\calc{100 * (dropcapdrop + dropcapcap) / dropcaprefht}}\letter}//
-\set dropcapwd {\wd dropcapbox}//
-\set hangafter {\calc{0 - \lines}}//
-\if {\> {\calc{pardir}} {0}}//
-\set hangindent {\calc{0 - dropcapwd - \gap}}//
-\noindent\rlap{\kern \gap\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}}\dropcaptext{\text}//
-\else//
-\set hangindent {\calc{dropcapwd + \gap}}//
-\noindent\llap{\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}\kern \gap}\dropcaptext{\text}//
-\fi//
-}//
+\def dropcap [lines:2] [gap:3] letter text {
+\setbox dropcapxbox \hbox{X}
+\set dropcapcap {\ht dropcapxbox}
+\set dropcapdrop {\calc{(\lines - 1) * baselineskip}}
+\setbox dropcaprefbox \hbox{\fontsize{100}\letter}
+\set dropcaprefht {\ht dropcaprefbox}
+\setbox dropcapbox \hbox{\fontsize{\calc{100 * (dropcapdrop + dropcapcap) / dropcaprefht}}\letter}
+\set dropcapwd {\wd dropcapbox}
+\set hangafter {\calc{0 - \lines}}
+\if {\> {\calc{pardir}} {0}}
+\set hangindent {\calc{0 - dropcapwd - \gap}}
+\noindent\rlap{\kern \gap\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}}\dropcaptext{\text}
+\else
+\set hangindent {\calc{dropcapwd + \gap}}
+\noindent\llap{\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}\kern \gap}\dropcaptext{\text}
+\fi
+}
 
 // ---- Font-size declarations ----------------------------------------------------
 // LaTeX's size-changing declarations, on a 10pt base. Each switches the type size for
@@ -176,7 +176,7 @@
   \set baselineskip {11}
   \set leftskip {28}
   \set rightskip {28}
-  \noindent
+  \noindent\par
 } {}
 
 // ---- Sections ------------------------------------------------------------------
@@ -236,7 +236,7 @@
   \fi
   \nobreak
   \vskip 8pt plus 2pt
-  \noindent
+  \noindent\par
 }
 
 \def subsection * t {
@@ -251,7 +251,7 @@
   \fi
   \nobreak
   \vskip 6pt plus 1pt
-  \noindent
+  \noindent\par
 }
 
 \def subsubsection * t {
@@ -266,7 +266,7 @@
   \fi
   \nobreak
   \vskip 5pt plus 1pt
-  \noindent
+  \noindent\par
 }
 
 // The table of contents is driven by the engine's \tableofcontents, which calls this once per entry it collected,
@@ -408,41 +408,43 @@
 // LaTeX list label does: \llap hangs it to the left under a left-to-right base, \rlap to the right
 // under a right-to-left one. A description term — the optional bold [label] — can be much wider than
 // the indent, so it is set inline at the margin instead (advancing the pen), the definition
-// following after the gap. The closing \ignorespaces drops the space before the item's text.
+// following after the gap. The closing \ignorespaces drops the space before the item's text. The opening
+// \par ends the previous item's paragraph so each item starts a fresh line — an explicit break, since a
+// module body's source newlines are not paragraph breaks.
 \def item [label:] {
-  \noindent\if {\label} {\font lmroman 10 bold \label}\hskip\labelsep\else\if {\> {\calc{pardir}} {0}}\rlap{\hskip\labelsep\itemmark}\else\llap{\itemmark\hskip\labelsep}\fi\fi\ignorespaces}
+  \par\noindent\if {\label} {\font lmroman 10 bold \label}\hskip\labelsep\else\if {\> {\calc{pardir}} {0}}\rlap{\hskip\labelsep\itemmark}\else\llap{\itemmark\hskip\labelsep}\fi\fi\ignorespaces}
 
 // ---- Floats (figures and tables) ----------------------------------------------
 // \figure / \table detach their body to a page edge (default top) over the engine's
 // \topinsert primitive; a \caption written inside numbers it as a figure or table
 // — each on its own counter — e.g. "Figure 1: …". An optional [htb] placement is
-// forwarded to \topinsert. Each line ends with // so its newline is stripped.
-\newcounter{figure}//
-\newcounter{table}//
-\def figure [placement:t] body {{//
-\set captionkind {Figure}//
-\set captioncounter {figure}//
-\set captionlist {lof}//
-\topinsert[\placement]{\body}//
-}}//
-\def table [placement:t] body {{//
-\set captionkind {Table}//
-\set captioncounter {table}//
-\set captionlist {lot}//
-\topinsert[\placement]{\body}//
-}}//
+// forwarded to \topinsert.
+\newcounter{figure}
+\newcounter{table}
+\def figure [placement:t] body {{
+\set captionkind {Figure}
+\set captioncounter {figure}
+\set captionlist {lof}
+\topinsert[\placement]{\body}
+}}
+\def table [placement:t] body {{
+\set captionkind {Table}
+\set captioncounter {table}
+\set captionlist {lot}
+\topinsert[\placement]{\body}
+}}
 // \caption steps the float's counter, then records the state a following \label captures — currentlabel holds the
 // number (\global, so it outlives the caption's group), currentlabeltype the kind word \autoref prefixes, and
 // currentlabelname the caption text \nameref prints — and files an entry into the float's contents list (lof / lot)
 // before printing the visible "Figure 1: …" caption.
-\def caption text {{//
-\stepcounter \captioncounter//
-\global\set currentlabel {\arabic{\value \captioncounter}}//
-\global\set currentlabeltype {\captionkind}//
-\global\set currentlabelname {\text}//
-\addcontentsline{\captionlist}{1}{\arabic{\value \captioncounter}}{\text}//
-\the\captionkind \arabic{\value \captioncounter}: \text//
-}}//
+\def caption text {{
+\stepcounter \captioncounter
+\global\set currentlabel {\arabic{\value \captioncounter}}
+\global\set currentlabeltype {\captionkind}
+\global\set currentlabelname {\text}
+\addcontentsline{\captionlist}{1}{\arabic{\value \captioncounter}}{\text}
+\the\captionkind \arabic{\value \captioncounter}: \text
+}}
 
 // ---- Boxes and conditionals ----------------------------------------------------
 // \begin{minipage}[pos]{width} … \end{minipage} sets its body as a paragraph in a box of the given width, the

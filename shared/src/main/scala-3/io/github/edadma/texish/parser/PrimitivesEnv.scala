@@ -25,7 +25,7 @@ object AddToHookPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     proc.handler.globalAssign = false // hooks are always global; ignore any stray prefix
     val name = proc.readIdentifier(pos)
-    val code = stripOuterBraces(proc.readArgument(pos))
+    val code = proc.moduleBody(stripOuterBraces(proc.readArgument(pos)))
     val fragment = Value.Macro(Vector.empty, code, pos)
     val updated = proc.handler.get(HookStoreName) match
       case Value.Map(m) => Value.Map(m + (name -> Value.Seq(hookFragments(proc, name) :+ fragment)))
@@ -90,8 +90,8 @@ object NewEnvironmentPrimitive extends Primitive:
     // exactly as \def does.
     val params = readMacroParams(proc, pos)
 
-    val beginCode = stripOuterBraces(proc.readArgument(pos))
-    val endCode   = stripOuterBraces(proc.readArgument(pos))
+    val beginCode = proc.moduleBody(stripOuterBraces(proc.readArgument(pos)))
+    val endCode   = proc.moduleBody(stripOuterBraces(proc.readArgument(pos)))
     val pair = Value.Seq(Vector(Value.Macro(params, beginCode, pos), Value.Macro(Vector.empty, endCode, pos)))
     val updated = proc.handler.get(EnvStoreName) match
       case Value.Map(m) => Value.Map(m + (name -> pair))

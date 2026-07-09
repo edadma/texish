@@ -21,26 +21,26 @@
 // body shape reverts at \end, which closes the environment's group. The counter is
 // the environment's own (created here) unless another is shared in; when a parent
 // counter is given, its value prefixes the number.
-\def newtheorem env [shared:] heading [within:] {{//
-\if {\= {\size {\shared}} {0}}//
-\newcounter{\env}//
-\if {\= {\size {\within}} {0}}\else\counterwithin{\env}{\within}\fi//
-\fi//
-\newenvironment \env [note:] {//
-\vskip 3pt plus 1pt minus 1pt//
-\if {\= {\size {\shared}} {0}}\set thmcnt {\env}\else\set thmcnt {\shared}\fi//
-\stepcounter{\thmcnt}//
-\noindent\bfseries\heading \if {\= {\size {\within}} {0}}\arabic{\value{\thmcnt}}\else\arabic{\value{\within}}.\arabic{\value{\thmcnt}}\fi\if {\= {\size {\note}} {0}}\else{ (\note)}\fi.\mdseries\itshape//
-} {\upshape\vskip 3pt plus 1pt minus 1pt}//
-}}//
+\def newtheorem env [shared:] heading [within:] {{
+\if {\= {\size {\shared}} {0}}
+\newcounter{\env}
+\if {\= {\size {\within}} {0}}\else\counterwithin{\env}{\within}\fi
+\fi
+\newenvironment \env [note:] {
+\vskip 3pt plus 1pt minus 1pt
+\if {\= {\size {\shared}} {0}}\set thmcnt {\env}\else\set thmcnt {\shared}\fi
+\stepcounter{\thmcnt}
+\noindent\bfseries\heading \if {\= {\size {\within}} {0}}\arabic{\value{\thmcnt}}\else\arabic{\value{\within}}.\arabic{\value{\thmcnt}}\fi\if {\= {\size {\note}} {0}}\else{ (\note)}\fi.\mdseries\itshape
+} {\upshape\vskip 3pt plus 1pt minus 1pt}
+}}
 
 // A proof environment with an italic run-in "Proof." head and an upright body. Place
 // \qed at the end of the proof to set the end-of-proof box flush right on the last line.
-\newenvironment proof {//
-\vskip 3pt plus 1pt minus 1pt//
-\noindent\itshape Proof.\upshape//
-} {\vskip 3pt plus 1pt minus 1pt}//
+\newenvironment proof {
+\vskip 3pt plus 1pt minus 1pt
+\noindent\itshape Proof.\upshape
+} {\vskip 3pt plus 1pt minus 1pt}
 
 // The end-of-proof box is drawn on the \picture layer rather than set from a font glyph, so it needs no
 // particular character in the body face: a hollow square, stroked but not filled, the height of a capital.
-\def qed {\hfill\picture width:{6.5} height:{6.5} {\nofill\stroke{black}\linewidth{0.5pt}\rect{0.5 0.5 5.5 5.5}}}//
+\def qed {\hfill\picture width:{6.5} height:{6.5} {\nofill\stroke{black}\linewidth{0.5pt}\rect{0.5 0.5 5.5 5.5}}}

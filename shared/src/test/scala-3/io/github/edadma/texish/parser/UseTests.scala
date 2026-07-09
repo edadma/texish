@@ -74,6 +74,42 @@ class UseTests extends AnyFreeSpec with Matchers:
     }
   }
 
+  "a macro body defined in a module drops the isolated newlines between its statements" in {
+    // Package code is written one statement per line, with no line-end // to swallow the break. Loaded as a
+    // module, the body's lone newlines are dropped, so the two runs join with no stray space when \ab later runs.
+    withModules(
+      "m.texish" -> "\\def ab {a\nb}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\ab").result shouldBe "ab"
+    }
+  }
+
+  "a macro defined at document level keeps its body newline — only module loading strips it" in {
+    // Same definition, but not inside a \use: the newline survives in the body and prints, so the module-load
+    // stripping is scoped to package code and does not change ordinary document macros.
+    withModules() { dir =>
+      runIn(dir.toPlatformString, "\\def ab {a\nb}\\ab").result shouldBe "a\nb"
+    }
+  }
+
+  "a blank line inside a module body is kept as a paragraph break" in {
+    // Only an isolated newline is insignificant. A blank line (two newlines) is an intentional paragraph break
+    // and must survive module loading unchanged.
+    withModules(
+      "m.texish" -> "\\def para {a\n\nb}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\para").result shouldBe "a\n\nb"
+    }
+  }
+
+  "an environment's begin/end code defined in a module also drops isolated newlines" in {
+    withModules(
+      "m.texish" -> "\\newenvironment e {a\nb}{c\nd}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\begin{e}\\end{e}").result shouldBe "abcd"
+    }
+  }
+
   "\\use of a missing module is an error" in {
     withModules() { dir =>
       a[ParserException] should be thrownBy runIn(dir.toPlatformString, "\\use{nothingHere}")
