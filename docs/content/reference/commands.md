@@ -353,6 +353,34 @@ print, resolved on the second typesetting pass.
 Both bracket arguments are optional: with no colour (or `[]`) a series takes the next
 palette colour, and a label adds a legend entry.
 
+## Geographic maps *(`\use{map}`)*
+
+Draws maps over the `\picture` layer in the Web Mercator projection the OpenStreetMap
+tile ecosystem uses. You declare the geographic window in longitude/latitude with
+`\mapbounds`, then draw inside `\map{…}`, writing real coordinates everywhere —
+`\place{35.23}{31.78}{Jerusalem}` lands at the true point. Because Mercator is separable,
+the projection is two one-argument macros (`\mapx`, `\mapy`), parallel to `plot`'s `\px`/`\py`.
+Base coastlines/rivers/land are far too dense to project a point at a time, so they are
+projected *offline* into a `\basemap` macro of pre-projected paths and `\include`d beside the
+document; overlays and furniture are projected at run time and register exactly. While the
+package is loaded its `\map{…}` shadows the keyed-map `\map`.
+
+| Command | Effect |
+|---------|--------|
+| `\mapbounds{lon0}{lat0}{lon1}{lat1}` | declare the window (south-west then north-east corner) and derive the projection |
+| `\map{ … }` | draw the map: the body holds the base linework, overlay, and furniture |
+| `\mapx{lon}` `\mapy{lat}` | project one coordinate to a page point (a number or a variable) |
+| `\place[anchor:auto]{lon}{lat}{name}` | a dot with a label at a coordinate |
+| `\marker[color:…]{lon}{lat}` `\label[anchor:center]{lon}{lat}{text}` | the dot or the label on its own |
+| `\route[color:…]{lon lat lon lat …}` | a polyline through a list of coordinates |
+| `\region[color:…]{lon lat lon lat …}` | a filled polygon through a list of coordinates |
+| `\graticule[step:1]` | a latitude/longitude grid every `step` degrees |
+| `\scalebar[km:50]{x}{y}` `\northarrow{x}{y}` | a scale bar / north arrow at a page position |
+| `\neatline` | a border framing the map |
+
+The base file sets the size configuration and calls `\mapbounds` itself, so the offline
+linework and the run-time overlay cannot drift out of register.
+
 ## Macros and programming
 
 | Command | Effect |

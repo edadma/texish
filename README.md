@@ -38,9 +38,10 @@ codes (`\qrcode`), text sub/superscripts, chemistry (`\ce` reaction equations an
 plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), railroad
 syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diagram per rule),
 node-and-edge diagrams (`\use{diagram}`, with `flowchart`, `automaton` and `er` presets —
-block diagrams, flowcharts, state machines and entity-relationship diagrams), and month
+block diagrams, flowcharts, state machines and entity-relationship diagrams), month
 calendars (`\use{calendar}` — a month grid with leap-year arithmetic, a configurable week
-start, and a today highlight).
+start, and a today highlight), and geographic maps (`\use{map}` — real longitude/latitude
+linework, place labels, routes and regions in the Web Mercator projection).
 
 **Documentation: [texish.edadma.dev](https://texish.edadma.dev/).**
 
@@ -166,7 +167,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.18.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.19.0"
 ```
 
 ## License
