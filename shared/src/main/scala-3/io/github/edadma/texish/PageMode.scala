@@ -2,6 +2,8 @@ package io.github.edadma.texish
 
 import io.github.edadma.texish.parser.Value
 
+import scala.collection.mutable.ListBuffer
+
 /** Builds the main vertical list and breaks it into pages.
   *
   * Pages break only at legal breakpoints, following TeX's rules: at a glue whose predecessor is non-discardable, or
@@ -41,13 +43,45 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     floatStackSize(items.collect { case f: FloatBox if f.edgeTop => f.content.height }) +
       floatStackSize(items.collect { case f: FloatBox if !f.edgeTop => f.content.height })
 
-  /** Page height the given items will occupy once shipped: their own heights, the footnote content carried by any
+  /** The height above its first baseline of a note's content — the ascent its opening line contributes across the
+    * boundary from the note before it. A footnote is a \vbox, whose own ascent measures to its LAST baseline, so
+    * the first line's ascent has to be read from the head box directly.
+    */
+  private def firstBaselineAscent(box: Box): Double = box match
+    case v: VerticalBox => v.boxes.headOption.map(_.ascent).getOrElse(v.ascent)
+    case _              => box.ascent
+
+  /** Interline glue laid between one footnote and the next, so their baselines are a footnote-baselineskip apart —
+    * the same rule VerticalMode applies between two lines of one note, computed here with the note's stored leading
+    * because the baselineskip in force at shipout is the body's, not the footnote's.
+    */
+  private def interNoteGlue(prev: InsertBox, cur: InsertBox): Double =
+    val skip = cur.leading - prev.content.descent - firstBaselineAscent(cur.content)
+
+    if skip <= t.getNumber("lineskiplimit") then t.getGlue("lineskip").naturalSize else skip
+
+  /** Height a footnote block built from these inserts occupies, apart from the separator: each note's content, plus
+    * the interline glue leading each note off the one before it.
+    */
+  private def notesHeight(inserts: collection.Seq[InsertBox]): Double =
+    if inserts.isEmpty then 0.0
+    else
+      var total = inserts.head.content.height
+      var prev  = inserts.head
+
+      for cur <- inserts.tail do
+        total += interNoteGlue(prev, cur) + cur.content.height
+        prev = cur
+
+      total
+
+  /** Page height the given items will occupy once shipped: their own heights, the footnote block carried by any
     * inserts among them (plus the footnote separator, once), and the top-float area (floats plus their spacing).
     */
   private def shippedSize(items: collection.Seq[Box]): Double =
-    val notes = items.collect { case ins: InsertBox => ins.content.height }
+    val inserts = items.collect { case ins: InsertBox => ins }
 
-    items.map(measure).sum + (if notes.isEmpty then 0 else notes.sum + separatorSize) + floatAreaSize(items)
+    items.map(measure).sum + (if inserts.isEmpty then 0 else notesHeight(inserts) + separatorSize) + floatAreaSize(items)
 
   override def clear(): Unit =
     super.clear()
@@ -100,10 +134,19 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     // footnote content of any inserts and the top floats in the prefix, by the same rule the overflow check in
     // add uses
     val heights = boxes.scanLeft(0.0)(_ + measure(_))
-    val notes = boxes.scanLeft(0.0)((acc, b) =>
-      acc + (b match
-        case ins: InsertBox => ins.content.height
-        case _              => 0.0))
+
+    // notes(i) is the footnote-block height of boxes(0 until i): each note's content plus the interline glue that
+    // leads it off the note before it — accumulated with the running previous insert, since that glue is pairwise
+    val notes                = new Array[Double](boxes.length + 1)
+    var noteAcc              = 0.0
+    var prevNote: InsertBox  = null
+    for i <- boxes.indices do
+      boxes(i) match
+        case ins: InsertBox =>
+          noteAcc += (if prevNote == null then ins.content.height else interNoteGlue(prevNote, ins) + ins.content.height)
+          prevNote = ins
+        case _ =>
+      notes(i + 1) = noteAcc
 
     def sizes(i: Int): Double =
       heights(i) + (if notes(i) > 0 then notes(i) + separatorSize else 0) + floatAreaSize(boxes.take(i))
@@ -220,9 +263,9 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     // top floats, body, footnotes, bottom floats — the order TeX/LaTeX use: top floats head the page above a
     // textfloatsep space, footnotes sit at the foot of the text below the separator rule, and bottom floats sink
     // below them. The body is built short by exactly the height all three areas take, so the page stays vsize tall.
-    val topFloats = boxes.collect { case f: FloatBox if f.edgeTop => f.content }.toList
-    val botFloats = boxes.collect { case f: FloatBox if !f.edgeTop => f.content }.toList
-    val notes     = boxes.collect { case ins: InsertBox => ins.content }.toList
+    val topFloats   = boxes.collect { case f: FloatBox if f.edgeTop => f.content }.toList
+    val botFloats   = boxes.collect { case f: FloatBox if !f.edgeTop => f.content }.toList
+    val noteInserts = boxes.collect { case ins: InsertBox => ins }.toList
 
     boxes.filterInPlace(b => !b.isInstanceOf[FloatBox] && !b.isInstanceOf[InsertBox])
 
@@ -245,11 +288,21 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     val bottom = floatStack(botFloats, top = false)
     val around = top.map(_.height).sum + bottom.map(_.height).sum
 
-    if notes.isEmpty then wrap(top ++ buildTo(t.getNumber("vsize") - around) ++ bottom)
+    if noteInserts.isEmpty then wrap(top ++ buildTo(t.getNumber("vsize") - around) ++ bottom)
     else
-      val body = buildTo(t.getNumber("vsize") - around - notes.map(_.height).sum - separatorSize)
+      val body = buildTo(t.getNumber("vsize") - around - notesHeight(noteInserts) - separatorSize)
+
+      // the notes joined into one column, each led off the one before it by interNoteGlue: the block then reads
+      // with a single uniform leading — within a note and across a note boundary alike — as one TeX \footins list
+      val column = ListBuffer[Box](noteInserts.head.content)
+      var prev   = noteInserts.head
+      for ins <- noteInserts.tail do
+        column += VSpaceBox(interNoteGlue(prev, ins))
+        column += ins.content
+        prev = ins
+
       val foot = VSpaceBox(t.getGlue("footnotesep").naturalSize)
         :: RuleBox(t, FootnoteRuleWidth, FootnoteRuleHeight, 0)
-        :: VSpaceBox(FootnoteRuleGap) :: notes
+        :: VSpaceBox(FootnoteRuleGap) :: column.toList
 
       wrap(top ++ body ++ foot ++ bottom)

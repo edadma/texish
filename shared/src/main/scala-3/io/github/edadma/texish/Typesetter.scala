@@ -809,6 +809,12 @@ abstract class Typesetter:
 
     new CharBox(this, if ligatures then Ligatures(rep, currentFont.ligatures) else rep)
 
+  /** A strut sized to the current baselineskip: TeX splits `\strutbox` roughly 0.7 above the baseline and 0.3 below,
+    * so a strutted line stands one baselineskip tall and leading comes out regular whatever the line's glyphs are. */
+  def strut: StrutBox =
+    val leading = getGlue("baselineskip").naturalSize
+    new StrutBox(leading * 0.7, leading * 0.3)
+
   infix def add(box: Box): Typesetter =
     ensureInitializedForContent()
     mode add box

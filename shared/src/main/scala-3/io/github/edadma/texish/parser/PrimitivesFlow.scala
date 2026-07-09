@@ -20,6 +20,10 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
   // vertical mode on its own. Horizontal glue and shifted boxes leave vertical mode themselves (see leaveVmode).
   proc.registerPrimitive("leavevmode", SimplePrimitive(() => t.leaveVmode))
 
+  // \strut adds an invisible box one baselineskip tall (and zero wide) to the current line, so the line keeps a
+  // regular height and depth no matter its glyphs — TeX's \strut. In vertical mode it begins a paragraph first.
+  proc.registerPrimitive("strut", SimplePrimitive(() => { t.leaveVmode; t.add(t.strut) }))
+
   // \par ends the current paragraph — the explicit form of the blank line that ordinarily breaks a
   // paragraph in the source. It ends the open paragraph (the same break \eject and the vertical glue
   // commands trigger) so a following run starts a fresh one; where no paragraph is open it does nothing.
@@ -338,6 +342,9 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         t.vbox()
         t.noindent add t.charBox(s"$n.")
         t.add(t.getGlue("spaceskip"))
+        // a footstrut holds the first line to a full footnote-baselineskip height, so its baseline sits the same
+        // distance below the separator rule (and below the note before it) whatever the note's opening glyphs are
+        t.add(t.strut)
         proc.processTokenList(body)
         t.paragraph()
 
@@ -345,7 +352,7 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
 
         t.exit()
 
-        if note ne null then t.start add InsertBox(note)
+        if note ne null then t.start add InsertBox(note, noteFont.size * 1.2)
     },
   )
 

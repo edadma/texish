@@ -46,7 +46,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
     val note      = Note(20)
 
     pm add Line(40)
-    pm add InsertBox(note)
+    pm add InsertBox(note, 12)
     pm.newpage()
 
     doc.shipped.length shouldBe 1
@@ -68,7 +68,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
     val (doc, pm) = setup(100)
 
     pm add Line(40)
-    pm add InsertBox(Note(20))
+    pm add InsertBox(Note(20), 12)
     pm add Glue(10, 5, 5)
     pm add Line(40) // 90 alone would fit, but the footnote block's 33 pushes it over
 
@@ -87,7 +87,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
     pm add Line(40)
     pm add Glue(10, 5, 5)
     pm add Line(40)
-    pm add InsertBox(note) // 90 + 53 overflows: the insert's line moves over, and the insert with it
+    pm add InsertBox(note, 12) // 90 + 53 overflows: the insert's line moves over, and the insert with it
 
     doc.shipped.length shouldBe 1
     doc.shipped(0).boxes.exists(_.isInstanceOf[RuleBox]) shouldBe false
@@ -106,18 +106,22 @@ class InsertTests extends AnyFreeSpec with Matchers:
     val n2        = Note(30)
 
     pm add Line(40)
-    pm add InsertBox(n1)
+    pm add InsertBox(n1, 40)
     pm add Glue(10, 5, 5)
     pm add Line(40)
-    pm add InsertBox(n2)
+    pm add InsertBox(n2, 40)
     pm.newpage()
 
     val page = doc.shipped(0)
 
     page.height shouldBe 200.0 +- 1e-9
     page.boxes.count(_.isInstanceOf[RuleBox]) shouldBe 1
-    // contents stack at the foot in document order
-    page.boxes.takeRight(2).toList shouldBe List(n1, n2)
+    // contents stack at the foot in document order, the second led off the first by interline glue: with leading 40
+    // and n1's depth 0 and n2's ascent 30, a 10-high spacer sits between them, so their baselines are 40 apart
+    val i1 = page.boxes.indexWhere(_ eq n1)
+    page.boxes(i1) should be theSameInstanceAs n1
+    page.boxes(i1 + 1).height shouldBe 10.0 +- 1e-9
+    page.boxes(i1 + 2) should be theSameInstanceAs n2
   }
 
   "pages with footnotes never overrun vsize" in quietly {
@@ -126,7 +130,7 @@ class InsertTests extends AnyFreeSpec with Matchers:
     for i <- 1 to 6 do
       if i > 1 then pm add Glue(10, 5, 5)
       pm add Line(40)
-      pm add InsertBox(Note(10))
+      pm add InsertBox(Note(10), 12)
 
     pm.newpage()
 

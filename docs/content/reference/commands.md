@@ -173,6 +173,7 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\centerline` `\leftline` `\rightline` `\centering` | alignment |
 | `\rlap` `\llap` | zero-width overlap boxes |
 | `\kern` `\hskip` `\vskip` | rigid / glue spacing |
+| `\strut` | an invisible zero-width box one baselineskip tall, so a line keeps a regular height and depth whatever its glyphs |
 | `\smallskip` `\medskip` `\bigskip` | named vertical gaps |
 | `\par` | end the current paragraph (the explicit form of a blank line; useful inside a macro) |
 | `\indent` `\noindent` | force / suppress the next paragraph's indent |
@@ -296,6 +297,7 @@ and the pages read in order. A run is padded with blank pages to a whole number 
 | `\defbitmap{name}{w}{h}{depth}{base64}` | define an inline bitmap from embedded data (so a package can carry a glyph) |
 | `\usebitmap[width:… height:…]{name}` | place a bitmap defined by `\defbitmap` |
 | `\picture width:… height:… {…}` | open a vector-graphics drawing |
+| `\qrcode[ecc:q cell:… quiet:… dark:… light:…]{data}` | a QR code drawn as crisp vector modules (via the `io.github.edadma.qr` library) |
 
 The drawing commands available inside `\picture` (paths, shapes, strokes, fills, transforms, text,
 arrows) are listed in the [drawing reference](../drawing/).
