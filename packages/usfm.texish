@@ -41,13 +41,15 @@
 \def usfmmr n t {\par\centerline{\font lmroman 10 italic \t}\medskip\noindent}
 
 // ---- Section headings -----------------------------------------------------------
-// \s is a section heading (bold); \r the parallel-passage references beneath it (small italic); \d a psalm's
-// descriptive title, or superscription, which can carry its own \v; \qa an acrostic heading; \sp a speaker label.
+// \s is a section heading (bold); \r the parallel-passage references beneath it (small italic, set as a ragged
+// paragraph so a long four-way cross-reference wraps to fit a narrow measure rather than overrunning a single
+// line); \d a psalm's descriptive title, or superscription, which can carry its own \v; \qa an acrostic heading;
+// \sp a speaker label.
 // Each ends with \noindent, as document's own \section does: that opens an empty paragraph left flush, so the body
 // paragraph that follows the heading sets flush too, without \p needing to know a heading came before it.
 \def usfms n t {\par\medskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\noindent}
-\def usfmr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip\noindent}
-\def usfmsr n t {\par\leftline{\font lmroman 9 italic \t}\nobreak\smallskip\noindent}
+\def usfmr n t {\par{\set leftskip {0}\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}\font lmroman 9 italic \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmsr n t {\usfmr{\n}{\t}}
 \def usfmd n t {\par\smallskip\leftline{\font lmroman 10 italic \t}\nobreak\smallskip\noindent}
 \def usfmsp n t {\par\smallskip\leftline{\font lmroman 10 bold \t}\nobreak\smallskip\noindent}
 \def usfmqa n t {\par\smallskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\noindent}
@@ -70,7 +72,7 @@
 \def usfmchapfig {\bfseries\dropcap[2][5]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
 \def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
-\def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\hskip 1.5 }
+\def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\kern 1.5 }
 \def usfmv n {\if {\= {\n} {1}}\else\usfmversenum{\n}\fi}
 
 // ---- Body paragraphs ------------------------------------------------------------

@@ -339,6 +339,10 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         t.set("rightskip", ZeroGlue)
         t.set("parindent", 0.0)
         t.set("hangindent", 0.0)
+        // Colour is context too: a marker that fell inside coloured text (red words of Jesus, say) must not tint
+        // the note at the foot. Reset to the default ink so the note reads in body colour, whatever coloured span
+        // the marker sat in. The scope restores the surrounding colour for the text after the marker.
+        t.currentColor = Color("black")
         t.vbox()
         t.noindent add t.charBox(s"$n.")
         t.add(t.getGlue("spaceskip"))
