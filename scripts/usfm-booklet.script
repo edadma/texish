@@ -53,7 +53,7 @@
 // ---- Inside front cover / colophon (folio 2) ----------------------------------
 // Publication information, set quietly and centred low on the page: the Scripture text's source and the imprint.
 {
-\vbox to:346 {
+\vbox to:345 {
   \vfil
   \centerline{\font lmroman 10 regular Scripture text from the}
   \smallskip
