@@ -356,7 +356,9 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
 
         t.exit()
 
-        if note ne null then t.start add InsertBox(note, noteFont.size * 1.2)
+        // The note carries its own leading so consecutive footnotes stack a footnote-baselineskip apart, tighter
+        // than the body — the same footnoteleading used within a note, not the body's 1.2.
+        if note ne null then t.start add InsertBox(note, noteFont.size * t.getNumber("footnoteleading"))
     },
   )
 
