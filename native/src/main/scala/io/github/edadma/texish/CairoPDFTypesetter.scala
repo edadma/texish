@@ -10,6 +10,7 @@ class CairoPDFTypesetter(val output: String) extends CairoTypesetter:
   def init(width: Double, height: Double): Unit =
     surface = pdfSurfaceCreate(output, width, height)
     ctx = surface.create
+    applyFontOptions()
 
   def createPageTarget: Any = ensureInitializedForContent()
 

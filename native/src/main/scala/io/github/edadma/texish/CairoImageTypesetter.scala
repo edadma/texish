@@ -36,6 +36,7 @@ class CairoImageTypesetter(dpi: Double = 100) extends CairoTypesetter:
     if !ready then
       surface = imageSurfaceCreate(Format.ARGB32, 1, 1)
       ctx = surface.create
+      applyFontOptions()
       ready = true
 
   def createPageTarget: Any =
@@ -49,6 +50,7 @@ class CairoImageTypesetter(dpi: Double = 100) extends CairoTypesetter:
 
     surface = imageSurfaceCreate(Format.ARGB32, pixels(pageWidth), pixels(pageHeight))
     ctx = surface.create
+    applyFontOptions()
 
     // map the engine's point coordinates onto device pixels for this page
     ctx.scale(deviceScale, deviceScale)

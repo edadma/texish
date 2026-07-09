@@ -4,12 +4,15 @@ import io.github.edadma.freetype.{Face as FTFace, Library, initFreeType}
 import io.github.edadma.libcairo.{
   Context,
   FontFace as CairoFontFace,
+  FontOptions,
   Format,
   Glyph,
+  HintMetrics,
   LineCap as CairoLineCap,
   LineJoin as CairoLineJoin,
   Surface,
   fontFaceCreateForFTFace,
+  fontOptionsCreate,
   imageSurfaceCreate,
   imageSurfaceCreateFromPNG,
   TextExtents as CairoTextExtents,
@@ -49,6 +52,17 @@ abstract class CairoTypesetter extends Typesetter:
   protected var surface: Surface     = uninitialized
   protected var ctx: Context         = uninitialized
   protected lazy val freetype: Library = initFreeType.getOrElse(sys.error("error initializing FreeType"))
+
+  // Cairo hints font metrics to the device-pixel grid on raster surfaces but not on vector ones, so the same
+  // face measures differently on an image page than on a PDF page. A layout engine must measure identically
+  // whatever the output target, so hint_metrics is forced OFF on every context this backend creates. Subclasses
+  // call applyFontOptions right after each context is created.
+  private lazy val hintOffOptions: FontOptions =
+    val o = fontOptionsCreate
+    o.setHintMetrics(HintMetrics.OFF)
+    o
+
+  protected def applyFontOptions(): Unit = ctx.setFontOptions(hintOffOptions)
 
   def setFont(font: RenderFont): Unit =
     ctx.setFontFace(font.face)
