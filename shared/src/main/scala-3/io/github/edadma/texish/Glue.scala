@@ -32,3 +32,10 @@ val FillGlue = Glue(0, 1, 0, 2)
 val ZeroGlue = Glue(0, 0, 0, 0)
 
 val InfGlue = Glue(0, 1, 1, 1, 1)
+
+/** Interword glue for a font whose space is `space`. Following TeX (cmr10's `3.33pt plus 1.67pt minus 1.11pt`),
+  * the space stretches by half its width and shrinks by a third. A finite shrink lets an over-long line tighten
+  * instead of going overfull. The font-changing primitives reset the `spaceskip`/`xspaceskip` parameters through
+  * these so every font's interword glue is flexed the same way. */
+def interwordGlue(space: Double): Glue  = Glue(space, space / 2, space / 3)
+def xinterwordGlue(space: Double): Glue = Glue(space * 1.5, space / 2, space / 3)

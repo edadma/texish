@@ -77,8 +77,8 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
         val body = proc.readArgument(pos)
         t.enter()
         val font = switch(t)
-        t.set("spaceskip", Glue(font.space, 1))
-        t.set("xspaceskip", Glue(font.space * 1.5, 1))
+        t.set("spaceskip", interwordGlue(font.space))
+        t.set("xspaceskip", xinterwordGlue(font.space))
         proc.processTokenList(body)
         t.exit()
     }

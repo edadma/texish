@@ -330,8 +330,8 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         t.enter()
         t.currentFont = noteFont
         t.set("baselineskip", Glue(noteFont.size * 1.2))
-        t.set("spaceskip", Glue(noteFont.space, 1))
-        t.set("xspaceskip", Glue(noteFont.space * 1.5, 1))
+        t.set("spaceskip", interwordGlue(noteFont.space))
+        t.set("xspaceskip", xinterwordGlue(noteFont.space))
         // The note is set on its own measure, flush at the foot, whatever the indentation of the line the marker
         // fell on — a marker inside a poetry line, a list item or a quotation must not carry that block's
         // leftskip / indent into the note. The scope above restores them for the surrounding text.

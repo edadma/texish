@@ -102,7 +102,7 @@ class WrapPageBreakTests extends AnyFreeSpec with Matchers:
   "a cutout that shipped with its page does not narrow the next page" in {
     // a short left cutout narrows the first lines of page one, then the body overflows onto page two; the cutout
     // shipped with page one, so it must not still be narrowing the top of page two
-    val pages = runPages(200, "\\cutout{100}{30}{l}\\noindent " + filler(20))
+    val pages = runPages(200, "\\cutout{100}{30}{l}\\noindent " + filler(26))
     pages.length should be > 1
     val firstPage = linesOf(pages.head)
     firstPage.exists(leadingWidth(_) >= Narrowed) shouldBe true // page one's opening lines are narrowed

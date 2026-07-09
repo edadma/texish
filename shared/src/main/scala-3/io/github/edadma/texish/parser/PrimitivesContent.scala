@@ -81,8 +81,8 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
           case Value.Text(typeface) =>
             val font = t.typeface(typeface)
             // Update spaceskip based on new font's space width (typesetter doesn't do this automatically)
-            t.set("spaceskip", Glue(font.space, 1))
-            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+            t.set("spaceskip", interwordGlue(font.space))
+            t.set("xspaceskip", xinterwordGlue(font.space))
           case _ => handler.error("\\typeface expects a typeface name", pos)
     },
   )
@@ -99,8 +99,8 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
           case (Value.Text(tf), Value.Num(sz), Value.Text(st)) =>
             val font = t.selectFont(tf, sz.toDouble, st.split("\\s+").toSet)
             // Update spaceskip based on new font's space width (typesetter doesn't do this automatically)
-            t.set("spaceskip", Glue(font.space, 1))
-            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+            t.set("spaceskip", interwordGlue(font.space))
+            t.set("xspaceskip", xinterwordGlue(font.space))
           case _ => handler.error("\\font expects <typeface> <size> <style>", pos)
     },
   )
@@ -134,8 +134,8 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
           case Value.Num(sz) =>
             val cur  = t.currentFont
             val font = t.selectFont(cur.typeface, sz.toDouble, cur.style)
-            t.set("spaceskip", Glue(font.space, 1))
-            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+            t.set("spaceskip", interwordGlue(font.space))
+            t.set("xspaceskip", xinterwordGlue(font.space))
           case _ => handler.error("\\fontsize expects a number", pos)
     },
   )
@@ -154,8 +154,8 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
           case (Value.Num(f), Value.Text(st)) =>
             val cur  = t.currentFont
             val font = t.selectFont(cur.typeface, cur.size * f.toDouble, st.split("\\s+").toSet)
-            t.set("spaceskip", Glue(font.space, 1))
-            t.set("xspaceskip", Glue(font.space * 1.5, 1))
+            t.set("spaceskip", interwordGlue(font.space))
+            t.set("xspaceskip", xinterwordGlue(font.space))
           case _ => handler.error("\\fontscale expects <factor> <style>", pos)
     },
   )
@@ -260,8 +260,8 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
         t.hbox(null)
         t.enter()
         val font = t.mono()
-        t.set("spaceskip", Glue(font.space, 1))
-        t.set("xspaceskip", Glue(font.space * 1.5, 1))
+        t.set("spaceskip", interwordGlue(font.space))
+        t.set("xspaceskip", xinterwordGlue(font.space))
         t.currentColor = Color("blue")
         t.add(t.charBox(uri))
         t.exit()

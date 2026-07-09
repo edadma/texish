@@ -991,8 +991,8 @@ abstract class Typesetter:
       "baselineskip"  -> Glue(currentFont.size * 1.2 * pt),
       "lineskip"      -> Glue(1 * pt),
       "lineskiplimit" -> 0.0,
-      "spaceskip"     -> Glue(currentFont.space, 1),
-      "xspaceskip"    -> Glue(currentFont.space * 1.5, 1),
+      "spaceskip"     -> interwordGlue(currentFont.space),
+      "xspaceskip"    -> xinterwordGlue(currentFont.space),
       "hsize"         -> 6.5 * in,
       "vsize"         -> 9 * in,
       "parindent"     -> 20 * pt, // TeX's \parindent
