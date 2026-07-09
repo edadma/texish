@@ -58,7 +58,10 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
   private def interNoteGlue(prev: InsertBox, cur: InsertBox): Double =
     val skip = cur.leading - prev.content.descent - firstBaselineAscent(cur.content)
 
-    if skip <= t.getNumber("lineskiplimit") then t.getGlue("lineskip").naturalSize else skip
+    // Strictly below the limit, as in TeX: a note's footstrut makes ascent+descent equal its leading, so `skip`
+    // lands exactly on zero, and a `<=` test would swap in \lineskip and space every note a spurious pad wider
+    // than its own leading. Only a genuine overlap (skip below the limit) falls back to \lineskip.
+    if skip < t.getNumber("lineskiplimit") then t.getGlue("lineskip").naturalSize else skip
 
   /** Height a footnote block built from these inserts occupies, apart from the separator: each note's content, plus
     * the interline glue leading each note off the one before it.

@@ -1024,7 +1024,7 @@ abstract class Typesetter:
       // scaled-down copy of the running text.
       "footnotesep"     -> Glue(currentFont.size * pt),
       "footnotescale"   -> 0.8,
-      "footnoteleading" -> 1.1,
+      "footnoteleading" -> 1.0,
       "footnoteno"      -> 0.0,
 
       // top floats (see FloatBox): the space between two floats stacked in a page's float area, and the space
