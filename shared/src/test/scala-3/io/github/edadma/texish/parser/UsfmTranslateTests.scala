@@ -64,6 +64,25 @@ class UsfmTranslateTests extends AnyFreeSpec with Matchers:
       "\\usfmp{1}\\usfmwj{\\usfmw{Celui} qui}"
   }
 
+  "a table of rows and cells becomes one \\usfmtable with a column spec" in {
+    tr("\\tr\n\\tc1 a\n\\tc2 b\n\\tr\n\\tc1 c\n\\tc2 d") shouldBe
+      "\\usfmtable{ll}{\\usfmtc{a} & \\usfmtc{b} \\\\ \\usfmtc{c} & \\usfmtc{d}}"
+  }
+
+  "a header cell becomes \\usfmth" in {
+    tr("\\tr\n\\th1 Name\n\\th2 Ref") shouldBe "\\usfmtable{ll}{\\usfmth{Name} & \\usfmth{Ref}}"
+  }
+
+  "skipIntro drops the book introduction up to the first chapter" in {
+    Usfm.translate("\\imt1 Title\n\\ip Intro.\n\\c 1\n\\p \\v 1 Text", skipIntro = true) shouldBe
+      "\\usfmc{1}\\usfmp{1}\\usfmv{1}Text"
+  }
+
+  "without skipIntro the introduction is set like the rest" in {
+    Usfm.translate("\\imt1 Title\n\\ip Intro.\n\\c 1\n\\p \\v 1 Text") shouldBe
+      "\\usfmimt{1}{Title }\\usfmip{1}Intro. \\usfmc{1}\\usfmp{1}\\usfmv{1}Text"
+  }
+
   "a cross-reference splits display text from its canonical target" in {
     tr("\\r (\\ref Genesis 1:1|GEN 1:1\\ref*)") shouldBe
       "\\usfmr{1}{(\\usfmref{Genesis 1:1}{GEN 1:1})}"

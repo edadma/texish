@@ -38,9 +38,15 @@ object UsfmPrimitive extends Primitive:
         if beside.exists && beside.isFile then beside.toPlatformString else rel
       catch case _: Throwable => rel
 
+    // A document sets `usfmintro` to 0 to drop the book introduction and set only the Scripture text.
+    val skipIntro = proc.handler match
+      case h: TypesetterHandler if h.typesetter.get("usfmintro").isDefined =>
+        h.typesetter.getNumber("usfmintro") == 0.0
+      case _ => false
+
     try
       val text = Path(resolved).readText()
-      proc.processContent(Usfm.translate(text))
+      proc.processContent(Usfm.translate(text, skipIntro))
     catch
       case e: ParserException => throw e
       case e: Exception       => proc.handler.error(s"\\usfm: cannot read '$rel': ${e.getMessage}", pos)
@@ -71,30 +77,48 @@ object Usfm:
 
   import Tok.*
 
-  // Metadata markers whose line is discarded entirely.
-  private val ignore = Set("id", "usfm", "ide", "rem", "sts", "toca")
+  // Metadata markers whose line is discarded entirely — book identification and the intro-end sentinel.
+  private val ignore = Set("id", "usfm", "ide", "rem", "sts", "toca", "ie")
 
-  // Titles and headings: the content up to the next block marker is captured as a braced argument.
-  private val headingBases = Set("h", "toc", "mt", "mte", "ms", "mr", "s", "sr", "r", "d", "sp", "qa", "cl", "cp")
+  // Titles and headings: the content up to the next block marker is captured as a braced argument. This covers
+  // the book titles (\mt…), major-section headings (\ms, \mr), section headings (\s, \sr, \r, \d, \sp, …) and the
+  // book introduction's own titles and outline (\imt, \is, \iot, \io — the outline entries carry \ior refs).
+  private val headingBases =
+    Set("h", "toc", "mt", "mte", "ms", "mr", "s", "sr", "r", "d", "sp", "qa", "cl", "cp",
+      "imt", "imte", "is", "iot", "io")
 
-  // Body paragraphs and poetry lines: the running text flows after the macro.
+  // Body paragraphs and poetry lines: the running text flows after the macro. Scripture paragraphs (\p, \m, \q…),
+  // lists (\li, \lim, \lh, \lf), and the introduction's prose and poetry (\ip, \im, \iq, \ili, …). \b and \ib are
+  // blank-line breaks with no level, handled specially where they are emitted.
   private val bodyBases =
     Set("p", "m", "pc", "pmo", "pi", "pr", "ph", "pm", "pmc", "pmr", "po", "mi", "nb", "cls",
-      "q", "qr", "qc", "qm", "qd", "li", "lim", "b")
+      "q", "qr", "qc", "qm", "qd", "li", "lim", "lh", "lf", "b",
+      "ip", "ipi", "ipq", "ipr", "im", "imi", "imq", "iq", "ili", "iex", "ib")
 
   // Inline character spans that close with \name*. Each has a matching \usfm… macro in the usfm package; a
   // character marker outside this set drops its styling but keeps the text it wrapped.
   private val charBases =
-    Set("wj", "nd", "add", "bk", "tl", "qt", "qs", "sc", "em", "it", "bd", "bdit", "sup", "k", "rq", "w", "fv")
+    Set("wj", "nd", "add", "bk", "tl", "qt", "qs", "sc", "em", "it", "bd", "bdit", "sup", "k", "rq", "w", "fv",
+      "ior", "iqt", "no", "dc", "pn", "png", "ord", "sig", "sls", "rb", "pro", "wg", "wh", "wa", "qac", "lit")
 
   // Footnote / cross-reference inner markers that run on until the next inner marker or the note's close.
   private val noteInner =
-    Set("fr", "ft", "fq", "fqa", "fqb", "fk", "fl", "fp", "fw", "fdc", "fm", "xo", "xt", "xq", "xk")
+    Set("fr", "ft", "fq", "fqa", "fqb", "fk", "fl", "fp", "fw", "fdc", "fm", "xo", "xt", "xq", "xk", "xot", "xnt", "xta")
+
+  // Table markers: a row opener (\tr) and the cell openers (\tc / \th, with right-aligned \tcr / \thr variants).
+  private def isTableCell(base: String): Boolean = base == "tc" || base == "tcr" || base == "th" || base == "thr"
+  private def isTableHeader(base: String): Boolean = base == "th" || base == "thr"
+
+  // The book introduction's markers. A document that only wants Scripture (a pocket portion, say) can ask the
+  // reader to drop the whole introduction — from its first marker to the first chapter — rather than edit the file.
+  private val introBases =
+    Set("imt", "imte", "is", "iot", "io", "ior", "iqt", "ip", "ipi", "ipq", "ipr", "im", "imi", "imq", "iq",
+      "ili", "iex", "ib")
 
   // A heading's captured content ends at the next block-level marker (a new heading, a body paragraph, or a
   // chapter). A verse marker does not end it — a psalm's descriptive title carries its own \v.
   private def endsCapture(base: String): Boolean =
-    base == "c" || headingBases.contains(base) || bodyBases.contains(base)
+    base == "c" || base == "tr" || headingBases.contains(base) || bodyBases.contains(base)
 
   /** Split a marker name into its letters and trailing level digit (`q2` → `("q", 2)`, `s` → `("s", 1)`). */
   private def splitLevel(name: String): (String, Int) =
@@ -159,14 +183,25 @@ object Usfm:
       k += 1
     b.toString
 
-  /** Translate a USFM document into texish source. */
-  def translate(src: String): String =
-    new Walker(tokenize(src)).run()
+  /** Translate a USFM document into texish source. With `skipIntro`, the book introduction (everything from its
+    * first marker to the first chapter) is dropped, so only the Scripture text is set. */
+  def translate(src: String, skipIntro: Boolean = false): String =
+    new Walker(tokenize(src), skipIntro).run()
 
-  private class Walker(toks: Vector[Tok]):
+  private class Walker(toks: Vector[Tok], skipIntro: Boolean):
     private val buf = toks.toBuffer
-    private val sb  = new StringBuilder
+    private var sb  = new StringBuilder
     private var i   = 0
+
+    // Run `body` with output diverted to a fresh buffer and return what it produced, restoring the previous
+    // buffer after. Used to translate a table cell's content into a string before it is placed in the row.
+    private def capture(body: => Unit): String =
+      val saved = sb
+      sb = new StringBuilder
+      body
+      val out = sb.toString
+      sb = saved
+      out
 
     def run(): String =
       while i < buf.length do step()
@@ -197,7 +232,11 @@ object Usfm:
           i += 1 // a stray closing marker with no open span — drop it
         case Marker(name, false) =>
           val (base, level) = splitLevel(name)
-          if base.isEmpty || ignore(base) then
+          if skipIntro && introBases(base) then
+            // Drop the whole introduction: skip to the first chapter, taking its tables and prose with it.
+            while i < buf.length && !(buf(i) match { case Marker(nm, false) => splitLevel(nm)._1 == "c"; case _ => false }) do
+              i += 1
+          else if base.isEmpty || ignore(base) then
             i += 1
             if i < buf.length && buf(i).isInstanceOf[Txt] then i += 1
           else if base == "c" || base == "v" then
@@ -217,6 +256,8 @@ object Usfm:
           else if base == "ref" then
             i += 1
             emitRef()
+          else if base == "tr" then
+            captureTable()
           else if base == "fv" || charBases(base) then
             i += 1
             sb.append(s"\\usfm$base{")
@@ -224,11 +265,74 @@ object Usfm:
             sb.append("}")
           else if bodyBases(base) then
             i += 1
-            if base == "b" then sb.append("\\usfmb")
+            // \b (stanza break) and \ib (intro blank line) are level-less breaks; the rest carry their level.
+            if base == "b" || base == "ib" then sb.append(s"\\usfm$base")
             else sb.append(s"\\usfm$base{$level}")
           else
             // An unrecognised marker loses its own effect but keeps the text it introduced, degrading rather than
             // swallowing content.
+            i += 1
+
+    // A USFM table: a run of \tr rows, each a series of \tc / \th cells (right-aligned \tcr / \thr variants). The
+    // whole run is gathered so the column count is known, then emitted as one \usfmtable{colspec}{body} — the
+    // colspec is one letter per column, the body the cells joined with & and rows with \\, so it lowers to the
+    // engine's \tabular. Header cells become \usfmth, ordinary cells \usfmtc, both redefinable in the package.
+    private def captureTable(): Unit =
+      val rows = collection.mutable.ArrayBuffer[collection.mutable.ArrayBuffer[(Boolean, String)]]()
+      while i < buf.length && (buf(i) match { case Marker(nm, false) => splitLevel(nm)._1 == "tr"; case _ => false }) do
+        i += 1 // consume the \tr
+        // A newline between \tr and its first cell tokenises as a whitespace text run; skip it so the cell loop
+        // does not stop before reading any cell.
+        while i < buf.length && (buf(i) match { case Txt(s) => s.trim.isEmpty; case _ => false }) do i += 1
+        val cells = collection.mutable.ArrayBuffer[(Boolean, String)]()
+        var more  = true
+        while more && i < buf.length do
+          buf(i) match
+            case Marker(nm, false) if isTableCell(splitLevel(nm)._1) =>
+              val header = isTableHeader(splitLevel(nm)._1)
+              i += 1
+              cells += ((header, capture(captureCell()).trim))
+            case _ => more = false
+        rows += cells
+      val cols = rows.map(_.size).maxOption.getOrElse(0)
+      if cols == 0 then return
+      sb.append(s"\\usfmtable{${"l" * cols}}{")
+      for (row, ri) <- rows.zipWithIndex do
+        for c <- 0 until cols do
+          if c > 0 then sb.append(" & ")
+          if c < row.size then
+            val (header, content) = row(c)
+            sb.append(if header then s"\\usfmth{$content}" else s"\\usfmtc{$content}")
+        if ri < rows.length - 1 then sb.append(" \\\\ ")
+      sb.append("}")
+
+    // One table cell: text and inline spans up to the next cell, the next row, or the block that ends the table.
+    private def captureCell(): Unit =
+      var done = false
+      while !done && i < buf.length do
+        buf(i) match
+          case Txt(s) =>
+            sb.append(escape(s))
+            i += 1
+          case Marker(nm, false) =>
+            val (b, _) = splitLevel(nm)
+            if isTableCell(b) || b == "tr" || endsCapture(b) then done = true
+            else if b == "f" || b == "fe" then
+              i += 1
+              emitNote("usfmfootnote", Set("f", "fe"))
+            else if b == "x" then
+              i += 1
+              emitNote("usfmxref", Set("x"))
+            else if b == "ref" then
+              i += 1
+              emitRef()
+            else if b == "fv" || charBases(b) then
+              i += 1
+              sb.append(s"\\usfm$b{")
+              captureSpan(nm)
+              sb.append("}")
+            else i += 1
+          case Marker(_, true) =>
             i += 1
 
     // Collect a heading's content until the next block-level marker, translating inline spans, footnotes and any

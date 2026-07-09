@@ -25,6 +25,10 @@
 \set baselineskip {12}
 \set parindent {15}
 
+// The book introduction is set by default. A pocket portion that wants only the Scripture sets \usfmintro to 0
+// before \usfm{…}, and the reader drops the introduction — no need to touch the USFM file.
+\set usfmintro {1}
+
 // ---- Book identity --------------------------------------------------------------
 // \h records the running book name in \usfmbook (for a document that wants a running head); \toc entries are not
 // printed. Both are redefinable.
@@ -34,11 +38,17 @@
 
 // ---- Titles ---------------------------------------------------------------------
 // \mt1 is the book title; higher \mt levels are its subtitles (which appear above it in the file), set smaller.
-// \ms is a major section title such as a psalter's book division, \mr its reference line.
-\def usfmmt n t {\par\if {\> {\n} {1}}\medskip\centerline{\font lmroman 13 regular \t}\smallskip\else\bigskip\centerline{\font lmroman 22 bold \t}\medskip\fi}
+// \ms is a major section title such as a psalter's book division, \mr its reference line. A title is a centred
+// paragraph, not a single \centerline, so a long book name (say a French "Évangile selon Jean") wraps to fit a
+// narrow measure rather than overrunning it — \usfmcenter sets the paragraph shape that centres every line.
+\def usfmcenter {\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}}
+// A left-aligned, ragged-right paragraph shape for a heading or reference line, so a long one wraps to fit the
+// measure instead of overrunning it. Some translations write a whole chapter summary as a section heading.
+\def usfmleftpar {\set leftskip {0}\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}}
+\def usfmmt n t {\par\if {\> {\n} {1}}\medskip{\usfmcenter\font lmroman 13 regular \noindent\t\par}\smallskip\else\bigskip{\usfmcenter\font lmroman 22 bold \noindent\t\par}\medskip\fi\noindent}
 \def usfmmte n t {\usfmmt{\n}{\t}}
-\def usfmms n t {\par\bigskip\centerline{\font lmroman 14 bold \t}\smallskip\noindent}
-\def usfmmr n t {\par\centerline{\font lmroman 10 italic \t}\medskip\noindent}
+\def usfmms n t {\par\bigskip{\usfmcenter\font lmroman 14 bold \noindent\t\par}\smallskip\noindent}
+\def usfmmr n t {\par{\usfmcenter\font lmroman 10 italic \noindent\t\par}\medskip\noindent}
 
 // ---- Section headings -----------------------------------------------------------
 // \s is a section heading (bold); \r the parallel-passage references beneath it (small italic, set as a ragged
@@ -47,14 +57,36 @@
 // \sp a speaker label.
 // Each ends with \noindent, as document's own \section does: that opens an empty paragraph left flush, so the body
 // paragraph that follows the heading sets flush too, without \p needing to know a heading came before it.
-\def usfms n t {\par\medskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\noindent}
-\def usfmr n t {\par{\set leftskip {0}\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}\font lmroman 9 italic \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfms n t {\par\medskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmr n t {\par{\usfmleftpar\font lmroman 9 italic \noindent\t\par}\nobreak\smallskip\noindent}
 \def usfmsr n t {\usfmr{\n}{\t}}
-\def usfmd n t {\par\smallskip\leftline{\font lmroman 10 italic \t}\nobreak\smallskip\noindent}
-\def usfmsp n t {\par\smallskip\leftline{\font lmroman 10 bold \t}\nobreak\smallskip\noindent}
-\def usfmqa n t {\par\smallskip\leftline{\font lmroman 11 bold \t}\nobreak\smallskip\noindent}
-\def usfmcl n t {\par\medskip\centerline{\font lmroman 13 bold \t}\smallskip\noindent}
+\def usfmd n t {\par\smallskip{\usfmleftpar\font lmroman 10 italic \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmsp n t {\par\smallskip{\usfmleftpar\font lmroman 10 bold \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmqa n t {\par\smallskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmcl n t {\par\medskip{\usfmcenter\font lmroman 13 bold \noindent\t\par}\smallskip\noindent}
 \def usfmcp n t {}
+
+// ---- Book introduction ----------------------------------------------------------
+// A book may open with an introduction: its own titles (\imt), section headings (\is), an outline (\iot heading,
+// \io entries each carrying an \ior reference span), and prose (\ip) and poetry (\iq). These render like their
+// Scripture counterparts a size quieter, and each block ends with \noindent so the paragraph after a heading sets
+// flush. \ib is a blank line within the introduction. \ie (intro end) is dropped by the reader.
+\def usfmimt n t {\par\medskip{\usfmcenter\font lmroman 12 bold \noindent\t\par}\smallskip\noindent}
+\def usfmimte n t {\usfmimt{\n}{\t}}
+\def usfmis n t {\par\smallskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmiot n t {\par\smallskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmio n t {\par{\set leftskip {\calc{\n * 12}}\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}\noindent\t\par}\noindent}
+\def usfmip n {\par\usfmprose}
+\def usfmipi n {\par\usfmprose\set leftskip {18}}
+\def usfmim n {\par\usfmprose\noindent}
+\def usfmimi n {\par\usfmprose\set leftskip {18}\noindent}
+\def usfmipq n {\par\usfmprose\set leftskip {18}\set rightskip {18}}
+\def usfmimq n {\par\usfmprose\set leftskip {18}\set rightskip {18}\noindent}
+\def usfmipr n {\par\usfmprose\set leftskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\noindent}
+\def usfmiq n {\par\usfmpoetry\set leftskip {\calc{usfmqbase + (\n - 1) * usfmqstep}}\noindent}
+\def usfmili n {\par\set leftskip {\calc{\n * 18}}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {0}\noindent}
+\def usfmiex n {\par\usfmprose\noindent}
+\def usfmib {\par\smallskip}
 
 // ---- Chapters and verses --------------------------------------------------------
 // A chapter number is held until the next body paragraph, which opens with it set as a large figure (\usfmchapfig)
@@ -135,6 +167,22 @@
 \def usfmrq t {\emph{\t}}
 \def usfmw t {\t}
 \def usfmfv t {{\bold \textsup{\t}}}
+\def usfmno t {\t}
+\def usfmdc t {\t}
+\def usfmpn t {\t}
+\def usfmpng t {\t}
+\def usfmpro t {\t}
+\def usfmrb t {\t}
+\def usfmwg t {\t}
+\def usfmwh t {\t}
+\def usfmwa t {\t}
+\def usfmqac t {\t}
+\def usfmlit t {\textbf{\t}}
+\def usfmord t {\textsup{\t}}
+\def usfmsig t {\emph{\t}}
+\def usfmsls t {\emph{\t}}
+\def usfmior t {\emph{\t}}
+\def usfmiqt t {\emph{\t}}
 
 // ---- Footnotes ------------------------------------------------------------------
 // A footnote rides the foot of its page through the engine's \footnote, set small. Its parts: \fr the origin
@@ -157,3 +205,14 @@
 \def usfmxt t {\t}
 \def usfmxq t {\emph{\t}}
 \def usfmxk t {\textsc{\t}}
+\def usfmxot t {\t}
+\def usfmxnt t {\t}
+\def usfmxta t {\t}
+
+// ---- Tables ---------------------------------------------------------------------
+// A USFM table (\tr rows of \tc / \th cells) is translated to one \usfmtable, whose first argument is a column
+// spec (one letter per column) and whose body is the cells joined with & and rows with \\ — the engine's \tabular
+// lays them out in equal columns. Header cells are bold; the table stands off from the surrounding text.
+\def usfmtable s b {\par\medskip\noindent\tabular{\s}{\b}\par\medskip\noindent}
+\def usfmtc t {\t}
+\def usfmth t {\textbf{\t}}
