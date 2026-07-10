@@ -406,9 +406,12 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
 
   // arrange - choose the page arrangement (output routine): how finished logical pages are placed onto physical
   // sheets. The default is one page per sheet; `two-up-booklet` sets pages two-up in saddle-stitch folding order on a
-  // sheet twice as wide (each sheet folded once), and `nup` tiles a grid. It must appear in the preamble, before any
-  // content, because the arrangement fixes the physical sheet size when the output surface is created. Examples:
+  // sheet twice as wide (each sheet folded once), `four-up-booklet` stacks that layout two sheets high on a sheet
+  // twice as tall as well (print, cut in half, then fold as the two-up booklet), and `nup` tiles a grid. It must
+  // appear in the preamble, before any content, because the arrangement fixes the physical sheet size when the output
+  // surface is created. Examples:
   //   \arrange two-up-booklet               % \geometry paper:a6 pages, two-up on an A5-landscape sheet
+  //   \arrange four-up-booklet              % A6 pages four-up on an A4 sheet, to cut in half and fold
   //   \arrange two-up-booklet signature:16  % fold into 16-page groups instead of one nested stack
   //   \arrange nup rows:2 cols:2            % four logical pages to a sheet
   proc.registerPrimitive(
@@ -437,12 +440,18 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
                 case Some(s) if s <= 0 || s % 4 != 0 =>
                   handler.error("\\arrange two-up-booklet: signature must be a positive multiple of 4", pos)
                 case sig => t.getDocument.arrangement = new TwoUpBookletArrangement(sig)
+            case "four-up-booklet" =>
+              intOpt("signature") match
+                case Some(s) if s <= 0 || s % 4 != 0 =>
+                  handler.error("\\arrange four-up-booklet: signature must be a positive multiple of 4", pos)
+                case sig => t.getDocument.arrangement = new FourUpBookletArrangement(sig)
             case "nup" =>
               val rows = intOpt("rows").getOrElse(1)
               val cols = intOpt("cols").getOrElse(1)
               if rows < 1 || cols < 1 then handler.error("\\arrange nup: rows and cols must be positive", pos)
               else t.getDocument.arrangement = new NupArrangement(rows, cols)
-            case other => handler.error(s"\\arrange: unknown arrangement '$other' (simple, two-up-booklet, nup)", pos)
+            case other =>
+              handler.error(s"\\arrange: unknown arrangement '$other' (simple, two-up-booklet, four-up-booklet, nup)", pos)
     },
   )
 

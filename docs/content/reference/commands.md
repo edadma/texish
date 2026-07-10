@@ -271,16 +271,17 @@ Example: `\geometry paper:a4 margin:2cm` or `\geometry left:2in right:1in top:1.
 ## Page arrangement
 
 `\arrange` chooses how finished logical pages are placed onto physical sheets — the output
-routine. The default ships one page per sheet; `two-up-booklet` and `nup` group several. It must
-appear in the preamble, before any content, because the arrangement fixes the physical sheet
-size when the output surface is created. Imposition happens in box space, above the rendering
-backend, so it works on every output target.
+routine. The default ships one page per sheet; the booklet arrangements and `nup` group several.
+It must appear in the preamble, before any content, because the arrangement fixes the physical
+sheet size when the output surface is created. Imposition happens in box space, above the
+rendering backend, so it works on every output target.
 
 | Form | Effect |
 |------|--------|
 | `\arrange simple` | one logical page per sheet (the default) |
 | `\arrange two-up-booklet` | pages two-up in saddle-stitch folding order on a sheet twice as wide, each sheet folded once; the whole book nests as one signature |
-| `\arrange two-up-booklet signature:<4k>` | fold into fixed groups of `4k` pages instead of one nested stack |
+| `\arrange four-up-booklet` | the two-up layout stacked two folded sheets high, on a sheet twice as tall as well; print, cut in half across the middle, then fold as the two-up booklet |
+| `\arrange two-up-booklet signature:<4k>` | fold into fixed groups of `4k` pages instead of one nested stack (also on `four-up-booklet`) |
 | `\arrange nup rows:<r> cols:<c>` | tile an `r`×`c` grid of pages per sheet, in reading order |
 
 The `two-up-booklet` arrangement sets the logical page with `\geometry` and lets the arrangement
@@ -290,6 +291,13 @@ double-sided, fold each sheet once down the middle, nest, and staple, and the pa
 A run is padded with blank pages to a whole number of sheets. The name describes the imposition,
 not the paper, so the same arrangement serves any page size — quarter-letter pages two-up on
 half-letter sheets, say.
+
+The `four-up-booklet` arrangement prints the same booklet on the next paper size up for cutting: it
+stacks the two-up layout two folded sheets high, so A6 pages fall four to an A4 sheet. Print
+double-sided, cut the sheet in half across the middle into two half-height sheets, then fold and
+nest those exactly as the two-up booklet — no page prints upside-down and nothing is slit. The
+back is laid out for long-edge duplex; if a fold-test dummy comes out mis-collated, switch the
+printer to long-edge binding.
 
 ## Images and graphics
 

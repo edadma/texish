@@ -55,28 +55,48 @@ class NupArrangement(rows: Int, cols: Int) extends Arrangement:
     doc.shipout(new SheetBox(cols * pw, rows * ph, placed.toSeq))
     buf.clear()
 
+/** Shared machinery for the saddle-stitch booklet arrangements. Pages are buffered as they arrive and the order is
+  * computed in `flush`, since a booklet's page order only settles once the last page is known. A run is padded with
+  * blanks to a whole number of folded sheets (four pages per sheet) and split into signatures — folded groups nested
+  * inside one another. With no explicit signature size the whole book is one signature (every sheet nested, one
+  * central staple line); an explicit size folds the book into fixed groups, the way pdfpages' `signature` key does,
+  * for a book too thick to fold as one.
+  *
+  * The common product is the ordered list of two-up sheet-sides the run folds into. Within a signature of `n` pages
+  * (local indices `0 until n`), sheet `s` carries, on its front, page `n-1-2s` at the left and page `2s` at the
+  * right; on its back, page `2s+1` at the left and page `n-2-2s` at the right. Front and back come out consecutively,
+  * outermost sheet first, which is the order a duplex printer expects. The two-up arrangement ships each side as its
+  * own sheet; the four-up arrangement gangs two sides' worth of sheets onto one taller sheet for cutting.
+  */
+abstract class SaddleBooklet(signature: Option[Int]) extends Arrangement:
+  protected val buf = ArrayBuffer[Box]()
+
+  def add(page: Box, doc: DocumentMode): Unit = buf += page
+
+  protected def roundUp(x: Int, m: Int): Int = ((x + m - 1) / m) * m
+
+  /** The ordered `(left, right)` page pairs for every sheet-side of the whole run — front then back of each folded
+    * sheet, outermost sheet first, across all signatures — with `blank` padding a short final sheet. */
+  protected def sheetSides(blank: Box): Seq[(Box, Box)] =
+    val len     = buf.length
+    val sigSize = signature.getOrElse(roundUp(len, 4))
+    val padded  = buf.toArray ++ Array.fill(roundUp(len, sigSize) - len)(blank: Box)
+
+    for
+      group <- padded.grouped(sigSize).toSeq
+      n = group.length
+      s <- 0 until n / 4
+      side <- Seq((group(n - 1 - 2 * s), group(2 * s)), (group(2 * s + 1), group(n - 2 - 2 * s)))
+    yield side
+
 /** Two-up saddle-stitch booklet imposition: logical pages are set at half width and printed two-up on a sheet
   * twice as wide, in the folding order that makes a stack of sheets each folded once down the middle and stapled
   * read in sequence. It is the two-up member of the booklet family — each sheet folded once, so A6 pages fall two
   * to an A5-landscape sheet. Folding each sheet a second time gives a four-up booklet on a sheet twice as tall as
   * well as wide (A6 pages onto A4), a separate arrangement.
-  *
-  * The order only settles once every page is known, so pages are buffered and imposed in `flush`. A run of pages
-  * is padded with blanks to a whole number of sheets (four pages per sheet) and split into signatures — folded
-  * groups nested inside one another. With no explicit signature size the whole book is one signature (every sheet
-  * nested, one central staple line); an explicit size folds the book into fixed groups, the way pdfpages'
-  * `signature` key does, for a book too thick to fold as one.
-  *
-  * Within a signature of `n` pages (local indices `0 until n`), sheet `s` carries, on its front, page `n-1-2s` at
-  * the left and page `2s` at the right; on its back, page `2s+1` at the left and page `n-2-2s` at the right. Front
-  * and back ship consecutively, outermost sheet first, which is the order a duplex printer expects.
   */
-class TwoUpBookletArrangement(signature: Option[Int]) extends Arrangement:
-  private val buf = ArrayBuffer[Box]()
-
+class TwoUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(signature):
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, ph)
-
-  def add(page: Box, doc: DocumentMode): Unit = buf += page
 
   override def flush(doc: DocumentMode): Unit =
     if buf.isEmpty then return
@@ -84,20 +104,45 @@ class TwoUpBookletArrangement(signature: Option[Int]) extends Arrangement:
     val (pw, ph) = doc.pageSize
     val blank    = new SheetBox(pw, ph, Nil)
 
-    // one signature is a whole number of four-page sheets; the whole book is one signature unless a size is given
-    val sigSize = signature.getOrElse(roundUp(buf.length, 4))
-    val padded  = buf.toArray ++ Array.fill(roundUp(buf.length, sigSize) - buf.length)(blank: Box)
-
-    for group <- padded.grouped(sigSize) do imposeSignature(group, pw, ph, doc)
+    for (left, right) <- sheetSides(blank) do
+      doc.shipout(new SheetBox(2 * pw, ph, Seq((left, 0.0, 0.0), (right, pw, 0.0))))
     buf.clear()
 
-  private def imposeSignature(pages: Array[Box], pw: Double, ph: Double, doc: DocumentMode): Unit =
-    val n = pages.length
-    def sheet(left: Box, right: Box): Unit =
-      doc.shipout(new SheetBox(2 * pw, ph, Seq((left, 0.0, 0.0), (right, pw, 0.0))))
+/** Four-up saddle-stitch booklet imposition for cutting: the two-up sheet-sides are ganged two folded sheets onto a
+  * sheet twice as tall as well as wide (A6 pages onto A4). Print double-sided, cut the sheet in half across the
+  * middle into two half-height sheets, then fold and nest those exactly as the two-up booklet. No page prints
+  * upside-down and nothing is slit — the layout is the two-up order stacked two sheets high, so once cut and
+  * collated outermost sheet first the pages read in sequence. A run is padded to a whole number of taller sheets.
+  *
+  * Registration assumes long-edge duplex: the back is laid out in the same upright top/bottom order as the front, so
+  * the printer's book-style flip about the long edge backs the upper and lower halves correctly. Each taller sheet
+  * ships its front then its back consecutively. The upper half of a sheet carries the outer of its two folded
+  * sheets and the lower half the inner, so cutting yields the sheets already in nesting order top to bottom.
+  */
+class FourUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(signature):
+  def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, 2 * ph)
 
-    for s <- 0 until n / 4 do
-      sheet(pages(n - 1 - 2 * s), pages(2 * s))     // front
-      sheet(pages(2 * s + 1), pages(n - 2 - 2 * s)) // back
+  override def flush(doc: DocumentMode): Unit =
+    if buf.isEmpty then return
 
-  private def roundUp(x: Int, m: Int): Int = ((x + m - 1) / m) * m
+    val (pw, ph) = doc.pageSize
+    val blank    = new SheetBox(pw, ph, Nil)
+
+    // group the two-up sides into folded sheets (front then back), then gang two folded sheets per taller sheet
+    val folded     = sheetSides(blank).grouped(2).toSeq                   // each: Seq(front, back) of one folded sheet
+    val blankSheet = Seq((blank: Box, blank: Box), (blank: Box, blank: Box))
+    val sheets     = if folded.length % 2 == 1 then folded :+ blankSheet else folded
+
+    def a4(top: (Box, Box), bot: (Box, Box)): SheetBox =
+      new SheetBox(
+        2 * pw,
+        2 * ph,
+        Seq((top._1, 0.0, 0.0), (top._2, pw, 0.0), (bot._1, 0.0, ph), (bot._2, pw, ph)),
+      )
+
+    for pair <- sheets.grouped(2) do
+      val upper = pair(0) // the outer folded sheet — upper half of the taller sheet
+      val lower = pair(1) // the inner folded sheet — lower half
+      doc.shipout(a4(upper(0), lower(0))) // front: both fronts
+      doc.shipout(a4(upper(1), lower(1))) // back: both backs
+    buf.clear()

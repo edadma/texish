@@ -128,6 +128,51 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     new TwoUpBookletArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 148.0))
   }
 
+  "four-up-booklet gangs two folded sheets, top upright, in two-up order" in {
+    val t   = fixture(pw = 100, ph = 150)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new FourUpBookletArrangement(None)
+
+    val probes = (0 until 8).map(new Probe(_))
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    // one A4: the two-up sheets (8,1)(2,7) and (6,3)(4,5) stacked, outer sheet on top, inner below — no rotation
+    doc.sheets.length shouldBe 2
+    doc.sheets.head.placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(7), 0.0, 0.0),   (Some(0), 100.0, 0.0),   // front, top half: p8 | p1
+      (Some(5), 0.0, 150.0), (Some(2), 100.0, 150.0), // front, bottom half: p6 | p3
+    )
+    doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(1), 0.0, 0.0),   (Some(6), 100.0, 0.0),   // back, top half: p2 | p7
+      (Some(3), 0.0, 150.0), (Some(4), 100.0, 150.0), // back, bottom half: p4 | p5
+    )
+  }
+
+  "four-up-booklet pads a lone folded sheet with a blank lower half" in {
+    val t   = fixture(pw = 100, ph = 150)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new FourUpBookletArrangement(None)
+
+    val probes = (0 until 4).map(new Probe(_)) // one folded sheet; the lower half of the A4 is blank
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    doc.sheets.length shouldBe 2
+    doc.sheets.head.placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(3), 0.0, 0.0),   (Some(0), 100.0, 0.0),   // front, top half: p4 | p1
+      (None, 0.0, 150.0),    (None, 100.0, 150.0),    // front, bottom half: blank
+    )
+    doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(1), 0.0, 0.0),   (Some(2), 100.0, 0.0),   // back, top half: p2 | p3
+      (None, 0.0, 150.0),    (None, 100.0, 150.0),    // back, bottom half: blank
+    )
+  }
+
+  "four-up-booklet doubles the sheet both ways" in {
+    new FourUpBookletArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 296.0))
+  }
+
   "n-up tiles pages in reading order across a grid" in {
     val t   = fixture(pw = 100, ph = 100)
     val doc = new RecordingDoc(t)

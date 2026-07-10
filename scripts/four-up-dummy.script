@@ -1,0 +1,19 @@
+// four-up-dummy — a fold-test dummy for the four-up-booklet arrangement. Eight A6 pages, each a single big
+// numeral, imposed four-up on one A4 sheet (two PDF pages: sheet front, sheet back). Print double-sided
+// (long-edge binding), cut the A4 in half across the middle into two A5 sheets, fold each A5 down the middle,
+// nest the top A5 around the bottom one, and the numerals should read 1..8 in order. If they don't, the printer's
+// duplex flip is short-edge, not long-edge — switch the print setting and try again.
+
+\geometry paper:a6 margin:12mm
+\arrange four-up-booklet
+
+\def num n {\vfil\hbox to:\hsize {\hss\font lmroman 140 regular \n\hss}\vfil\eject}
+
+\num{1}
+\num{2}
+\num{3}
+\num{4}
+\num{5}
+\num{6}
+\num{7}
+\num{8}
