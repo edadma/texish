@@ -55,13 +55,14 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     * the same rule VerticalMode applies between two lines of one note, computed here with the note's stored leading
     * because the baselineskip in force at shipout is the body's, not the footnote's.
     */
+  // Interline glue between one footnote and the next: exactly enough that their baselines are one footnote-leading
+  // apart, uniformly. This does NOT apply TeX's \lineskip fallback, on purpose — a note that opens with a tall
+  // glyph (an accented capital, say `És`) has an ascent larger than the leading, which would drive the fallback
+  // and pad that one gap wider than the rest, so a stack of cross-references spaces unevenly. Letting the glue go
+  // negative tucks the tall glyph into the descender space of the line above (harmless in a footnote) and keeps
+  // every baseline the same distance apart, which is what makes the apparatus read as one even block.
   private def interNoteGlue(prev: InsertBox, cur: InsertBox): Double =
-    val skip = cur.leading - prev.content.descent - firstBaselineAscent(cur.content)
-
-    // Strictly below the limit, as in TeX: a note's footstrut makes ascent+descent equal its leading, so `skip`
-    // lands exactly on zero, and a `<=` test would swap in \lineskip and space every note a spurious pad wider
-    // than its own leading. Only a genuine overlap (skip below the limit) falls back to \lineskip.
-    if skip < t.getNumber("lineskiplimit") then t.getGlue("lineskip").naturalSize else skip
+    cur.leading - prev.content.descent - firstBaselineAscent(cur.content)
 
   /** Height a footnote block built from these inserts occupies, apart from the separator: each note's content, plus
     * the interline glue leading each note off the one before it.
