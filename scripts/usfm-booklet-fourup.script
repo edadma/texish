@@ -2,11 +2,13 @@
 // with \arrange four-up-booklet. Each page is A6 (105 x 148 mm); the arrangement stacks the two-up booklet layout two
 // folded sheets high on an A4 sheet (210 x 297 mm), so the A6 pages fall four to a sheet. Print double-sided (long-
 // edge duplex), cut each A4 in half across the middle into two A5 sheets, fold each A5 down the middle, and nest the
-// upper half around the lower one — the pages read in order. It is the cut-and-fold companion to usfm-booklet.script,
-// which images the same booklet two-up on A5 for a printer or folder that feeds A5 directly.
+// halves outermost first — the pages read in order. It is the cut-and-fold companion to usfm-booklet.script, which
+// images the same booklet two-up on A5 for a printer or folder that feeds A5 directly.
 //
-// Twelve folios in all: a framed front cover, a colophon, the nine pages of John 1–2, and a QR-code back cover —
-// one saddle-stitched signature. Four-up, that is padded to a whole number of A4 sheets: two A4 sheets, four PDF pages.
+// The book runs cover, colophon, the pages of John 1–2, and a QR-code back cover. Two folded sheets gang onto each
+// A4, so a page count that is not a multiple of eight leaves one blank A5 half on the last sheet — cut it off and
+// discard it; the front and back covers always land on the outermost fold. Print on A4 with fit-to-page (centred),
+// since the imposition fills the full sheet and a borderless printer is rare.
 
 \use{usfm}
 

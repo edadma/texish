@@ -56,11 +56,15 @@ class NupArrangement(rows: Int, cols: Int) extends Arrangement:
     buf.clear()
 
 /** Shared machinery for the saddle-stitch booklet arrangements. Pages are buffered as they arrive and the order is
-  * computed in `flush`, since a booklet's page order only settles once the last page is known. A run is padded with
-  * blanks to a whole number of folded sheets (four pages per sheet) and split into signatures — folded groups nested
-  * inside one another. With no explicit signature size the whole book is one signature (every sheet nested, one
-  * central staple line); an explicit size folds the book into fixed groups, the way pdfpages' `signature` key does,
-  * for a book too thick to fold as one.
+  * computed in `flush`, since a booklet's page order only settles once the last page is known. A run is padded to a
+  * whole number of folded sheets (four pages per sheet) and split into signatures — folded groups nested inside one
+  * another. With no explicit signature size the whole book is one signature (every sheet nested, one central staple
+  * line); an explicit size folds the book into fixed groups, the way pdfpages' `signature` key does, for a book too
+  * thick to fold as one.
+  *
+  * Padding blanks are inserted just before the final page, so the front cover (first page) and back cover (last page)
+  * always fall on the outermost folded sheet — the physical outside of the booklet — with any blanks landing in the
+  * interior instead of after the back cover.
   *
   * The common product is the ordered list of two-up sheet-sides the run folds into. Within a signature of `n` pages
   * (local indices `0 until n`), sheet `s` carries, on its front, page `n-1-2s` at the left and page `2s` at the
@@ -78,9 +82,16 @@ abstract class SaddleBooklet(signature: Option[Int]) extends Arrangement:
   /** The ordered `(left, right)` page pairs for every sheet-side of the whole run — front then back of each folded
     * sheet, outermost sheet first, across all signatures — with `blank` padding a short final sheet. */
   protected def sheetSides(blank: Box): Seq[(Box, Box)] =
-    val len     = buf.length
+    val arr     = buf.toArray
+    val len     = arr.length
     val sigSize = signature.getOrElse(roundUp(len, 4))
-    val padded  = buf.toArray ++ Array.fill(roundUp(len, sigSize) - len)(blank: Box)
+    val total   = roundUp(len, sigSize)
+
+    // Pad blanks sit just before the final page, not after it, so a booklet's front cover (the first page) and
+    // back cover (the last page) stay on the outermost folded sheet and the running content is left unbroken.
+    val padded =
+      if total == len then arr
+      else arr.take(len - 1) ++ Array.fill(total - len)(blank) ++ arr.takeRight(1)
 
     for
       group <- padded.grouped(sigSize).toSeq
@@ -112,12 +123,16 @@ class TwoUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(sign
   * sheet twice as tall as well as wide (A6 pages onto A4). Print double-sided, cut the sheet in half across the
   * middle into two half-height sheets, then fold and nest those exactly as the two-up booklet. No page prints
   * upside-down and nothing is slit — the layout is the two-up order stacked two sheets high, so once cut and
-  * collated outermost sheet first the pages read in sequence. A run is padded to a whole number of taller sheets.
+  * collated outermost sheet first the pages read in sequence.
   *
   * Registration assumes long-edge duplex: the back is laid out in the same upright top/bottom order as the front, so
   * the printer's book-style flip about the long edge backs the upper and lower halves correctly. Each taller sheet
   * ships its front then its back consecutively. The upper half of a sheet carries the outer of its two folded
   * sheets and the lower half the inner, so cutting yields the sheets already in nesting order top to bottom.
+  *
+  * Two folded sheets gang onto one taller sheet, so an odd number of folded sheets leaves the lower half of the last
+  * taller sheet entirely blank — cut it off and discard it rather than folding it in. A book whose page count is a
+  * multiple of eight fills every half and avoids the discard.
   */
 class FourUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(signature):
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, 2 * ph)

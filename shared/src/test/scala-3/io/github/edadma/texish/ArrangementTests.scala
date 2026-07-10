@@ -88,20 +88,20 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     )
   }
 
-  "two-up-booklet pads a short book to whole four-page sheets with blanks" in {
+  "two-up-booklet pads before the last page so the last page stays on the outer sheet" in {
     val t   = fixture(pw = 100)
     val doc = new RecordingDoc(t)
     doc.arrangement = new TwoUpBookletArrangement(None)
 
-    val probes = (0 until 3).map(new Probe(_)) // pads to 4: p0 p1 p2 blank
+    val probes = (0 until 3).map(new Probe(_)) // pads to 4: p0 p1 blank p2 — the blank goes before the last page
     probes.foreach(doc.add)
     doc.arrangement.flush(doc)
 
     doc.sheets.length shouldBe 2
-    // front: (blank, p0); back: (p1, p2)
+    // front: (p2, p0); back: (p1, blank) — p0 first and p2 last both land on the outer sheet's outside faces
     doc.sheets.map(layoutOf) shouldBe Seq(
-      Seq((None, 0.0), (Some(0), 100.0)),
-      Seq((Some(1), 0.0), (Some(2), 100.0)),
+      Seq((Some(2), 0.0), (Some(0), 100.0)),
+      Seq((Some(1), 0.0), (None, 100.0)),
     )
   }
 
@@ -166,6 +166,27 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
       (Some(1), 0.0, 0.0),   (Some(2), 100.0, 0.0),   // back, top half: p2 | p3
       (None, 0.0, 150.0),    (None, 100.0, 150.0),    // back, bottom half: blank
+    )
+  }
+
+  "four-up-booklet pads before the last page so covers stay on the outer sheet" in {
+    val t   = fixture(pw = 100, ph = 150)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new FourUpBookletArrangement(None)
+
+    val probes = (0 until 6).map(new Probe(_)) // pads to 8: the two blanks land before the last page, not after it
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    // one A4, two folded sheets: the first page (p1) and the last page (p6) both ride the outer sheet's outside
+    doc.sheets.length shouldBe 2
+    doc.sheets.head.placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(5), 0.0, 0.0),   (Some(0), 100.0, 0.0),   // front, top half (outer sheet): p6 | p1
+      (None, 0.0, 150.0),    (Some(2), 100.0, 150.0), // front, bottom half (inner sheet): blank | p3
+    )
+    doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(1), 0.0, 0.0),   (None, 100.0, 0.0),      // back, top half (outer sheet): p2 | blank
+      (Some(3), 0.0, 150.0), (Some(4), 100.0, 150.0), // back, bottom half (inner sheet): p4 | p5
     )
   }
 
