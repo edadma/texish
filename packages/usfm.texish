@@ -188,8 +188,12 @@
 // A footnote rides the foot of its page through the engine's \footnote, set small. Its parts: \fr the origin
 // reference (bold), \ft explanatory text (roman), \fqa an alternative rendering (italic), \fv a verse number
 // inside the note. \usfmxref renders a cross-reference note the same way.
-\def usfmfootnote b {\footnote{\font lmroman 8 regular \b}}
-\def usfmxref b {\footnote{\font lmroman 8 regular \b}}
+//
+// Both take the note's USFM caller as their first argument. A `+` caller means "number it": the note joins the
+// running footnote sequence. Any other caller is used verbatim — set as a small italic sigil, the way Louis
+// Segond marks its per-passage cross-references with italic letters a, b, c — and does not touch the counter.
+\def usfmfootnote c b {\if {\= {\c} {+}}\footnote{\font lmroman 8 regular \b}\else\footnote[\emph{\c}]{\font lmroman 8 regular \b}\fi}
+\def usfmxref c b {\if {\= {\c} {+}}\footnote{\font lmroman 8 regular \b}\else\footnote[\emph{\c}]{\font lmroman 8 regular \b}\fi}
 \def usfmfr t {{\bold \t} }
 \def usfmft t {\t}
 \def usfmfq t {\emph{\t}}

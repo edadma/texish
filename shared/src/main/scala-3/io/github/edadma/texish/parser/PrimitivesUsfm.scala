@@ -439,12 +439,19 @@ object Usfm:
       val target  = if bar < 0 then raw else raw.substring(bar + 1)
       sb.append(s"\\usfmref{${escape(display.trim)}}{${escape(target.trim)}}")
 
-    // A footnote or cross-reference note. The caller mark (the `+`, `-` or `?` after the opening marker) is
-    // discarded; the body is a run of inner segments, each closed implicitly by the next inner marker or the
-    // note's own close.
+    // A footnote or cross-reference note. The caller mark (the word right after the opening marker: `+` to
+    // auto-number, `-` for none, or a literal caller like Louis Segond's `a`, `b`, `c`) is captured and passed as
+    // the macro's first argument, so the package can honour the translation's own scheme. The body is a run of
+    // inner segments, each closed implicitly by the next inner marker or the note's own close.
     private def emitNote(wrapper: String, closeBases: Set[String]): Unit =
-      sb.append(s"\\$wrapper{")
-      if i < buf.length && buf(i).isInstanceOf[Txt] then i += 1 // drop the caller token
+      val caller =
+        if i < buf.length && buf(i).isInstanceOf[Txt] then
+          val s       = buf(i).asInstanceOf[Txt].s.dropWhile(_ == ' ')
+          val sp      = s.indexOf(' ')
+          if sp < 0 then { i += 1; s }
+          else { buf(i) = Txt(s.substring(sp + 1)); s.substring(0, sp) }
+        else ""
+      sb.append(s"\\$wrapper{${escape(caller)}}{")
       var done = false
       while !done && i < buf.length do
         buf(i) match

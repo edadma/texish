@@ -264,6 +264,34 @@ private[parser] def readOptionalNumber(proc: Processor): Option[Double] =
       out.toString.trim.toDoubleOption
     case _ => None
 
+// Read an optional [ … ] argument as a token list, respecting brace nesting so control sequences and groups
+// inside it survive to be typeset by the caller (unlike readPlacementSpec / readOptionalNumber, which flatten to
+// text). Used for \footnote's explicit marker. Returns None, leaving the stream untouched, when no '[' follows.
+private[parser] def readBracketTokens(proc: Processor): Option[Vector[Token]] =
+  proc.skipSpaces()
+  proc.peekToken() match
+    case Token.Text(s, sp) if s.startsWith("[") =>
+      proc.nextToken()
+      if s.length > 1 then proc.pushBack(Vector(Token.Text(s.substring(1), sp)))
+      val toks  = Vector.newBuilder[Token]
+      var depth = 0
+      var done  = false
+      while !done && proc.hasMoreTokens do
+        proc.peekToken() match
+          case Token.BeginGroup(_) => depth += 1; toks += proc.nextToken()
+          case Token.EndGroup(_)   => depth -= 1; toks += proc.nextToken()
+          case Token.Text(str, p) if depth == 0 && str.contains(']') =>
+            proc.nextToken()
+            val idx = str.indexOf(']')
+            if idx > 0 then toks += Token.Text(str.substring(0, idx), p)
+            val after = str.substring(idx + 1)
+            if after.nonEmpty then proc.pushBack(Vector(Token.Text(after, p)))
+            done = true
+          case Token.EOF(_) => done = true
+          case _            => toks += proc.nextToken()
+      Some(toks.result())
+    case _ => None
+
 // Read a \resizebox dimension argument: a braced dimension, or `!` to mean "keep the aspect ratio set by the
 // other dimension" (returned as None).
 private[parser] def resizeDim(proc: Processor, pos: CharReader): Option[Double] =

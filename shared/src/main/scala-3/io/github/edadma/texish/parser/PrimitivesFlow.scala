@@ -301,29 +301,41 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
-  // footnote - 1 body arg: a raised marker number in the running text, with the body typeset at the foot of
-  // whatever page the marker lands on. The body is typeset immediately, at footnotesize, into a block that rides
-  // the vertical list as a zero-size insert (see InsertBox); the page builder counts its height against the page
-  // and moves it below the separator rule at shipout, so reference and footnote always share a page.
+  // footnote - an optional [marker] then 1 body arg: a raised marker in the running text, with the body typeset at
+  // the foot of whatever page the marker lands on. With no [marker] the note auto-numbers (a running counter in
+  // `footnoteno`); with an explicit [marker] that content is the caller instead — a letter, a symbol, an italic
+  // sigil — and the counter is left alone, so a document can follow a translation's own scheme (Louis Segond's
+  // per-passage italic letters, say) rather than one global sequence. The body is typeset immediately, at
+  // footnotesize, into a block that rides the vertical list as a zero-size insert (see InsertBox); the page builder
+  // counts its height against the page and moves it below the separator rule at shipout.
   proc.registerPrimitive(
     "footnote",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val body = proc.readArgument(pos)
-        val n    = t.getNumber("footnoteno").toInt + 1
+        val markerToks = readBracketTokens(proc)
+        val body       = proc.readArgument(pos)
+        val auto       = markerToks.isEmpty
+        val n          = if auto then t.getNumber("footnoteno").toInt + 1 else 0
 
-        t.set("footnoteno", n.toDouble)
+        if auto then t.set("footnoteno", n.toDouble)
 
         val textFont = t.currentFont
         val noteFont = t.makeFont(textFont.typeface, textFont.size * t.getNumber("footnotescale"), textFont.style)
 
-        // the marker: the footnote number in the smaller footnote font, raised a third of an em
-        t.currentFont = noteFont
+        // Build the marker: the running number when auto, otherwise the given content typeset in the note font.
+        // The foot entry opens with the same marker, so `label` reproduces it in the note's own paragraph.
+        def markerBox(): Box =
+          t.enter()
+          t.currentFont = noteFont
+          t.hbox(null)
+          markerToks match
+            case Some(toks) => proc.processTokenList(toks)
+            case None       => t.add(t.charBox(n.toString))
+          val b = t.mode.exit
+          t.exit()
+          b
 
-        val marker = t.charBox(n.toString)
-
-        t.currentFont = textFont
-        t.leaveVmode add ShiftBox(marker, -textFont.size / 3)
+        t.leaveVmode add ShiftBox(markerBox(), -textFont.size / 3)
 
         // the body is typeset now, into its own vertical box at the footnote size, behind a "N." prefix; the
         // scope brackets the font switch and its dependent spacing so the surrounding text resumes unaffected
@@ -343,8 +355,16 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
         // the note at the foot. Reset to the default ink so the note reads in body colour, whatever coloured span
         // the marker sat in. The scope restores the surrounding colour for the text after the marker.
         t.currentColor = Color("black")
+        // A note set solid has no room for a tall glyph: an accented capital on a wrapped line would trip the
+        // \lineskip floor and open the line above it, just as it did between notes. Disable the floor inside the
+        // note so every line sits exactly a footnote-leading below the last, the accent tucking into the line above.
+        t.set("lineskiplimit", -1.0e6)
         t.vbox()
-        t.noindent add t.charBox(s"$n.")
+        // the foot entry opens with the same marker as the in-text mark: "N." when auto-numbered, else the caller
+        t.noindent
+        markerToks match
+          case Some(toks) => proc.processTokenList(toks)
+          case None       => t.add(t.charBox(s"$n."))
         t.add(t.getGlue("spaceskip"))
         // a footstrut holds the first line to a full footnote-baselineskip height, so its baseline sits the same
         // distance below the separator rule (and below the note before it) whatever the note's opening glyphs are

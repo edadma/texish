@@ -92,19 +92,24 @@ class UsfmTranslateTests extends AnyFreeSpec with Matchers:
     tr("\\r \\ref John 1:1\\ref*") shouldBe "\\usfmr{1}{\\usfmref{John 1:1}{John 1:1}}"
   }
 
-  "a footnote becomes nested segment macros, its caller dropped" in {
+  "a footnote passes its caller through and nests its segment macros" in {
     tr("\\p \\v 5 overcome\\f + \\fr 1:5 \\ft Or \\fqa comprehended\\f* it.") shouldBe
-      "\\usfmp{1}\\usfmv{5}overcome\\usfmfootnote{\\usfmfr{1:5 }\\usfmft{Or }\\usfmfqa{comprehended}} it."
+      "\\usfmp{1}\\usfmv{5}overcome\\usfmfootnote{+}{\\usfmfr{1:5 }\\usfmft{Or }\\usfmfqa{comprehended}} it."
+  }
+
+  "a cross-reference passes its literal letter caller through" in {
+    tr("\\p text\\x a \\xo 1.1 \\xt Acts 4:25\\x*") shouldBe
+      "\\usfmp{1}text\\usfmxref{a}{\\usfmxo{1.1 }\\usfmxt{Acts 4:25}}"
   }
 
   "a footnote segment carries an embedded cross-reference" in {
     tr("\\p text\\f + \\ft see \\ref Acts 4:25|ACT 4:25\\ref*\\f*") shouldBe
-      "\\usfmp{1}text\\usfmfootnote{\\usfmft{see \\usfmref{Acts 4:25}{ACT 4:25}}}"
+      "\\usfmp{1}text\\usfmfootnote{+}{\\usfmft{see \\usfmref{Acts 4:25}{ACT 4:25}}}"
   }
 
   "a verse number inside a footnote stays within its text segment" in {
     tr("\\p a\\f + \\ft x \\fv 4\\fv*y\\f*") shouldBe
-      "\\usfmp{1}a\\usfmfootnote{\\usfmft{x \\usfmfv{4}y}}"
+      "\\usfmp{1}a\\usfmfootnote{+}{\\usfmft{x \\usfmfv{4}y}}"
   }
 
   "metadata markers and their lines are dropped" in {
