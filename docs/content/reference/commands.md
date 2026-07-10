@@ -415,11 +415,17 @@ for a deeper poetry indent, and so on. The defaults give a print-Bible page: a l
 superscript verse numbers, bold section headings with italic reference lines, justified prose and
 ragged poetry, real footnotes, and the words of Jesus in red.
 
+The reader handles the full USFM marker set — including USFM 3.0 word attributes and plus-nested
+character markers — and a book's front-matter **introduction** (its own titles, outline, prose and
+poetry, set a size quieter than the Scripture). Suppress the introduction with `\set usfmintro {0}`
+before the call — a pocket portion that wants only the text needs no change to the USFM file.
+
 | Macro | Styles |
 |-------|--------|
 | `\usfmmt{n}{…}` `\usfms{n}{…}` `\usfmr{n}{…}` `\usfmd{n}{…}` | book title / section heading / reference line / psalm superscription |
 | `\usfmc{N}` `\usfmv{N}` | the chapter figure and the verse number |
 | `\usfmp{n}` `\usfmm{n}` `\usfmq{n}` `\usfmli{n}` `\usfmb` | indented / flush paragraph, poetry line by level, list item, stanza break |
+| `\usfmimt{n}{…}` `\usfmis{n}{…}` `\usfmiot{n}{…}` `\usfmio{n}{…}` `\usfmip{n}` `\usfmiq{n}` | introduction: title / heading / outline heading and entry / prose / poetry |
 | `\usfmwj{…}` `\usfmref{disp}{target}` `\usfmnd{…}` | words of Jesus, a cross-reference link, the name of God |
 | `\usfmfootnote{…}` with `\usfmfr` `\usfmft` `\usfmfqa` `\usfmfv` | a footnote and its reference / text / alternative / verse-number parts |
 
