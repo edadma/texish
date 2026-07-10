@@ -405,12 +405,12 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
   )
 
   // arrange - choose the page arrangement (output routine): how finished logical pages are placed onto physical
-  // sheets. The default is one page per sheet; `onefold` sets pages two-up in saddle-stitch folding order on a sheet
-  // twice as wide (each sheet folded once), and `nup` tiles a grid. It must appear in the preamble, before any content,
-  // because the arrangement fixes the physical sheet size when the output surface is created. Examples:
-  //   \arrange onefold                 % \geometry paper:a6 pages, two-up on an A5-landscape sheet
-  //   \arrange onefold signature:16    % fold into 16-page groups instead of one nested stack
-  //   \arrange nup rows:2 cols:2        % four logical pages to a sheet
+  // sheets. The default is one page per sheet; `two-up-booklet` sets pages two-up in saddle-stitch folding order on a
+  // sheet twice as wide (each sheet folded once), and `nup` tiles a grid. It must appear in the preamble, before any
+  // content, because the arrangement fixes the physical sheet size when the output surface is created. Examples:
+  //   \arrange two-up-booklet               % \geometry paper:a6 pages, two-up on an A5-landscape sheet
+  //   \arrange two-up-booklet signature:16  % fold into 16-page groups instead of one nested stack
+  //   \arrange nup rows:2 cols:2            % four logical pages to a sheet
   proc.registerPrimitive(
     "arrange",
     new Primitive {
@@ -432,17 +432,17 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
         else
           mode match
             case "simple" => t.getDocument.arrangement = SimpleArrangement
-            case "onefold" =>
+            case "two-up-booklet" =>
               intOpt("signature") match
                 case Some(s) if s <= 0 || s % 4 != 0 =>
-                  handler.error("\\arrange onefold: signature must be a positive multiple of 4", pos)
-                case sig => t.getDocument.arrangement = new OneFoldArrangement(sig)
+                  handler.error("\\arrange two-up-booklet: signature must be a positive multiple of 4", pos)
+                case sig => t.getDocument.arrangement = new TwoUpBookletArrangement(sig)
             case "nup" =>
               val rows = intOpt("rows").getOrElse(1)
               val cols = intOpt("cols").getOrElse(1)
               if rows < 1 || cols < 1 then handler.error("\\arrange nup: rows and cols must be positive", pos)
               else t.getDocument.arrangement = new NupArrangement(rows, cols)
-            case other => handler.error(s"\\arrange: unknown arrangement '$other' (simple, onefold, nup)", pos)
+            case other => handler.error(s"\\arrange: unknown arrangement '$other' (simple, two-up-booklet, nup)", pos)
     },
   )
 
