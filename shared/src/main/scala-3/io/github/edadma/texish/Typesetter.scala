@@ -46,6 +46,11 @@ abstract class Typesetter:
   var ligatures: Boolean       = true
   var representations: Boolean = true
 
+  // The typeface consulted for codepoints the active font has no glyph for — the glyph-fallback face. A text run
+  // is split so those codepoints are set from this face instead of drawing a missing-glyph box (see coverageSegments
+  // and CharBox). None disables fallback; it is set once the fallback face is loaded.
+  var fallbackTypeface: Option[String] = None
+
   // A typeface's style variants each carry their own ligature set, because different cuts of one super-family run
   // different ligature programs — the roman body forms f-ligatures and the dash/quote text representations, while
   // the typewriter (mono) role sets code literally with none of them. So the map keys a style to both its font
@@ -572,6 +577,14 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernSans/lmsans10-oblique.otf", lmLigatures, Set("sans", "italic"))
   loadFont("lmroman", "fonts/LatinModernSans/lmsans10-boldoblique.otf", lmLigatures, Set("sans", "bold", "italic"))
 
+  // New Computer Modern — a Computer Modern redrawing carrying full polytonic Greek and Cyrillic. It is loaded as
+  // its own selectable face (\font newcm …) and, more usefully, registered as the glyph-fallback face: when a run
+  // hits a codepoint lmroman has no glyph for (a Greek word in a footnote, say), that codepoint is set from NewCM
+  // instead of a missing-glyph box. Because NewCM *is* Computer Modern, the substituted glyphs sit invisibly beside
+  // the surrounding Latin Modern text.
+  loadFont("newcm", "fonts/NewComputerModern/NewCM10-Regular.otf", lmLigatures, Set.empty)
+  fallbackTypeface = Some("newcm")
+
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
   // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
   // SmaflConvertMain build tool). Loaded by file directly (not loadTypeface, whose naming assumes a .ttf)
@@ -808,6 +821,47 @@ abstract class Typesetter:
       if representations then Ligatures.replace(s, Ligatures.REPRESENTATIONS, currentFont.ligatures) else s
 
     new CharBox(this, if ligatures then Ligatures(rep, currentFont.ligatures) else rep)
+
+  /** The glyph-fallback font at a given size, if a fallback face is registered — the face used to set codepoints the
+    * active font has no glyph for. Built at `size` so the substitute matches the surrounding text's size. */
+  def fallbackFontAt(size: Double): Option[Font] =
+    fallbackTypeface.filter(typefaces.contains).map(tf => makeFont(tf, size, Set.empty))
+
+  /** Split a text run into maximal pieces, each set in one font: the primary font over the stretches it has glyphs
+    * for, the fallback font over the stretches it does not (where the fallback does). When the primary covers the
+    * whole run — the overwhelmingly common case — the run comes back as a single piece, so ordinary Latin text is
+    * untouched and pays only one glyph-coverage scan. A codepoint neither font has stays with the primary (and draws
+    * its missing-glyph box, exactly as before). */
+  def coverageSegments(text: String, primary: Font): Array[(String, Font)] =
+    val prf = primary.renderFont.asInstanceOf[RenderFont]
+    var gap = false
+    var i   = 0
+    while i < text.length && !gap do
+      val cp = text.codePointAt(i)
+      if glyphIndex(prf, cp) == 0 then gap = true
+      i += Character.charCount(cp)
+
+    if !gap then Array((text, primary))
+    else
+      fallbackFontAt(primary.size) match
+        case None => Array((text, primary))
+        case Some(fb) =>
+          val frf = fb.renderFont.asInstanceOf[RenderFont]
+          val out = new ArrayBuffer[(String, Font)]
+          val sb  = new StringBuilder
+          var cur: Font = primary
+          var j = 0
+          while j < text.length do
+            val cp     = text.codePointAt(j)
+            val n      = Character.charCount(cp)
+            val chosen = if glyphIndex(prf, cp) == 0 && glyphIndex(frf, cp) != 0 then fb else primary
+            if sb.nonEmpty && (chosen ne cur) then
+              out += ((sb.toString, cur)); sb.clear()
+            cur = chosen
+            sb ++= text.substring(j, j + n)
+            j += n
+          if sb.nonEmpty then out += ((sb.toString, cur))
+          out.toArray
 
   /** A strut sized to the current baselineskip: TeX splits `\strutbox` roughly 0.7 above the baseline and 0.3 below,
     * so a strutted line stands one baselineskip tall and leading comes out regular whatever the line's glyphs are. */

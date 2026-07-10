@@ -55,16 +55,29 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
         case Some(sh) => sh.position(shapedGlyphs)
         case None     => Array.fill(shapedGlyphs.length)(GlyphPlacement(false, -1, 0.0, 0.0))
 
-  val TextExtents(_, yBearing, _, heightValue, advance, _) = t.getTextExtents(text, rf)
+  // The run split for glyph fallback: the primary font over the codepoints it has, the fallback font over the rest.
+  // Only the plain path is segmented — a script-shaped run (Arabic/Indic) or one carrying combining marks (Hebrew
+  // niqqud) keeps its single font. A run the primary font covers whole comes back as one segment, unchanged, so
+  // ordinary Latin text pays only a coverage scan and behaves exactly as before.
+  private val marked: Boolean = text.nonEmpty && Bidi.hasMarks(text)
+  private val segments: Array[(String, Font)] =
+    if text.isEmpty || shapedGlyphs != null || marked then Array((text, font))
+    else t.coverageSegments(text, font)
+  private val segMetrics: Array[TextExtents] =
+    segments.map((s, f) => t.getTextExtents(s, f.renderFont.asInstanceOf[t.RenderFont]))
 
   // The box width is the pen advance, not the ink bounding box. The advance carries the glyphs' side
   // bearings, so one box sets flush after the next exactly as the font intends — and manual \kern between
   // pieces of text (as in the \TeX logo) lands on the same metrics it would in TeX. Using the ink width
   // instead silently dropped the leading and trailing side bearings of every run; justification mostly hid
   // it, but exact character spacing did not survive. The ink box still gives the vertical extents below.
-  // A shaped run measures by the sum of its base glyphs' advances; the marks add nothing.
+  // A plain run measures by the sum of its segments' advances; a shaped run by its base glyphs' advances.
   override val width: Double =
-    if shapedGlyphs == null then advance
+    if shapedGlyphs == null then
+      var w = 0.0
+      var i = 0
+      while i < segMetrics.length do { w += segMetrics(i).xAdvance; i += 1 }
+      w
     else
       var w = 0.0
       var i = 0
@@ -73,22 +86,33 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
         i += 1
       w
   override val xAdvance: Double = width
-  override val height: Double   = heightValue
-  val ascent: Double            = -yBearing       // Ascent is the negative yBearing
-  val descent: Double           = height - ascent // Descent is height minus ascent
+  val ascent: Double            = segMetrics.map(m => -m.yBearing).max        // tallest segment ascent
+  val descent: Double           = segMetrics.map(m => m.height + m.yBearing).max // deepest segment descent
+  override val height: Double   = ascent + descent
 
   def draw(t: Typesetter, x: Double, y: Double): Unit =
     box(t, x, y, "purple")
 
     if text.nonEmpty then
-      t.setFont(font)
       t.setColor(color)
-      val rf = font.renderFont.asInstanceOf[t.RenderFont]
-      if shapedGlyphs != null then drawPositioned(shapedGlyphs, shapedPlaces, x, y)
+      if shapedGlyphs != null then
+        t.setFont(font)
+        drawPositioned(shapedGlyphs, shapedPlaces, x, y)
+      else if marked then
+        val mrf = font.renderFont.asInstanceOf[t.RenderFont]
+        t.setFont(font)
+        t.markShaper(mrf) match
+          case Some(shaper) => drawMarked(t, mrf, shaper, x, y)
+          case None         => t.drawString(text, x, y)
       else
-        t.markShaper(rf) match
-          case Some(shaper) if Bidi.hasMarks(text) => drawMarked(t, rf, shaper, x, y)
-          case _                                   => t.drawString(text, x, y)
+        // Plain path: draw each font-run at the running pen, so fallback glyphs come from their own font.
+        var cx = x
+        var i  = 0
+        while i < segments.length do
+          t.setFont(segments(i)._2)
+          t.drawString(segments(i)._1, cx, y)
+          cx += segMetrics(i).xAdvance
+          i += 1
 
   /** Draw a positioned glyph run: a base advances the pen and is drawn at the cursor; a mark advances
     * nothing and is drawn relative to the origin of the glyph it attaches to, so a vowel point or a
