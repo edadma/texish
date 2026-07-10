@@ -190,6 +190,28 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     )
   }
 
+  "four-up-booklet duplexShift pulls the front side left and leaves the back in place" in {
+    val t   = fixture(pw = 100, ph = 150)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new FourUpBookletArrangement(None, duplexShift = 6.0)
+
+    val probes = (0 until 8).map(new Probe(_))
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    doc.sheets.length shouldBe 2
+    // front sheet: every x is 6 less than the unshifted layout (0 → -6, 100 → 94)
+    doc.sheets.head.placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(7), -6.0, 0.0),   (Some(0), 94.0, 0.0),
+      (Some(5), -6.0, 150.0), (Some(2), 94.0, 150.0),
+    )
+    // back sheet: unshifted, so it registers with the front after the duplexer nudges the front right
+    doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(1), 0.0, 0.0),   (Some(6), 100.0, 0.0),
+      (Some(3), 0.0, 150.0), (Some(4), 100.0, 150.0),
+    )
+  }
+
   "four-up-booklet doubles the sheet both ways" in {
     new FourUpBookletArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 296.0))
   }

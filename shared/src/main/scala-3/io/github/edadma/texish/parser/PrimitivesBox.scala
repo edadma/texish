@@ -412,6 +412,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
   // surface is created. Examples:
   //   \arrange two-up-booklet               % \geometry paper:a6 pages, two-up on an A5-landscape sheet
   //   \arrange four-up-booklet              % A6 pages four-up on an A4 sheet, to cut in half and fold
+  //   \arrange four-up-booklet duplexshift:3mm % pull the front side 3mm left to cancel duplex misregistration
   //   \arrange two-up-booklet signature:16  % fold into 16-page groups instead of one nested stack
   //   \arrange nup rows:2 cols:2            % four logical pages to a sheet
   proc.registerPrimitive(
@@ -429,7 +430,8 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
           .trim
           .toLowerCase
         val opts = proc.readOptionalParams(pos)
-        def intOpt(key: String): Option[Int] = opts.get(key).flatMap(Value.number).map(_.toInt)
+        def intOpt(key: String): Option[Int]    = opts.get(key).flatMap(Value.number).map(_.toInt)
+        def dimOpt(key: String): Option[Double] = opts.get(key).flatMap(Value.number)
 
         if t.contentStarted then handler.error("\\arrange must appear before any page content", pos)
         else
@@ -444,7 +446,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
               intOpt("signature") match
                 case Some(s) if s <= 0 || s % 4 != 0 =>
                   handler.error("\\arrange four-up-booklet: signature must be a positive multiple of 4", pos)
-                case sig => t.getDocument.arrangement = new FourUpBookletArrangement(sig)
+                case sig => t.getDocument.arrangement = new FourUpBookletArrangement(sig, dimOpt("duplexshift").getOrElse(0.0))
             case "nup" =>
               val rows = intOpt("rows").getOrElse(1)
               val cols = intOpt("cols").getOrElse(1)

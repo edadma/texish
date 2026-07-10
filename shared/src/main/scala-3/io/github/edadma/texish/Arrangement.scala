@@ -133,8 +133,13 @@ class TwoUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(sign
   * Two folded sheets gang onto one taller sheet, so an odd number of folded sheets leaves the lower half of the last
   * taller sheet entirely blank — cut it off and discard it rather than folding it in. A book whose page count is a
   * multiple of eight fills every half and avoids the discard.
+  *
+  * `duplexShift` cancels a printer's front-to-back registration error: many duplexers land the front side a couple of
+  * millimetres off the back on the re-feed. The value (in points) is how far the printer pushes the front to the
+  * right of the back; the front sheets are drawn that much to the left so they land aligned with the backs. It is a
+  * per-printer tuning knob, off (0) by default, meant to be set from the document, not a fixed part of the layout.
   */
-class FourUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(signature):
+class FourUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0) extends SaddleBooklet(signature):
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, 2 * ph)
 
   override def flush(doc: DocumentMode): Unit =
@@ -148,16 +153,18 @@ class FourUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(sig
     val blankSheet = Seq((blank: Box, blank: Box), (blank: Box, blank: Box))
     val sheets     = if folded.length % 2 == 1 then folded :+ blankSheet else folded
 
-    def a4(top: (Box, Box), bot: (Box, Box)): SheetBox =
+    // dx nudges a whole sheet sideways: the front is pulled left by duplexShift so that, after the duplexer lands it
+    // a matching amount to the right, it registers with the back.
+    def a4(top: (Box, Box), bot: (Box, Box), dx: Double): SheetBox =
       new SheetBox(
         2 * pw,
         2 * ph,
-        Seq((top._1, 0.0, 0.0), (top._2, pw, 0.0), (bot._1, 0.0, ph), (bot._2, pw, ph)),
+        Seq((top._1, dx, 0.0), (top._2, pw + dx, 0.0), (bot._1, dx, ph), (bot._2, pw + dx, ph)),
       )
 
     for pair <- sheets.grouped(2) do
       val upper = pair(0) // the outer folded sheet — upper half of the taller sheet
       val lower = pair(1) // the inner folded sheet — lower half
-      doc.shipout(a4(upper(0), lower(0))) // front: both fronts
-      doc.shipout(a4(upper(1), lower(1))) // back: both backs
+      doc.shipout(a4(upper(0), lower(0), -duplexShift)) // front: both fronts, pulled left by duplexShift
+      doc.shipout(a4(upper(1), lower(1), 0.0)) // back: both backs, unshifted
     buf.clear()
