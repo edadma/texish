@@ -27,7 +27,11 @@ class UsfmTranslateTests extends AnyFreeSpec with Matchers:
   }
 
   "a stanza break becomes \\usfmb with no argument" in {
-    tr("\\q1 line\n\\b\n\\q1 next") shouldBe "\\usfmq{1}line \\usfmb \\usfmq{1}next"
+    tr("\\q1 line\n\\b\n\\q1 next") shouldBe "\\usfmq{1}line \\usfmb\\usfmq{1}next"
+  }
+
+  "a marker alone on its line leaves no leading space in the paragraph" in {
+    tr("\\p\n\\v 1 In the beginning.") shouldBe "\\usfmp{1}\\usfmv{1}In the beginning."
   }
 
   "a section heading captures its content up to the next block marker" in {

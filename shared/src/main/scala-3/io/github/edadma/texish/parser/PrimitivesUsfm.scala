@@ -152,9 +152,11 @@ object Usfm:
         if i < n && src.charAt(i) == '*' then
           closing = true
           i += 1
-        // A single space after an opening marker is the marker's delimiter, not content, and is dropped. After a
-        // closing marker (\wj*) a following space is ordinary content and is kept.
-        if !closing && i < n && src.charAt(i) == ' ' then i += 1
+        // A single whitespace after an opening marker is the marker's delimiter, not content, and is dropped —
+        // a newline counts, so a marker alone on its line (`\p` then `\v 1 …` on the next, as many translations
+        // write it) does not leave a leading space that indents the paragraph's first line. After a closing marker
+        // (\wj*) a following space is ordinary content and is kept.
+        if !closing && i < n && (src.charAt(i) == ' ' || src.charAt(i) == '\n' || src.charAt(i) == '\r' || src.charAt(i) == '\t') then i += 1
         out += Marker(name.toString, closing)
       else
         // Newlines and tabs collapse to spaces so a line break between markers never reads as a paragraph break —
