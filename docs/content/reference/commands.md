@@ -281,6 +281,7 @@ rendering backend, so it works on every output target.
 | `\arrange simple` | one logical page per sheet (the default) |
 | `\arrange two-up-booklet` | pages two-up in saddle-stitch folding order on a sheet twice as wide, each sheet folded once; the whole book nests as one signature |
 | `\arrange four-up-booklet` | the two-up layout stacked two folded sheets high, on a sheet twice as tall as well; print, cut in half across the middle, then fold as the two-up booklet |
+| `\arrange four-up-booklet duplexshift:<len>` | pull the front side `<len>` left to cancel a printer's front-to-back registration error |
 | `\arrange two-up-booklet signature:<4k>` | fold into fixed groups of `4k` pages instead of one nested stack (also on `four-up-booklet`) |
 | `\arrange nup rows:<r> cols:<c>` | tile an `r`×`c` grid of pages per sheet, in reading order |
 
@@ -297,7 +298,9 @@ stacks the two-up layout two folded sheets high, so A6 pages fall four to an A4 
 double-sided, cut the sheet in half across the middle into two half-height sheets, then fold and
 nest those exactly as the two-up booklet — no page prints upside-down and nothing is slit. The
 back is laid out for long-edge duplex; if a fold-test dummy comes out mis-collated, switch the
-printer to long-edge binding.
+printer to long-edge binding. Padding blanks fall just before the last page, so the front and back
+covers always land on the outermost sheet. If a duplexer lands the front a millimetre or two off
+the back, `duplexshift:<len>` pulls every front side that far left to bring the two into register.
 
 ## Images and graphics
 
