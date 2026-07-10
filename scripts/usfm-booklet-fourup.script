@@ -1,0 +1,105 @@
+// usfm-booklet-fourup — the first two chapters of John set as a pocket booklet, with covers, imposed FOUR-UP on A4
+// with \arrange four-up-booklet. Each page is A6 (105 x 148 mm); the arrangement stacks the two-up booklet layout two
+// folded sheets high on an A4 sheet (210 x 297 mm), so the A6 pages fall four to a sheet. Print double-sided (long-
+// edge duplex), cut each A4 in half across the middle into two A5 sheets, fold each A5 down the middle, and nest the
+// upper half around the lower one — the pages read in order. It is the cut-and-fold companion to usfm-booklet.script,
+// which images the same booklet two-up on A5 for a printer or folder that feeds A5 directly.
+//
+// Twelve folios in all: a framed front cover, a colophon, the nine pages of John 1–2, and a QR-code back cover —
+// one saddle-stitched signature. Four-up, that is padded to a whole number of A4 sheets: two A4 sheets, four PDF pages.
+
+\use{usfm}
+
+\usehyphenation{en-us}
+
+\geometry paper:a6 top:10mm left:10mm right:10mm bottom:16mm footskip:5mm
+\arrange four-up-booklet
+
+// The front matter carries no folio number: an empty \footline suppresses the centred page number document prints
+// by default. It is restored, and the count reset to 1, at the first page of Scripture, so numbering runs 1, 2, 3…
+// through the text and stops again at the back cover — the front and back covers and the colophon stay unnumbered.
+// \footline is expanded per page as each is composed, so redefining it between pages takes effect from that page on.
+\def footline {}
+
+// ---- Front cover (folio 1) ----------------------------------------------------
+// A framed typographic title page in the Scripture-portion tradition: the book's name large in a soft slate blue
+// (#4E6E8C), John's own thesis verse beneath, a hairline rule between. The frame is centred on the page with an
+// equal margin on every side. \centerline centres it left-to-right; it sits inside a text-height \vbox whose \vfil
+// glue above and below centres it top-to-bottom, and a fixed \vskip on top cancels the extra depth the footer-
+// driven bottom page-margin would otherwise add over the top margin — so the frame is equidistant from all four
+// paper edges, not just the two sides.
+{
+\color{#4E6E8C}
+\vbox to:345 {
+  \vskip 17pt
+  \vfil
+  \centerline{\fbox{\vbox to:318 {
+    \vfil
+    \makebox[197pt][c]{\color{#333333}\font lmroman 13 regular \textsc{The Gospel According to}}
+    \vskip 16pt
+    \makebox[197pt][c]{\font lmroman 64 regular John}
+    \vskip 12pt
+    \makebox[197pt][c]{\hrule width:70 ascent:1.4}
+    \vfil
+    \makebox[197pt][c]{\color{#333333}\parbox{176pt}{\centering\font lmroman 10 italic but these are written that you may believe that Jesus is the Christ, the Son of God, and that by believing you may have life in His name.}}
+    \vskip 8pt
+    \makebox[197pt][c]{\color{#333333}\font lmroman 9 regular \textsc{John 20:31}}
+    \vfil
+  }}}
+  \vfil
+}
+}
+\eject
+
+// ---- Inside front cover / colophon (folio 2) ----------------------------------
+// Publication information, set quietly and centred low on the page: the Scripture text's source and the imprint.
+{
+\vbox to:345 {
+  \vfil
+  \centerline{\font lmroman 10 regular Scripture text from the}
+  \smallskip
+  \centerline{\font lmroman 10 regular \textsc{Berean Standard Bible}}
+  \smallskip
+  \centerline{\font lmroman 9 italic which is in the public domain.}
+  \vskip 24pt
+  \centerline{\color{#4E6E8C}\hrule width:50 ascent:0.8}
+  \vskip 24pt
+  \centerline{\font lmroman 10 regular christianevangelism.media}
+  \vskip 40pt
+}
+}
+\eject
+
+// ---- The Gospel text (folios 3–11, folios numbered 1–9) -----------------------
+// Numbering starts here: restore document's centred page number and reset the count to 1, so the first page of John
+// reads 1 rather than 3.
+\set pageno {1}
+\def footline {\hss\font lmroman 10 regular \the\pageno\hss}
+\usfm{john12.usfm}
+\vfill\eject
+
+// Back to no folio number for the back cover.
+\def footline {}
+
+// ---- Back cover (folio 12) ----------------------------------------------------
+// The call to action: a QR code linking to the ministry site, a short invitation, and the imprint. The QR is drawn
+// as vector cells (crisp on the print), error-correction level Q so a fold crease or smudge across it still scans.
+// \qrcode reads its URL straight from the live source (a URL's // would otherwise read as a comment), so it cannot
+// sit inside a collected argument such as \centerline or \fbox — it is issued directly and centred by setting fil
+// glue on both sides of its one-box line.
+{
+\vskip 40pt
+\centerline{\color{#4E6E8C}\hrule width:60 ascent:1}
+\vskip 16pt
+\centerline{\color{#333333}\font lmroman 13 regular \textsc{Read · Watch · Share}}
+\vskip 22pt
+{\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\noindent\qrcode[cell:3pt quiet:4]{https://christianevangelism.media}\par}
+\vskip 22pt
+\centerline{\color{#4E6E8C}\font lmroman 13 regular christianevangelism.media}
+\vskip 26pt
+\centerline{\color{#333333}\font lmroman 10 italic “Come and see.”}
+\smallskip
+\centerline{\color{#333333}\font lmroman 9 regular \textsc{John 1:46}}
+\vfill
+}
+\eject
