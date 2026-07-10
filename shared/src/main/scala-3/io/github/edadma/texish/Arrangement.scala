@@ -55,8 +55,11 @@ class NupArrangement(rows: Int, cols: Int) extends Arrangement:
     doc.shipout(new SheetBox(cols * pw, rows * ph, placed.toSeq))
     buf.clear()
 
-/** Saddle-stitch booklet imposition: logical pages are set at half width and printed two-up on a sheet twice as
-  * wide, in the folding order that makes a stack of sheets folded down the middle and stapled read in sequence.
+/** One-fold saddle-stitch booklet imposition: logical pages are set at half width and printed two-up on a sheet
+  * twice as wide, in the folding order that makes a stack of sheets each folded once down the middle and stapled
+  * read in sequence. It is the single-fold member of the booklet family — A6 pages fall two to an A5-landscape
+  * sheet. Folding each sheet a second time, four-up on a sheet twice as tall as well as wide (A6 pages onto A4),
+  * is a separate arrangement.
   *
   * The order only settles once every page is known, so pages are buffered and imposed in `flush`. A run of pages
   * is padded with blanks to a whole number of sheets (four pages per sheet) and split into signatures — folded
@@ -68,7 +71,7 @@ class NupArrangement(rows: Int, cols: Int) extends Arrangement:
   * the left and page `2s` at the right; on its back, page `2s+1` at the left and page `n-2-2s` at the right. Front
   * and back ship consecutively, outermost sheet first, which is the order a duplex printer expects.
   */
-class BookletArrangement(signature: Option[Int]) extends Arrangement:
+class OneFoldArrangement(signature: Option[Int]) extends Arrangement:
   private val buf = ArrayBuffer[Box]()
 
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, ph)

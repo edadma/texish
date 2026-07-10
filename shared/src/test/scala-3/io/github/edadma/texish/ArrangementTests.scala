@@ -6,8 +6,8 @@ import org.scalatest.matchers.should.Matchers
 import scala.collection.mutable.ArrayBuffer
 
 /** The page arrangements — the output routine that places finished logical pages onto physical sheets. A simple
-  * arrangement ships one page per sheet at the text origin, n-up tiles a grid in reading order, and a booklet
-  * imposes pages two-up in saddle-stitch folding order, padding a short book to whole sheets with blanks. Metrics
+  * arrangement ships one page per sheet at the text origin, n-up tiles a grid in reading order, and the one-fold
+  * booklet imposes pages two-up in saddle-stitch folding order, padding a short book to whole sheets with blanks. Metrics
   * come from the fixed [[HeadlessTypesetter]].
   */
 class ArrangementTests extends AnyFreeSpec with Matchers:
@@ -69,10 +69,10 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     SimpleArrangement.sheetSize(100, 150) shouldBe ((100.0, 150.0))
   }
 
-  "booklet imposes pages two-up in saddle-stitch folding order" in {
+  "onefold imposes pages two-up in saddle-stitch folding order" in {
     val t   = fixture(pw = 100)
     val doc = new RecordingDoc(t)
-    doc.arrangement = new BookletArrangement(None)
+    doc.arrangement = new OneFoldArrangement(None)
 
     val probes = (0 until 8).map(new Probe(_))
     probes.foreach(doc.add)
@@ -88,10 +88,10 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     )
   }
 
-  "booklet pads a short book to whole four-page sheets with blanks" in {
+  "onefold pads a short book to whole four-page sheets with blanks" in {
     val t   = fixture(pw = 100)
     val doc = new RecordingDoc(t)
-    doc.arrangement = new BookletArrangement(None)
+    doc.arrangement = new OneFoldArrangement(None)
 
     val probes = (0 until 3).map(new Probe(_)) // pads to 4: p0 p1 p2 blank
     probes.foreach(doc.add)
@@ -105,10 +105,10 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     )
   }
 
-  "booklet folds into fixed signatures when a size is given" in {
+  "onefold folds into fixed signatures when a size is given" in {
     val t   = fixture(pw = 100)
     val doc = new RecordingDoc(t)
-    doc.arrangement = new BookletArrangement(Some(4)) // each sheet its own fold group
+    doc.arrangement = new OneFoldArrangement(Some(4)) // each sheet its own fold group
 
     val probes = (0 until 8).map(new Probe(_))
     probes.foreach(doc.add)
@@ -124,8 +124,8 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     )
   }
 
-  "booklet doubles the sheet width" in {
-    new BookletArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 148.0))
+  "onefold doubles the sheet width" in {
+    new OneFoldArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 148.0))
   }
 
   "n-up tiles pages in reading order across a grid" in {
