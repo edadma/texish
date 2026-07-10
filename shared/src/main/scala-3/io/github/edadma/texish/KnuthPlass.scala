@@ -116,6 +116,15 @@ object KnuthPlass:
 
     if items.isEmpty then return Some(Seq.empty)
 
+    // Does a line's target width depend on WHICH line it is? A hanging indent (\hangindent, drop caps and
+    // hanging quotations) or a cutout (text flowing around a figure) narrows particular line numbers; a plain
+    // paragraph gives every line the same measure. This decides how active breakpoints are pruned below: when
+    // the measure is uniform, two nodes at the same position and fitness face an identical future no matter how
+    // many lines preceded them, so the line number can be dropped from the prune key — which keeps the active
+    // set bounded by one line's breakpoint window rather than letting it grow with the paragraph. A line count
+    // cannot exceed the item count, so that bounds the cutout scan.
+    val measureVariesByLine = hangindent != 0 || (0 to items.length).exists(n => extraInset(n) != 0.0)
+
     // Cumulative width and flexibility up to each position. A penalty contributes NO width here: its width
     // (the hyphen) counts only when the break is actually taken there, added explicitly at the break — a
     // line merely passing through hyphenation points must not be measured wider than it renders.
@@ -181,13 +190,16 @@ object KnuthPlass:
     // badness instead of failing. Returns the least-demerit end breakpoint, or None if no chain of legal
     // breaks reaches the paragraph's end.
     def solve(effTolerance: Double, emergency: Double): Option[Breakpoint] =
-      // Keep only the best breakpoint for each (position, line, fitness) combination. Fitness stays in the
-      // key so a tight-ending and a loose-ending chain both survive — \adjdemerits may make either the
-      // better predecessor for the next line.
+      // Keep only the best breakpoint per active class. Fitness stays in the key so a tight-ending and a
+      // loose-ending chain both survive — \adjdemerits may make either the better predecessor for the next
+      // line. The line number is part of the key only when the measure varies by line (see above): there a
+      // node headed for an indented line must not be conflated with one headed for a full-width line, so both
+      // are kept; otherwise line is omitted and the active set stays bounded by one line's breakpoint window.
       def prune(bs: ArrayBuffer[Breakpoint]): ArrayBuffer[Breakpoint] =
-        bs.groupBy(b => (b.position, b.line, b.fitness))
-          .map(_._2.minBy(_.totalDemerits))
-          .to(ArrayBuffer)
+        val grouped =
+          if measureVariesByLine then bs.groupBy(b => (b.position, b.line, b.fitness))
+          else bs.groupBy(b => (b.position, b.fitness))
+        grouped.map(_._2.minBy(_.totalDemerits)).to(ArrayBuffer)
 
       // Active breakpoints - start with break at position -1 (before first item)
       var activeBreaks = ArrayBuffer[Breakpoint](
@@ -229,6 +241,17 @@ object KnuthPlass:
 
           val newBreaks = ArrayBuffer[Breakpoint]()
 
+          // Active nodes whose line to this breakpoint is already overfull are retired here (TeX's node
+          // deactivation): the surviving nodes are collected as we go and become the new active set. An
+          // overfull line only grows longer at every later breakpoint — cumulative width is monotonic — so
+          // such a node can never start a feasible line again, and keeping it would let the active list grow
+          // without bound. Omitting this step makes a long paragraph with many hyphenation breakpoints (e.g.
+          // a whole Bible chapter set as one paragraph, densely hyphenated) explode into a near-hang; with it
+          // the breaker stays close to linear. A node retired here contributes no break at i either: an
+          // overfull line's badness exceeds any tolerance, so it never entered `newBreaks` in the first place.
+          val survivors      = ArrayBuffer[Breakpoint]()
+          var anyDeactivated = false
+
           for a <- activeBreaks do
             // Compute line width from a to i; the line resumes after the previous break's discardables and
             // opens with a broken discretionary's `post` material
@@ -249,6 +272,13 @@ object KnuthPlass:
 
             val delta   = measure(a.line) - lineWidth
             val badness = badnessOf(delta, lineStretch, lineStretchInf, lineShrink, lineShrinkInf)
+
+            // Overfull: too long even at full finite shrink, with no infinite shrink to absorb it. Retire the
+            // node rather than carrying it forward. (A forced break rebuilds the active set from newBreaks
+            // below, so survivor bookkeeping there is moot.)
+            val overfull = delta < 0 && lineShrinkInf == 0 && -delta > lineShrink
+            if overfull then anyDeactivated = true
+            else survivors += a
 
             if badness <= effTolerance || forced then
               val penalty = item match
@@ -271,9 +301,11 @@ object KnuthPlass:
                 previous = a,
               )
 
-          // Add new breaks and prune dominated ones; a forced break replaces the actives outright
+          // Rebuild the active set from the survivors plus the new breaks, pruning dominated ones; a forced
+          // break replaces the actives outright. When nothing was deactivated and no break was added, the
+          // active set is unchanged and left as is.
           if forced then activeBreaks = prune(newBreaks)
-          else if newBreaks.nonEmpty then activeBreaks = prune(activeBreaks ++ newBreaks)
+          else if anyDeactivated || newBreaks.nonEmpty then activeBreaks = prune(survivors ++ newBreaks)
 
       // Find the best final breakpoint: a virtual break at the end. The last line carries \parfillskip —
       // normally infinitely stretchable, so a short final line (even a single word) is perfectly fine,
