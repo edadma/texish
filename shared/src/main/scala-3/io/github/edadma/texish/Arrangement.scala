@@ -105,8 +105,12 @@ abstract class SaddleBooklet(signature: Option[Int]) extends Arrangement:
   * read in sequence. It is the two-up member of the booklet family — each sheet folded once, so A6 pages fall two
   * to an A5-landscape sheet. Folding each sheet a second time gives a four-up booklet on a sheet twice as tall as
   * well as wide (A6 pages onto A4), a separate arrangement.
+  *
+  * `duplexShift` cancels a printer's front-to-back registration error, exactly as in the four-up arrangement: the
+  * value (in points) is how far the duplexer lands the front side to the right of the back, and the front sheets are
+  * drawn that much to the left so they register. Off (0) by default; a per-printer tuning knob set from the document.
   */
-class TwoUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(signature):
+class TwoUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0) extends SaddleBooklet(signature):
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, ph)
 
   override def flush(doc: DocumentMode): Unit =
@@ -115,8 +119,11 @@ class TwoUpBookletArrangement(signature: Option[Int]) extends SaddleBooklet(sign
     val (pw, ph) = doc.pageSize
     val blank    = new SheetBox(pw, ph, Nil)
 
-    for (left, right) <- sheetSides(blank) do
-      doc.shipout(new SheetBox(2 * pw, ph, Seq((left, 0.0, 0.0), (right, pw, 0.0))))
+    // sheetSides yields each folded sheet's front then its back, so even indices are front sides: pull those left by
+    // duplexShift to register with the backs after the duplexer lands the front that far to the right.
+    for ((left, right), i) <- sheetSides(blank).zipWithIndex do
+      val dx = if i % 2 == 0 then -duplexShift else 0.0
+      doc.shipout(new SheetBox(2 * pw, ph, Seq((left, dx, 0.0), (right, pw + dx, 0.0))))
     buf.clear()
 
 /** Four-up saddle-stitch booklet imposition for cutting: the two-up sheet-sides are ganged two folded sheets onto a

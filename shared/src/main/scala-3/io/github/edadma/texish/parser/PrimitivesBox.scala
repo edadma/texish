@@ -441,7 +441,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
               intOpt("signature") match
                 case Some(s) if s <= 0 || s % 4 != 0 =>
                   handler.error("\\arrange two-up-booklet: signature must be a positive multiple of 4", pos)
-                case sig => t.getDocument.arrangement = new TwoUpBookletArrangement(sig)
+                case sig => t.getDocument.arrangement = new TwoUpBookletArrangement(sig, dimOpt("duplexshift").getOrElse(0.0))
             case "four-up-booklet" =>
               intOpt("signature") match
                 case Some(s) if s <= 0 || s % 4 != 0 =>

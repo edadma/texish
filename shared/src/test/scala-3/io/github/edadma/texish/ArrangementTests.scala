@@ -128,6 +128,25 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     new TwoUpBookletArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 148.0))
   }
 
+  "two-up-booklet duplexShift pulls the front sides left and leaves the backs in place" in {
+    val t   = fixture(pw = 100)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new TwoUpBookletArrangement(None, duplexShift = 6.0)
+
+    val probes = (0 until 8).map(new Probe(_))
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    // front sides (sheets 0 and 2) are shifted 6 left (0 → -6, 100 → 94); back sides are unchanged
+    doc.sheets.length shouldBe 4
+    doc.sheets.map(layoutOf) shouldBe Seq(
+      Seq((Some(7), -6.0), (Some(0), 94.0)),
+      Seq((Some(1), 0.0), (Some(6), 100.0)),
+      Seq((Some(5), -6.0), (Some(2), 94.0)),
+      Seq((Some(3), 0.0), (Some(4), 100.0)),
+    )
+  }
+
   "four-up-booklet gangs two folded sheets, top upright, in two-up order" in {
     val t   = fixture(pw = 100, ph = 150)
     val doc = new RecordingDoc(t)
