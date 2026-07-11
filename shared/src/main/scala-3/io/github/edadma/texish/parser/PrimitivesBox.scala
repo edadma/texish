@@ -414,6 +414,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
   //   \arrange four-up-booklet              % A6 pages four-up on an A4 sheet, to cut in half and fold
   //   \arrange four-up-booklet duplexshift:3mm % pull the front side 3mm left to cancel duplex misregistration
   //   \arrange two-up-booklet signature:16  % fold into 16-page groups instead of one nested stack
+  //   \arrange two-up-booklet binding:right % right-bound (Arabic/Hebrew) — spine and cover on the right
   //   \arrange nup rows:2 cols:2            % four logical pages to a sheet
   proc.registerPrimitive(
     "arrange",
@@ -432,21 +433,36 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
         val opts = proc.readOptionalParams(pos)
         def intOpt(key: String): Option[Int]    = opts.get(key).flatMap(Value.number).map(_.toInt)
         def dimOpt(key: String): Option[Double] = opts.get(key).flatMap(Value.number)
+        // binding chooses which edge the book is bound on: left (the default, spine on the left) or right (Arabic,
+        // Hebrew and other right-to-left books, spine and front cover on the right). Right-binding mirrors the
+        // saddle-stitch imposition so the pages read back to front. Returns None for an unrecognised value so the
+        // caller can report it against the specific arrangement.
+        def rightBoundOpt: Option[Boolean] = opts.get("binding").map(Value.display).map(_.toLowerCase) match
+          case None          => Some(false)
+          case Some("left")  => Some(false)
+          case Some("right") => Some(true)
+          case Some(_)       => None
 
         if t.contentStarted then handler.error("\\arrange must appear before any page content", pos)
         else
           mode match
             case "simple" => t.getDocument.arrangement = SimpleArrangement
             case "two-up-booklet" =>
-              intOpt("signature") match
-                case Some(s) if s <= 0 || s % 4 != 0 =>
+              (intOpt("signature"), rightBoundOpt) match
+                case (Some(s), _) if s <= 0 || s % 4 != 0 =>
                   handler.error("\\arrange two-up-booklet: signature must be a positive multiple of 4", pos)
-                case sig => t.getDocument.arrangement = new TwoUpBookletArrangement(sig, dimOpt("duplexshift").getOrElse(0.0))
+                case (_, None) =>
+                  handler.error("\\arrange two-up-booklet: binding must be left or right", pos)
+                case (sig, Some(rb)) =>
+                  t.getDocument.arrangement = new TwoUpBookletArrangement(sig, dimOpt("duplexshift").getOrElse(0.0), rb)
             case "four-up-booklet" =>
-              intOpt("signature") match
-                case Some(s) if s <= 0 || s % 4 != 0 =>
+              (intOpt("signature"), rightBoundOpt) match
+                case (Some(s), _) if s <= 0 || s % 4 != 0 =>
                   handler.error("\\arrange four-up-booklet: signature must be a positive multiple of 4", pos)
-                case sig => t.getDocument.arrangement = new FourUpBookletArrangement(sig, dimOpt("duplexshift").getOrElse(0.0))
+                case (_, None) =>
+                  handler.error("\\arrange four-up-booklet: binding must be left or right", pos)
+                case (sig, Some(rb)) =>
+                  t.getDocument.arrangement = new FourUpBookletArrangement(sig, dimOpt("duplexshift").getOrElse(0.0), rb)
             case "nup" =>
               val rows = intOpt("rows").getOrElse(1)
               val cols = intOpt("cols").getOrElse(1)

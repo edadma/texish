@@ -100,6 +100,21 @@ class RtlParagraphTests extends AnyFreeSpec with Matchers:
     visual(s"\\rtl\\ltr Hello $A$B world") shouldBe s"Hello $B$A world"
   }
 
+  // Explicit horizontal boxes — \hbox, \makebox, \centerline and the like — reorder their own content the way a
+  // paragraph line does, so a right-to-left title or heading set outside a running paragraph reads correctly.
+
+  "an explicit hbox reorders a right-to-left run like a paragraph line" in {
+    visual(s"\\rtl \\hbox{$A$B $G$D}") shouldBe s"$D$G $B$A"
+  }
+
+  "an hbox keeps an embedded Latin word left-to-right within a right-to-left base" in {
+    visual(s"\\rtl \\hbox{$A Hello $B}") shouldBe s"$B Hello $A"
+  }
+
+  "a left-to-right hbox is left unchanged" in {
+    visual(s"\\hbox{Hello $A$B world}") shouldBe s"Hello $B$A world"
+  }
+
   // The first set line, an HBox holding the line's boxes left to right.
   private def firstLine(boxes: Seq[Box]): HBox =
     def collect(b: Box): List[HBox] = b match

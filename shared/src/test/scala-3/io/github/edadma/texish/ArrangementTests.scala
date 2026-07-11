@@ -124,6 +124,26 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     )
   }
 
+  "two-up-booklet right binding mirrors every sheet-side for a right-bound book" in {
+    val t   = fixture(pw = 100)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new TwoUpBookletArrangement(None, rightBound = true)
+
+    val probes = (0 until 8).map(new Probe(_))
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    // the left-bound layout (8,1)(2,7)(6,3)(4,5) reflected: each side's halves swap, so the front cover (p1) lands
+    // on the right and the reader turns pages left to right
+    doc.sheets.length shouldBe 4
+    doc.sheets.map(layoutOf) shouldBe Seq(
+      Seq((Some(0), 0.0), (Some(7), 100.0)),
+      Seq((Some(6), 0.0), (Some(1), 100.0)),
+      Seq((Some(2), 0.0), (Some(5), 100.0)),
+      Seq((Some(4), 0.0), (Some(3), 100.0)),
+    )
+  }
+
   "two-up-booklet doubles the sheet width" in {
     new TwoUpBookletArrangement(None).sheetSize(105, 148) shouldBe ((210.0, 148.0))
   }
@@ -228,6 +248,28 @@ class ArrangementTests extends AnyFreeSpec with Matchers:
     doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
       (Some(1), 0.0, 0.0),   (Some(6), 100.0, 0.0),
       (Some(3), 0.0, 150.0), (Some(4), 100.0, 150.0),
+    )
+  }
+
+  "four-up-booklet right binding mirrors every sheet-side for a right-bound book" in {
+    val t   = fixture(pw = 100, ph = 150)
+    val doc = new RecordingDoc(t)
+    doc.arrangement = new FourUpBookletArrangement(None, rightBound = true)
+
+    val probes = (0 until 8).map(new Probe(_))
+    probes.foreach(doc.add)
+    doc.arrangement.flush(doc)
+
+    // the left-bound two-up sides reflected before ganging: each half swaps, so the front cover (p1) lands on the
+    // right of its half and the finished booklet opens from the right
+    doc.sheets.length shouldBe 2
+    doc.sheets.head.placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(0), 0.0, 0.0),   (Some(7), 100.0, 0.0),   // front, top half: p1 | p8
+      (Some(2), 0.0, 150.0), (Some(5), 100.0, 150.0), // front, bottom half: p3 | p6
+    )
+    doc.sheets(1).placed.map { case (pg, dx, dy) => (idOf(pg), dx, dy) } shouldBe Seq(
+      (Some(6), 0.0, 0.0),   (Some(1), 100.0, 0.0),   // back, top half: p7 | p2
+      (Some(4), 0.0, 150.0), (Some(3), 100.0, 150.0), // back, bottom half: p5 | p4
     )
   }
 

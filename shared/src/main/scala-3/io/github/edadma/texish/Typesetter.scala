@@ -974,7 +974,7 @@ abstract class Typesetter:
     this
 
   def hbox(toSize: Double | Null = null, spread: Double | Null = null): Typesetter =
-    push(new HBoxBuilder(this, toSize, spread))
+    push(new HBoxBuilder(this, toSize, spread, reorderBidi = true))
     this
 
   def vbox(toSize: Double | Null = null, spread: Double | Null = null): Typesetter =

@@ -71,8 +71,13 @@ class NupArrangement(rows: Int, cols: Int) extends Arrangement:
   * right; on its back, page `2s+1` at the left and page `n-2-2s` at the right. Front and back come out consecutively,
   * outermost sheet first, which is the order a duplex printer expects. The two-up arrangement ships each side as its
   * own sheet; the four-up arrangement gangs two sides' worth of sheets onto one taller sheet for cutting.
+  *
+  * `rightBound` mirrors the whole imposition for a right-bound book (Arabic, Hebrew, …), whose spine and front cover
+  * sit on the right and whose pages turn left to right. It reflects each sheet-side about its centre — swapping the
+  * left and right halves — which is exactly the left-bound layout's mirror image, leaving the fold, the nesting, and
+  * front-to-back registration untouched.
   */
-abstract class SaddleBooklet(signature: Option[Int]) extends Arrangement:
+abstract class SaddleBooklet(signature: Option[Int], rightBound: Boolean) extends Arrangement:
   protected val buf = ArrayBuffer[Box]()
 
   def add(page: Box, doc: DocumentMode): Unit = buf += page
@@ -93,12 +98,16 @@ abstract class SaddleBooklet(signature: Option[Int]) extends Arrangement:
       if total == len then arr
       else arr.take(len - 1) ++ Array.fill(total - len)(blank) ++ arr.takeRight(1)
 
-    for
-      group <- padded.grouped(sigSize).toSeq
-      n = group.length
-      s <- 0 until n / 4
-      side <- Seq((group(n - 1 - 2 * s), group(2 * s)), (group(2 * s + 1), group(n - 2 - 2 * s)))
-    yield side
+    val sides =
+      for
+        group <- padded.grouped(sigSize).toSeq
+        n = group.length
+        s <- 0 until n / 4
+        side <- Seq((group(n - 1 - 2 * s), group(2 * s)), (group(2 * s + 1), group(n - 2 - 2 * s)))
+      yield side
+
+    // A right-bound book is the left-bound layout reflected: swap each sheet-side's left and right halves.
+    if rightBound then sides.map((l, r) => (r, l)) else sides
 
 /** Two-up saddle-stitch booklet imposition: logical pages are set at half width and printed two-up on a sheet
   * twice as wide, in the folding order that makes a stack of sheets each folded once down the middle and stapled
@@ -109,8 +118,10 @@ abstract class SaddleBooklet(signature: Option[Int]) extends Arrangement:
   * `duplexShift` cancels a printer's front-to-back registration error, exactly as in the four-up arrangement: the
   * value (in points) is how far the duplexer lands the front side to the right of the back, and the front sheets are
   * drawn that much to the left so they register. Off (0) by default; a per-printer tuning knob set from the document.
+  * `rightBound` mirrors the imposition for a right-bound (Arabic/Hebrew) book — see [[SaddleBooklet]].
   */
-class TwoUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0) extends SaddleBooklet(signature):
+class TwoUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0, rightBound: Boolean = false)
+    extends SaddleBooklet(signature, rightBound):
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, ph)
 
   override def flush(doc: DocumentMode): Unit =
@@ -145,8 +156,10 @@ class TwoUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0)
   * millimetres off the back on the re-feed. The value (in points) is how far the printer pushes the front to the
   * right of the back; the front sheets are drawn that much to the left so they land aligned with the backs. It is a
   * per-printer tuning knob, off (0) by default, meant to be set from the document, not a fixed part of the layout.
+  * `rightBound` mirrors the imposition for a right-bound (Arabic/Hebrew) book — see [[SaddleBooklet]].
   */
-class FourUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0) extends SaddleBooklet(signature):
+class FourUpBookletArrangement(signature: Option[Int], duplexShift: Double = 0.0, rightBound: Boolean = false)
+    extends SaddleBooklet(signature, rightBound):
   def sheetSize(pw: Double, ph: Double): (Double, Double) = (2 * pw, 2 * ph)
 
   override def flush(doc: DocumentMode): Unit =

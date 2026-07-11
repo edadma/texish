@@ -1,5 +1,9 @@
 package io.github.edadma.texish
 
+import scala.collection.mutable.ArrayBuffer
+
+import io.github.edadma.texish.opentype.{ArabicShaping, JoiningForm}
+
 /** The Unicode bidirectional character class assigned to a codepoint, restricted to the subset the
   * paragraph algorithm needs. The explicit embedding and isolate initiators (LRE/RLE/LRI/…) are
   * deliberately absent: plain right-to-left prose — Hebrew or Arabic scripture, a name or a number
@@ -488,3 +492,118 @@ object Bidi:
     var i     = 0
     while i < order.length do { sb.append(s.charAt(order(i))); i += 1 }
     sb.toString
+
+  /** Whether a sequence of set boxes needs bidirectional processing: a right-to-left base direction, or any
+    * character box carrying a right-to-left character. Left-to-right content under a left-to-right base — the
+    * overwhelmingly common case — skips reordering entirely and is laid out exactly as before. */
+  def needsReorder(boxes: collection.Seq[Box], base: Int): Boolean =
+    base == 1 || boxes.exists {
+      case c: CharBox => hasRtl(c.text)
+      case _          => false
+    }
+
+  /** Reorder a run of set boxes from logical into visual order under base direction `base`, in place, and
+    * substitute Arabic cursive forms. This is the shared bidi/shaping step for any horizontal run — a
+    * paragraph line or an explicit horizontal box (`\hbox`, `\makebox`, `\centerline`) — so a book set in a
+    * right-to-left script shapes and orders the same way in its body text and on its title page.
+    *
+    * Reordering happens at character granularity, not box granularity: a Hebrew or Arabic word arrives as a
+    * single box whose characters are in logical (reading) order, and they must be reversed within the box so
+    * the glyphs are drawn left to right in their visual positions. Every backend draws a run of glyphs in the
+    * order given, applying no reordering of its own, so texish owns the bidi here and hands each backend text
+    * already in visual order.
+    *
+    * Each character of each word box becomes one item, each interword glue (or other non-text box) one neutral
+    * item, giving a one-to-one map between items and the characters of the bidi string. The Unicode algorithm
+    * yields the visual order of those items; walking it, runs of characters sharing a font and colour recombine
+    * into word boxes (their text now in visual order) and glue and other boxes pass through at their visual
+    * positions. The resolution is per run, with `base` as the surrounding direction. */
+  def reorderVisual(content: ArrayBuffer[Box], base: Int): Unit =
+    if content.isEmpty then return
+
+    // Flatten to characters, each remembering its source: a word box contributes its characters, and a glue
+    // or other box one neutral character. Character index lines up with the bidi string below.
+    val chars   = new StringBuilder
+    val srcChar = ArrayBuffer.empty[CharBox] // the source word box for a text character, else null
+    val srcBox  = ArrayBuffer.empty[Box]     // the box itself for a non-text character, else null
+    for b <- content do
+      b match
+        case c: CharBox =>
+          for ch <- c.text do
+            chars.append(ch)
+            srcChar += c
+            srcBox += null
+        case _ =>
+          chars.append(if b.isSpace then ' ' else '￼') // glue is neutral whitespace; anything else neutral
+          srcChar += null
+          srcBox += b
+
+    val s      = chars.toString
+    val levels = Bidi.resolvedLevels(s, base)
+
+    // Arabic cursive joining is decided here, in memory order, while the logical string is still intact: each
+    // character's contextual form (initial/medial/final/isolated) follows from its neighbours, and a form once
+    // decided is independent of the visual order the reorder below imposes. The resolved forms ride along into
+    // the visual runs so each Arabic CharBox can substitute its shaped glyphs. Characters in the Arabic blocks
+    // are all BMP, so a per-code-unit form array lines up with the per-code-unit run text built below. Null
+    // when the run has no Arabic, leaving every other script's path untouched.
+    val forms: Array[JoiningForm] =
+      if ArabicShaping.hasArabic(s) then ArabicShaping.resolveForms(Array.tabulate(s.length)(k => s.charAt(k).toInt))
+      else null
+
+    // Group into reorder units. A base character and the non-spacing marks that follow it form one cluster,
+    // so reversing a right-to-left run does not strand a vowel point ahead of its consonant; the low half of
+    // a surrogate pair likewise rides with its high half, so an astral character (an emoji, a plane-1
+    // letter) is never split and re-drawn as two broken code units by a run reversal. A non-text box is its
+    // own unit. Each unit takes the level of its base character.
+    val unitChars = ArrayBuffer.empty[ArrayBuffer[Int]]
+    val unitLevel = ArrayBuffer.empty[Int]
+    var i         = 0
+    while i < s.length do
+      val isText = srcChar(i) != null
+      val isMark = isText && Bidi.classify(s.charAt(i).toInt) == BidiClass.NSM
+      val isPairTail = isText && Character.isLowSurrogate(s.charAt(i)) &&
+        i > 0 && Character.isHighSurrogate(s.charAt(i - 1)) && (srcChar(i - 1) eq srcChar(i))
+      if (isMark || isPairTail) && unitChars.nonEmpty && srcChar(unitChars.last.head) != null then unitChars.last += i
+      else
+        unitChars += ArrayBuffer(i)
+        unitLevel += levels(i)
+      i += 1
+
+    val order = Bidi.reorderByLevels(unitLevel.toArray)
+
+    // Walk the units in visual order, recombining runs of one font and colour into word boxes whose text is
+    // now visual. A unit's own characters stay in logical order (base then marks); a right-to-left bracket
+    // is swapped for its mirror image (UAX #9 L4).
+    val out      = ArrayBuffer.empty[Box]
+    var runText  = null: StringBuilder
+    var runSrc   = null: CharBox
+    var runForms = null: ArrayBuffer[JoiningForm] // resolved joining forms parallel to runText, when Arabic
+    def flushRun(): Unit =
+      if runText != null then
+        out += (if runForms != null then runSrc.newCharBox(runText.toString, runForms.toArray)
+                else runSrc.newCharBox(runText.toString))
+        runText = null
+        runSrc = null
+        runForms = null
+    for ui <- order do
+      val cis   = unitChars(ui)
+      val first = cis.head
+      if srcChar(first) != null then
+        val src = srcChar(first)
+        if runText != null && (runSrc.font != src.font || runSrc.color != src.color) then flushRun()
+        if runText == null then
+          runText = new StringBuilder
+          runSrc = src
+          if forms != null then runForms = ArrayBuffer.empty
+        for ci <- cis do
+          val cp = s.charAt(ci).toInt
+          runText.append(if Bidi.isRtlLevel(levels(ci)) then Bidi.mirror(cp).toChar else cp.toChar)
+          if runForms != null then runForms += forms(ci)
+      else
+        flushRun()
+        out += srcBox(first)
+    flushRun()
+
+    content.clear()
+    content ++= out
