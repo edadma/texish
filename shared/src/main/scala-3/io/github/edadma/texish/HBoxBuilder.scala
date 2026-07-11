@@ -20,7 +20,7 @@ class HBoxBuilder(
   // already reordered through their own builder and leave this off, so nothing is processed twice; a pure
   // left-to-right box short-circuits in needsReorder and is built exactly as before.
   override def result: Box =
-    if reorderBidi then
+    if reorderBidi && Bidi.needsReorder(boxes) then
       val base = if t.getNumber("pardir") == 1.0 then 1 else 0
-      if Bidi.needsReorder(boxes, base) then Bidi.reorderVisual(boxes, base)
+      Bidi.reorderVisual(boxes, base)
     super.result

@@ -104,12 +104,15 @@
 // change weight without opening a group, so the carve survives. Verse numbers are small bold superscripts
 // (\usfmversenum) — except verse 1's, which is omitted: the chapter figure already marks where the first verse
 // begins, as in most printed Bibles. A verse marked with a range (1-2) is not verse 1 and keeps its number.
+// The paragraph macro that emits the figure ends with \ignorespaces, so the space the source leaves between the
+// chapter number and the first word is swallowed: the word sits flush against the drop cap's hung margin, level
+// with the carved lines below it, instead of one space further in.
 // Redefine \usfmchapfig — e.g. \dropcap[3] for a three-line figure — to restyle.
 \set usfmchappending {0}
 \def usfmchapno {}
 \def usfmchapfig {\bfseries\dropcap[2][5]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
-\def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi}
+\def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi\ignorespaces}
 \def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\kern 1.5 }
 \def usfmv n {\if {\= {\n} {1}}\else\usfmversenum{\n}\fi}
 
@@ -120,7 +123,7 @@
 // flush after a heading or chapter figure. \m, \pmo and \nb run flush left; \pc is centred. Each resets the
 // paragraph shape it needs so a preceding poetry line's ragged margins do not leak in.
 \def usfmprose {\set leftskip {0}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {15}}
-\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\noindent\usfmchapfig\fi}
+\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\noindent\usfmchapfig\fi\ignorespaces}
 \def usfmm n {\par\usfmprose\noindent\usfmchapmaybe}
 \def usfmpmo n {\usfmm{\n}}
 \def usfmpm n {\usfmm{\n}}

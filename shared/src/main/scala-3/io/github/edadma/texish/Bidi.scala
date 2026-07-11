@@ -493,11 +493,15 @@ object Bidi:
     while i < order.length do { sb.append(s.charAt(order(i))); i += 1 }
     sb.toString
 
-  /** Whether a sequence of set boxes needs bidirectional processing: a right-to-left base direction, or any
-    * character box carrying a right-to-left character. Left-to-right content under a left-to-right base — the
-    * overwhelmingly common case — skips reordering entirely and is laid out exactly as before. */
-  def needsReorder(boxes: collection.Seq[Box], base: Int): Boolean =
-    base == 1 || boxes.exists {
+  /** Whether an explicit horizontal box needs bidirectional reordering: it must actually contain a
+    * right-to-left character. A right-to-left base direction alone is deliberately NOT enough — an author
+    * builds an explicit box (a drop-cap's `\rlap{\kern … \smash{…}}`, a raised superscript, a wrapper) out of
+    * boxes and glue whose order is intentional, and reversing those neutral items just because the surrounding
+    * text runs right to left corrupts the construction. Only a run that carries right-to-left text has a visual
+    * order to recover; box order the author set is left untouched. (Paragraph lines take a different path with
+    * its own base-direction rule — this governs only the `\hbox`/`\makebox`/`\centerline` family.) */
+  def needsReorder(boxes: collection.Seq[Box]): Boolean =
+    boxes.exists {
       case c: CharBox => hasRtl(c.text)
       case _          => false
     }

@@ -115,6 +115,27 @@ class RtlParagraphTests extends AnyFreeSpec with Matchers:
     visual(s"\\hbox{Hello $A$B world}") shouldBe s"Hello $B$A world"
   }
 
+  // The boxes of the first hbox that holds a character, glue included — to check that structural boxes keep
+  // their author-given order.
+  private def hboxBoxes(src: String): Seq[Box] =
+    def collect(b: Box): List[HBox] = b match
+      case h: HBox if h.boxes.exists(_.isInstanceOf[CharBox]) => List(h)
+      case h: HBox                                            => h.boxes.toList.flatMap(collect)
+      case v: VBox                                            => v.boxes.toList.flatMap(collect)
+      case _                                                  => Nil
+    render(src).flatMap(collect).head.boxes.toSeq
+
+  "an explicit hbox with no right-to-left text keeps its structural boxes in order under \\rtl" in {
+    // A drop-cap builds \rlap{\kern … \smash{…}} — boxes whose order the author fixed; a right-to-left base
+    // must not reverse them just because the page runs right to left (regression: the chapter figure jumped
+    // out of place). Here a 40pt kern precedes a Latin letter with no RTL text, so the kern must stay first.
+    val boxes   = hboxBoxes(s"\\rtl \\hbox{\\kern 40 a}")
+    val kernIdx = boxes.indexWhere(b => !b.isInstanceOf[CharBox] && math.abs(b.width - 40.0) < 0.5)
+    val charIdx = boxes.indexWhere(_.isInstanceOf[CharBox])
+    kernIdx should be >= 0
+    charIdx should be > kernIdx
+  }
+
   // The first set line, an HBox holding the line's boxes left to right.
   private def firstLine(boxes: Seq[Box]): HBox =
     def collect(b: Box): List[HBox] = b match
