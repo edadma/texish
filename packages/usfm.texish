@@ -20,8 +20,14 @@
 \use{document}
 
 // ---- Body defaults --------------------------------------------------------------
+// The font family every part of the book is set in — body, titles, headings, footnotes, and the inline styles,
+// which all take their italic/bold/small-caps cut from this family. It is a macro, not a fixed face, so a document
+// that sets Scripture in a non-Latin script redefines it once and the whole book follows: \def usfmfamily {cjksc}
+// for Chinese, {arabic}, {hebrew}, {devanagari} … A family with no italic or small-caps cut (a CJK face, say)
+// substitutes its nearest available weight automatically, so a heading or a reference line still sets.
+\def usfmfamily {lmroman}
 // A 10pt body on a 12pt baseline. A document overrides any of these before \usfm{…}.
-\font lmroman 10 regular
+\font \usfmfamily 10 regular
 \set baselineskip {12}
 \set parindent {15}
 
@@ -45,10 +51,10 @@
 // A left-aligned, ragged-right paragraph shape for a heading or reference line, so a long one wraps to fit the
 // measure instead of overrunning it. Some translations write a whole chapter summary as a section heading.
 \def usfmleftpar {\set leftskip {0}\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}}
-\def usfmmt n t {\par\if {\> {\n} {1}}\medskip{\usfmcenter\font lmroman 13 regular \noindent\t\par}\smallskip\else\bigskip{\usfmcenter\font lmroman 22 bold \noindent\t\par}\medskip\fi\noindent}
+\def usfmmt n t {\par\if {\> {\n} {1}}\medskip{\usfmcenter\font \usfmfamily 13 regular \noindent\t\par}\smallskip\else\bigskip{\usfmcenter\font \usfmfamily 22 bold\noindent\t\par}\medskip\fi\noindent}
 \def usfmmte n t {\usfmmt{\n}{\t}}
-\def usfmms n t {\par\bigskip{\usfmcenter\font lmroman 14 bold \noindent\t\par}\smallskip\noindent}
-\def usfmmr n t {\par{\usfmcenter\font lmroman 10 italic \noindent\t\par}\medskip\noindent}
+\def usfmms n t {\par\bigskip{\usfmcenter\font \usfmfamily 14 bold \noindent\t\par}\smallskip\noindent}
+\def usfmmr n t {\par{\usfmcenter\font \usfmfamily 10 italic \noindent\t\par}\medskip\noindent}
 
 // ---- Section headings -----------------------------------------------------------
 // \s is a section heading (bold); \r the parallel-passage references beneath it (small italic, set as a ragged
@@ -57,13 +63,13 @@
 // \sp a speaker label.
 // Each ends with \noindent, as document's own \section does: that opens an empty paragraph left flush, so the body
 // paragraph that follows the heading sets flush too, without \p needing to know a heading came before it.
-\def usfms n t {\par\medskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
-\def usfmr n t {\par{\usfmleftpar\font lmroman 9 italic \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfms n t {\par\medskip{\usfmleftpar\font \usfmfamily 11 bold\noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmr n t {\par{\usfmleftpar\font \usfmfamily 9 italic\noindent\t\par}\nobreak\smallskip\noindent}
 \def usfmsr n t {\usfmr{\n}{\t}}
-\def usfmd n t {\par\smallskip{\usfmleftpar\font lmroman 10 italic \noindent\t\par}\nobreak\smallskip\noindent}
-\def usfmsp n t {\par\smallskip{\usfmleftpar\font lmroman 10 bold \noindent\t\par}\nobreak\smallskip\noindent}
-\def usfmqa n t {\par\smallskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
-\def usfmcl n t {\par\medskip{\usfmcenter\font lmroman 13 bold \noindent\t\par}\smallskip\noindent}
+\def usfmd n t {\par\smallskip{\usfmleftpar\font \usfmfamily 10 italic\noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmsp n t {\par\smallskip{\usfmleftpar\font \usfmfamily 10 bold\noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmqa n t {\par\smallskip{\usfmleftpar\font \usfmfamily 11 bold\noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmcl n t {\par\medskip{\usfmcenter\font \usfmfamily 13 bold \noindent\t\par}\smallskip\noindent}
 \def usfmcp n t {}
 
 // ---- Book introduction ----------------------------------------------------------
@@ -71,10 +77,10 @@
 // \io entries each carrying an \ior reference span), and prose (\ip) and poetry (\iq). These render like their
 // Scripture counterparts a size quieter, and each block ends with \noindent so the paragraph after a heading sets
 // flush. \ib is a blank line within the introduction. \ie (intro end) is dropped by the reader.
-\def usfmimt n t {\par\medskip{\usfmcenter\font lmroman 12 bold \noindent\t\par}\smallskip\noindent}
+\def usfmimt n t {\par\medskip{\usfmcenter\font \usfmfamily 12 bold \noindent\t\par}\smallskip\noindent}
 \def usfmimte n t {\usfmimt{\n}{\t}}
-\def usfmis n t {\par\smallskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
-\def usfmiot n t {\par\smallskip{\usfmleftpar\font lmroman 11 bold \noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmis n t {\par\smallskip{\usfmleftpar\font \usfmfamily 11 bold\noindent\t\par}\nobreak\smallskip\noindent}
+\def usfmiot n t {\par\smallskip{\usfmleftpar\font \usfmfamily 11 bold\noindent\t\par}\nobreak\smallskip\noindent}
 \def usfmio n t {\par{\set leftskip {\calc{\n * 12}}\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}\noindent\t\par}\noindent}
 \def usfmip n {\par\usfmprose}
 \def usfmipi n {\par\usfmprose\set leftskip {18}}
@@ -192,8 +198,8 @@
 // Both take the note's USFM caller as their first argument. A `+` caller means "number it": the note joins the
 // running footnote sequence. Any other caller is used verbatim — set as a small italic sigil, the way Louis
 // Segond marks its per-passage cross-references with italic letters a, b, c — and does not touch the counter.
-\def usfmfootnote c b {\if {\= {\c} {+}}\footnote{\font lmroman 8 regular \b}\else\footnote[\emph{\c}]{\font lmroman 8 regular \b}\fi}
-\def usfmxref c b {\if {\= {\c} {+}}\footnote{\font lmroman 8 regular \b}\else\footnote[\emph{\c}]{\font lmroman 8 regular \b}\fi}
+\def usfmfootnote c b {\if {\= {\c} {+}}\footnote{\font \usfmfamily 8 regular\b}\else\footnote[\emph{\c}]{\font \usfmfamily 8 regular\b}\fi}
+\def usfmxref c b {\if {\= {\c} {+}}\footnote{\font \usfmfamily 8 regular\b}\else\footnote[\emph{\c}]{\font \usfmfamily 8 regular\b}\fi}
 \def usfmfr t {{\bold \t} }
 \def usfmft t {\t}
 \def usfmfq t {\emph{\t}}
