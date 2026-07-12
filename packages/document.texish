@@ -60,13 +60,12 @@
 // \dropcap[lines][gap]{L}{orem} opens a paragraph with an oversized initial: the
 // letter is enlarged until it spans the given number of lines — its top on the first
 // line's cap height, its baseline on the baseline of the last spanned line — and the
-// opening lines are indented around it (a \hangindent selected by a negative
-// \hangafter, so the carve-out ends by itself when the paragraph does). The optional
-// arguments are positional: [lines] is how many lines the letter spans (default 2) and
-// [gap] the space in points between the letter and the carved text (default 3), so
-// \dropcap{L}{orem}, \dropcap[3]{L}{orem} and \dropcap[3][6]{L}{orem} are all valid.
-// The last mandatory argument is the rest of the opening word, set through
-// \dropcaptext — small capitals by default, redefinable like \foliostyle.
+// opening lines are carved around it. The optional arguments are positional: [lines] is
+// how many lines the letter spans (default 2) and [gap] the space in points between the
+// letter and the carved text (default 3), so \dropcap{L}{orem}, \dropcap[3]{L}{orem}
+// and \dropcap[3][6]{L}{orem} are all valid. The last mandatory argument is the rest of
+// the opening word, set through \dropcaptext — small capitals by default, redefinable
+// like \foliostyle.
 //
 // The size is measured, not guessed: an X of the surrounding font gives the cap
 // height, the letter is test-set once at a reference size, and the ratio of the target
@@ -74,9 +73,16 @@
 // the final size. Any typeface, weight and leading therefore come out aligned; a
 // descender (Q, J) hangs below the last spanned baseline, as a metal initial would.
 // The letter is placed in a zero-width overlap box, smashed so the first line keeps
-// its own height and lowered onto the last spanned baseline. Under a right-to-left
-// base the carve-out and the letter move to the right edge, mirroring \item's marker.
-// The paragraph should run at least `lines` lines, or it ends before the letter does.
+// its own height and lowered onto the last spanned baseline.
+//
+// The carve is a \cutout of the letter's height, not a \hangindent, so it reserves the
+// space by vertical band rather than by line count: the opening text flows around the
+// letter even when it crosses a paragraph break within the letter's lines — a short
+// first paragraph followed by another still carves correctly, where a per-paragraph
+// hanging indent would revert at the break and let the next paragraph ride onto the
+// letter. Because the cutout is registered between paragraphs, \dropcap must open in
+// vertical mode (its own \noindent starts the paragraph). Under a right-to-left base
+// the carve and the letter move to the right edge, mirroring \item's marker.
 \def dropcaptext t {\textsc{\t}}
 \def dropcap [lines:2] [gap:3] letter text {
 \setbox dropcapxbox \hbox{X}
@@ -86,12 +92,11 @@
 \set dropcaprefht {\ht dropcaprefbox}
 \setbox dropcapbox \hbox{\fontsize{\calc{100 * (dropcapdrop + dropcapcap) / dropcaprefht}}\letter}
 \set dropcapwd {\wd dropcapbox}
-\set hangafter {\calc{0 - \lines}}
 \if {\> {\calc{pardir}} {0}}
-\set hangindent {\calc{0 - dropcapwd - \gap}}
+\cutout {\calc{dropcapwd + \gap}} {\calc{dropcapdrop + dropcapcap}} {right}
 \noindent\rlap{\kern \gap\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}}\dropcaptext{\text}
 \else
-\set hangindent {\calc{dropcapwd + \gap}}
+\cutout {\calc{dropcapwd + \gap}} {\calc{dropcapdrop + dropcapcap}} {left}
 \noindent\llap{\smash{\lower \dropcapdrop \hbox{\box dropcapbox}}\kern \gap}\dropcaptext{\text}
 \fi
 }

@@ -98,21 +98,24 @@
 // A chapter number is held until the next body paragraph, which opens with it set as a large figure (\usfmchapfig)
 // — so the number leads the chapter's first paragraph, after any heading. The figure is document's \dropcap with an
 // empty word-remainder: the number is enlarged until it spans two lines (its top on the first line's cap height,
-// its baseline on the second) and the opening lines are carved around it. The weight is set with the \bfseries /
-// \mdseries declarations rather than \bold{…}: \dropcap sets \hangindent for the paragraph, and \bold{…} would run
-// the whole call inside a group whose close reverts that \hangindent before the paragraph breaks — the declarations
-// change weight without opening a group, so the carve survives. Verse numbers are small bold superscripts
-// (\usfmversenum) — except verse 1's, which is omitted: the chapter figure already marks where the first verse
-// begins, as in most printed Bibles. A verse marked with a range (1-2) is not verse 1 and keeps its number.
-// The paragraph macro that emits the figure ends with \ignorespaces, so the space the source leaves between the
-// chapter number and the first word is swallowed: the word sits flush against the drop cap's hung margin, level
-// with the carved lines below it, instead of one space further in.
+// its baseline on the second) and the opening lines are carved around it. \dropcap opens the paragraph itself (it
+// registers the carve between paragraphs, then runs its own \noindent), so the paragraph macros emit the figure in
+// vertical mode — they no longer \noindent ahead of it. Because \dropcap carves with a \cutout rather than a
+// hanging indent, the carve reaches across a paragraph break: a chapter whose verse 1 is a short one-line
+// paragraph, followed by verse 2 as a new paragraph, still flows that next paragraph around the number instead of
+// letting it ride onto the figure. The weight is set with the \bfseries / \mdseries declarations rather than
+// \bold{…}, which change it without wrapping the \dropcap call in a group. Verse numbers are small bold
+// superscripts (\usfmversenum) — except verse 1's, which is omitted: the chapter figure already marks where the
+// first verse begins, as in most printed Bibles. A verse marked with a range (1-2) is not verse 1 and keeps its
+// number. The paragraph macro that emits the figure ends with \ignorespaces, so the space the source leaves
+// between the chapter number and the first word is swallowed: the word sits flush against the drop cap's carved
+// inset, level with the carved lines below it, instead of one space further in.
 // Redefine \usfmchapfig — e.g. \dropcap[3] for a three-line figure — to restyle.
 \set usfmchappending {0}
 \def usfmchapno {}
 \def usfmchapfig {\bfseries\dropcap[2][5]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
-\def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi\ignorespaces}
+\def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\else\noindent\fi\ignorespaces}
 \def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\kern 1.5 }
 \def usfmv n {\if {\= {\n} {1}}\else\usfmversenum{\n}\fi}
 
@@ -123,16 +126,16 @@
 // flush after a heading or chapter figure. \m, \pmo and \nb run flush left; \pc is centred. Each resets the
 // paragraph shape it needs so a preceding poetry line's ragged margins do not leak in.
 \def usfmprose {\set leftskip {0}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {15}}
-\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\noindent\usfmchapfig\fi\ignorespaces}
-\def usfmm n {\par\usfmprose\noindent\usfmchapmaybe}
+\def usfmp n {\par\usfmprose\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\fi\ignorespaces}
+\def usfmm n {\par\usfmprose\usfmchapmaybe}
 \def usfmpmo n {\usfmm{\n}}
 \def usfmpm n {\usfmm{\n}}
 \def usfmpo n {\usfmm{\n}}
 \def usfmmi n {\usfmm{\n}}
 \def usfmcls n {\usfmm{\n}}
 \def usfmnb n {\par\usfmprose\noindent}
-\def usfmpi n {\par\usfmprose\set leftskip {\calc{\n * 12}}\noindent\usfmchapmaybe}
-\def usfmpc n {\par\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\noindent\usfmchapmaybe}
+\def usfmpi n {\par\usfmprose\set leftskip {\calc{\n * 12}}\usfmchapmaybe}
+\def usfmpc n {\par\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\usfmchapmaybe}
 \def usfmpmc n {\usfmpc{\n}}
 
 // ---- Poetry ---------------------------------------------------------------------
@@ -141,18 +144,18 @@
 \set usfmqbase {18}
 \set usfmqstep {18}
 \def usfmpoetry {\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}\set parindent {0}}
-\def usfmq n {\par\usfmpoetry\set leftskip {\calc{usfmqbase + (\n - 1) * usfmqstep}}\noindent\usfmchapmaybe}
+\def usfmq n {\par\usfmpoetry\set leftskip {\calc{usfmqbase + (\n - 1) * usfmqstep}}\usfmchapmaybe}
 \def usfmqm n {\usfmq{\n}}
 \def usfmqd n {\usfmq{\n}}
-\def usfmqc n {\par\usfmpoetry\set leftskip {0 plus 1fil}\noindent\usfmchapmaybe}
-\def usfmqr n {\par\usfmpoetry\set leftskip {0 plus 1fil}\set rightskip {0}\set parfillskip {0}\noindent\usfmchapmaybe}
+\def usfmqc n {\par\usfmpoetry\set leftskip {0 plus 1fil}\usfmchapmaybe}
+\def usfmqr n {\par\usfmpoetry\set leftskip {0 plus 1fil}\set rightskip {0}\set parfillskip {0}\usfmchapmaybe}
 \def usfmpr n {\usfmqr{\n}}
 \def usfmpmr n {\usfmqr{\n}}
-\def usfmph n {\par\usfmprose\set leftskip {\calc{\n * 18}}\noindent\usfmchapmaybe}
+\def usfmph n {\par\usfmprose\set leftskip {\calc{\n * 18}}\usfmchapmaybe}
 \def usfmb {\par\smallskip}
 
 // ---- Lists ----------------------------------------------------------------------
-\def usfmli n {\par\set leftskip {\calc{\n * 18}}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {0}\noindent\usfmchapmaybe}
+\def usfmli n {\par\set leftskip {\calc{\n * 18}}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {0}\usfmchapmaybe}
 \def usfmlim n {\usfmli{\n}}
 
 // ---- Illustrations --------------------------------------------------------------

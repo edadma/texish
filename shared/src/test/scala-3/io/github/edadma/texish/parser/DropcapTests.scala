@@ -180,3 +180,19 @@ class DropcapTests extends AnyFreeSpec with Matchers:
     boxes.flatMap(deepChars).map(_.text).mkString should include("lpha")
     boxes.flatMap(deepChars).maxBy(_.font.size).text shouldBe "A"
   }
+
+  "the carve spans a paragraph break when the first paragraph is shorter than the letter" in {
+    val (capX, ascL, wdL) = probe("L")
+    val size              = 10.0 * (12.0 + capX) / ascL
+    val indent            = wdL * size / 10.0 + 3.0
+
+    // The first paragraph is a single short line, but the letter still spans two lines. The second
+    // paragraph opens flush (\noindent), so without a carve its first line would start at the margin;
+    // the cutout reaches across the paragraph break and narrows it to the same inset as the first line.
+    val ls = textLines(
+      render("\\dropcap{L}{orem} short first line.\n\n\\noindent second paragraph runs on beside the letter here.")
+    )
+    ls.length should be >= 2
+    inkStart(ls(0)) shouldBe (indent +- 0.01)
+    inkStart(ls(1)) shouldBe (indent +- 0.01)
+  }

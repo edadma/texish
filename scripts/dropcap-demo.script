@@ -22,12 +22,12 @@ command aligns correctly at any body size or leading.
 \section{Spanning more lines}
 
 \dropcap[3]{W}{hen} a grander opening is wanted, the optional first argument sets how
-many lines the initial spans. The paragraph's opening lines are carved out around the
-letter with a hanging indent that expires by itself, so the text below the letter
-returns to the full measure without any further markup. A paragraph should run at
-least as many lines as the letter spans, or the carve-out ends before the letter
-does. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-aliquip ex ea commodo consequat, duis aute irure dolor in reprehenderit.
+many lines the initial spans. The opening lines are carved out around the letter with a
+cutout the height of the letter, so the text below it returns to the full measure without
+any further markup. Because the cutout reserves that space by vertical band rather than by
+line count, a paragraph shorter than the letter carves correctly too: the opening lines of
+the following paragraph flow around the letter rather than riding onto it. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 \section{The gap and a descender}
 
