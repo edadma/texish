@@ -131,3 +131,26 @@ class UsfmTranslateTests extends AnyFreeSpec with Matchers:
   "an unrecognised character marker keeps its text but drops the styling" in {
     tr("\\p a \\xyz kept\\xyz* b") shouldBe "\\usfmp{1}a kept b"
   }
+
+  // The newline after the closing \fig* is kept as a space, as after any closing marker; between the figure
+  // block and the paragraph that follows it is inert.
+  "a fig figure with a USFM 3.0 caption and attributes becomes \\usfmfig" in {
+    tr("\\c 1\n\\fig The Word|src=\"jn01.png\" size=\"col\"\\fig*\n\\p \\v 1 Text") shouldBe
+      "\\usfmc{1}\\usfmfig{jn01.png}{col}{The Word} \\usfmp{1}\\usfmv{1}Text"
+  }
+
+  "a fig with an empty caption emits an empty caption argument" in {
+    tr("\\fig |src=\"jn02.png\" size=\"span\"\\fig*") shouldBe "\\usfmfig{jn02.png}{span}{}"
+  }
+
+  "a fig alt attribute supplies the caption when the caption slot is empty" in {
+    tr("\\fig |src=\"a.png\" alt=\"a scene\"\\fig*") shouldBe "\\usfmfig{a.png}{col}{a scene}"
+  }
+
+  "a pre-3.0 positional fig pulls file, size and caption from the pipe fields" in {
+    tr("\\fig desc|b.jpg|span|loc|copy|A caption|1.1\\fig*") shouldBe "\\usfmfig{b.jpg}{span}{A caption}"
+  }
+
+  "a fig with no image source emits nothing" in {
+    tr("\\fig no source\\fig*") shouldBe ""
+  }

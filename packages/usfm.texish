@@ -155,6 +155,17 @@
 \def usfmli n {\par\set leftskip {\calc{\n * 18}}\set rightskip {0}\set parfillskip {0 plus 1fil}\set parindent {0}\noindent\usfmchapmaybe}
 \def usfmlim n {\usfmli{\n}}
 
+// ---- Illustrations --------------------------------------------------------------
+// A USFM \fig figure. The reader hands \usfmfig the image path, the requested size (col = the text measure,
+// span = the same in a single-column book), and the caption. A figure is set as its own centred block at
+// the text width, with a small italic caption beneath when the source gives one. Placed right after a \c
+// marker it heads the chapter, above the chapter number that opens the first paragraph. Figures are shown
+// by default; \set usfmfigures {0} drops every figure — an edition whose readers are aniconic (an Arabic or
+// Hebrew portion, say) turns them off without touching the USFM. Redefine \usfmfig to restyle placement,
+// width or caption.
+\set usfmfigures {1}
+\def usfmfig src size cap {\if {\> {\calc{usfmfigures}} {0}}\par\nobreak\centerline{\includegraphics[width=\linewidth]{\src}}\if {\size {\cap}}\nobreak\smallskip{\usfmcenter\font \usfmfamily 8 italic\noindent\cap\par}\fi\medskip\noindent\fi}
+
 // ---- Inline character styles ----------------------------------------------------
 // Words of Jesus are red by default (the red-letter convention) — \def usfmwj t {\t} for plain text. A cross-
 // reference prints its display text, its canonical target available as a second argument for a linking document.

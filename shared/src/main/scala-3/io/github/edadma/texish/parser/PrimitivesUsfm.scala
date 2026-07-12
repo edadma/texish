@@ -258,6 +258,9 @@ object Usfm:
           else if base == "ref" then
             i += 1
             emitRef()
+          else if base == "fig" then
+            i += 1
+            emitFig()
           else if base == "tr" then
             captureTable()
           else if base == "fv" || charBases(base) then
@@ -440,6 +443,47 @@ object Usfm:
       val display = if bar < 0 then raw else raw.substring(0, bar)
       val target  = if bar < 0 then raw else raw.substring(bar + 1)
       sb.append(s"\\usfmref{${escape(display.trim)}}{${escape(target.trim)}}")
+
+    // A \fig…\fig* illustration. USFM 3.0 writes the caption before the pipe and attributes after it
+    // (`caption|src="file" size="col" ref="c.v" alt="…"`); the pre-3.0 form is positional
+    // (`desc|file|size|loc|copy|caption|ref`). Either shape yields an image file, a requested size and a
+    // caption, handed to the package's \usfmfig{src}{size}{caption} — which owns placement and whether
+    // figures appear at all (\set usfmfigures {0} drops them for an edition whose readers are aniconic).
+    private def emitFig(): Unit =
+      val content = new StringBuilder
+      var done    = false
+      while !done && i < buf.length do
+        buf(i) match
+          case Marker("fig", true) =>
+            i += 1
+            done = true
+          case Txt(s) =>
+            content.append(s)
+            i += 1
+          case _ =>
+            i += 1
+      val raw     = content.toString
+      val bar     = raw.indexOf('|')
+      val caption = (if bar < 0 then raw else raw.substring(0, bar)).trim
+      val attrs   = if bar < 0 then "" else raw.substring(bar + 1).trim
+      var src  = ""
+      var size = "col"
+      var cap  = caption
+      if attrs.contains('=') then
+        val attr = "(\\w+)\\s*=\\s*\"([^\"]*)\"".r
+        for m <- attr.findAllMatchIn(attrs) do
+          m.group(1) match
+            case "src"  => src = m.group(2)
+            case "size" => size = m.group(2)
+            case "alt"  => if cap.isEmpty then cap = m.group(2)
+            case _      => ()
+      else if attrs.nonEmpty then
+        val f = attrs.split('|')
+        if f.length >= 1 && f(0).trim.nonEmpty then src = f(0).trim
+        if f.length >= 2 && f(1).trim.nonEmpty then size = f(1).trim
+        if f.length >= 5 && f(4).trim.nonEmpty then cap = f(4).trim
+      if src.nonEmpty then
+        sb.append(s"\\usfmfig{${escape(src)}}{${escape(size)}}{${escape(cap)}}")
 
     // A footnote or cross-reference note. The caller mark (the word right after the opening marker: `+` to
     // auto-number, `-` for none, or a literal caller like Louis Segond's `a`, `b`, `c`) is captured and passed as
