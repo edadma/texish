@@ -12,7 +12,7 @@ import scala.scalanative.posix.unistd.isatty
   * through the parser over a Cairo backend, and writes the result as a PDF or one PNG per page.
   */
 
-private val Version = "0.19.7"
+private val Version = "0.19.8"
 
 private case class Config(
     input: Option[String] = None,
