@@ -27,6 +27,24 @@ class CliTests extends AnyFreeSpec with Matchers:
     finally out.delete()
   }
 
+  "renderPdf tags the PDF as sRGB (1.4 + OutputIntent) so DeviceRGB is colour-managed" in {
+    val out = File.createTempFile("texish-cli", ".pdf")
+
+    try
+      renderPdf(source, out.getAbsolutePath, "letter")
+
+      val bytes = Files.readAllBytes(out.toPath)
+      new String(bytes.take(8)) shouldBe "%PDF-1.4" // restricted so the OutputIntent can be appended
+
+      val text = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1)
+      text should include("/Type /OutputIntent")           // the intent is present
+      text should include("/OutputIntents [")              // and the catalog references it
+      text should include("/DestOutputProfile")            // pointing at the embedded sRGB profile
+      // The appended incremental xref must chain to the original, or a strict reader would reject the file.
+      text should include("/Prev ")
+    finally out.delete()
+  }
+
   "renderPng writes one PNG per page with a PNG signature" in {
     val dir  = Files.createTempDirectory("texish-cli").toFile
     val base = new File(dir, "page").getAbsolutePath
