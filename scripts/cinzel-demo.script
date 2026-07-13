@@ -1,0 +1,38 @@
+// cinzel-demo — Cinzel, an all-capitals titling serif in the Trajan tradition, bundled for display lines.
+// It has no lowercase and no italic; the cuts sit on the weight axis, selected as the free-axis tags after
+// the size: \font cinzel 24 regular, medium, semibold, bold, extrabold, black.
+
+\use{document}
+
+\title{The \texttt{cinzel} Titling Face}
+\author{The texish engine}
+\date{Version 0.19.9}
+\maketitle
+
+\section{The weights}
+
+Cinzel is an inscriptional capital in the manner of the Roman monumental letter, cut in six weights and no
+italic. Because it has no lowercase, it is a face for a line of display — a title, a chapter opening, a cover
+— rather than for running text.
+
+\noindent{\font cinzel 22 regular Regular}
+
+\noindent{\font cinzel 22 medium Medium}
+
+\noindent{\font cinzel 22 semibold Semibold}
+
+\noindent{\font cinzel 22 bold Bold}
+
+\noindent{\font cinzel 22 extrabold Extrabold}
+
+\noindent{\font cinzel 22 black Black}
+
+\section{At display size}
+
+\noindent{\font cinzel 40 bold In the beginning}
+
+\vskip 6pt
+
+\noindent{\font cinzel 28 regular Chapter the First}
+
+\vfill\eject

@@ -381,6 +381,24 @@ abstract class Typesetter:
     "Regular",
   )
 
+  // Cinzel — an all-capitals titling serif in the Trajan tradition, for display lines: chapter openings, covers,
+  // running heads. It has no lowercase and no italic, so the styled cuts sit on the weight axis alone; \font
+  // cinzel 24 sets the regular weight, and the heavier cuts are the free-axis tags \font cinzel 24 medium,
+  // semibold, bold, extrabold, black. Only the text-representation ligatures (the curly quotes and dashes it
+  // carries as punctuation) are enabled — the f-ligatures are lowercase forms this face does not have.
+  loadTypeface(
+    "cinzel",
+    "fonts/Cinzel/Cinzel",
+    Ligatures.TEXT_REPRESENTATIONS,
+    Set(),
+    "Regular",
+    "Medium",
+    "SemiBold",
+    "Bold",
+    "ExtraBold",
+    "Black",
+  )
+
   val gentiumbookMissing = Set(
     `LONG LEFT RIGHT ARROW`,
     `LONG LEFT RIGHT DOUBLE ARROW`,
