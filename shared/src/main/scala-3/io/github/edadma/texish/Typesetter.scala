@@ -444,6 +444,15 @@ abstract class Typesetter:
   loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf", Set.empty, Set.empty)
   loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Bold.ttf", Set.empty, Set("bold"))
 
+  // Ezra SIL, the scholarly Biblical-Hebrew face cut in the style of the Biblia Hebraica Stuttgartensia, for
+  // pointed Hebrew set the way a critical edition sets it: \font ezra 12, with its heavier companion cut (Ezra
+  // SIL SR) mapped to the bold slot so \font ezra 12 bold selects it. Right to left like the Noto Hebrew face,
+  // so the engine reorders into visual order (see Bidi and ParagraphMode) and the font carries the consonants,
+  // the vowel points and the cantillation marks, which it positions through its GPOS. Loaded by file, like the
+  // Noto Hebrew cuts; the filesystem-less in-browser build overrides loadBundledFonts and does not ship it.
+  loadFont("ezra", "fonts/EzraSIL/SILEOT.ttf", Set.empty, Set.empty)
+  loadFont("ezra", "fonts/EzraSIL/SILEOTSR.ttf", Set.empty, Set("bold"))
+
   // Noto Naskh Arabic, the bundled face for right-to-left Arabic (and Persian, Urdu, … in the same script):
   // \font arabic 12 sets it, with a bold cut so \font arabic 12 bold is a real bold weight. These are static
   // Regular and Bold instances drawn from the variable upstream (wght 400 and 700). The Naskh style is the
@@ -453,6 +462,23 @@ abstract class Typesetter:
   // build overrides loadBundledFonts and does not ship them.
   loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf", Set.empty, Set.empty)
   loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Bold.ttf", Set.empty, Set("bold"))
+
+  // Amiri, a traditional Naskh book face in the Bulaq (Būlāq) tradition, an alternative to Noto Naskh for
+  // right-to-left Arabic: \font amiri 12, with a real bold cut and slanted (italic) cuts for its Latin. The
+  // cursive joining and the bidi reordering are the engine's exactly as for the Noto face — shaping keys off
+  // the Arabic script of the text, not the typeface name — and the font supplies the joined forms and the many
+  // classical ligatures through its GSUB. The "-Style.ttf" cuts fit loadTypeface; no ligature set is enabled,
+  // as Arabic documents type their punctuation literally. Not shipped in the filesystem-less in-browser build.
+  loadTypeface(
+    "amiri",
+    "fonts/Amiri/Amiri",
+    Set.empty[String],
+    Set(),
+    "Regular",
+    "Bold",
+    "Italic",
+    ("Bold", "Italic"),
+  )
 
   // Noto Serif Devanagari, the bundled face for Devanagari (Hindi, Marathi, …): \font devanagari 12 sets it,
   // or the alias \font hindi 12, each with a bold cut so \font devanagari 12 bold is a real bold weight. These
@@ -559,6 +585,30 @@ abstract class Typesetter:
     "Medium",
     ("Medium", "Italic"),
     "Regular",
+  )
+
+  // EB Garamond — Georg Duffner's revival of Claude Garamont's sixteenth-century roman, a book face for
+  // running text: \font ebgaramond 12, with matching italic, the heavier weights on the free axis (medium,
+  // semibold, extrabold) and their italics, and a real bold. Given the f-ligatures and the text
+  // representations (curly quotes, dashes) it carries, but not the arrow ligatures, so a run sets clean without
+  // risking a missing-glyph box. Loaded on the JVM and Native hosts; the in-browser build ships only Latin
+  // Modern and does not include it.
+  val ebGaramondLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet ++ Ligatures.TEXT_REPRESENTATIONS
+  loadTypeface(
+    "ebgaramond",
+    "fonts/EB_Garamond/static/EBGaramond",
+    ebGaramondLigatures,
+    Set(),
+    "Regular",
+    "Italic",
+    "Medium",
+    ("Medium", "Italic"),
+    "SemiBold",
+    ("SemiBold", "Italic"),
+    "Bold",
+    ("Bold", "Italic"),
+    "ExtraBold",
+    ("ExtraBold", "Italic"),
   )
 
   // Latin Modern Roman — GUST's OpenType successor to Computer Modern and the text companion to Latin Modern

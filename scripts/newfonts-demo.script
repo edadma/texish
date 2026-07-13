@@ -1,0 +1,50 @@
+// newfonts-demo — three bundled faces added alongside the originals: EB Garamond (a Garamond revival for
+// Latin body text), Amiri (a traditional Naskh book hand for Arabic), and Ezra SIL (the scholarly Biblical
+// Hebrew face). Each is selected by name with \font: \font ebgaramond 12, \font amiri 14, \font ezra 14.
+
+\use{document}
+
+\title{Three New Faces}
+\author{The texish engine}
+\date{Version 0.19.9}
+\maketitle
+
+\section{EB Garamond}
+
+{\font ebgaramond 12
+EB Garamond is a revival of the sixteenth-century roman of Claude Garamont, a quiet book face for running
+text. The quick brown fox jumps over the lazy dog. It carries {\font ebgaramond 12 italic an italic},
+{\font ebgaramond 12 medium a medium}, {\font ebgaramond 12 semibold a semibold}, {\font ebgaramond 12 bold a
+bold} and {\font ebgaramond 12 extrabold an extrabold} weight, with the f-ligatures — fi, fl, ffi — and proper
+curly ``quotes'' and dashes.
+}
+
+\section{Amiri --- Arabic}
+
+Amiri is a traditional Naskh book hand in the Bulaq tradition, an alternative to the bundled Noto Naskh. The
+cursive joining and the right-to-left reordering are the engine's, exactly as for the other Arabic face.
+
+\medskip
+
+\rtl
+{\font amiri 16 regular
+اللغة العربية من أقدم اللغات في العالم. تكتب من اليمين إلى اليسار، وتتصل حروفها بعضها
+ببعض داخل الكلمة الواحدة.
+}
+\ltr
+
+\section{Ezra SIL --- Hebrew}
+
+Ezra SIL is cut in the style of the Biblia Hebraica Stuttgartensia, the face a critical edition of the Hebrew
+Bible is set in. It carries the consonants, the vowel points and the cantillation marks.
+
+\medskip
+
+\rtl
+{\font ezra 16 regular
+בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ׃ וְהָאָרֶץ הָיְתָה תֹהוּ וָבֹהוּ
+וְחֹשֶׁךְ עַל־פְּנֵי תְהוֹם׃
+}
+\ltr
+
+\vfill\eject
