@@ -104,10 +104,14 @@
 // hanging indent, the carve reaches across a paragraph break: a chapter whose verse 1 is a short one-line
 // paragraph, followed by verse 2 as a new paragraph, still flows that next paragraph around the number instead of
 // letting it ride onto the figure. The weight is set with the \bfseries / \mdseries declarations rather than
-// \bold{…}, which change it without wrapping the \dropcap call in a group. Verse numbers are small bold
-// superscripts (\usfmversenum) — except verse 1's, which is omitted: the chapter figure already marks where the
-// first verse begins, as in most printed Bibles. A verse marked with a range (1-2) is not verse 1 and keeps its
-// number. The paragraph macro that emits the figure ends with \ignorespaces, so the space the source leaves
+// \bold{…}, which change it without wrapping the \dropcap call in a group. Verse numbers are small sans-serif
+// superscripts set in Latin Modern Sans (\usfmversenum), whatever the Scripture face: a verse number is always a
+// Latin numeral, and a single sans face keeps it crisp at superscript size, sets it apart from the serif prose and
+// from the serif footnote markers, and gives every edition the same numerals whether the body is Roman, CJK, Arabic
+// or Hebrew (those faces carry no sans cut, so scaling the body face would fail on them). Verse 1's number is
+// omitted: the chapter figure already marks where the first verse begins, as in most printed Bibles. A verse marked
+// with a range (1-2) is not verse 1 and keeps its number. The paragraph macro that emits the figure ends with
+// \ignorespaces, so the space the source leaves
 // between the chapter number and the first word is swallowed: the word sits flush against the drop cap's carved
 // inset, level with the carved lines below it, instead of one space further in.
 // Redefine \usfmchapfig — e.g. \dropcap[3] for a three-line figure — to restyle.
@@ -116,7 +120,7 @@
 \def usfmchapfig {\bfseries\dropcap[2][5]{\usfmchapno}{}\mdseries}
 \def usfmc n {\gdef usfmchapno {\n}\set usfmchappending {1}\par\medskip}
 \def usfmchapmaybe {\if {\> {\calc{usfmchappending}} {0}}\set usfmchappending {0}\usfmchapfig\else\noindent\fi\ignorespaces}
-\def usfmversenum n {\raise 0.3em \hbox{\fontscale{0.7}{bold}\n}\kern 1.5 }
+\def usfmversenum n {\raise 0.3em \hbox{\font lmroman 7 {sans bold}\n}\kern 1.5 }
 \def usfmv n {\if {\= {\n} {1}}\else\usfmversenum{\n}\fi}
 
 // ---- Body paragraphs ------------------------------------------------------------
