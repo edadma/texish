@@ -155,6 +155,26 @@ class FontDeclarationTests extends AnyFreeSpec with Matchers:
     x.font.style should contain allOf ("mono", "bold")
   }
 
+  "\\ttdefault points the typewriter fallback at another family" in {
+    // JetBrains Mono is a standalone monospace family whose plain cut is the typewriter, so the role tag is
+    // dropped when delegating to it: \texttt in EB Garamond now lands on jetbrains, not Latin Modern.
+    val boxes = render("\\ttdefault{jetbrains}{\\font ebgaramond 12 regular \\texttt{X}} Y")
+    val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get
+    x.font.typeface shouldBe "jetbrains"
+  }
+
+  "\\sfdefault points the sans fallback at a super-family's sans member" in {
+    // Noto carries a sans member cut, so the role tag is kept: \textsf in EB Garamond lands on noto's sans.
+    val boxes = render("\\sfdefault{noto}{\\font ebgaramond 12 regular \\textsf{X}} Y")
+    val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get
+    x.font.typeface shouldBe "noto"
+    x.font.style should contain("sans")
+  }
+
+  "\\ttdefault rejects a family that is not loaded" in {
+    an[Exception] should be thrownBy render("\\ttdefault{no-such-family}")
+  }
+
   "JetBrains Mono is available as a dedicated code face, distinct from the mono role" in {
     val boxes = render("{\\font jetbrains 10 regular X} \\texttt{Y}")
     boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get.font.typeface shouldBe

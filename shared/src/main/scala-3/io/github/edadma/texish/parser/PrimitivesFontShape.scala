@@ -86,6 +86,26 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
   proc.registerPrimitive("textsf", roleText(_.sans()))
   proc.registerPrimitive("textrm", roleText(_.serif()))
 
+  // \ttdefault{family} / \sfdefault{family} - name the typewriter and sans-serif families that \texttt / \ttfamily
+  // and \textsf / \sffamily fall back to when the current typeface carries no such member of its own, the way
+  // LaTeX's \ttdefault / \sfdefault name a code and sans family independent of the text family. So a document set
+  // in EB Garamond can put its inline code in JetBrains Mono with \ttdefault{jetbrains}; Latin Modern is the
+  // default for each. The named family may be a super-family with a mono/sans member (Latin Modern) or a
+  // standalone monospaced family whose plain cut is the typewriter (JetBrains Mono) — both resolve. A family that
+  // has its own such member still uses that member; the default applies only where one is missing.
+  def familyDefault(name: String, set: (Typesetter, String) => Unit): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          val fam = Value.display(proc.evalArgumentExpr(pos))
+          if t.hasTypeface(fam) then set(t, fam)
+          else handler.error(s"\\$name: typeface '$fam' is not loaded", pos)
+      },
+    )
+  familyDefault("ttdefault", (t, f) => t.monoDefaultTypeface = f)
+  familyDefault("sfdefault", (t, f) => t.sansDefaultTypeface = f)
+
   // \glyphwidth{typeface}{size}{codepoint} - the width of one glyph's inked image, in points, at the given size:
   // the distance from the glyph's origin to the right edge of its ink (x-bearing + ink width). Returns a number
   // for \set / \calc, so a drawing can size itself to a real glyph rather than a guessed constant — the music

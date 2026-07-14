@@ -854,6 +854,10 @@ abstract class Typesetter:
       case None                     => sys.error(s"typeface '$typeface' not found")
       case Some(Typeface(fonts, _)) => typefaces(typeface) = Typeface(fonts, Some(baseline))
 
+  /** Whether a typeface of this name has been loaded — used to validate a family name a document names (e.g.
+    * the typewriter and sans families \ttdefault / \sfdefault point at) before it is stored. */
+  def hasTypeface(name: String): Boolean = typefaces.contains(name)
+
   def selectFont(typeface: String, size: Double, style: String*): Font = selectFont(typeface, size, style.toSet)
 
   def selectFont(typeface: String, size: Double, styleSet: Set[String]): Font =
@@ -906,17 +910,23 @@ abstract class Typesetter:
             )
 
           case None =>
-            // \texttt or \textsf on a family that carries no such member: switch to the document's typewriter or
-            // sans-serif family — the way LaTeX's \ttfamily / \sffamily resolve independent of the text family —
-            // carrying the requested weight and slope over, rather than failing. A family that does provide the
-            // member resolved above and never reaches here, so this fires only for the missing-member case.
-            val roleFamily = wanted.collectFirst {
-              case "mono" => monoDefaultTypeface
-              case "sans" => sansDefaultTypeface
-            }
-            roleFamily match
-              case Some(fam) if fam != typeface && typefaces.contains(fam) => makeFont(fam, size, styleSet)
-              case _ =>
+            // \texttt or \textsf on a family that carries no such member: resolve the document's typewriter or
+            // sans-serif family instead (\ttdefault / \sfdefault; Latin Modern by default), the way LaTeX's
+            // \ttfamily / \sffamily resolve independent of the text family. The named family may be a super-family
+            // that carries a mono/sans member cut (Latin Modern, whose typewriter lives under the "mono" style),
+            // or a standalone monospaced family whose plain cut *is* the typewriter (JetBrains Mono); the role tag
+            // is kept for the former and dropped for the latter, so both resolve. Weight and slope carry over. A
+            // family that provides the member resolved above and never reaches here.
+            wanted.collectFirst { case s if axisOf(s) == StyleAxis.Role => s } match
+              case Some(role) =>
+                val fam = if role == "mono" then monoDefaultTypeface else sansDefaultTypeface
+                if fam == typeface || !typefaces.contains(fam) then
+                  sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
+                else
+                  val stripped  = styleSet.filterNot(s => axisOf(s) == StyleAxis.Role)
+                  val keepsRole = typefaces.get(fam).exists(_.fonts.keys.exists(_.contains(role)))
+                  makeFont(fam, size, if keepsRole then stripped + role else stripped)
+              case None =>
                 sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
 
   infix def add(text: String): Typesetter = add(charBox(text))
