@@ -17,14 +17,12 @@ capitals from the roman.
 
 \section{Synthesized small caps (EB Garamond)}
 
-EB Garamond has no separate small-caps file. Its roman does carry the OpenType \verb|smcp| feature, so the
-engine synthesizes small caps from the lowercase letters:
-
-\medskip
-
 {\font ebgaramond 12
-\textsc{The quick brown fox jumps over the lazy dog.} The capital letters stay full height and the rest drop
-to small capitals, all from the one roman font.
+EB Garamond has no separate small-caps file. Its roman does carry the OpenType \texttt{smcp} feature, so
+\textsc{the quick brown fox jumps over the lazy dog} is set by turning the lowercase letters into the font's
+own small capitals — the capital letters stay full height and the rest drop to small caps. The \texttt{smcp}
+above is set in the document's typewriter face: EB Garamond has no monospace member, so \verb|\texttt| falls
+back to it rather than failing.
 }
 
 \section{Side by side}

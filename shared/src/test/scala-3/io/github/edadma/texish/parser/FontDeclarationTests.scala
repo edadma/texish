@@ -131,6 +131,30 @@ class FontDeclarationTests extends AnyFreeSpec with Matchers:
     styleOf(boxes, "X") should contain("mono")
   }
 
+  "\\texttt on a family with no monospace member falls back to the document typewriter family" in {
+    // EB Garamond carries no mono cut; \texttt must switch to the tt-default family (Latin Modern) the way
+    // LaTeX's \ttfamily resolves independent of the text family, rather than throwing.
+    val boxes = render("{\\font ebgaramond 12 regular \\texttt{X}} Y")
+    val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get
+    x.font.typeface shouldBe "lmroman"
+    x.font.style should contain("mono")
+  }
+
+  "\\textsf on a family with no sans member falls back to the document sans family" in {
+    val boxes = render("{\\font ebgaramond 12 regular \\textsf{X}} Y")
+    val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get
+    x.font.typeface shouldBe "lmroman"
+    x.font.style should contain("sans")
+  }
+
+  "the typewriter fallback carries the current weight over to the substitute family" in {
+    // \bfseries then \texttt in a family without a mono cut lands on Latin Modern Mono *bold*, not the regular.
+    val boxes = render("{\\font ebgaramond 12 regular \\bfseries\\texttt{X}} Y")
+    val x     = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get
+    x.font.typeface shouldBe "lmroman"
+    x.font.style should contain allOf ("mono", "bold")
+  }
+
   "JetBrains Mono is available as a dedicated code face, distinct from the mono role" in {
     val boxes = render("{\\font jetbrains 10 regular X} \\texttt{Y}")
     boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("X") => c }.get.font.typeface shouldBe

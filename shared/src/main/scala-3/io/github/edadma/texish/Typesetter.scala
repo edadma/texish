@@ -51,6 +51,13 @@ abstract class Typesetter:
   // and CharBox). None disables fallback; it is set once the fallback face is loaded.
   var fallbackTypeface: Option[String] = None
 
+  // The families \texttt (mono) and \textsf (sans) resolve to when the current typeface carries no such member —
+  // the way LaTeX's \ttdefault and \sfdefault name a typewriter and a sans family independent of the text family,
+  // so \texttt in a Garamond paragraph sets in the document's typewriter face rather than failing. Latin Modern
+  // provides both members, so it is the default for each; a document may point these elsewhere.
+  var monoDefaultTypeface: String = "lmroman"
+  var sansDefaultTypeface: String = "lmroman"
+
   // A typeface's style variants each carry their own ligature set, because different cuts of one super-family run
   // different ligature programs — the roman body forms f-ligatures and the dash/quote text representations, while
   // the typewriter (mono) role sets code literally with none of them. So the map keys a style to both its font
@@ -869,7 +876,7 @@ abstract class Typesetter:
         // least essential axes in turn — small caps first, then slope, then weight — keeping the family role (the
         // mono/sans member) as long as possible. So a mono face with no small-caps or slanted cut falls back to
         // upright mono rather than failing, as LaTeX's font substitution does.
-        val (face, ligatures) =
+        val inFamily =
           fonts
             .get(wanted)
             .orElse(LazyList(StyleAxis.Caps, StyleAxis.Slope, StyleAxis.Series)
@@ -877,26 +884,40 @@ abstract class Typesetter:
               .tail
               .flatMap(fonts.get)
               .headOption)
-            .getOrElse(
-              sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded"),
+
+        inFamily match
+          case Some((face, ligatures)) =>
+            val derivedFont = makeFont(face, size)
+
+            // Small caps was asked for but no dedicated small-caps cut exists (the caps axis fell back to the
+            // ordinary face). The render layer may then synthesize small caps through the font's `smcp` feature.
+            val syntheticSmallcaps = wanted.contains("smallcaps") && !fonts.contains(wanted)
+
+            Font(
+              typeface,
+              size,
+              charWidth(derivedFont, ' '),
+              getTextExtents("x", derivedFont).height,
+              styleSet,
+              derivedFont,
+              baseline,
+              ligatures,
+              syntheticSmallcaps,
             )
-        val derivedFont = makeFont(face, size)
 
-        // Small caps was asked for but no dedicated small-caps cut exists (the caps axis fell back to the
-        // ordinary face). The render layer may then synthesize small caps through the font's `smcp` feature.
-        val syntheticSmallcaps = wanted.contains("smallcaps") && !fonts.contains(wanted)
-
-        Font(
-          typeface,
-          size,
-          charWidth(derivedFont, ' '),
-          getTextExtents("x", derivedFont).height,
-          styleSet,
-          derivedFont,
-          baseline,
-          ligatures,
-          syntheticSmallcaps,
-        )
+          case None =>
+            // \texttt or \textsf on a family that carries no such member: switch to the document's typewriter or
+            // sans-serif family — the way LaTeX's \ttfamily / \sffamily resolve independent of the text family —
+            // carrying the requested weight and slope over, rather than failing. A family that does provide the
+            // member resolved above and never reaches here, so this fires only for the missing-member case.
+            val roleFamily = wanted.collectFirst {
+              case "mono" => monoDefaultTypeface
+              case "sans" => sansDefaultTypeface
+            }
+            roleFamily match
+              case Some(fam) if fam != typeface && typefaces.contains(fam) => makeFont(fam, size, styleSet)
+              case _ =>
+                sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
 
   infix def add(text: String): Typesetter = add(charBox(text))
 
