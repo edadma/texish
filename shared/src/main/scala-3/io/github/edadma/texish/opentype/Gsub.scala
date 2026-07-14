@@ -77,6 +77,18 @@ object Gsub:
       if g.hasFormSubstitution then Some(g) else None
     }
 
+  /** Build a shaper bound to the Latin (or default) script for a font's small-capitals substitution, or None
+    * when the font carries no `smcp` feature there. This is the signal that an ordinary text font can turn its
+    * lowercase letters into small capitals — the engine applies the feature itself (see the small-caps path in
+    * `io.github.edadma.texish.CharBox`) rather than relying on a separately drawn small-caps font. Unlike the
+    * Arabic and Indic factories this gates on the case feature itself, since small caps is a feature of an
+    * ordinary roman, not a script of its own. */
+  def fromSmallCaps(gsub: Option[Array[Byte]], gdef: Option[Array[Byte]] = None): Option[Gsub] =
+    gsub.flatMap { data =>
+      val g = new Gsub(data, Seq("latn"), Gdef.from(gdef))
+      if g.hasFeature("smcp") then Some(g) else None
+    }
+
   /** Build an Indic shaper from a font's raw `GSUB` (and `GDEF`) bytes for the script whose OpenType tags are
     * `scriptTags` (Devanagari passes `dev2`, `deva`; Bengali passes `bng2`, `beng`), or None when the font
     * carries none of those script tables — a font that does not shape the script keeps the plain text path.

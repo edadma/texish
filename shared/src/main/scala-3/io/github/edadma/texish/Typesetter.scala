@@ -215,6 +215,17 @@ abstract class Typesetter:
   def gsubShaper(font: RenderFont): Option[Gsub] =
     gsubShaperCache.getOrElseUpdate(font, Gsub.from(sfntTable(font, "GSUB"), sfntTable(font, "GDEF")))
 
+  // Parsed small-capitals shapers, one per render font whose GSUB carries an `smcp` feature. Read once and
+  // cached like the other shapers, since a small-caps run draws many boxes in one font.
+  private val smcpShaperCache = mutable.HashMap.empty[Any, Option[Gsub]]
+
+  /** The small-capitals shaper for `font`, or None when the font has no `smcp` feature (a dedicated small-caps
+    * cut, or a face without small caps at all) — in which case a small-caps run sets its letters through the
+    * plain path, either as the drawn small-caps cut or, lacking one, as the ordinary letters. This turns the
+    * lowercase letters of an ordinary roman into its small capitals; see the small-caps path in [[CharBox]]. */
+  def smcpShaper(font: RenderFont): Option[Gsub] =
+    smcpShaperCache.getOrElseUpdate(font, Gsub.fromSmallCaps(sfntTable(font, "GSUB"), sfntTable(font, "GDEF")))
+
   // Parsed Indic shapers, one per render font whose GSUB carries an Indic script (Devanagari, Bengali, …).
   // Read once and cached like the other shapers, since an Indic paragraph draws many runs in the same font.
   private val indicShaperCache = mutable.HashMap.empty[Any, Option[IndicShaper]]
@@ -871,6 +882,10 @@ abstract class Typesetter:
             )
         val derivedFont = makeFont(face, size)
 
+        // Small caps was asked for but no dedicated small-caps cut exists (the caps axis fell back to the
+        // ordinary face). The render layer may then synthesize small caps through the font's `smcp` feature.
+        val syntheticSmallcaps = wanted.contains("smallcaps") && !fonts.contains(wanted)
+
         Font(
           typeface,
           size,
@@ -880,6 +895,7 @@ abstract class Typesetter:
           derivedFont,
           baseline,
           ligatures,
+          syntheticSmallcaps,
         )
 
   infix def add(text: String): Typesetter = add(charBox(text))

@@ -19,6 +19,10 @@ import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, JoiningForm}
   * detects the script from the text and, when the font shapes it, runs the Indic shaper — clustering, conjunct
   * and half-form substitution, the pre-base vowel-sign reordering, and vowel-sign variant selection.
   *
+  * Small caps set in a font that has no dedicated small-caps cut go the same way: when the run's font is an
+  * ordinary roman standing in for small caps and carries the OpenType `smcp` feature, the box runs its letters
+  * through that feature, so the lowercase letters become small capitals and the capitals are left as they are.
+  *
   * In every case the resulting glyphs are laid out by their own advances, and any marks (Hebrew points,
   * Arabic dots, Indic below-base signs) are placed by the shared GPOS mark shaper. */
 class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color, val forms: Array[JoiningForm])
@@ -44,7 +48,18 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
         case Some(sh) if sh.handles(text) =>
           val cps = Array.tabulate(text.length)(i => text.charAt(i).toInt)
           sh.shape(cps, cp => t.glyphIndex(rf, cp))
-        case _ => null
+        case _ =>
+          // Synthesized small caps: an ordinary roman standing in for an unloaded small-caps cut turns its
+          // lowercase letters into small capitals through the font's `smcp` feature. Capitals, figures and
+          // punctuation the feature does not cover pass through unchanged; a font without the feature falls to
+          // the plain path and sets the ordinary letters.
+          if font.syntheticSmallcaps then
+            t.smcpShaper(rf) match
+              case Some(gs) =>
+                val nominal = Array.tabulate(text.length)(i => t.glyphIndex(rf, text.charAt(i).toInt))
+                gs.applyFeatureByTag(nominal, "smcp")
+              case None => null
+          else null
 
   // Placement of each shaped glyph: where the marks attach to their bases (GPOS), or a run of bare advances
   // when the font has no mark positioning. Computed once for both metrics and drawing.

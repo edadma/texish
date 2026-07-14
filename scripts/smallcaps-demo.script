@@ -1,0 +1,36 @@
+// smallcaps-demo — small caps two ways. Latin Modern and Alegreya carry a dedicated small-caps cut, drawn
+// directly. EB Garamond has no separate small-caps file, but its regular cut carries the OpenType smcp
+// feature, so the engine synthesizes small caps from its lowercase letters. Both go through \textsc.
+
+\use{document}
+
+\title{Small Capitals}
+\author{The texish engine}
+\date{Version 0.19.9}
+\maketitle
+
+\section{A drawn small-caps cut (Latin Modern)}
+
+The body face here is Latin Modern, which ships a real small-caps font. \textsc{The quick brown fox jumps
+over the lazy dog} — set with \verb|\textsc|, the lowercase letters come from the small-caps cut and the
+capitals from the roman.
+
+\section{Synthesized small caps (EB Garamond)}
+
+EB Garamond has no separate small-caps file. Its roman does carry the OpenType \verb|smcp| feature, so the
+engine synthesizes small caps from the lowercase letters:
+
+\medskip
+
+{\font ebgaramond 12
+\textsc{The quick brown fox jumps over the lazy dog.} The capital letters stay full height and the rest drop
+to small capitals, all from the one roman font.
+}
+
+\section{Side by side}
+
+{\font ebgaramond 13 regular Hamburgefonstiv 1234}
+
+{\font ebgaramond 13 regular \textsc{Hamburgefonstiv 1234}}
+
+\vfill\eject
