@@ -12,7 +12,13 @@ class CairoPDFTypesetter(val output: String) extends CairoTypesetter:
     ctx = surface.create
     applyFontOptions()
 
-  def createPageTarget: Any = ensureInitializedForContent()
+  def createPageTarget: Any =
+    val target = ensureInitializedForContent()
+    // paint the page background under all content, as the image, SVG and Graphics2D backends do; a translucent or
+    // transparent \pagecolor lets a compositor show through, while the default opaque white is the usual paper
+    setColor(backgroundColor)
+    ctx.paint()
+    target
 
   def ejectPageTarget(): Unit = ctx.showPage()
 

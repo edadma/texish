@@ -93,6 +93,34 @@ class CairoImageTests extends AnyFreeSpec with Matchers:
     whiteCorner(render(100, "Hello world\n\n").head) shouldBe true
   }
 
+  "\\pagecolor{transparent} leaves the page clear for compositing over video" in {
+    // the lower-third use case: a transparent page ships with only the drawn content opaque, so a compositor
+    // shows the video through the bare areas
+    val pages = render(100, "\\pagecolor{transparent}\nHello world\n\n")
+    val p     = pages.head
+    p.flush()
+    val data = p.getData
+    // the bare top-left corner is fully clear: every channel, alpha included, is zero
+    (data(0) & 0xff) shouldBe 0x00
+    (data(1) & 0xff) shouldBe 0x00
+    (data(2) & 0xff) shouldBe 0x00
+    (data(3) & 0xff) shouldBe 0x00
+    inkPixels(p) should be > 0 // the text still drew
+  }
+
+  "a translucent \\pagecolor tints the whole page at partial alpha" in {
+    // a 50%-black band: the bare corner is half-opaque black (premultiplied ARGB32, so the colour channels
+    // stay near zero and the alpha byte is about half)
+    val pages = render(100, "\\pagecolor[0.5]{black}\nHello world\n\n")
+    val p     = pages.head
+    p.flush()
+    val data = p.getData
+    (data(0) & 0xff) shouldBe 0x00
+    (data(1) & 0xff) shouldBe 0x00
+    (data(2) & 0xff) shouldBe 0x00
+    (data(3) & 0xff) shouldBe 128 +- 3
+  }
+
   "the font base directory is where bundled fonts are read from" in {
     // Each bundled face is named `fonts/…`; CairoTypesetter.fontsDir is the directory *containing* that
     // `fonts/` folder and is prepended before the file is opened, so an embedding application can keep

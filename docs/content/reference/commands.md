@@ -45,7 +45,8 @@ The document is typeset twice over a shared label table, so forward references r
 | `\emph{…}` `\textit{…}` `\textbf{…}` | italic, italic, bold |
 | `\texttt{…}` | monospaced (Latin Modern Mono) |
 | `\textsub{…}` `\textsup{…}` | text subscript / superscript |
-| `\color{name}` `\textcolor{name}{…}` | pen colour (CSS name or `#RRGGBB`) |
+| `\color[alpha]{name}` `\textcolor[alpha]{name}{…}` | pen colour (CSS name, `#RRGGBB`, `#RRGGBBAA`, or `transparent`; optional `[alpha]` 0–1) |
+| `\pagecolor[alpha]{name}` | colour painted across the whole page under all content (translucent or `transparent` for overlays); set in the preamble |
 | `\href{url}{text}` `\url{url}` | clickable links (real PDF annotations) |
 | `\TeX` `\LaTeX` `\TeXish` | the logos *(`\use{document}`)* |
 | `\dropcap[lines][gap]{X}{rest}` | drop cap spanning `lines` lines (default 2), sized by measurement; `rest` continues the word through the redefinable `\dropcaptext` (small caps by default) *(`\use{document}`)* |
@@ -230,8 +231,8 @@ penalties, and so on).
 |---------|--------|
 | `\hrule` `\vrule` | a horizontal / vertical rule (`[width:…]`, `[height:…]`, `[depth:…]` size it) |
 | `\fbox{…}` `\framebox{…}` | frame the content (padding `fboxsep`, rule `fboxrule`, current pen colour) |
-| `\colorbox{color}{…}` | fill the content's background with a colour, no frame |
-| `\fcolorbox{frame}{bg}{…}` | frame in one colour around a body filled with another |
+| `\colorbox[alpha]{color}{…}` | fill the content's background with a colour, no frame (translucent via `[alpha]` or `#RRGGBBAA`) |
+| `\fcolorbox{frame}{bg}{…}` | frame in one colour around a body filled with another (either may be `#RRGGBBAA`) |
 | `\rotatebox{deg}{…}` | rotate the content counter-clockwise about its left baseline |
 | `\scalebox{factor}[yfactor]{…}` | scale the content (one factor scales uniformly) |
 | `\reflectbox{…}` | mirror the content left-to-right |

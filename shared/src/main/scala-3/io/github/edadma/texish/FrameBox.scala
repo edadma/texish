@@ -10,7 +10,7 @@ class FrameBox(
     sep: Double,
     rule: Double,
     frameColor: Color | Null,
-    bgColor: Color | Null,
+    val bgColor: Color | Null,
 ) extends ContentBox:
   private val framed = frameColor != null && rule > 0
   private val pad    = sep + (if framed then rule else 0.0)

@@ -149,7 +149,9 @@ class SvgTypesetter extends Typesetter:
       .append(fmt(pageHeight))
       .append("\" fill=\"")
       .append(cssColor(backgroundColor))
-      .append("\"/>\n")
+      .append("\"")
+      .append(opacityAttr("fill-opacity", backgroundColor))
+      .append("/>\n")
     page
 
   def ejectPageTarget(): Unit =

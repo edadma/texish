@@ -68,12 +68,34 @@ H\textsub{2}O          the 1\textsup{st}          x\textsup{2}
 ## Colour
 
 `\color` sets the pen for the rest of the current group; `\textcolor` colours just its
-argument. A colour is a CSS name (`blue`, `darkred`, …) or a `#RRGGBB` hex code.
+argument. A colour is a CSS name (`blue`, `darkred`, …), a `#RRGGBB` hex code, a `#RRGGBBAA`
+hex code that carries its own alpha, or the keyword `transparent`.
 
 ```texish
 \textcolor{firebrick}{a single red word}, then black again.
 {\color{blue}the rest of this group is blue.}
 ```
+
+To make a colour translucent, add an optional `[alpha]` (0–1) or use an eight-digit code —
+the two are equivalent:
+
+```texish
+\textcolor[0.5]{firebrick}{a half-opaque word}
+\textcolor{#b2222280}{the same, written as #RRGGBBAA}
+```
+
+`\pagecolor` sets the colour painted across the whole page, under all content — a solid
+band, a translucent tint, or `transparent` to leave the page clear. It applies to the
+document's pages, so give it in the preamble. A translucent or transparent page composites
+correctly when the output is used as an overlay (for example a video lower-third):
+
+```texish
+\pagecolor[0.6]{black}   % a 60%-opaque black band the video shows through
+\pagecolor{transparent}  % clear page; only the drawn content is opaque
+```
+
+The optional `[alpha]` and eight-digit codes work for the box fills too — `\colorbox` and
+`\fcolorbox` (see [Boxes](/reference/commands/)) and the picture-mode `\fill` / `\stroke`.
 
 ## Clickable links
 

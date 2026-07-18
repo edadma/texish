@@ -227,15 +227,18 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
   proc.registerPrimitive("fbox", frameBoxPrimitive)
   proc.registerPrimitive("framebox", frameBoxPrimitive)
 
-  // colorbox color body - fill the body's background (padded by \fboxsep) with the named colour, no frame.
+  // colorbox [alpha] color body - fill the body's background (padded by \fboxsep) with the colour, no frame. The
+  // colour may be a #RRGGBBAA code or carry an optional [alpha] (0–1), so the fill can be translucent.
   proc.registerPrimitive(
     "colorbox",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val alpha = readOptionalNumber(proc)
         evalArg(proc, pos) match
           case Value.Text(name) =>
+            val bg = withAlpha(Color(name), alpha)
             captureHBox(proc, t, handler, pos) match
-              case b: Box => handler.addBox(new FrameBox(b, numVarOr(t, "fboxsep", 3.0), 0.0, null, Color(name)))
+              case b: Box => handler.addBox(new FrameBox(b, numVarOr(t, "fboxsep", 3.0), 0.0, null, bg))
               case null   =>
           case _ => handler.error("\\colorbox expects a colour name or #RRGGBB code", pos)
     },

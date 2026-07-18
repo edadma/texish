@@ -236,6 +236,11 @@ private[parser] def captureHBox(proc: Processor, t: Typesetter, handler: Typeset
 private[parser] def numVarOr(t: Typesetter, name: String, default: Double): Double =
   t.get(name).flatMap(points).getOrElse(default)
 
+// Apply a colour primitive's optional [alpha] to a colour, overriding whatever alpha the colour already carries; a
+// missing bracket (None) leaves the colour untouched. Shared by \color, \textcolor, \pagecolor and \colorbox.
+private[parser] def withAlpha(c: Color, alpha: Option[Double]): Color =
+  alpha.fold(c)(a => c.copy(alpha = a))
+
 // Read an optional bracketed number ([0.5], [-1]) following \scalebox, in the style of readPlacementSpec. Returns
 // None (leaving the stream untouched) when no '[' run follows.
 private[parser] def readOptionalNumber(proc: Processor): Option[Double] =

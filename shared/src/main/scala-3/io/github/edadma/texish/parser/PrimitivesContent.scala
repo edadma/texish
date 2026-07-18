@@ -270,32 +270,52 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
     },
   )
 
-  // color name - set the pen colour for the text, rules and glyphs that follow in the current group; the colour
-  // reverts at the group's close, exactly as \font does (both are saved on enter and restored on exit). The name
-  // is a CSS colour word (blue, darkred, …) or a #RRGGBB hex code.
+  // color [alpha] name - set the pen colour for the text, rules and glyphs that follow in the current group; the
+  // colour reverts at the group's close, exactly as \font does (both are saved on enter and restored on exit). The
+  // name is a CSS colour word (blue, darkred, …), a #RRGGBB or #RRGGBBAA hex code, or `transparent`. An optional
+  // [alpha] (0–1) makes any colour translucent, so \color[0.5]{red} and \color{#ff000080} are the same half-red.
   proc.registerPrimitive(
     "color",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val alpha = readOptionalNumber(proc)
         evalArg(proc, pos) match
-          case Value.Text(name) => t.currentColor = Color(name)
+          case Value.Text(name) => t.currentColor = withAlpha(Color(name), alpha)
           case _                => handler.error("\\color expects a colour name or #RRGGBB code", pos)
     },
   )
 
-  // textcolor name body - set the pen colour for just its body, which is typeset in its own group so the colour
-  // reverts immediately after. \textcolor{blue}{link} is the local form of \color.
+  // textcolor [alpha] name body - set the pen colour for just its body, which is typeset in its own group so the
+  // colour reverts immediately after. \textcolor{blue}{link} is the local form of \color, and it takes the same
+  // optional [alpha] and #RRGGBBAA translucency.
   proc.registerPrimitive(
     "textcolor",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
+        val alpha = readOptionalNumber(proc)
         evalArg(proc, pos) match
           case Value.Text(name) =>
             val body = proc.readArgument(pos)
             t.enter()
-            t.currentColor = Color(name)
+            t.currentColor = withAlpha(Color(name), alpha)
             proc.processTokenList(body)
             t.exit()
           case _ => handler.error("\\textcolor expects a colour name or #RRGGBB code", pos)
+    },
+  )
+
+  // pagecolor [alpha] name - set the colour painted across the whole page, under all content: a CSS colour word, a
+  // #RRGGBB or #RRGGBBAA hex code, or `transparent`. An optional [alpha] (0–1) tints the page translucently, so
+  // \pagecolor[0.6]{black} (or \pagecolor{#000000aa}) lets a compositor show video through it, and
+  // \pagecolor{transparent} leaves the page unpainted. The setting applies to the document's pages; give it in the
+  // preamble. It is not part of the saved graphics state, so it is not scoped to a group the way \color is.
+  proc.registerPrimitive(
+    "pagecolor",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val alpha = readOptionalNumber(proc)
+        evalArg(proc, pos) match
+          case Value.Text(name) => t.backgroundColor = withAlpha(Color(name), alpha)
+          case _                => handler.error("\\pagecolor expects a colour name or #RRGGBB code", pos)
     },
   )

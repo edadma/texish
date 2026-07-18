@@ -1,6 +1,7 @@
 package io.github.edadma.texish
 
-private val RGBRegex = "#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})".r
+private val RGBRegex  = "#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})".r
+private val RGBARegex = "#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})".r
 
 case class Color(red: Double, green: Double, blue: Double, alpha: Double):
   def this(r: Int, g: Int, b: Int, a: Int) = this(r / 255.0, g / 255.0, b / 255.0, a / 255.0)
@@ -63,14 +64,22 @@ object Color:
           math.min(255, (blue * 255).round.toInt),
         )
 
+  /** Parse a colour: a CSS name (`blue`), a `#RRGGBB` hex code, a `#RRGGBBAA` hex code that carries its own alpha
+    * in the final pair (CSS4), or the keyword `transparent`. The `alpha` parameter is the alpha for the forms that
+    * don't encode one themselves — a name or a six-digit hex — so `Color("white", 0.5)` is a half-opaque white; an
+    * eight-digit code's own alpha always wins, and `transparent` is fully clear. */
   def apply(c: String, alpha: Double = 1): Color =
-    colorMap get c.toLowerCase match
-      case None =>
-        c match
-          case RGBRegex(r, g, b) =>
-            new Color(Integer.parseInt(r, 16), Integer.parseInt(g, 16), Integer.parseInt(b, 16), (alpha * 255).toInt)
-          case _ => sys.error(s"color code not recognized: $c")
-      case Some(color) => color.copy(alpha = alpha)
+    if c.equalsIgnoreCase("transparent") then TRANSPARENT
+    else
+      colorMap get c.toLowerCase match
+        case Some(color) => color.copy(alpha = alpha)
+        case None =>
+          c match
+            case RGBARegex(r, g, b, a) =>
+              new Color(Integer.parseInt(r, 16), Integer.parseInt(g, 16), Integer.parseInt(b, 16), Integer.parseInt(a, 16))
+            case RGBRegex(r, g, b) =>
+              new Color(Integer.parseInt(r, 16), Integer.parseInt(g, 16), Integer.parseInt(b, 16), (alpha * 255).toInt)
+            case _ => sys.error(s"color code not recognized: $c")
 
   val TRANSPARENT: Color = new Color(0, 0, 0, 0)
 

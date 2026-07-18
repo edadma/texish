@@ -50,6 +50,19 @@ class SvgTypesetterTests extends AnyFreeSpec with Matchers:
     svg should include("fill=\"#000000\"")
   }
 
+  "a translucent page background emits fill-opacity on the background rect" in {
+    val t = new SvgTypesetter
+    t.backgroundColor = Color("black", 0.6)
+    quiet {
+      t.add(new CharBox(t, "x"))
+      t.end()
+    }
+
+    val svg = t.pageSvgs.head
+    svg should include("fill=\"#000000\"")
+    svg should include("fill-opacity=\"0.6\"")
+  }
+
   "each shipped page is its own svg document" in {
     val t = new SvgTypesetter
     quiet {
