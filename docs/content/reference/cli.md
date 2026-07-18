@@ -28,6 +28,17 @@ cat doc.texish | texish -o doc          # read the source from standard input
 PDF is the default output. A single-page document writes `name.png`; a multi-page document
 writes `name_1.png`, `name_2.png`, and so on.
 
+## Bundled fonts
+
+The bundled faces are read from a `fonts/` directory. By default the tool looks for it in the
+current working directory, so running from the texish source tree just works. To render from
+anywhere — or to ship the fonts with an embedding application — set `TEXISH_FONTS_DIR` to the
+directory that contains `fonts/`:
+
+```sh
+TEXISH_FONTS_DIR=/opt/texish texish doc.texish   # reads /opt/texish/fonts/…
+```
+
 ## Building the binary
 
 ```sh

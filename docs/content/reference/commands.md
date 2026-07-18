@@ -59,6 +59,17 @@ the rest of the enclosing group (so an environment can set its whole body in one
 at the closing brace or `\end`. Family roles select the roman/sans/typewriter member of the current
 super-family, keeping weight and slope.
 
+Small caps come from a real cut when the family has one (Latin Modern, Alegreya SC); otherwise, if
+the current face carries the OpenType `smcp` feature (EB Garamond and most modern text romans),
+`\smallcaps`/`\scshape`/`\textsc` synthesise true small capitals from that feature rather than
+falling back to ordinary lowercase.
+
+`\texttt`/`\ttfamily` and `\textsf`/`\sffamily` fall back to a document-level typewriter or sans
+family when the current family has no such member (Garamond, Cinzel, Amiri …), so an inline
+`\texttt` never fails. `\ttdefault{name}`/`\sfdefault{name}` name those fallback families (Latin
+Modern by default); the target may be a super-family with a typewriter/sans member or a standalone
+family whose plain cut is the typewriter (`\ttdefault{jetbrains}`).
+
 | Command | Effect |
 |---------|--------|
 | `\font{face}{size}{style}` | select typeface, size and style together |
@@ -71,7 +82,21 @@ super-family, keeping weight and slope.
 | `\itshape` `\slshape` `\bfseries` `\scshape` | declare italic / slanted / bold / small-caps for the group |
 | `\upshape` `\mdseries` `\normalfont` | clear the shape axis / clear bold / return to the plain face |
 | `\rmfamily` `\sffamily` `\ttfamily` | declare roman / sans / typewriter for the group |
+| `\ttdefault{name}` `\sfdefault{name}` | name the fallback typewriter / sans family for `\texttt` / `\textsf` |
 | `\accent{mark}{char}` | combine an accent mark with a base character |
+
+### Bundled text faces
+
+Latin Modern (`\font lmroman`) is the default body face. Three more Latin faces are bundled on the
+JVM and Native builds (the browser build ships only Latin Modern):
+
+- `\font cinzel` — an all-capitals inscriptional titling serif in the Trajan tradition, for titles
+  and chapter openings, in six weights (`regular`, `medium`, `semibold`, `bold`, `extrabold`,
+  `black`).
+- `\font ebgaramond` — a Garamond revival for running text, with italic, the medium/semibold/
+  extrabold weights and their italics, a real bold, and true small caps through the `smcp` feature.
+
+Any other face is brought in with `\loadfont{name}{path}`.
 
 ## Chinese and CJK
 
@@ -103,11 +128,13 @@ Serif Bengali is bundled: `\font bengali 12 regular` (or the alias `\font assame
 
 ## Right-to-left scripts
 
-`\rtl` and `\ltr` set the paragraph base direction. Two faces are bundled, each in a regular and a
-bold cut: `\font hebrew` (Noto Serif Hebrew) and `\font arabic` (Noto Naskh Arabic). Hebrew niqqud,
-Arabic cursive joining, the lam-alef and Allah ligatures, and Arabic harakat are all applied
-automatically from the text in logical order — see [Right-to-left text](/guide/right-to-left/) for
-the full treatment.
+`\rtl` and `\ltr` set the paragraph base direction. Faces are bundled for both scripts, each in a
+regular and a bold cut: `\font hebrew` (Noto Serif Hebrew) and `\font arabic` (Noto Naskh Arabic),
+with the traditional book hands `\font amiri` (a Naskh alternative to Noto for Arabic) and
+`\font ezra` (Ezra SIL, the Biblia Hebraica Stuttgartensia face, with vowel points and cantillation
+marks) alongside them. Hebrew niqqud, Arabic cursive joining, the lam-alef and Allah ligatures, and
+Arabic harakat are all applied automatically from the text in logical order — see
+[Right-to-left text](/guide/right-to-left/) for the full treatment.
 
 ## Text symbols
 
