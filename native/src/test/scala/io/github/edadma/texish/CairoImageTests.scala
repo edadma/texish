@@ -93,6 +93,23 @@ class CairoImageTests extends AnyFreeSpec with Matchers:
     whiteCorner(render(100, "Hello world\n\n").head) shouldBe true
   }
 
+  "the font base directory is where bundled fonts are read from" in {
+    // Each bundled face is named `fonts/…`; CairoTypesetter.fontsDir is the directory *containing* that
+    // `fonts/` folder and is prepended before the file is opened, so an embedding application can keep
+    // the fonts anywhere. The default "." finds ./fonts from the source tree (every other test here
+    // relies on it); this confirms the directory is actually consulted — the fonts' parent given as an
+    // absolute path still resolves, and a directory with no fonts fails loudly rather than drawing tofu.
+    val original = CairoTypesetter.fontsDir
+    try
+      CairoTypesetter.fontsDir = new java.io.File("fonts").getAbsoluteFile.getParent
+      val t = new CairoImageTypesetter(100)
+      t.destroy() // constructed and tore down without a font-load error
+
+      CairoTypesetter.fontsDir = "/no/such/fonts/dir"
+      a[RuntimeException] should be thrownBy new CairoImageTypesetter(100)
+    finally CairoTypesetter.fontsDir = original
+  }
+
   "a multi-page document ships one surface per page, each with content" in {
     val pages = render(100, "first page\n\n\\vfill\\eject second page\n\n\\vfill\\eject third page\n\n")
 

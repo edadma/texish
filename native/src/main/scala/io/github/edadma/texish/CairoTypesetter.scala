@@ -37,6 +37,17 @@ case class CairoFace(cairo: CairoFontFace, ft: FTFace)
   */
 case class CairoRenderFont(face: CairoFontFace, size: Double, ft: FTFace)
 
+object CairoTypesetter:
+
+  /** The directory that contains the bundled `fonts/` folder. The engine names each bundled face by a
+    * path that begins at that folder (`fonts/LatinModernRoman/lmroman10-regular.otf`), and this
+    * directory is prepended before the file is opened — so an application embedding the engine can ship
+    * the `fonts/` folder wherever it likes and point the loader at its parent. An absolute font path is
+    * used unchanged. It defaults to the current directory — where the command-line tool, run from the
+    * source tree, finds `fonts/` — or to the value of `TEXISH_FONTS_DIR` when that environment variable
+    * is set. Set it before constructing a typesetter: the bundled faces are loaded in the constructor. */
+  var fontsDir: String = sys.env.getOrElse("TEXISH_FONTS_DIR", ".")
+
 /** The drawing shared by the native Cairo backends. Everything that operates on a Cairo context — text, lines,
   * fills, fonts, images — lives here and is identical whatever the page is drawn onto. Subclasses decide only
   * what surface backs the context and how pages are delimited: [[CairoPDFTypesetter]] draws every page onto one
@@ -90,7 +101,11 @@ abstract class CairoTypesetter extends Typesetter:
     ctx.fill()
 
   def loadFont(path: String): FontFace =
-    val ft = freetype.newFace(path, 0).getOrElse(sys.error(s"error loading face: $path"))
+    // A relative name is resolved against the configured fonts directory; an absolute path is opened as
+    // given, so a document's own \loadfont with a full path still works.
+    val file     = new File(path)
+    val resolved = if file.isAbsolute then path else new File(CairoTypesetter.fontsDir, path).getPath
+    val ft       = freetype.newFace(resolved, 0).getOrElse(sys.error(s"error loading face: $resolved"))
 
     CairoFace(fontFaceCreateForFTFace(ft.faceptr, 0), ft)
 
