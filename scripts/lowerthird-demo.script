@@ -19,9 +19,10 @@
 // The panel spans the full 1280px width and is a fixed 240px tall — one third of 720 — so it
 // fills the lower third exactly, flush to the bottom. The \parbox is 1260x220px and \fboxsep
 // adds 10px of padding on every side (1260+20 = 1280 wide, 220+20 = 240 tall), so the text
-// sits just 10px from the panel edge; the content is vertically centred in the band.
+// sits just 10px from the panel edge. The content is top-aligned ([t]), so the heading sits
+// 10px below the panel's top.
 \set fboxsep {10}
-\colorbox[0.55]{black}{\parbox[c][220pt][c]{1260pt}{
+\colorbox[0.55]{black}{\parbox[c][220pt][t]{1260pt}{
 \color{white}
 \set parindent {0}
 \font ebgaramond 30 bold
