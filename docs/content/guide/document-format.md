@@ -14,6 +14,14 @@ This is the analogue of plain TeX's format or a LaTeX document class, kept delib
 small. `\use` resolves the format from texish's bundled packages, so nothing else is
 needed. Everything below assumes it is loaded.
 
+The everyday text conveniences — the size ladder (`\large`, `\Large`, …), the vertical
+skips (`\smallskip`/`\medskip`/`\bigskip`), single-line alignment (`\centerline` and
+friends), the inline markup (`\emph`, `\textbf`, …) and the `center` / `flushleft` /
+`quote` environments — actually live in a lighter package, **`base`**, that carries none
+of the article furniture. `document` builds on it (`\use{base}`), so they are all
+available here; but a page that wants only those conveniences — a caption, a flyer, a
+title card — can load `\use{base}` alone and skip titles, sections and page numbering.
+
 ## Title block
 
 Declare the title, author, and date, then typeset the block with `\maketitle`:

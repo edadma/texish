@@ -1,0 +1,136 @@
+// base — the small, class-independent conveniences most documents want, gathered so
+// they can be used without the weight of the full `document` class: a size ladder,
+// vertical skips, single-line alignment, overlap boxes, inline text markup, the
+// TeX-family logos, the alignment and quotation environments, and a pair of conditional
+// helpers. Each is a thin macro over an engine primitive (\fontsize, \vskip, \hbox,
+// \hss / \hfil, \italic / \bold / \smallcaps, \if), so there is no policy here beyond a
+// default body face and the familiar 10pt size steps — both overridable.
+//
+// Import it at the top of a document:
+//
+//     \use{base}
+//
+// The `document` package builds on this — it begins with \use{base} — so everything
+// defined here is available under \use{document} as well.
+
+// ---- Body font and leading ----------------------------------------------------
+// A 10pt serif body (Latin Modern Roman) on a 12pt baseline, so text has a family to
+// set in and the size ladder below has something to scale. A class or document may
+// select a different face; the size steps keep whatever family is current.
+\font lmroman 10 regular
+\set baselineskip {12}
+
+// ---- Vertical spacing ----------------------------------------------------------
+\def smallskip {\vskip 3pt plus 1pt minus 1pt}
+\def medskip {\vskip 6pt plus 2pt minus 2pt}
+\def bigskip {\vskip 12pt plus 4pt minus 4pt}
+
+// ---- Horizontal alignment of a single line ------------------------------------
+\def centerline t {\hbox to:\hsize {\hss\t\hss}}
+\def leftline t {\hbox to:\hsize {\t\hfil}}
+\def rightline t {\hbox to:\hsize {\hfil\t}}
+
+// \centering switches the rest of the current group to centred lines: the surrounding
+// glue stretches equally on both sides and the last line is not filled to the right,
+// so every line of a wrapped paragraph centres. Use it inside a group or a figure body
+// so the setting reverts when the group closes.
+\def centering {
+  \set leftskip {0 plus 1fil}
+  \set rightskip {0 plus 1fil}
+  \set parfillskip {0}
+}
+
+// Zero-width overlap boxes (the plain-TeX definitions): \rlap draws its content to
+// the right of the current point, \llap to the left, neither advancing the pen.
+// A list marker placed with one of these hangs beside the text without pushing it.
+\def rlap m {\hbox to:0 {\m\hss}}
+\def llap m {\hbox to:0 {\hss\m}}
+
+// ---- Font-size declarations ----------------------------------------------------
+// LaTeX's size-changing declarations, on a 10pt base. Each switches the type size for
+// the rest of the current group — use one inside { … } or an environment — keeping the
+// current family and shape and resetting the leading to TeX's 1.2× the new size. The
+// scale is `article`'s 10pt option: \footnotesize 8, \small 9, \large 12, \Large 14.
+\def tiny {\fontsize{5}}
+\def scriptsize {\fontsize{7}}
+\def footnotesize {\fontsize{8}}
+\def small {\fontsize{9}}
+\def normalsize {\fontsize{10}}
+\def large {\fontsize{12}}
+\def Large {\fontsize{14}}
+\def LARGE {\fontsize{17}}
+\def huge {\fontsize{20}}
+\def Huge {\fontsize{25}}
+
+// ---- Inline markup -------------------------------------------------------------
+// \emph and \textit slant the body into italic; \textbf sets it bold; \textsl uses the
+// slanted cut and \textsc small capitals. The family-role switches \textrm / \textsf /
+// \texttt (roman / sans-serif / typewriter) are engine primitives — they keep the current
+// weight and slope — and \textnormal resets to the plain face. \textsuperscript and
+// \textsubscript raise or drop a smaller box.
+\def emph t {\italic{\t}}
+\def textit t {\italic{\t}}
+\def textbf t {\bold{\t}}
+\def textsl t {\slanted{\t}}
+\def textsc t {\smallcaps{\t}}
+\def textnormal t {{\normalfont\t}}
+\def textsuperscript t {\textsup{\t}}
+\def textsubscript t {\textsub{\t}}
+
+// ---- TeX-family logos ----------------------------------------------------------
+// The TeX-family wordmarks, set from the engine's box primitives. \LaTeX rides a
+// small capital A in a \vbox whose height is a measured T, with \vss filling
+// beneath, so its apex sits at the cap height (Lamport's own construction). \TeXish
+// is this engine's mark — \TeX with a slanted "ish" raised against the X. The small
+// letters and the kerns are all relative to the current size (\fontscale and em/ex
+// units), so every logo scales cleanly from a footnote to a title.
+\def TeX {T\kern-.1667em\lower.5ex\hbox{E}\kern-.125em X}
+\def LaTeX {L\kern-.36em\setbox latexAbox \hbox{T}\vbox to:\ht latexAbox {\hbox{\fontscale{.7}{regular}A}\vss}\kern-.15em\TeX}
+\def TeXish {\TeX\kern-.14em\raise.22em\hbox{\fontscale{.7}{slanted}ish}}
+
+// ---- Alignment environments ----------------------------------------------------
+// Block forms of the alignment declarations: every paragraph inside is centred, set
+// ragged-right (flushleft) or ragged-left (flushright). The infinite glue on the
+// stretching side(s) plus a zero parfillskip makes even the last line align, and
+// parindent is dropped so the block has no first-line indent. The settings revert at
+// \end because the environment is its own group.
+\newenvironment center {
+  \set leftskip {0 plus 1fil}
+  \set rightskip {0 plus 1fil}
+  \set parfillskip {0}
+  \set parindent {0}
+} {}
+
+\newenvironment flushleft {
+  \set rightskip {0 plus 1fil}
+  \set parfillskip {0}
+  \set parindent {0}
+} {}
+
+\newenvironment flushright {
+  \set leftskip {0 plus 1fil}
+  \set parfillskip {0}
+  \set parindent {0}
+} {}
+
+// ---- Quotation blocks ----------------------------------------------------------
+// Indent a block on both sides. leftskip / rightskip are set inside the environment's
+// own group, so they revert automatically at \end. \quotation is the same with a wider
+// indent.
+\newenvironment quote {
+  \set leftskip {25}
+  \set rightskip {25}
+} {}
+
+\newenvironment quotation {
+  \set leftskip {40}
+  \set rightskip {40}
+} {}
+
+// ---- Conditionals --------------------------------------------------------------
+// \ifthenelse{test}{then}{else} chooses one of two branches on a boolean test, over the
+// engine's \if. The test is an ordinary expression — a comparison such as \> {\x} {3}, or
+// \equal for strings; compound tests use the expression operators. \equal{a}{b} is true
+// when the two expand to the same string, the common ifthen test.
+\def equal a b {\={\a}{\b}}
+\def ifthenelse c a b {\if {\c} \a \else \b \fi}
