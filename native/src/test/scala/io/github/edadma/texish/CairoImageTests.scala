@@ -69,6 +69,22 @@ class CairoImageTests extends AnyFreeSpec with Matchers:
     pages.head.getHeight shouldBe 2200 // 792 * 200/72
   }
 
+  "the default dpi is 72, so one point renders as one pixel" in {
+    // with no dpi argument the device scale is the identity: a letter page (612x792pt) is a 612x792px surface,
+    // not the 850x1100 the previous 100dpi default produced
+    val t       = new CairoImageTypesetter()
+    val handler = new TypesetterHandler(t)
+    val proc    = new Processor(handler)
+
+    registerTypesettingPrimitives(proc, handler)
+    proc.process("Hello world\n\n")
+    t.end()
+
+    val page = t.getDocument.printedPages.head.asInstanceOf[Surface]
+    page.getWidth shouldBe 612
+    page.getHeight shouldBe 792
+  }
+
   "each page has an opaque white background and drawn text" in {
     val pages = render(100, "Hello world\n\n")
 

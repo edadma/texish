@@ -28,6 +28,23 @@ class Graphics2DPageTests extends AnyFreeSpec with Matchers:
     pixels(pages(0)) should not equal pixels(pages(1))
   }
 
+  "the default dpi is 72, so one point renders as one pixel" in {
+    // with no dpi argument the device scale is the identity: a page of N points is an N-pixel image, not the
+    // N * 100/72 the previous default produced
+    val t = new Graphics2DTypesetter()
+    t.set("paperwidth", 120.0)
+    t.set("paperheight", 60.0)
+
+    Console.withOut(new java.io.ByteArrayOutputStream) {
+      t.add(new CharBox(t, "x"))
+      t.end()
+    }
+
+    val img = t.getDocument.printedPages.head.asInstanceOf[BufferedImage]
+    img.getWidth shouldBe 120
+    img.getHeight shouldBe 60
+  }
+
   "the page background honours backgroundColor" in {
     // a dark page colour fills the page instead of white; the default leaves the white paper that
     // print output expects

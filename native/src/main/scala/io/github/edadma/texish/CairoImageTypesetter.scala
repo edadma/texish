@@ -9,12 +9,15 @@ import io.github.edadma.libcairo.{Format, Surface, imageSurfaceCreate}
   * out.
   *
   * The engine works in big points; `dpi` sets the device scale (`dpi / 72`) applied to each page context so that
-  * point coordinates map to device pixels. The measurement context created at construction is left unscaled:
+  * point coordinates map to device pixels. The default `dpi` is 72, so the scale is the identity and one point
+  * renders as exactly one pixel — a Cairo image surface is pixel-native, so a page of N points is an N-pixel
+  * surface with no hidden scaling; pass a higher value (e.g. 144 or 216) to supersample the same layout. The
+  * measurement context created at construction is left unscaled:
   * text extents are reported in user space regardless of the transform, and — because the subclass `deviceScale`
   * field is not yet initialized while the superclass constructor calls `init` — scaling it there would apply a
   * zero transform and leave the context permanently in Cairo's error state.
   */
-class CairoImageTypesetter(dpi: Double = 100) extends CairoTypesetter:
+class CairoImageTypesetter(dpi: Double = 72) extends CairoTypesetter:
 
   val output: String = null
 

@@ -21,9 +21,11 @@ case class AwtRenderFont(font: JFont, path: String)
 /** Raster backend over java.awt. The engine hands this class coordinates and sizes in big points (1/72 inch); the
   * device transform (dpi/72) is applied in exactly one place — a scale on the Graphics2D — so layout is identical
   * across backends and only rasterization density differs. Text is measured against an identity FontRenderContext, so
-  * extents are reported back to the engine in points.
+  * extents are reported back to the engine in points. The default `dpi` is 72, so the device transform is the
+  * identity and one point renders as exactly one pixel (a page of N points is an N-pixel image); pass a higher value
+  * (e.g. 144 or 216) to supersample the same layout for crisper output.
   */
-class Graphics2DTypesetter(dpi: Double = 100) extends Typesetter:
+class Graphics2DTypesetter(dpi: Double = 72) extends Typesetter:
 
   type ImageHandle = BufferedImage
   type FontFace    = AwtFace
