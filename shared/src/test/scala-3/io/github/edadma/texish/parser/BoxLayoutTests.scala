@@ -120,6 +120,22 @@ class BoxLayoutTests extends AnyFreeSpec with Matchers:
       (t2.added.last.ascent + t2.added.last.descent) shouldBe (100.0 +- tol)
     }
 
+    "a trailing newline in the body does not leak a spurious break into the following text" in {
+      // A \parbox (here full-width, in a \colorbox) whose body ends with a source newline must clear its
+      // pending-newline state, or the newline after the box becomes a paragraph break and an empty full-width
+      // line — which the line-setter reported as an underfull box (the lower-third recipe hit this).
+      val out = new java.io.ByteArrayOutputStream
+      Console.withOut(out) {
+        val (t, proc) = fixture()
+        proc.process(
+          "\\set paperwidth {500}\n\\set paperheight {300}\n\\geometry margin:0\n\\set fboxsep {0}\n" +
+            "\\vfill\n\\noindent\\colorbox{black}{\\parbox[c][100pt][c]{\\linewidth}{\nHi\n}}\n",
+        )
+        t.end()
+      }
+      out.toString should not include "underfull"
+    }
+
     "[inner-pos] holds the content top, bottom, or centred within the fixed height" in {
       // fill above the content vs below it: top-aligned fills below, bottom-aligned fills above, centred fills both
       def fills(src: String): (Double, Double) =

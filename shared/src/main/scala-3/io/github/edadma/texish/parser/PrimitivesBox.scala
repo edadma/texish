@@ -178,6 +178,9 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
         closeFixedVbox(t, height, inner)
         val box = t.mode.exit
         t.set("hsize", saved)
+        // the body is self-contained: a source newline at its end left the pending-newline state set, and it must
+        // not leak out to the surrounding paragraph (where it would turn the next newline into a spurious break)
+        handler.flushPendingSpace()
 
         box match
           case vb: VerticalBox => t.add(alignParbox(vb, align))
@@ -222,6 +225,9 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
           closeFixedVbox(t, height, inner)
           val box = t.mode.exit
           t.set("hsize", savedHsize)
+          // clear the pending-newline state the body's final newline left, so it does not leak a spurious
+          // paragraph break into the text after the minipage (as it does for \parbox)
+          handler.flushPendingSpace()
 
           box match
             case vb: VerticalBox => t.add(alignParbox(vb, align))
