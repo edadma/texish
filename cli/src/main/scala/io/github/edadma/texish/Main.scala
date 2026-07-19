@@ -58,13 +58,14 @@ private def fail(msg: String): Nothing =
         }
         .text("paper size (default: letter)"),
       opt[String]('r', "resolution")
-        .valueName("<sd | hd | fhd>")
+        .valueName("<sd | hd | fhd | dpi>")
         .action((x, c) => c.copy(resolution = x))
         .validate {
-          case "sd" | "hd" | "fhd" => success
-          case _                   => failure("only 'sd', 'hd', or 'fhd' are allowed as resolutions")
+          case "sd" | "hd" | "fhd"                        => success
+          case n if n.toDoubleOption.exists(_ > 0)        => success
+          case _ => failure("resolution must be 'sd', 'hd', 'fhd', or a positive DPI number")
         }
-        .text("PNG device resolution (default: hd)"),
+        .text("PNG device resolution: a named size or a DPI number (72 = one pixel per point; default: hd)"),
       help("help").text("prints this usage text"),
       version("version").text("prints the current version"),
     )
@@ -131,6 +132,7 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
       case "sd"  => 96.0
       case "hd"  => 150.0
       case "fhd" => 300.0
+      case n     => n.toDouble // a bare number is a DPI; validated positive at the CLI (72 = 1px per point)
 
   val t = Passes.untilStable() { () =>
     val t      = new CairoImageTypesetter(dpi)

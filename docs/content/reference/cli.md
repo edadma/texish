@@ -13,8 +13,13 @@ texish [options] [input-file]
   -o, --output <file>           output path (default: beside the input file, or out)
   -t, --type <pdf | png>        output type (default: pdf)
   -p, --paper <a4 | letter>     paper size (default: letter)
-  -r, --resolution <sd|hd|fhd>  PNG device resolution (default: hd)
+  -r, --resolution <sd|hd|fhd|dpi>  PNG device resolution (default: hd)
 ```
+
+The resolution is either a named size — `sd` (96 dpi), `hd` (150 dpi) or `fhd` (300 dpi) —
+or a positive DPI number. Because the engine measures in points (72 per inch), **`-r 72`
+makes one point render as exactly one pixel**, so a document laid out in points reads
+directly in pixels — convenient for fixed-size raster targets such as video frames.
 
 ## Examples
 
@@ -22,6 +27,7 @@ texish [options] [input-file]
 texish doc.texish                       # writes doc.pdf
 texish doc.texish -o paper -p a4        # writes paper.pdf on A4
 texish doc.texish -t png -r fhd         # writes doc.png (or doc_1.png, doc_2.png, …)
+texish frame.texish -t png -r 72        # 1 point = 1 pixel: a 1280x720pt page is a 1280x720 PNG
 cat doc.texish | texish -o doc          # read the source from standard input
 ```
 

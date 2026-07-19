@@ -5,27 +5,28 @@
 // shows the video through it), \colorbox[alpha] (the translucent fill), and a
 // fixed-height \parbox (the band keeps its size no matter how much text it holds).
 //
-// Render as a transparent PNG at exactly 1280x720:
-//   texish -t png -r sd scripts/lowerthird-demo.script
-// At -r sd (96 dpi) points scale x4/3 to pixels, so the 960x540pt frame below is a
-// 1280x720 image; for 1080p use 1440x810pt instead.
+// Render as a transparent PNG, one pixel per point, so every length below is in pixels:
+//   texish -t png -r 72 scripts/lowerthird-demo.script
+// The -r 72 sets the device to 72 dpi, where the engine's point is exactly one pixel.
+// The frame is a 1280x720 (720p) video; for 1080p use 1920x1080.
 
 \use{document}
 
-\geometry paperwidth:960pt paperheight:540pt margin:0
+\geometry paperwidth:1280pt paperheight:720pt margin:0
 \pagecolor{transparent}
 
 // Push the band to the foot of the frame.
 \vfill
 
-// The band spans the full width and is a fixed 180pt tall — one third of 540. \fboxsep
-// gives it its inner padding; leftskip/rightskip indent the text further inside. The
-// parbox width plus twice \fboxsep equals the frame width, so the fill runs edge to edge.
-\set fboxsep {30}
-\colorbox[0.55]{black}{\parbox[c][120pt][c]{900pt}{
+// The band spans the full width and is a fixed 240 pixels tall — one third of 720.
+// \fboxsep gives it its inner padding; leftskip/rightskip indent the text further inside.
+// The parbox width plus twice \fboxsep equals the frame width, so the fill runs edge to
+// edge: 1200 + 2*40 = 1280.
+\set fboxsep {40}
+\colorbox[0.55]{black}{\parbox[c][160pt][c]{1200pt}{
 \color{white}
-\set leftskip {30}
-\set rightskip {30}
+\set leftskip {40}
+\set rightskip {40}
 {\bfseries\large A Lower Third}\par
 \medskip
 Text flows here as it would in any paragraph — justified, hyphenated, and wrapping to

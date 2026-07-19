@@ -48,6 +48,27 @@ class CliTests extends AnyFreeSpec with Matchers:
       dir.delete()
   }
 
+  "a numeric resolution sets the DPI, so at 72 one point renders as one pixel" in {
+    val dir  = Files.createTempDirectory("texish-cli").toFile
+    val base = new File(dir, "px").getAbsolutePath
+
+    try
+      // a letter page is 612x792 points; at 72 DPI the PNG must be exactly 612x792 pixels
+      renderPng("hello\n\n", base, "letter", "72")
+
+      val png   = new File(dir, "px.png")
+      val bytes = Files.readAllBytes(png.toPath)
+
+      // PNG IHDR: width is the 4 big-endian bytes at offset 16, height at offset 20
+      def be32(off: Int) = (0 until 4).foldLeft(0)((acc, i) => (acc << 8) | (bytes(off + i) & 0xff))
+
+      be32(16) shouldBe 612
+      be32(20) shouldBe 792
+    finally
+      dir.listFiles.foreach(_.delete())
+      dir.delete()
+  }
+
   "a single-page PNG keeps the base name with a .png extension" in {
     val dir  = Files.createTempDirectory("texish-cli").toFile
     val base = new File(dir, "solo").getAbsolutePath
