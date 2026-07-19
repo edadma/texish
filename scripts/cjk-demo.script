@@ -24,7 +24,7 @@ Knuth's line breaker finds breaks at glue, penalties and discretionary hyphens. 
 prose is full of interword glue, so it wraps naturally; a long word is split by Liang
 hyphenation. Chinese, written without spaces between characters, offers the breaker
 nothing to work with — the whole paragraph is one rigid box, and it runs off the edge of
-the page. The fix, following \texttt{xeCJK} and \texttt{luatexja} on the Unicode \TeX{}
+the page. The fix, following \mono{xeCJK} and \mono{luatexja} on the Unicode \TeX{}
 engines, is to insert the missing break opportunities between characters before the
 breaker runs.
 
@@ -55,7 +55,7 @@ narrower column of a quotation:
 
 \section{Traditional Chinese}
 
-The bundled \texttt{cjktc} face sets Traditional Chinese; the same line breaking and kinsoku
+The bundled \mono{cjktc} face sets Traditional Chinese; the same line breaking and kinsoku
 apply, since both are driven by the characters themselves, not by the choice of font.
 
 \medskip

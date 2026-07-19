@@ -76,7 +76,7 @@ knowledge, hardship, and the double-da of the word for learning:
 
 \section{Reph, ya-phalaa and below-base ra}
 
-The consonant \emph{ra} takes special forms when it joins another. A word-initial ra
+The consonant \italic{ra} takes special forms when it joins another. A word-initial ra
 followed by the hasant becomes a reph --- a small stroke drawn above the following base,
 though it is typed first --- as in the words for work and religion. A ya after the hasant
 becomes the post-base ya-phalaa, and a ra after another consonant hangs below it, as in
@@ -118,7 +118,7 @@ The below- and above-base signs stack onto their base:
 
 \section{Assamese}
 
-The same script serves Assamese, which uses its own \emph{ro} and \emph{wo} letters. The
+The same script serves Assamese, which uses its own \italic{ro} and \italic{wo} letters. The
 \verb|\font assamese| alias selects the same face:
 
 \medskip

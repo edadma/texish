@@ -13,7 +13,7 @@
 \def footline {\hfil — \the\pageno — \hfil}
 \def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
 
-\title{The \texttt{flowchart} Package}
+\title{The \mono{flowchart} Package}
 \author{A texish demonstration}
 \maketitle
 

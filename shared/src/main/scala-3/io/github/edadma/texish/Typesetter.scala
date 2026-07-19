@@ -51,9 +51,9 @@ abstract class Typesetter:
   // and CharBox). None disables fallback; it is set once the fallback face is loaded.
   var fallbackTypeface: Option[String] = None
 
-  // The families \texttt (mono) and \textsf (sans) resolve to when the current typeface carries no such member —
+  // The families \mono (mono) and \sans (sans) resolve to when the current typeface carries no such member —
   // the way LaTeX's \ttdefault and \sfdefault name a typewriter and a sans family independent of the text family,
-  // so \texttt in a Garamond paragraph sets in the document's typewriter face rather than failing. Latin Modern
+  // so \mono in a Garamond paragraph sets in the document's typewriter face rather than failing. Latin Modern
   // provides both members, so it is the default for each; a document may point these elsewhere.
   var monoDefaultTypeface: String = "lmroman"
   var sansDefaultTypeface: String = "lmroman"
@@ -529,7 +529,7 @@ abstract class Typesetter:
   loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
-  // typewriter *role* (\texttt, Latin Modern Mono) used for inline code in running text: that one is cut to match
+  // typewriter *role* (\mono, Latin Modern Mono) used for inline code in running text: that one is cut to match
   // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall
   // x-height and disambiguated glyphs (0/O, 1/l/I) better suited to a block of code. No ligatures — code is set
   // literally — across the family's full weight range. Selected by name, e.g. \font jetbrains 9 regular.
@@ -639,9 +639,9 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-italic.otf", lmLigatures, Set("italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmroman10-bolditalic.otf", lmLigatures, Set("bold", "italic"))
   loadFont("lmroman", "fonts/LatinModernRoman/lmromanslant10-regular.otf", lmLigatures, Set("slanted"))
-  // The small-caps cut of the body face, so \textsc / \scshape / \smallcaps set capitals-and-small-capitals in
-  // the same family as the roman text. The oblique cut backs the small-caps shape inside italic context (\emph
-  // around \textsc), registered under the {smallcaps, italic} style so that combination resolves too. Small caps
+  // The small-caps cut of the body face, so \smallcaps / \scshape / \smallcaps set capitals-and-small-capitals in
+  // the same family as the roman text. The oblique cut backs the small-caps shape inside italic context (\italic
+  // around \smallcaps), registered under the {smallcaps, italic} style so that combination resolves too. Small caps
   // gets only the text-representation ligatures (dashes, quotes) and not the f-ligatures (ﬁ, ﬂ, …): the cut has no
   // lowercase f, so it carries no f-ligature glyphs, and applying them would map e.g. "fi" to a glyph the font
   // lacks — dropping the pair from the output (a small-caps "fiable" set as "able").
@@ -649,7 +649,7 @@ abstract class Typesetter:
   loadFont("lmroman", "fonts/LatinModernRoman/lmromancaps10-oblique.otf", Ligatures.TEXT_REPRESENTATIONS, Set("smallcaps", "italic"))
 
   // The typewriter and sans-serif members of the Latin Modern super-family, registered as the mono and sans
-  // *roles* of the same `lmroman` typeface — so \texttt and \textsf select them by setting the role axis while
+  // *roles* of the same `lmroman` typeface — so \mono and \sans select them by setting the role axis while
   // keeping the current weight and slope, and a document that switches its body super-family carries its code and
   // headings to the matching cuts. Latin Modern Mono is set without ligatures (code is literal); its bold comes
   // from the companion lmmonolt weight, the only one cut bold. Latin Modern Sans uses an oblique for its slope,
@@ -799,7 +799,7 @@ abstract class Typesetter:
   def smallcaps(): Font   = setAxis(StyleAxis.Caps, "smallcaps")
   def nosmallcaps(): Unit = removeStyle("smallcaps")
 
-  // The family-role axis selects the typewriter (\texttt) or sans-serif (\textsf) member of the current
+  // The family-role axis selects the typewriter (\mono) or sans-serif (\sans) member of the current
   // super-family, keeping the series and slope; serif() clears the role back to the roman default.
   def mono(): Font  = setAxis(StyleAxis.Role, "mono")
   def sans(): Font  = setAxis(StyleAxis.Role, "sans")
@@ -910,7 +910,7 @@ abstract class Typesetter:
             )
 
           case None =>
-            // \texttt or \textsf on a family that carries no such member: resolve the document's typewriter or
+            // \mono or \sans on a family that carries no such member: resolve the document's typewriter or
             // sans-serif family instead (\ttdefault / \sfdefault; Latin Modern by default), the way LaTeX's
             // \ttfamily / \sffamily resolve independent of the text family. The named family may be a super-family
             // that carries a mono/sans member cut (Latin Modern, whose typewriter lives under the "mono" style),

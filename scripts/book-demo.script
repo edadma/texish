@@ -25,14 +25,14 @@
 
 \chapter{Preface}
 
-This book is set with the \texttt{book} package, the \texttt{book}-class companion to
-the \texttt{document} package's article format. Front matter such as this preface
+This book is set with the \mono{book} package, the \mono{book}-class companion to
+the \mono{document} package's article format. Front matter such as this preface
 carries lowercase-roman folios and unnumbered chapter titles, exactly as in LaTeX.
 
 Look at the foot of the page: the folio is a roman numeral. The chapter title above
 carries no number, because front-matter chapters are unnumbered. When the main matter
 begins, the folios restart at arabic~1 and chapters take numbers, with sections
-numbered \emph{within} their chapter.
+numbered \italic{within} their chapter.
 
 The running head along the top of every page names the chapter it belongs to. It is
 driven by a page mark that each chapter records, so turning a page never leaves the
@@ -67,7 +67,7 @@ book package changes only the sectioning, the title page and the page numbering.
 
 A section's number is the chapter number and the section number joined with a dot. A
 new chapter resets the section counter, so the first section of every chapter is always
-\emph{n}.1. The running head at the top of the page shows the chapter title, recorded
+\italic{n}.1. The running head at the top of the page shows the chapter title, recorded
 as a page mark when the chapter opened.
 
 \subsection{A finer point}
@@ -99,7 +99,7 @@ Chapter~1 — and a figure in the next chapter would restart at 2.1.
 \label{fig:rule}
 }
 
-The figure above is \autoref{fig:rule}, written with \texttt{\\autoref}, which prints
+The figure above is \autoref{fig:rule}, written with \mono{\\autoref}, which prints
 the kind word and the per-chapter number the caption recorded. Cross-references resolve
 on the same settling pass that fixes the contents page numbers.
 
@@ -137,7 +137,7 @@ dresses the page with chapter heads, a title page and per-matter folios.
 
 Section 2.2, to show the section counter advancing within the chapter while the
 subsection counter it owns has reset. Numbering that restarts per chapter is the single
-most book-like thing the package does, and it falls out of one \texttt{\\counterwithin}
+most book-like thing the package does, and it falls out of one \mono{\\counterwithin}
 declaration plus a redefinition of how the section number prints.
 
 // A second part, to show parts carry their own uppercase-roman counter and do not
@@ -161,7 +161,7 @@ chapter, section and subsection with its resolved page number.
 // LaTeX's \chapter*. It still opens a fresh page and sets the running head.
 \chapter*{An unnumbered interlude}
 
-This chapter was written \texttt{\\chapter*}, so it carries no number and does not appear
+This chapter was written \mono{\\chapter*}, so it carries no number and does not appear
 in the table of contents, yet it still begins on a fresh page and updates the running
 head. Starred sectioning is how a book sets apart material that should not be numbered.
 
@@ -178,5 +178,5 @@ page count continues unbroken from the main matter.
 
 That completes the tour: a title page, a contents list, roman front matter, two parts of
 numbered chapters with per-chapter sections, figures and cross-references, a starred
-interlude, and unnumbered back matter — the whole LaTeX \texttt{book} class, in one
+interlude, and unnumbered back matter — the whole LaTeX \mono{book} class, in one
 short document.

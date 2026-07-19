@@ -1,21 +1,21 @@
 \use{document}
 \use{music}
 
-\title{The \texttt{music} Package}
+\title{The \mono{music} Package}
 \author{Engraved staff notation, drawn from the document language}
 \maketitle
 
 \section{Reading a score}
 
-The \texttt{music} package draws a line of staff notation. A score, written
-\texttt{\\score\{\ldots\}}, is a space-separated list of notes. A note is an
-optional accidental, a letter \texttt{a}–\texttt{g} for the pitch, optional
-\texttt{'} or \texttt{,} to raise or lower it an octave, an optional duration
-digit, an optional augmentation dot, and any trailing marks. A \texttt{|} is a
-barline and \texttt{r} a rest. The heads, clefs, flags, rests, accidentals and
+The \mono{music} package draws a line of staff notation. A score, written
+\mono{\\score\{\ldots\}}, is a space-separated list of notes. A note is an
+optional accidental, a letter \mono{a}–\mono{g} for the pitch, optional
+\mono{'} or \mono{,} to raise or lower it an octave, an optional duration
+digit, an optional augmentation dot, and any trailing marks. A \mono{|} is a
+barline and \mono{r} a rest. The heads, clefs, flags, rests, accidentals and
 time-signature figures are real engraved glyphs from a SMuFL music font; the
 stems, beams, staff lines, ledger lines and barlines are ruled over the
-\texttt{\\picture} layer.
+\mono{\\picture} layer.
 
 \section{A scale}
 
@@ -38,7 +38,7 @@ the thirty-second.
 
 \section{Rests}
 
-A \texttt{r} is a rest, sized to its duration the same way a note is. Here a
+A \mono{r} is a rest, sized to its duration the same way a note is. Here a
 whole rest, a half, a quarter, and an eighth, each between sounding notes.
 
 \bigskip
@@ -64,9 +64,9 @@ of the staff.
 
 \section{Accidentals}
 
-An accidental leads a note: \texttt{+} for a sharp, \texttt{-} for a flat,
-\texttt{n} for a natural. The sign is drawn just left of the head; it changes how
-the note is read, not where it sits, so \texttt{+f} and \texttt{f} share a line.
+An accidental leads a note: \mono{+} for a sharp, \mono{-} for a flat,
+\mono{n} for a natural. The sign is drawn just left of the head; it changes how
+the note is read, not where it sits, so \mono{+f} and \mono{f} share a line.
 Here a chromatic climb, then a sharpened note cancelled by a natural.
 
 \bigskip
@@ -75,7 +75,7 @@ Here a chromatic climb, then a sharpened note cancelled by a natural.
 \section{Beams}
 
 Eighth notes in a run are usually joined by a beam rather than each carrying its
-own flag. Bracket a group with \texttt{[} and \texttt{]} and the notes between
+own flag. Bracket a group with \mono{[} and \mono{]} and the notes between
 share one beam.
 
 \bigskip
@@ -99,7 +99,7 @@ thirty-seconds a third. The bracket beams whatever durations it contains.
 
 \section{Time signatures}
 
-Setting \texttt{\\set musictimenum} and \texttt{\\set musictimeden} draws a time
+Setting \mono{\\set musictimenum} and \mono{\\set musictimeden} draws a time
 signature after the clef. Three-four time, a waltz, with the beats grouped into
 bars.
 
@@ -121,7 +121,7 @@ A two-digit signature, twelve-eight, stays centred as a block.
 
 \section{Key signatures}
 
-A key signature follows the clef. Set \texttt{\\set musickey} to a signed count: a
+A key signature follows the clef. Set \mono{\\set musickey} to a signed count: a
 positive number draws that many sharps, a negative one that many flats, each in
 its conventional order and on its conventional line. Here two sharps (D major),
 then three flats (E-flat major).
@@ -140,17 +140,17 @@ then three flats (E-flat major).
 
 \section{Repeats and barlines}
 
-Besides the plain barline \texttt{|}, a score can write a double barline
-\texttt{||}, a final barline \texttt{|.}, and the start and end of a repeated
-section, \texttt{|:} and \texttt{:|}.
+Besides the plain barline \mono{|}, a score can write a double barline
+\mono{||}, a final barline \mono{|.}, and the start and end of a repeated
+section, \mono{|:} and \mono{:|}.
 
 \bigskip
 \centerline{\score{|: c d e f | g a b c' :| d' c' b a || g1 |.}}
 
 \section{Articulations}
 
-A mark after a note tells the player how to attack it: \texttt{>} an accent,
-\texttt{!} a staccato, \texttt{=} a tenuto, \texttt{*} a marcato, \texttt{;} a
+A mark after a note tells the player how to attack it: \mono{>} an accent,
+\mono{!} a staccato, \mono{=} a tenuto, \mono{*} a marcato, \mono{;} a
 fermata. Each sits on the side away from the stem, and several may stack. Here
 the same phrase plain, then accented, staccato, tenuto and marcato, closing on a
 note that is both marcato and held under a fermata.
@@ -160,8 +160,8 @@ note that is both marcato and held under a fermata.
 
 \section{Slurs and ties}
 
-A run bracketed by \texttt{(} and \texttt{)} is drawn under one slur. A trailing
-\texttt{-} ties a note to the next of the same pitch, holding it across. Here a
+A run bracketed by \mono{(} and \mono{)} is drawn under one slur. A trailing
+\mono{-} ties a note to the next of the same pitch, holding it across. Here a
 slurred turn, then two tied half notes.
 
 \bigskip
@@ -169,9 +169,9 @@ slurred turn, then two tied half notes.
 
 \section{Dynamics and hairpins}
 
-A token beginning \texttt{!} is a dynamic, set below the staff: \texttt{!p},
-\texttt{!mf}, \texttt{!ff}, \texttt{!sfz}. A \texttt{<} opens a crescendo hairpin
-and \texttt{>} a diminuendo, each closed by \texttt{=}. Here a phrase that starts
+A token beginning \mono{!} is a dynamic, set below the staff: \mono{!p},
+\mono{!mf}, \mono{!ff}, \mono{!sfz}. A \mono{<} opens a crescendo hairpin
+and \mono{>} a diminuendo, each closed by \mono{=}. Here a phrase that starts
 soft, swells, and falls away.
 
 \bigskip
@@ -179,8 +179,8 @@ soft, swells, and falls away.
 
 \section{The bass clef}
 
-Setting \texttt{\\set musicclef \{bass\}} notates in the bass clef instead, where
-middle C sits one ledger line \emph{above} the staff. Here a C major scale from
+Setting \mono{\\set musicclef \{bass\}} notates in the bass clef instead, where
+middle C sits one ledger line \italic{above} the staff. Here a C major scale from
 the C below the staff up to middle C.
 
 \set musicclef {bass}
@@ -189,8 +189,8 @@ the C below the staff up to middle C.
 
 \section{Alto and tenor clefs}
 
-The C clef names the line that is middle C: the middle line in the \texttt{alto}
-clef, the fourth line in the \texttt{tenor}. The same C major scale around middle
+The C clef names the line that is middle C: the middle line in the \mono{alto}
+clef, the fourth line in the \mono{tenor}. The same C major scale around middle
 C, read in each.
 
 \set musicclef {alto}
@@ -203,7 +203,7 @@ C, read in each.
 
 \section{A short piece}
 
-Everything together: the opening of \emph{Ode to Joy} in the treble clef, in
+Everything together: the opening of \italic{Ode to Joy} in the treble clef, in
 common time, with beamed eighths, a slurred phrase, a dynamic, and a final
 barline to close.
 
@@ -217,8 +217,8 @@ barline to close.
 
 \section{Choosing the music font}
 
-The glyphs come from a SMuFL music font, and \texttt{\\set musicfont} chooses which
-one. The default is Bravura, the standard reference font; \texttt{petaluma} is a
+The glyphs come from a SMuFL music font, and \mono{\\set musicfont} chooses which
+one. The default is Bravura, the standard reference font; \mono{petaluma} is a
 handwritten, jazz-lead-sheet alternative — the same notes, a different hand. Here
 one phrase set in each.
 

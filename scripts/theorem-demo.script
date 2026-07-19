@@ -29,15 +29,15 @@
 \newtheorem{example}{Example}[section]
 \newtheorem{remark}{Remark}
 
-\title{The \texttt{theorem} Package}
+\title{The \mono{theorem} Package}
 \author{A tour of amsthm-style environments in texish}
 \maketitle
 
 \section{Independent numbering}
 
-A theorem-like environment defined with \texttt{\\newtheorem\{theorem\}\{Theorem\}}
+A theorem-like environment defined with \mono{\\newtheorem\{theorem\}\{Theorem\}}
 carries its own counter. The plain style sets a bold run-in head and an italic body,
-and the body shape reverts at \texttt{\\end}.
+and the body shape reverts at \mono{\\end}.
 
 \begin{theorem}
 The square of the hypotenuse of a right triangle equals the sum of the squares of
@@ -53,8 +53,8 @@ which is unique up to the order of the factors.
 
 \section{Shared counters}
 
-The optional argument \emph{before} the heading shares another environment's counter.
-Here \texttt{lemma} and \texttt{corollary} were both declared with \texttt{[theorem]},
+The optional argument \italic{before} the heading shares another environment's counter.
+Here \mono{lemma} and \mono{corollary} were both declared with \mono{[theorem]},
 so they continue the single running sequence rather than starting fresh. Note the
 numbers below pick up where the theorems left off.
 
@@ -75,8 +75,8 @@ And a further theorem advances the shared sequence once more, to Theorem 5.
 
 \section{Optional notes}
 
-A note in brackets after \texttt{\\begin} is shown in parentheses in the head, giving
-the theorem a name. The body should start on the line after \texttt{\\begin} so that a
+A note in brackets after \mono{\\begin} is shown in parentheses in the head, giving
+the theorem a name. The body should start on the line after \mono{\\begin} so that a
 normal interword space follows the run-in head.
 
 \begin{theorem}[Pythagoras]
@@ -92,7 +92,7 @@ equality exactly when $u$ and $v$ are linearly dependent.
 
 \section{Numbering within a section}
 
-Environments declared with a trailing \texttt{[section]} reset whenever the section
+Environments declared with a trailing \mono{[section]} reset whenever the section
 counter advances and print the section number as a prefix. So the items below are
 numbered 4.1, 4.2, and so on, the leading 4 being the number of this section.
 
@@ -107,15 +107,15 @@ as desired by taking $x$ sufficiently close to $x_0$. This numbers as Definition
 \end{definition}
 
 \begin{example}
-The function $f(x) = x^2$ is continuous everywhere. Because \texttt{example} also
+The function $f(x) = x^2$ is continuous everywhere. Because \mono{example} also
 numbers within the section but on its OWN counter, it begins at 4.1 independently of
 the definitions above.
 \end{example}
 
 \section{Proofs and the QED mark}
 
-The \texttt{proof} environment sets an italic run-in ``Proof.'' head with an upright
-body. Placing \texttt{\\qed} at the end sets the end-of-proof box flush right on
+The \mono{proof} environment sets an italic run-in ``Proof.'' head with an upright
+body. Placing \mono{\\qed} at the end sets the end-of-proof box flush right on
 the last line. Definitions in this section continue the within-section numbering, now
 prefixed with 5.
 
@@ -133,7 +133,7 @@ Let $m = 2j$ and $n = 2k$ for integers $j$ and $k$. Then $m + n = 2j + 2k = 2(j 
 which is twice the integer $j + k$, and is therefore even. \qed
 \end{proof}
 
-\begin{theorem}[Irrationality of \texttt{root 2}]
+\begin{theorem}[Irrationality of \mono{root 2}]
 There is no rational number whose square is $2$.
 \end{theorem}
 
@@ -145,7 +145,7 @@ factor $2$, contradicting lowest terms. \qed
 
 \section{Independent counters revisited}
 
-Finally, the \texttt{remark} environment was given neither a shared counter nor a
+Finally, the \mono{remark} environment was given neither a shared counter nor a
 within-section parent, so it runs entirely on its own, unaffected by the theorems,
 definitions, and examples above.
 

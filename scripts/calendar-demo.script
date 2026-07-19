@@ -9,7 +9,7 @@
 \use{document}
 \use{calendar}
 
-\def headline {\textit{The calendar package} \hfil page \the\pageno}
+\def headline {\italic{The calendar package} \hfil page \the\pageno}
 \def footline {\hfil — \the\pageno — \hfil}
 
 \title{The calendar Package}
@@ -17,16 +17,16 @@
 \date{}
 \maketitle
 
-A \textit{calendar} is one \texttt{\\picture} box: a title bar with the month and year, a
+A \italic{calendar} is one \mono{\\picture} box: a title bar with the month and year, a
 weekday header row, and a grid of day cells. It flows in the text like any other box, so
 it can be centred on a page, dropped into a paragraph, or tiled into a year planner. The
-whole package is the document language — \texttt{\\calc} does the date arithmetic, a pair
-of maps hold the names and month lengths, and the grid is \texttt{\\picture} lines and
+whole package is the document language — \mono{\\calc} does the date arithmetic, a pair
+of maps hold the names and month lengths, and the grid is \mono{\\picture} lines and
 placed labels. There is no calendar-specific engine primitive.
 
 \section{A month}
 
-The call \texttt{\\calendar\{2026\}\{6\}} draws June 2026. Weeks start on Sunday and the
+The call \mono{\\calendar\{2026\}\{6\}} draws June 2026. Weeks start on Sunday and the
 weekend columns take a distinct ink.
 
 \vskip 10pt
@@ -34,7 +34,7 @@ weekend columns take a distinct ink.
 
 \section{Weeks starting on Monday}
 
-Set \texttt{\\calweekstart} to \texttt{1} for the ISO convention: the header rotates so
+Set \mono{\\calweekstart} to \mono{1} for the ISO convention: the header rotates so
 Monday leads and the weekend pair moves to the right of the grid. The change is scoped to
 the group, so it affects only this calendar.
 
@@ -45,7 +45,7 @@ the group, so it affects only this calendar.
 \section{Leap years and the today highlight}
 
 February is twenty-nine days long exactly when the Gregorian rule says so — 2024 is a leap
-year. Setting \texttt{\\caltoday} draws a tinted cell behind that day; here the fourth is
+year. Setting \mono{\\caltoday} draws a tinted cell behind that day; here the fourth is
 marked.
 
 \vskip 10pt
@@ -56,8 +56,8 @@ marked.
 
 \section{Restyling}
 
-Every visual property is a configuration variable set with \texttt{\\set} after
-\texttt{\\use}. Below, a warmer palette, larger cells and a Monday start turn the same
+Every visual property is a configuration variable set with \mono{\\set} after
+\mono{\\use}. Below, a warmer palette, larger cells and a Monday start turn the same
 primitive into a wall-calendar page.
 
 \vskip 10pt
@@ -72,7 +72,7 @@ primitive into a wall-calendar page.
 
 \section{A quarter, side by side}
 
-Because a calendar is just a box, a row of \texttt{\\calendar} calls in an \texttt{\\hbox}
+Because a calendar is just a box, a row of \mono{\\calendar} calls in an \mono{\\hbox}
 sets three months together — the start of a year planner.
 
 \vskip 10pt
@@ -81,5 +81,5 @@ sets three months together — the start of a year planner.
  \set caltitlesize {11}\set calheadsize {7}\set caldaysize {8}
  \centerline{\hbox{\calendar{2026}{1}\hskip 12pt\calendar{2026}{2}\hskip 12pt\calendar{2026}{3}}}}
 
-Every calendar on these pages is one \texttt{\\picture} box, set by the same engine as the
+Every calendar on these pages is one \mono{\\picture} box, set by the same engine as the
 prose around it.

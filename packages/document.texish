@@ -7,8 +7,9 @@
 // It provides a title block, numbered sections, an abstract, quotation blocks,
 // bulleted / numbered lists, floats and a table of contents. The everyday text
 // conveniences it also relies on — the size ladder, vertical skips, single-line
-// alignment, inline markup and the TeX logos — live in the lighter `base` package,
-// which this one builds on, so they are available here too.
+// alignment and the TeX logos — live in the lighter `base` package, which this one
+// builds on, so they are available here too. (Inline shape commands like \bold and
+// \italic are engine primitives, available with or without either package.)
 //
 // The look follows a 10-point LaTeX `article`: a serif body (Latin Modern Roman),
 // roman title, bold headings on a tight type scale, and a centred page number at
@@ -57,7 +58,7 @@
 // letter. Because the cutout is registered between paragraphs, \dropcap must open in
 // vertical mode (its own \noindent starts the paragraph). Under a right-to-left base
 // the carve and the letter move to the right edge, mirroring \item's marker.
-\def dropcaptext t {\textsc{\t}}
+\def dropcaptext t {\smallcaps{\t}}
 \def dropcap [lines:2] [gap:3] letter text {
 \setbox dropcapxbox \hbox{X}
 \set dropcapcap {\ht dropcapxbox}

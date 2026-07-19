@@ -12,11 +12,11 @@
 \use{document}
 \use{plot}
 
-\title{The \TeXish{} \texttt{plot} Package}
+\title{The \TeXish{} \mono{plot} Package}
 \author{A comprehensive demonstration}
 \maketitle
 
-A \emph{plot} is a picture with a coordinate system on it: you declare the data ranges
+A \italic{plot} is a picture with a coordinate system on it: you declare the data ranges
 and a few series, and the package maps data values onto the page, draws the axes and
 labelled ticks, and strokes the series. Because every part of it — the prose, the
 axes, the grid and the curves — is the same document language, a figure is just a box
@@ -24,10 +24,10 @@ that flows in the text like any other.
 
 \section{Lines, scatters and legends}
 
-A series is given an optional \emph{[colour]} and an optional \emph{[label]} before its
-data, which is a flat \texttt{x y x y …} list. A series with a label records a legend
+A series is given an optional \italic{[colour]} and an optional \italic{[label]} before its
+data, which is a flat \mono{x y x y …} list. A series with a label records a legend
 entry; \verb|\legend| then draws the key in a corner of the data area
-(\texttt{ne}, \texttt{nw}, \texttt{se} or \texttt{sw}). Here a \verb|\lineplot| strokes
+(\mono{ne}, \mono{nw}, \mono{se} or \mono{sw}). Here a \verb|\lineplot| strokes
 a polyline through the points and a \verb|\scatter| drops a marker at a few of them.
 
 \xrange{0}{6}
@@ -44,7 +44,7 @@ a polyline through the points and a \verb|\scatter| drops a marker at a few of t
 \section{Bars and reference lines}
 
 The \verb|\bars| series draws a vertical bar from the axis to each value, centred on its
-x position and a fraction \emph{plotbarfrac} of the x step wide. The \verb|\hline| and
+x position and a fraction \italic{plotbarfrac} of the x step wide. The \verb|\hline| and
 \verb|\vline| commands draw a dashed reference line at a data value — a threshold, a
 target, or as here the mean revenue.
 
@@ -61,10 +61,10 @@ target, or as here the mean revenue.
 
 \section{Auto colours and marker shapes}
 
-With an empty \emph{[colour]} bracket a series takes the next colour from the palette in
+With an empty \italic{[colour]} bracket a series takes the next colour from the palette in
 turn, so several series stay distinct with no manual colouring. The marker shape is set
-with \emph{plotmarkshape} — \texttt{circle}, \texttt{square}, \texttt{triangle} or
-\texttt{diamond} — and \emph{plotmarkr} sets the radius.
+with \italic{plotmarkshape} — \mono{circle}, \mono{square}, \mono{triangle} or
+\mono{diamond} — and \italic{plotmarkr} sets the radius.
 
 \xrange{0}{10}
 \yrange{0}{10}
@@ -81,9 +81,9 @@ with \emph{plotmarkshape} — \texttt{circle}, \texttt{square}, \texttt{triangle
 
 \section{Function plots}
 
-The \verb|\fnplot| series samples a function of \emph{x} across the domain and strokes
+The \verb|\fnplot| series samples a function of \italic{x} across the domain and strokes
 the result. The expression is ordinary \verb|\calc| arithmetic written in terms of
-\emph{x}, so any of the engine's math functions are available.
+\italic{x}, so any of the engine's math functions are available.
 
 \xrange{-3}{3}
 \yrange{0}{9}
@@ -97,7 +97,7 @@ the result. The expression is ordinary \verb|\calc| arithmetic written in terms 
 When a range straddles zero the package draws a light axis line through it, so a curve
 that crosses the origin shows where the sign changes. Several functions can share one
 plot, and the tick step can be pinned with \verb|\xstep| / \verb|\ystep| instead of the
-automatic \emph{nice} step.
+automatic \italic{nice} step.
 
 \xrange{0}{6.283}
 \yrange{-1.2}{1.2}
@@ -146,7 +146,7 @@ or cumulative data. The two compose in one plot.
 \section{Categorical axes and value labels}
 
 \verb|\xcategories| names the x ticks instead of numbering them; the categories sit at
-x = 1, 2, 3, … so bars line up beneath the names. Setting \emph{plotvalues} to 1 prints
+x = 1, 2, 3, … so bars line up beneath the names. Setting \italic{plotvalues} to 1 prints
 each bar's value above it.
 
 \yrange{0}{160}
@@ -179,7 +179,7 @@ least-squares line of best fit through the data and draws it dashed across the r
 
 \section{Minor ticks and tick-label formatting}
 
-\emph{plotxminor} / \emph{plotyminor} subdivide each major interval with lighter minor
+\italic{plotxminor} / \italic{plotyminor} subdivide each major interval with lighter minor
 ticks and grid lines. \verb|\xtickformat| / \verb|\ytickformat| wrap every tick number
 with a prefix and suffix — here a \verb|\$| before the cost values and a \verb|\%| after
 the utilisation values.
@@ -203,8 +203,8 @@ the utilisation values.
 
 \section{Bubble charts}
 
-The \verb|\bubble| series reads \emph{x y size} triples and draws a translucent disc at
-each point whose \emph{area} (not radius) encodes the third value — the perceptually
+The \verb|\bubble| series reads \italic{x y size} triples and draws a translucent disc at
+each point whose \italic{area} (not radius) encodes the third value — the perceptually
 honest scaling. Because the discs are translucent, two series overlaid in one plot stay
 legible where they overlap.
 
@@ -221,8 +221,8 @@ legible where they overlap.
 
 \section{Styling the frame}
 
-The frame is fully configurable. The grid can be turned off with \emph{plotgrid},
-tick-label precision is set with \emph{plottickdec}, the bar width with \emph{plotbarfrac},
+The frame is fully configurable. The grid can be turned off with \italic{plotgrid},
+tick-label precision is set with \italic{plottickdec}, the bar width with \italic{plotbarfrac},
 and the axis, grid and tick colours are all named variables. This plot turns the grid
 off, widens the bars, and recolours the palette by overwriting its first entries before
 the plot.

@@ -4,8 +4,8 @@ import io.github.edadma.char_reader.CharReader
 import io.github.edadma.texish.*
 
 /** Font-shape and decorated-box primitives: the shape-wrapping commands (\bold / \italic / \smallcaps /
-  * \slanted), the LaTeX shape and family declarations (\itshape / \bfseries / \rmfamily / …), the role-text
-  * forms (\texttt / \textsf / \textrm), \glyphwidth, text scripts (\textsub / \textsup), verbatim and code
+  * \slanted), the shape and family declarations (\itshape / \bfseries / \rmfamily / …), the role-text
+  * forms (\mono / \sans / \serif), \glyphwidth, text scripts (\textsub / \textsup), verbatim and code
   * (\verb / \code), \underline, and the framing and transform boxes (\fbox / \colorbox / \rotatebox /
   * \scalebox / \resizebox / \raisebox and friends). */
 private[parser] def registerFontShapePrimitives(proc: Processor, handler: TypesetterHandler): Unit =
@@ -67,10 +67,10 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
   declarePrimitive("sffamily", _.sans())
   declarePrimitive("ttfamily", _.mono())
 
-  // \texttt / \textsf / \textrm - 1 body arg: set the content in the typewriter, sans-serif or roman member of the
+  // \mono / \sans / \serif - 1 body arg: set the content in the typewriter, sans-serif or roman member of the
   // current super-family, at the current size and keeping the weight and slope. The switch is scoped, so the text
   // resumes in the previous font afterwards; the interword space is reset to the chosen cut's own space (the mono
-  // face is fixed-width, the others proportional). \texttt is the common case — inline code, file names, URLs.
+  // face is fixed-width, the others proportional). \mono is the common case — inline code, file names, URLs.
   def roleText(switch: Typesetter => Font): Primitive =
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
@@ -82,12 +82,12 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
         proc.processTokenList(body)
         t.exit()
     }
-  proc.registerPrimitive("texttt", roleText(_.mono()))
-  proc.registerPrimitive("textsf", roleText(_.sans()))
-  proc.registerPrimitive("textrm", roleText(_.serif()))
+  proc.registerPrimitive("mono", roleText(_.mono()))
+  proc.registerPrimitive("sans", roleText(_.sans()))
+  proc.registerPrimitive("serif", roleText(_.serif()))
 
-  // \ttdefault{family} / \sfdefault{family} - name the typewriter and sans-serif families that \texttt / \ttfamily
-  // and \textsf / \sffamily fall back to when the current typeface carries no such member of its own, the way
+  // \ttdefault{family} / \sfdefault{family} - name the typewriter and sans-serif families that \mono / \ttfamily
+  // and \sans / \sffamily fall back to when the current typeface carries no such member of its own, the way
   // LaTeX's \ttdefault / \sfdefault name a code and sans family independent of the text family. So a document set
   // in EB Garamond can put its inline code in JetBrains Mono with \ttdefault{jetbrains}; Latin Modern is the
   // default for each. The named family may be a super-family with a mono/sans member (Latin Modern) or a

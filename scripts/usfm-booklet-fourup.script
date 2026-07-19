@@ -37,7 +37,7 @@
   \vfil
   \centerline{\fbox{\vbox to:318 {
     \vfil
-    \makebox[197pt][c]{\color{#333333}\font lmroman 13 regular \textsc{The Gospel According to}}
+    \makebox[197pt][c]{\color{#333333}\font lmroman 13 regular \smallcaps{The Gospel According to}}
     \vskip 16pt
     \makebox[197pt][c]{\font lmroman 64 regular John}
     \vskip 12pt
@@ -45,7 +45,7 @@
     \vfil
     \makebox[197pt][c]{\color{#333333}\parbox{176pt}{\centering\font lmroman 10 italic but these are written that you may believe that Jesus is the Christ, the Son of God, and that by believing you may have life in His name.}}
     \vskip 8pt
-    \makebox[197pt][c]{\color{#333333}\font lmroman 9 regular \textsc{John 20:31}}
+    \makebox[197pt][c]{\color{#333333}\font lmroman 9 regular \smallcaps{John 20:31}}
     \vfil
   }}}
   \vfil
@@ -60,7 +60,7 @@
   \vfil
   \centerline{\font lmroman 10 regular Scripture text from the}
   \smallskip
-  \centerline{\font lmroman 10 regular \textsc{Berean Standard Bible}}
+  \centerline{\font lmroman 10 regular \smallcaps{Berean Standard Bible}}
   \smallskip
   \centerline{\font lmroman 9 italic which is in the public domain.}
   \vskip 24pt
@@ -93,7 +93,7 @@
 \vskip 40pt
 \centerline{\color{#4E6E8C}\hrule width:60 ascent:1}
 \vskip 16pt
-\centerline{\color{#333333}\font lmroman 13 regular \textsc{Read · Watch · Share}}
+\centerline{\color{#333333}\font lmroman 13 regular \smallcaps{Read · Watch · Share}}
 \vskip 22pt
 {\set leftskip {0 plus 1fil}\set rightskip {0 plus 1fil}\set parfillskip {0}\set parindent {0}\noindent\qrcode[cell:3pt quiet:4]{https://christianevangelism.media}\par}
 \vskip 22pt
@@ -101,7 +101,7 @@
 \vskip 26pt
 \centerline{\color{#333333}\font lmroman 10 italic “Come and see.”}
 \smallskip
-\centerline{\color{#333333}\font lmroman 9 regular \textsc{John 1:46}}
+\centerline{\color{#333333}\font lmroman 9 regular \smallcaps{John 1:46}}
 \vfill
 }
 \eject

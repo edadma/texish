@@ -68,14 +68,14 @@ class DocumentFeaturesTests extends AnyFreeSpec with Matchers:
     text(boxes) should include("Body")
   }
 
-  "\\textsl sets the slanted shape, \\textsc small caps, \\textsf the sans role" in {
-    fontOf(render("\\textsl{X} Y"), "X").style should contain("slanted")
-    fontOf(render("\\textsc{X} Y"), "X").style should contain("smallcaps")
-    fontOf(render("\\textsf{X} Y"), "X").style should contain("sans")
+  "\\slanted sets the slanted shape, \\smallcaps small caps, \\sans the sans role" in {
+    fontOf(render("\\slanted{X} Y"), "X").style should contain("slanted")
+    fontOf(render("\\smallcaps{X} Y"), "X").style should contain("smallcaps")
+    fontOf(render("\\sans{X} Y"), "X").style should contain("sans")
   }
 
   "inline markup reverts to the body font afterwards" in {
-    val boxes = render("\\textsl{X} Y")
+    val boxes = render("\\slanted{X} Y")
     fontOf(boxes, "Y").style should not contain "slanted"
     fontOf(boxes, "Y").typeface shouldBe "lmroman"
   }

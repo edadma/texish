@@ -19,7 +19,7 @@
 
 \chapter{Preface}
 
-This little book is a complete tour of the \texttt{chords} package. Every kind of
+This little book is a complete tour of the \mono{chords} package. Every kind of
 chord diagram the package can draw appears on the pages that follow: ordinary open
 chords, chords with muted and open strings, dots that carry finger numbers and dots
 that do not, barre chords drawn with a thick bar, and shapes high up the neck where
@@ -34,8 +34,8 @@ A chord diagram is a picture of the top of the neck as you look down at it. The 
 vertical lines are the strings, from the lowest and thickest on the left to the
 highest and thinnest on the right. The horizontal lines are the frets, and the thick
 line across the top is the nut. A black dot shows where to press a string, and the
-number inside it names the finger: \textbf{1} index, \textbf{2} middle, \textbf{3}
-ring, \textbf{4} little finger. Above the nut an ``o'' marks an open string and an
+number inside it names the finger: \bold{1} index, \bold{2} middle, \bold{3}
+ring, \bold{4} little finger. Above the nut an ``o'' marks an open string and an
 ``×'' marks a string you do not play.
 
 \bigskip
@@ -90,7 +90,7 @@ dots are gone.
 \chapter{Barre Chords}
 
 A barre is one finger laid flat across several strings. It is given with the optional
-bracket argument \texttt{[fret first last]}: the fret it lies on, and the first and
+bracket argument \mono{[fret first last]}: the fret it lies on, and the first and
 last string columns it covers, numbered 1 (low E, far left) to 6 (high e, far right).
 The package draws it as a thick round bar, and the dot that would land on the barre's
 own fret is left out, since the bar already covers it.
@@ -98,7 +98,7 @@ own fret is left out, since the bar already covers it.
 \section{F Major}
 
 F major lays the index finger flat across all six strings at the first fret, written
-\texttt{[1 1 6]}, with the rest of the E-major shape stacked on top.
+\mono{[1 1 6]}, with the rest of the E-major shape stacked on top.
 
 \bigskip
 \centerline{\chord[1 1 6]{F}{1 3 3 2 1 1}{1 3 4 2 1 1}}
@@ -106,7 +106,7 @@ F major lays the index finger flat across all six strings at the first fret, wri
 
 \section{B Major}
 
-B major barres five strings at the second fret, \texttt{[2 2 6]}, muting the lowest
+B major barres five strings at the second fret, \mono{[2 2 6]}, muting the lowest
 string. Its bar starts at column 2, so the low E keeps its ``×'' above the nut.
 
 \bigskip
@@ -152,7 +152,7 @@ voicing up the neck, drawn in its ``10\,fr'' window.
 \chapter{Restyling the Box}
 
 Every dimension and colour of the diagram is a configuration variable you can set
-after \texttt{\\use\{chords\}}. Sizes are in points. Here the same C chord is drawn
+after \mono{\\use\{chords\}}. Sizes are in points. Here the same C chord is drawn
 larger and in a different ink by overriding a few of them.
 
 \bigskip
@@ -182,6 +182,6 @@ look.
 \chapter{Summary of Features}
 
 This tour covered open chords with mixed open and muted strings, finger-number labels
-and plain number-less dots, barre chords via the \texttt{[fret first last]} argument,
+and plain number-less dots, barre chords via the \mono{[fret first last]} argument,
 movable shapes high up the neck with the ``\,fr'' window label in place of the nut,
 and the configuration variables that restyle the box.

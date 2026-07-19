@@ -3,7 +3,7 @@
 // Two layers are on show. The first is the engine's own math mode — fractions,
 // roots, scripts, big operators, matrices, the math-array environments, the
 // stacking and framing boxes, and the math alphabets — all of which work with no
-// package loaded at all. The second is the small \texttt{math} package, which adds
+// package loaded at all. The second is the small \mono{math} package, which adds
 // the amsmath operator and connective names the engine does not define on its own:
 // \arcsin / \arccos / \arctan / \Pr, the modular \bmod / \pmod / \mod / \pod, the
 // implication arrows \implies / \iff / \impliedby, and the \dots ellipsis.
@@ -20,15 +20,15 @@
 \maketitle
 
 This document exercises the whole of texish math mode in one place: the
-constructions built into the engine and the amsmath names the \texttt{math}
+constructions built into the engine and the amsmath names the \mono{math}
 package adds on top. Every formula below is live — what you see is what the
 engine set.
 
 \section {Inline and display math}
 
 Math is written between dollar signs. A single pair, $a^2 + b^2 = c^2$, sets the
-formula \emph{inline}, in the run of the text and on the current line. A double
-pair sets it as a centred \emph{display}, broken out of the paragraph and given
+formula \italic{inline}, in the run of the text and on the current line. A double
+pair sets it as a centred \italic{display}, broken out of the paragraph and given
 room to breathe:
 
 $$e^{i\pi} + 1 = 0.$$
@@ -39,17 +39,17 @@ display form lets it drop underneath.
 
 \section {Fractions and binomials}
 
-The plain \texttt{\\frac} chooses its size from context — full size in a display,
-small in a line of text. The display fractions \texttt{\\dfrac} and \texttt{\\tfrac}
-fix that choice regardless of where they sit, and \texttt{\\binom} stacks a
+The plain \mono{\\frac} chooses its size from context — full size in a display,
+small in a line of text. The display fractions \mono{\\dfrac} and \mono{\\tfrac}
+fix that choice regardless of where they sit, and \mono{\\binom} stacks a
 binomial coefficient inside invisible delimiters:
 
 $$\frac{a}{b} + \frac{c}{d} = \frac{ad + bc}{bd}
   \qquad
   \binom{n}{k} = \dfrac{n!}{k!\,(n - k)!}.$$
 
-Because \texttt{\\dfrac} stays full size everywhere, it nests cleanly into a
-continued fraction, while \texttt{\\tfrac} keeps a one-line fraction compact:
+Because \mono{\\dfrac} stays full size everywhere, it nests cleanly into a
+continued fraction, while \mono{\\tfrac} keeps a one-line fraction compact:
 
 $$\dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{x}}}}
   \qquad
@@ -100,8 +100,8 @@ $$\alpha \; \beta \; \gamma \; \delta \; \theta \; \lambda \; \mu \; \pi \; \sig
   \qquad
   \Gamma \; \Delta \; \Theta \; \Lambda \; \Pi \; \Sigma \; \Omega.$$
 
-The named functions are set upright, like \texttt{\\sin}, \texttt{\\log} and
-\texttt{\\lim}, and take operator spacing. The \texttt{math} package adds the
+The named functions are set upright, like \mono{\\sin}, \mono{\\log} and
+\mono{\\lim}, and take operator spacing. The \mono{math} package adds the
 inverse trigonometric and probability names alongside them:
 
 $$\sin^2\theta + \cos^2\theta = 1
@@ -110,16 +110,16 @@ $$\sin^2\theta + \cos^2\theta = 1
   \qquad
   \Pr(A \cup B) \le \Pr(A) + \Pr(B).$$
 
-When a function has no built-in name, \texttt{\\operatorname} makes one — the run
+When a function has no built-in name, \mono{\\operatorname} makes one — the run
 is kept roman and given the spacing of an operator, with its scripts set to the
-side like the log-like \texttt{\\sin} and \texttt{\\arccos}, not stacked beneath:
+side like the log-like \mono{\\sin} and \mono{\\arccos}, not stacked beneath:
 
 $$\operatorname{argmax}_{x} f(x)
   \qquad
   \arcsin x + \arccos x = \frac{\pi}{2}.$$
 
-The modular forms also come from the package. \texttt{\\bmod} is the binary "mod"
-of $a \bmod b$, set with a medium space on each side; \texttt{\\pmod} closes a
+The modular forms also come from the package. \mono{\\bmod} is the binary "mod"
+of $a \bmod b$, set with a medium space on each side; \mono{\\pmod} closes a
 congruence with a parenthesised modulus after a quad of space:
 
 $$15 \bmod 4 = 3
@@ -153,28 +153,28 @@ $$\det A = \begin{vmatrix} a & b \\ c & d \end{vmatrix} = ad - bc
   \qquad
   \begin{Vmatrix} 1 & 0 \\ 0 & 1 \end{Vmatrix}.$$
 
-A \texttt{smallmatrix} carries no fences of its own, so you bracket it yourself;
+A \mono{smallmatrix} carries no fences of its own, so you bracket it yourself;
 it sets compactly inside a line, as in
 $(\begin{smallmatrix} a & b \\ c & d \end{smallmatrix})$.
 
 \section {Cases and aligned blocks}
 
-A piecewise definition uses \texttt{cases}, whose rows are set flush left under a
-single brace, the column before \texttt{\\&} the value and the column after it the
+A piecewise definition uses \mono{cases}, whose rows are set flush left under a
+single brace, the column before \mono{\\&} the value and the column after it the
 condition:
 
 $$|x| = \begin{cases} \phantom{-}x & x \ge 0, \\ -x & x < 0. \end{cases}$$
 
-The \texttt{aligned} environment lines a block of equations up on their relation
-symbols — the \texttt{\\&} marks the alignment column, just before the relation:
+The \mono{aligned} environment lines a block of equations up on their relation
+symbols — the \mono{\\&} marks the alignment column, just before the relation:
 
 $$\begin{aligned}
   (a + b)^2 &= a^2 + 2ab + b^2 \\
             &= a^2 + b^2 + 2ab.
 \end{aligned}$$
 
-The \texttt{gathered} environment centres a run of equations without aligning
-them, and \texttt{split} breaks one long equation across lines on a shared
+The \mono{gathered} environment centres a run of equations without aligning
+them, and \mono{split} breaks one long equation across lines on a shared
 alignment point:
 
 $$\begin{gathered}
@@ -189,8 +189,8 @@ $$\begin{gathered}
 
 \section {Stacks, overlines and boxes}
 
-\texttt{\\overset} and \texttt{\\underset} stack an annotation above or below a
-base, and \texttt{\\substack} stacks the lines of a many-line subscript:
+\mono{\\overset} and \mono{\\underset} stack an annotation above or below a
+base, and \mono{\\substack} stacks the lines of a many-line subscript:
 
 $$A \overset{\text{def}}{=} B
   \qquad
@@ -198,8 +198,8 @@ $$A \overset{\text{def}}{=} B
   \qquad
   \sum_{\substack{0 < i < n \\ i \ne k}} a_i.$$
 
-A rule may be drawn across a whole sub-formula with \texttt{\\overline} or
-\texttt{\\underline}, and \texttt{\\boxed} rings a result in a frame:
+A rule may be drawn across a whole sub-formula with \mono{\\overline} or
+\mono{\\underline}, and \mono{\\boxed} rings a result in a frame:
 
 $$\overline{a + b} = \overline{a} + \overline{b}
   \qquad
@@ -230,7 +230,7 @@ write $\mathbf{x}$ for a column vector and $\mathrm{tr}\, A$ for a trace.
 
 \section {Text, connectives and ellipses}
 
-\texttt{\\text} drops a run of ordinary upright prose into a formula, the way a
+\mono{\\text} drops a run of ordinary upright prose into a formula, the way a
 qualifying phrase reads beside an equation:
 
 $$x^2 = 4 \quad \text{if and only if} \quad x = \pm 2.$$
@@ -240,10 +240,10 @@ with a thick space on either side, so a chain of reasoning reads naturally:
 
 $$x^2 = 4 \implies x = 2 \;\text{or}\; x = -2 \iff |x| = 2.$$
 
-An ellipsis carries a sequence to its limit. \texttt{\\dots} chooses its height
+An ellipsis carries a sequence to its limit. \mono{\\dots} chooses its height
 from what follows, as in amsmath: centred dots before an operator or relation,
 so they line up with the plus signs, and low dots before a comma, on the
-baseline with them. (\texttt{\\cdots} and \texttt{\\ldots} force either form.)
+baseline with them. (\mono{\\cdots} and \mono{\\ldots} force either form.)
 
 $$1 + 2 + 3 + \dots + n = \frac{n(n+1)}{2}
   \qquad
@@ -255,13 +255,13 @@ Every symbol in a formula belongs to a class — ordinary, operator, binary,
 relation, opening, closing, punctuation or inner — and the class sets the spacing
 around it. The eight class-forcing commands override that class when a symbol is
 being used in an unusual role. For instance, a slash used as a binary operator
-takes the medium binary spacing with \texttt{\\mathbin}, while a colon forced to a
-relation takes the wider relation spacing with \texttt{\\mathrel}:
+takes the medium binary spacing with \mono{\\mathbin}, while a colon forced to a
+relation takes the wider relation spacing with \mono{\\mathrel}:
 
 $$a \mathbin{/} b \qquad x \mathrel{:} y \qquad \mathopen| x \mathclose|.$$
 
-The full set is \texttt{\\mathord}, \texttt{\\mathop}, \texttt{\\mathbin},
-\texttt{\\mathrel}, \texttt{\\mathopen}, \texttt{\\mathclose}, \texttt{\\mathpunct}
-and \texttt{\\mathinner}.
+The full set is \mono{\\mathord}, \mono{\\mathop}, \mono{\\mathbin},
+\mono{\\mathrel}, \mono{\\mathopen}, \mono{\\mathclose}, \mono{\\mathpunct}
+and \mono{\\mathinner}.
 
 \vfill\eject

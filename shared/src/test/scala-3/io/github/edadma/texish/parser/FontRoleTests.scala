@@ -6,12 +6,12 @@ import org.scalatest.matchers.should.Matchers
 
 import scala.collection.mutable.ArrayBuffer
 
-/** \texttt sets its argument in the typewriter member of the current super-family — the mono *role* of the
+/** \mono sets its argument in the typewriter member of the current super-family — the mono *role* of the
   * `lmroman` family, not a separate typeface — and reverts to the body font afterwards. Because the mono cut
   * carries no ligatures, the smart-quote and dash representations stay off inside it, so code-like text such as
   * file names is set literally.
   */
-class TextttTests extends AnyFreeSpec with Matchers:
+class FontRoleTests extends AnyFreeSpec with Matchers:
 
   private class CapturingDocument(t: HeadlessTypesetter) extends DocumentMode(t):
     val shipped = new ArrayBuffer[VBox]
@@ -41,17 +41,23 @@ class TextttTests extends AnyFreeSpec with Matchers:
 
   private def allText(boxes: Seq[Box]): String = boxes.toList.flatMap(chars).map(_.text).mkString
 
-  "\\texttt sets its content in the mono role and reverts after" in {
-    val boxes = render("\\texttt{X} Y")
+  "\\mono sets its content in the mono role and reverts after" in {
+    val boxes = render("\\mono{X} Y")
     fontOf(boxes, "X").style should contain("mono")
     fontOf(boxes, "Y").style should not contain "mono"
   }
 
-  "\\texttt keeps the surrounding weight — bold code stays bold" in {
-    val boxes = render("\\bold{a\\texttt{X}}")
+  "\\mono keeps the surrounding weight — bold code stays bold" in {
+    val boxes = render("\\bold{a\\mono{X}}")
     fontOf(boxes, "X").style should contain allOf ("mono", "bold")
   }
 
-  "the dash representations stay off inside \\texttt" in {
-    allText(render("\\texttt{a--b}")) should not include `EN DASH`
+  "\\sans and \\serif select the sans and roman roles" in {
+    fontOf(render("\\sans{X} Y"), "X").style should contain("sans")
+    // \serif inside a sans run returns to the roman member, dropping the sans role
+    fontOf(render("\\sans{a\\serif{X}}"), "X").style should not contain "sans"
+  }
+
+  "the dash representations stay off inside \\mono" in {
+    allText(render("\\mono{a--b}")) should not include `EN DASH`
   }

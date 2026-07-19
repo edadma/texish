@@ -180,20 +180,20 @@
 // reference prints its display text, its canonical target available as a second argument for a linking document.
 \def usfmwj t {\textcolor{#c0281e}{\t}}
 \def usfmref d t {\d}
-\def usfmnd t {\textsc{\t}}
-\def usfmadd t {\emph{\t}}
-\def usfmbk t {\emph{\t}}
-\def usfmtl t {\emph{\t}}
+\def usfmnd t {\smallcaps{\t}}
+\def usfmadd t {\italic{\t}}
+\def usfmbk t {\italic{\t}}
+\def usfmtl t {\italic{\t}}
 \def usfmqt t {\t}
-\def usfmqs t {\emph{\t}}
-\def usfmsc t {\textsc{\t}}
-\def usfmem t {\emph{\t}}
-\def usfmit t {\emph{\t}}
-\def usfmbd t {\textbf{\t}}
-\def usfmbdit t {\textbf{\emph{\t}}}
+\def usfmqs t {\italic{\t}}
+\def usfmsc t {\smallcaps{\t}}
+\def usfmem t {\italic{\t}}
+\def usfmit t {\italic{\t}}
+\def usfmbd t {\bold{\t}}
+\def usfmbdit t {\bold{\italic{\t}}}
 \def usfmsup t {\textsup{\t}}
-\def usfmk t {\emph{\t}}
-\def usfmrq t {\emph{\t}}
+\def usfmk t {\italic{\t}}
+\def usfmrq t {\italic{\t}}
 \def usfmw t {\t}
 \def usfmfv t {{\bold \textsup{\t}}}
 \def usfmno t {\t}
@@ -206,12 +206,12 @@
 \def usfmwh t {\t}
 \def usfmwa t {\t}
 \def usfmqac t {\t}
-\def usfmlit t {\textbf{\t}}
+\def usfmlit t {\bold{\t}}
 \def usfmord t {\textsup{\t}}
-\def usfmsig t {\emph{\t}}
-\def usfmsls t {\emph{\t}}
-\def usfmior t {\emph{\t}}
-\def usfmiqt t {\emph{\t}}
+\def usfmsig t {\italic{\t}}
+\def usfmsls t {\italic{\t}}
+\def usfmior t {\italic{\t}}
+\def usfmiqt t {\italic{\t}}
 
 // ---- Footnotes ------------------------------------------------------------------
 // A footnote rides the foot of its page through the engine's \footnote, set small. Its parts: \fr the origin
@@ -221,14 +221,14 @@
 // Both take the note's USFM caller as their first argument. A `+` caller means "number it": the note joins the
 // running footnote sequence. Any other caller is used verbatim — set as a small italic sigil, the way Louis
 // Segond marks its per-passage cross-references with italic letters a, b, c — and does not touch the counter.
-\def usfmfootnote c b {\if {\= {\c} {+}}\footnote{\font \usfmfamily 8 regular\b}\else\footnote[\emph{\c}]{\font \usfmfamily 8 regular\b}\fi}
-\def usfmxref c b {\if {\= {\c} {+}}\footnote{\font \usfmfamily 8 regular\b}\else\footnote[\emph{\c}]{\font \usfmfamily 8 regular\b}\fi}
+\def usfmfootnote c b {\if {\= {\c} {+}}\footnote{\font \usfmfamily 8 regular\b}\else\footnote[\italic{\c}]{\font \usfmfamily 8 regular\b}\fi}
+\def usfmxref c b {\if {\= {\c} {+}}\footnote{\font \usfmfamily 8 regular\b}\else\footnote[\italic{\c}]{\font \usfmfamily 8 regular\b}\fi}
 \def usfmfr t {{\bold \t} }
 \def usfmft t {\t}
-\def usfmfq t {\emph{\t}}
-\def usfmfqa t {\emph{\t}}
-\def usfmfqb t {\emph{\t}}
-\def usfmfk t {\textsc{\t}}
+\def usfmfq t {\italic{\t}}
+\def usfmfqa t {\italic{\t}}
+\def usfmfqb t {\italic{\t}}
+\def usfmfk t {\smallcaps{\t}}
 \def usfmfl t {\t}
 \def usfmfp t {\t}
 \def usfmfw t {\t}
@@ -236,8 +236,8 @@
 \def usfmfm t {\t}
 \def usfmxo t {{\bold \t} }
 \def usfmxt t {\t}
-\def usfmxq t {\emph{\t}}
-\def usfmxk t {\textsc{\t}}
+\def usfmxq t {\italic{\t}}
+\def usfmxk t {\smallcaps{\t}}
 \def usfmxot t {\t}
 \def usfmxnt t {\t}
 \def usfmxta t {\t}
@@ -248,4 +248,4 @@
 // lays them out in equal columns. Header cells are bold; the table stands off from the surrounding text.
 \def usfmtable s b {\par\medskip\noindent\tabular{\s}{\b}\par\medskip\noindent}
 \def usfmtc t {\t}
-\def usfmth t {\textbf{\t}}
+\def usfmth t {\bold{\t}}

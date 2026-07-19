@@ -9,9 +9,9 @@
 
 \chapter{Preface}
 
-This is the reference manual for \emph{texish}, a typesetting engine in the
+This is the reference manual for \italic{texish}, a typesetting engine in the
 tradition of Donald Knuth's \TeX. Like \TeX, texish reads a source document
-written in a language of ordinary text interspersed with \emph{control
+written in a language of ordinary text interspersed with \italic{control
 sequences}, and from it builds finished pages: lines broken and justified by the
 Knuth--Plass algorithm, words divided by Liang's hyphenation patterns, formulae
 set in real math mode, and the whole assembled by a page builder into a PDF.
@@ -60,7 +60,7 @@ readable core that a student can hope to understand in full.
 
 \section{What texish is}
 
-At heart texish is an \emph{interpreter}. You give it a source document; it
+At heart texish is an \italic{interpreter}. You give it a source document; it
 reads that document from beginning to end, and as it reads it acts: it sets
 characters into words, gathers words into paragraphs, breaks paragraphs into
 lines, stacks lines and other material into pages, and ships each finished page
@@ -83,11 +83,11 @@ next.
 
 \subsection{Tokens}
 
-First the source is broken into \emph{tokens}. A run of ordinary letters is one
+First the source is broken into \italic{tokens}. A run of ordinary letters is one
 text token; a backslash followed by letters is a control-sequence token, such as
 \verb|\section|; the special characters --- the braces that open and close a
 group, the \verb|$| that toggles mathematics --- are tokens of their own. A few
-characters are \emph{active} and behave like commands in their own right; the tie
+characters are \italic{active} and behave like commands in their own right; the tie
 \verb|~|, which sets an unbreakable space, is one. Two slashes begin a comment
 that runs to the end of the line. (Unlike \TeX, the percent sign is an ordinary
 character in texish, free to be used in prose and in arithmetic.)
@@ -95,9 +95,9 @@ character in texish, free to be used in prose and in arithmetic.)
 \subsection{Processing and expansion}
 
 The tokens are then processed in order. Most control sequences are
-\emph{primitives}, built into the engine: \verb|\hskip| inserts horizontal space,
+\italic{primitives}, built into the engine: \verb|\hskip| inserts horizontal space,
 \verb|\vbox| builds a vertical box, \verb|\section| opens a section. Others are
-\emph{macros}, defined in the source or by a package with \verb|\def|; when the
+\italic{macros}, defined in the source or by a package with \verb|\def|; when the
 engine meets a macro it replaces it with its definition and goes on reading. The
 bundled packages --- loaded with \verb|\use| --- are nothing more than
 collections of such definitions; the \verb|document| package, for instance,
@@ -106,8 +106,8 @@ engine's primitives.
 
 \subsection{Boxes and glue}
 
-As the engine reads, the material it produces is assembled out of \emph{boxes}
-and \emph{glue}, the two ideas at the centre of the whole system. A box is a
+As the engine reads, the material it produces is assembled out of \italic{boxes}
+and \italic{glue}, the two ideas at the centre of the whole system. A box is a
 rectangle with a definite height, depth, and width --- a single character is a
 box, a word is a box of boxes, a line is a wider one. Glue is stretchable,
 shrinkable space set between boxes; it is glue that lets a line of type spread to

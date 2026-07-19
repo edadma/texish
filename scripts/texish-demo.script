@@ -28,8 +28,8 @@
 
 \section {Boxes and glue}
 
-\label{sec:boxes}Everything texish sets is a \emph{box}, and the space between
-boxes is \emph{glue} --- a length that can stretch and shrink. The engine builds
+\label{sec:boxes}Everything texish sets is a \italic{box}, and the space between
+boxes is \italic{glue} --- a length that can stretch and shrink. The engine builds
 a paragraph by packing boxes and glue, then choosing line breaks. The primitives
 below expose that machinery directly. This is \autoref{sec:boxes}.
 
@@ -44,8 +44,8 @@ words with explicit glue between them, framed so its extent is visible:
 
 \subsection {Stretchable and shrinkable glue}
 
-Glue is written \texttt{natural plus stretch minus shrink}. Infinite stretch
-(\texttt{fil}, \texttt{fill}) wins over any finite amount, so it pushes
+Glue is written \mono{natural plus stretch minus shrink}. Infinite stretch
+(\mono{fil}, \mono{fill}) wins over any finite amount, so it pushes
 neighbouring material apart. In the framed line below, the \verb|\hfil| between
 the words absorbs all the slack equally, while \verb|\hfill| (a stronger
 infinity) would take it all itself:
@@ -56,7 +56,7 @@ infinity) would take it all itself:
 \medskip
 \noindent\fbox{\hbox to:4in {pushed\hfill apart}}
 
-A finite \texttt{plus}/\texttt{minus} glue flexes only as far as it is allowed;
+A finite \mono{plus}/\mono{minus} glue flexes only as far as it is allowed;
 here the gap may grow by up to 1in but is asked to fill 3in, so it stretches to
 its limit and the box reports the rest as underfull (an engine, not a document,
 concern):
@@ -124,7 +124,7 @@ newspaper or a two-column paper is read.}
 \vskip 12pt
 
 \noindent The same material in two columns with a wider gutter, set by the
-optional \texttt{gap} parameter:
+optional \mono{gap} parameter:
 
 \columns gap:32 {2}{\noindent
 The quick brown fox jumps over the lazy dog, and then, gathering its breath, it
@@ -187,7 +187,7 @@ gives the author over the rhythm of the pages.
 \label{sec:picture}A \verb|\picture| is a fixed-size box drawn into with shapes,
 paths, and placed type. It flows in the text like any other box and prints through
 the same backend as the page itself. Coordinates are y-up from the lower-left; a
-bare number is a point and a unit suffix (\texttt{in}, \texttt{mm}, \texttt{pt})
+bare number is a point and a unit suffix (\mono{in}, \mono{mm}, \mono{pt})
 is honoured. The pen is set with \verb|\stroke|, the fill with \verb|\fill|.
 
 \medskip
@@ -293,7 +293,7 @@ different light theme:
 \section {Named counters}
 
 \label{sec:counters}Every numbered thing in a document — a section, a figure, a
-footnote — rides on a \emph{counter}: a named integer the engine holds and advances
+footnote — rides on a \italic{counter}: a named integer the engine holds and advances
 for you. \verb|\newcounter| declares one (starting at zero), \verb|\stepcounter|
 adds one, \verb|\setcounter| and \verb|\addtocounter| assign and adjust it, and
 \verb|\value| reads it back so a formatter can render it. The six formatters turn

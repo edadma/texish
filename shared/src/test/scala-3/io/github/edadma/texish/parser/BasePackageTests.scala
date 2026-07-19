@@ -60,10 +60,10 @@ class BasePackageTests extends AnyFreeSpec with Matchers:
   }
 
   "inline markup sets the shape and reverts to the body font afterwards" in {
-    fontOf(render("\\emph{X} Y"), "X").style should contain("italic")
-    fontOf(render("\\textbf{X} Y"), "X").style should contain("bold")
-    fontOf(render("\\textsc{X} Y"), "X").style should contain("smallcaps")
-    fontOf(render("\\emph{X} Y"), "Y").style should not contain "italic"
+    fontOf(render("\\italic{X} Y"), "X").style should contain("italic")
+    fontOf(render("\\bold{X} Y"), "X").style should contain("bold")
+    fontOf(render("\\smallcaps{X} Y"), "X").style should contain("smallcaps")
+    fontOf(render("\\italic{X} Y"), "Y").style should not contain "italic"
   }
 
   "\\centerline sets its content and the TeX logo expands" in {

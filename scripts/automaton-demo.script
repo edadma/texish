@@ -17,17 +17,17 @@
 // the text like any other).
 \def centerline c {\hbox to:\hsize {\hfil\c\hfil}}
 
-\title{The \texttt{automaton} Package}
+\title{The \mono{automaton} Package}
 \author{A tour of finite-state-machine diagrams in texish}
 \maketitle
 
 \section{The vocabulary}
 
-The package adds a handful of commands on top of the \texttt{diagram} layer, each
+The package adds a handful of commands on top of the \mono{diagram} layer, each
 giving a circle or an arrow its automata-theory meaning. Every machine is declared
-inside a \texttt{\\picture}, and the four building blocks are: a \emph{state}, an
-\emph{accepting} (final) state, an \emph{initial} marker, and a labelled
-\emph{transition}. The figure below shows all four at once.
+inside a \mono{\\picture}, and the four building blocks are: a \italic{state}, an
+\italic{accepting} (final) state, an \italic{initial} marker, and a labelled
+\italic{transition}. The figure below shows all four at once.
 
 \vskip 10pt
 
@@ -40,15 +40,15 @@ inside a \texttt{\\picture}, and the four building blocks are: a \emph{state}, a
 
 \vskip 6pt
 
-\noindent Here \texttt{\\state} drew the ordinary circle $q_0$, \texttt{\\accepting}
-drew the double circle $q_1$, \texttt{\\initial} attached the short incoming arrow,
-and \texttt{\\trans} drew the labelled transition between them.
+\noindent Here \mono{\\state} drew the ordinary circle $q_0$, \mono{\\accepting}
+drew the double circle $q_1$, \mono{\\initial} attached the short incoming arrow,
+and \mono{\\trans} drew the labelled transition between them.
 
 \section{States}
 
 A state is a circle sized to its label; an accepting state carries a second ring
 drawn just inside the outline. The gap between those two rings is configurable with
-\texttt{\\autoring}. Below, an ordinary state sits beside an accepting one so the
+\mono{\\autoring}. Below, an ordinary state sits beside an accepting one so the
 double ring is easy to compare.
 
 \vskip 10pt
@@ -60,10 +60,10 @@ double ring is easy to compare.
 
 \subsection{The initial marker}
 
-\texttt{\\initial} marks the start state with a short arrow entering from the left.
-For a start arrow coming from another side, the underlying \texttt{\\dgentry}
-primitive stays available: it takes a direction (\texttt{north}, \texttt{south},
-\texttt{east} or \texttt{west}) and a length. The three states below are each
+\mono{\\initial} marks the start state with a short arrow entering from the left.
+For a start arrow coming from another side, the underlying \mono{\\dgentry}
+primitive stays available: it takes a direction (\mono{north}, \mono{south},
+\mono{east} or \mono{west}) and a length. The three states below are each
 marked as a start state, but from different sides.
 
 \vskip 10pt
@@ -81,7 +81,7 @@ marked as a start state, but from different sides.
 
 \subsection{Straight transitions}
 
-\texttt{\\trans[symbol]\{from\}\{to\}} draws a straight labelled arrow between two
+\mono{\\trans[symbol]\{from\}\{to\}} draws a straight labelled arrow between two
 states. The label is set beside the arrow, and the arrow attaches to the true
 circle boundary at each end. A transition on more than one symbol simply lists them
 in the label.
@@ -96,7 +96,7 @@ in the label.
 
 \subsection{Self-transitions}
 
-\texttt{\\loopabove\{name\}\{symbol\}} draws a self-transition as a labelled loop
+\mono{\\loopabove\{name\}\{symbol\}} draws a self-transition as a labelled loop
 rising from the top of the state — the standard picture for a symbol that keeps the
 machine in the same state.
 
@@ -110,7 +110,7 @@ machine in the same state.
 \subsection{Curved transitions for a back-and-forth pair}
 
 When two states transition to each other, two straight arrows would overlap.
-\texttt{\\arc[bend]\{from\}\{to\}\{symbol\}} bows the arrow sideways by \texttt{bend}
+\mono{\\arc[bend]\{from\}\{to\}\{symbol\}} bows the arrow sideways by \mono{bend}
 points; giving each direction the same bend separates the pair into two clean arcs.
 
 \vskip 10pt
@@ -146,9 +146,9 @@ for the symbols that leave it unchanged.
 
 \section{Layout is free}
 
-States need not sit in a row — any placement the \texttt{diagram} layer understands
-works. Absolute coordinates (\texttt{at X Y}) and the relative directions
-(\texttt{right}, \texttt{left}, \texttt{above}, \texttt{below}, each with an optional
+States need not sit in a row — any placement the \mono{diagram} layer understands
+works. Absolute coordinates (\mono{at X Y}) and the relative directions
+(\mono{right}, \mono{left}, \mono{above}, \mono{below}, each with an optional
 gap) can be mixed freely. Placed at the corners of a triangle, the three states
 below count the number of $1$s read modulo three; each $1$ steps to the next state,
 and $r_0$ — both the start and the only accepting state — is reached again exactly
@@ -188,10 +188,10 @@ takes an $a$ to $n_1$, then a $b$ to the accepting state $n_2$.
 
 \section{Tuning the look}
 
-The configuration of the underlying \texttt{diagram} layer remains in reach, so the
-appearance can be tuned without leaving the package. Overriding \texttt{dgfill} (the
-state fill), \texttt{dglinecolor} (the ink), \texttt{autoring} (the double-ring gap)
-and \texttt{dgloop} (the height of a self-loop) restyles the same machine below. The
+The configuration of the underlying \mono{diagram} layer remains in reach, so the
+appearance can be tuned without leaving the package. Overriding \mono{dgfill} (the
+state fill), \mono{dglinecolor} (the ink), \mono{autoring} (the double-ring gap)
+and \mono{dgloop} (the height of a self-loop) restyles the same machine below. The
 overrides are confined to this picture's group, so they do not leak into the rest of
 the document.
 

@@ -21,7 +21,7 @@
 // The abstract environment sets a centred bold "Abstract" heading over a smaller,
 // narrower block.
 \begin{abstract}
-This document exercises the full feature set of the \texttt{document} package:
+This document exercises the full feature set of the \mono{document} package:
 the title block and abstract, numbered and unnumbered sectioning, a table of
 contents whose page numbers resolve in a second pass, lists of every kind,
 quotations, alignment, inline markup, the LaTeX font-size declarations, the
@@ -41,12 +41,12 @@ body on a tight \LaTeX{} type scale.
 // ---- Sectioning ----------------------------------------------------------------
 \section {Sectioning}
 
-The \texttt{section}, \texttt{subsection} and \texttt{subsubsection} commands give
+The \mono{section}, \mono{subsection} and \mono{subsubsection} commands give
 three numbered levels. Numbering is automatic: a subsection resets to one at the
 start of each new section, and a subsubsection resets within each subsection.
 
 Notice that this first paragraph after a heading is set flush to the left margin,
-with no first-line indent, exactly as in a LaTeX \emph{article}. The paragraphs
+with no first-line indent, exactly as in a LaTeX \italic{article}. The paragraphs
 that follow, like this one, open with the usual first-line indent and there is no
 extra vertical space between them — the indent alone marks the boundary.
 
@@ -70,7 +70,7 @@ is left out of the table of contents.
 This heading was written with a star, so it stands out from the body without a
 number and without a contents entry.
 
-\paragraph{A run-in heading.} The \texttt{paragraph} command is the lowest level:
+\paragraph{A run-in heading.} The \mono{paragraph} command is the lowest level:
 it sets its title bold on the same line as the text it introduces, with no number
 and no break after it. The body continues immediately, as you see here.
 
@@ -80,7 +80,7 @@ The package provides three list environments, all of which nest cleanly.
 
 \subsection {Enumerated lists}
 
-The \texttt{enumerate} environment numbers its items automatically \dots
+The \mono{enumerate} environment numbers its items automatically \dots
 
 \begin{enumerate}
 \item Like this,
@@ -91,7 +91,7 @@ aligns under the text rather than the number,
 
 \subsection {Bulleted and nested lists}
 
-The \texttt{itemize} environment marks each item with a bullet, and lists nest to
+The \mono{itemize} environment marks each item with a bullet, and lists nest to
 any depth — a list inside an item simply indents one level further:
 
 \begin{itemize}
@@ -114,18 +114,18 @@ indent stands out against the outer level.
 
 \subsection {Description lists}
 
-The \texttt{description} environment pairs a bold term, given to \texttt{item} in
+The \mono{description} environment pairs a bold term, given to \mono{item} in
 brackets, with its hanging definition:
 
 \begin{description}
 \item[texish] the layout engine these notes are typeset with.
-\item[package] a reusable bundle of macros, loaded with \texttt{use}.
+\item[package] a reusable bundle of macros, loaded with \mono{use}.
 \item[document] the article-style package this very script demonstrates.
 \end{description}
 
 \section {Quotations}
 
-A \texttt{quote} block is indented on both sides and remains fully justified:
+A \mono{quote} block is indented on both sides and remains fully justified:
 
 \begin{quote}
 The art of writing is the art of discovering what you believe. Good prose is like
@@ -133,7 +133,7 @@ a windowpane, clear enough that the reader forgets it is there at all and sees
 only what lies beyond it.
 \end{quote}
 
-A \texttt{quotation} block is the same, indented a little wider — suited to longer,
+A \mono{quotation} block is the same, indented a little wider — suited to longer,
 multi-paragraph passages:
 
 \begin{quotation}
@@ -163,25 +163,25 @@ indent.
 This paragraph is set flush right, ragged down its left edge.
 \end{flushright}
 
-The single-line helpers \texttt{centerline}, \texttt{leftline} and
-\texttt{rightline} place one line each at the left, centre, or right of the
+The single-line helpers \mono{centerline}, \mono{leftline} and
+\mono{rightline} place one line each at the left, centre, or right of the
 measure:
 
 \centerline{This single line is centred.}
 \leftline{This single line is flush left.}
 \rightline{This single line is flush right.}
 
-\noindent The \texttt{centering} declaration switches the rest of a group to
-centred lines, the basis of the \texttt{center} environment above.
+\noindent The \mono{centering} declaration switches the rest of a group to
+centred lines, the basis of the \mono{center} environment above.
 
 \section {Inline markup}
 
-The body can be set \emph{emphasised}, \textit{italic}, \textsl{slanted},
-\textbf{bold}, \textsc{in small caps}, or \underline{underlined}, switched between
-the family roles \textrm{roman}, \textsf{sans-serif}, and \texttt{typewriter}, and
-reset to the plain face with \textnormal{normal}. A water molecule is
-H\textsubscript{2}O and the 1\textsuperscript{st} item carries a raised ordinal.
-The ellipsis commands \texttt{dots} and \texttt{ldots} both set \dots{} three dots.
+The body can be set \italic{emphasised}, \italic{italic}, \slanted{slanted},
+\bold{bold}, \smallcaps{in small caps}, or \underline{underlined}, switched between
+the family roles \serif{roman}, \sans{sans-serif}, and \mono{typewriter}, and
+reset to the plain face with {\normalfont normal}. A water molecule is
+H\textsub{2}O and the 1\textsup{st} item carries a raised ordinal.
+The ellipsis commands \mono{dots} and \mono{ldots} both set \dots{} three dots.
 
 \section {Font sizes}
 
@@ -201,8 +201,8 @@ dash~\textendash, and the degree sign~\textdegree.
 
 \section {Floats: figures and tables}
 
-A \texttt{figure} detaches its body to the top of a page, and a \texttt{caption}
-written inside numbers it on the figure counter. The \texttt{label} on the caption
+A \mono{figure} detaches its body to the top of a page, and a \mono{caption}
+written inside numbers it on the figure counter. The \mono{label} on the caption
 lets it be cross-referenced: this is Figure~\ref{fig:frog}.
 
 \figure[h]{
@@ -211,15 +211,15 @@ lets it be cross-referenced: this is Figure~\ref{fig:frog}.
 \centerline{\caption{A frog, scaled to a third of the text width.}\label{fig:frog}}
 }
 
-A \texttt{table} float works the same way on its own counter: its caption reads
+A \mono{table} float works the same way on its own counter: its caption reads
 "Table~1", not "Figure~4", and it files into the list of tables. Its body can be
 any content — the float, the caption and the counter are the document-package
 features; a tabular grid would come from a separate package.
 
 \table[h]{
 \centerline{\begin{minipage}{3.2in}
-\textbf{Sectioning summary.} The three numbered levels are \texttt{section},
-\texttt{subsection} and \texttt{subsubsection}, numbered 1, 1.1 and 1.1.1 and
+\bold{Sectioning summary.} The three numbered levels are \mono{section},
+\mono{subsection} and \mono{subsubsection}, numbered 1, 1.1 and 1.1.1 and
 reset within their parent.
 \end{minipage}}
 \vskip 6pt
@@ -238,7 +238,7 @@ on the next page (see Table~\ref{tab:levels} for the sectioning summary).
 
 \section {Boxes and conditionals}
 
-A \texttt{minipage} sets its body as a paragraph in a box of a chosen width. Two
+A \mono{minipage} sets its body as a paragraph in a box of a chosen width. Two
 side by side, centred, with a gap between them:
 
 \centerline{//
@@ -253,18 +253,18 @@ And this is the right minipage, the same width, set as its own little paragraph.
 
 \medskip
 
-\noindent The \texttt{ifthenelse} command chooses between two branches on a boolean
-test, and \texttt{equal} tests two strings for equality. For example,
-\ifthenelse{\equal{texish}{texish}}{the two strings \emph{are} equal}{they are not}
+\noindent The \mono{ifthenelse} command chooses between two branches on a boolean
+test, and \mono{equal} tests two strings for equality. For example,
+\ifthenelse{\equal{texish}{texish}}{the two strings \italic{are} equal}{they are not}
 — and \ifthenelse{\equal{texish}{tex}}{they are equal}{the two strings are
-\emph{not} equal}.
+\italic{not} equal}.
 
 \appendix
 
 \section {After the appendix}
 
-After \texttt{appendix}, the section counter restarts and its number switches to a
-letter, so this section is Appendix~A while keeping the same \texttt{section}
+After \mono{appendix}, the section counter restarts and its number switches to a
+letter, so this section is Appendix~A while keeping the same \mono{section}
 command. A subsection here follows along as A.1.
 
 \subsection {A lettered subsection}

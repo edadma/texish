@@ -4,7 +4,7 @@
 
 \use{document}
 
-\title{The \texttt{cinzel} Titling Face}
+\title{The \mono{cinzel} Titling Face}
 \author{The texish engine}
 \date{Version 0.20.4}
 \maketitle

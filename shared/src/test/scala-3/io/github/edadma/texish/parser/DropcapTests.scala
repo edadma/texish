@@ -157,7 +157,7 @@ class DropcapTests extends AnyFreeSpec with Matchers:
     val sc = render(s"\\dropcap{L}{orem} $filler").flatMap(deepChars).find(_.text.contains("orem")).get
     sc.font.style should contain("smallcaps")
 
-    val bold = render(s"\\def dropcaptext t {\\textbf{\\t}}\n\\dropcap{L}{orem} $filler")
+    val bold = render(s"\\def dropcaptext t {\\bold{\\t}}\n\\dropcap{L}{orem} $filler")
       .flatMap(deepChars).find(_.text.contains("orem")).get
     bold.font.style should contain("bold")
     bold.font.style should not contain "smallcaps"

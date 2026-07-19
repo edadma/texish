@@ -2,23 +2,23 @@
 \use{railroad}
 
 \title{Railroad Diagrams from EBNF}
-\author{the \texttt{railroad} package}
+\author{the \mono{railroad} package}
 \maketitle
 
-The \texttt{railroad} package turns a grammar written in W3C-style EBNF — the notation of the
+The \mono{railroad} package turns a grammar written in W3C-style EBNF — the notation of the
 XML and XPath specifications — into a railroad (syntax) diagram, one picture per rule. The whole
-package is written in the document language over the \texttt{\\picture} vector layer: there is no
+package is written in the document language over the \mono{\\picture} vector layer: there is no
 railroad-specific engine primitive. This demo walks through every EBNF construct the package
 draws, each shown in isolation, and closes with a complete realistic grammar.
 
-A diagram has an entry arrow on the left, an exit arrow on the right, and the \emph{rail} running
+A diagram has an entry arrow on the left, an exit arrow on the right, and the \italic{rail} running
 between them through every item. The rule name sits in a band across the top of its own picture.
 
 \section{Reading a rule}
 
 A grammar is one or more rules separated by whitespace or newlines. Each rule names an expression
-with \texttt{::=}. The simplest rule is a single item — here a reference to another rule, drawn as
-a plain rectangle (a \emph{nonterminal}).
+with \mono{::=}. The simplest rule is a single item — here a reference to another rule, drawn as
+a plain rectangle (a \italic{nonterminal}).
 
 \railroad{
   start ::= program
@@ -26,12 +26,12 @@ a plain rectangle (a \emph{nonterminal}).
 
 \section{The three kinds of item}
 
-A \emph{primary} — the atom of a diagram — is one of three things, and each gets its own box
+A \italic{primary} — the atom of a diagram — is one of three things, and each gets its own box
 shape so you can tell them apart at a glance.
 
 \subsection{Nonterminals}
 
-A bare name is a \emph{nonterminal}: a reference to another rule. It is drawn as a square-cornered
+A bare name is a \italic{nonterminal}: a reference to another rule. It is drawn as a square-cornered
 rectangle.
 
 \railroad{
@@ -40,7 +40,7 @@ rectangle.
 
 \subsection{Terminals}
 
-A quoted literal — with either double or single quotes — is a \emph{terminal}: text that appears
+A quoted literal — with either double or single quotes — is a \italic{terminal}: text that appears
 verbatim in the input. It is drawn as a rounded ``stadium'' box. The quotes are stripped; only the
 contents are shown.
 
@@ -70,15 +70,15 @@ notation reads literally. Negated and ranged classes work the same way.
 
 \section{Putting items in a row}
 
-Writing two or more items in a row is \emph{concatenation}: they are drawn left to right, joined by
-a connecting rail. This is a \emph{sequence}.
+Writing two or more items in a row is \italic{concatenation}: they are drawn left to right, joined by
+a connecting rail. This is a \italic{sequence}.
 
 \railroad{
   call ::= name "(" args ")"
 }
 
-The difference operator \texttt{-} of W3C EBNF is treated as plain concatenation, so \texttt{A - B}
-simply draws \texttt{A} then \texttt{B}.
+The difference operator \mono{-} of W3C EBNF is treated as plain concatenation, so \mono{A - B}
+simply draws \mono{A} then \mono{B}.
 
 \railroad{
   range ::= low - high
@@ -86,7 +86,7 @@ simply draws \texttt{A} then \texttt{B}.
 
 \section{Choosing between items}
 
-The bar \texttt{|} is \emph{alternation}: the branches are stacked and the rail forks to pick one.
+The bar \mono{|} is \italic{alternation}: the branches are stacked and the rail forks to pick one.
 The first alternative stays on the main line; later ones drop to a rounded fork below.
 
 \railroad{
@@ -103,7 +103,7 @@ A choice may have any number of branches, and each branch may itself be a row of
 
 Parentheses group a sub-expression so a repetition or a choice can apply to the whole group rather
 than to one item. A group is transparent — it adds no box of its own, only the structure inside it.
-Here the choice \texttt{("." \emph{or} ",")} is grouped so the row reads as a single column.
+Here the choice \mono{("." \italic{or} ",")} is grouped so the row reads as a single column.
 
 \railroad{
   pair ::= key (":" | "=") value
@@ -114,27 +114,27 @@ Here the choice \texttt{("." \emph{or} ",")} is grouped so the row reads as a si
 A repetition mark after an item (or a group) controls how many times it may occur. Each mark draws a
 distinct loop of rails.
 
-\subsection{Optional --- \texttt{?}}
+\subsection{Optional --- \mono{?}}
 
-A trailing \texttt{?} makes an item \emph{optional}: the rail may skip it entirely, so the skip
+A trailing \mono{?} makes an item \italic{optional}: the rail may skip it entirely, so the skip
 runs straight along the main line and the item rides a forked track just below it.
 
 \railroad{
   decl ::= "var" name "="? value
 }
 
-\subsection{Zero or more --- \texttt{*}}
+\subsection{Zero or more --- \mono{*}}
 
-A trailing \texttt{*} means \emph{zero or more}: a bypass above (to skip it) and a return loop below
+A trailing \mono{*} means \italic{zero or more}: a bypass above (to skip it) and a return loop below
 (to repeat it).
 
 \railroad{
   block ::= "{" statement* "}"
 }
 
-\subsection{One or more --- \texttt{+}}
+\subsection{One or more --- \mono{+}}
 
-A trailing \texttt{+} means \emph{one or more}: a return loop below to repeat, but no bypass, so at
+A trailing \mono{+} means \italic{one or more}: a return loop below to repeat, but no bypass, so at
 least one occurrence is required.
 
 \railroad{
@@ -157,7 +157,7 @@ rails the EBNF would otherwise produce.
 
 \subsection{Optional choice}
 
-When an optional wraps a choice, \texttt{(a | b)?}, the skip is folded \emph{into} the fork as an
+When an optional wraps a choice, \mono{(a | b)?}, the skip is folded \italic{into} the fork as an
 empty top branch on the main line, with the real alternatives below it — one fork rather than a
 choice nested inside a separate optional. A plain optional draws the same way, so the two match.
 
@@ -167,8 +167,8 @@ choice nested inside a separate optional. A plain optional draws the same way, s
 
 \subsection{Separated list}
 
-The pattern \texttt{A (sep A)*} — an item repeated with a separator between occurrences — is folded
-into a single ``list'' node: the item \texttt{A} rides the main line and the separator rides a
+The pattern \mono{A (sep A)*} — an item repeated with a separator between occurrences — is folded
+into a single ``list'' node: the item \mono{A} rides the main line and the separator rides a
 return loop above it. This is exactly how a comma-separated argument list should look.
 
 \railroad{
@@ -177,7 +177,7 @@ return loop above it. This is exactly how a comma-separated argument list should
 
 \section{A complete grammar}
 
-A single \texttt{\\railroad} call may hold several rules; they are drawn one after another. Here is a
+A single \mono{\\railroad} call may hold several rules; they are drawn one after another. Here is a
 small but realistic grammar — a JSON-ish value language — exercising every construct at once:
 nonterminals, terminals, character classes, sequence, choice, grouping, all three repetition marks,
 the optional-choice fold, and the separated-list fold.
@@ -203,7 +203,7 @@ freely. The lexical rules below build a JSON number from character classes and r
 \section{Restyling the diagrams}
 
 Every visual is a configuration variable you may override with
-\texttt{\\set name \{value\}} after \texttt{\\use\{railroad\}}. Sizes are in points. Here we shrink the
+\mono{\\set name \{value\}} after \mono{\\use\{railroad\}}. Sizes are in points. Here we shrink the
 boxes, widen the gaps, and recolour the palette to a warm hue — the terminal and character-class
 shades are derived automatically as darker Oklch tints of the one base colour.
 

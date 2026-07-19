@@ -36,19 +36,23 @@ or name early — e.g. to butt text directly against a command with no space, as
 
 ## Emphasis and weight
 
+The shape-wrapping commands each set their argument in one shape and revert at the closing
+brace:
+
 ```texish
-\emph{emphasis}        % italic
-\textit{italic}        \italic{…}
-\textbf{bold}          \bold{…}
+\italic{emphasis}         italic
+\bold{strong}             bold
+\slanted{oblique}         slanted (the oblique cut, distinct from italic)
+\smallcaps{Small Caps}    small capitals
 ```
 
 ## Monospaced text
 
-`\texttt` sets its argument in Latin Modern Mono at the surrounding size — for file names,
+`\mono` sets its argument in Latin Modern Mono at the surrounding size — for file names,
 inline code, and the like:
 
 ```texish
-The file \texttt{document.texish} defines \texttt{\\maketitle}.
+The file \mono{document.texish} defines \mono{\\maketitle}.
 ```
 
 Because the mono face is cut to sit with the roman body, the code matches the text around

@@ -42,8 +42,8 @@ The document is typeset twice over a shared label table, so forward references r
 
 | Command | Effect |
 |---------|--------|
-| `\emph{…}` `\textit{…}` `\textbf{…}` | italic, italic, bold |
-| `\texttt{…}` | monospaced (Latin Modern Mono) |
+| `\italic{…}` `\bold{…}` `\slanted{…}` `\smallcaps{…}` | italic, bold, slanted, small caps |
+| `\serif{…}` `\sans{…}` `\mono{…}` | roman / sans-serif / typewriter member of the family |
 | `\textsub{…}` `\textsup{…}` | text subscript / superscript |
 | `\color[alpha]{name}` `\textcolor[alpha]{name}{…}` | pen colour (CSS name, `#RRGGBB`, `#RRGGBBAA`, or `transparent`; optional `[alpha]` 0–1) |
 | `\pagecolor[alpha]{name}` | colour painted across the whole page under all content (translucent or `transparent` for overlays); set in the preamble |
@@ -62,12 +62,12 @@ super-family, keeping weight and slope.
 
 Small caps come from a real cut when the family has one (Latin Modern, Alegreya SC); otherwise, if
 the current face carries the OpenType `smcp` feature (EB Garamond and most modern text romans),
-`\smallcaps`/`\scshape`/`\textsc` synthesise true small capitals from that feature rather than
+`\smallcaps`/`\scshape` synthesise true small capitals from that feature rather than
 falling back to ordinary lowercase.
 
-`\texttt`/`\ttfamily` and `\textsf`/`\sffamily` fall back to a document-level typewriter or sans
+`\mono`/`\ttfamily` and `\sans`/`\sffamily` fall back to a document-level typewriter or sans
 family when the current family has no such member (Garamond, Cinzel, Amiri …), so an inline
-`\texttt` never fails. `\ttdefault{name}`/`\sfdefault{name}` name those fallback families (Latin
+`\mono` never fails. `\ttdefault{name}`/`\sfdefault{name}` name those fallback families (Latin
 Modern by default); the target may be a super-family with a typewriter/sans member or a standalone
 family whose plain cut is the typewriter (`\ttdefault{jetbrains}`).
 
@@ -79,11 +79,11 @@ family whose plain cut is the typewriter (`\ttdefault{jetbrains}`).
 | `\typeface{name}` | select a typeface by name |
 | `\loadfont{name}{path}` | register a font file from disk under a typeface name |
 | `\bold{…}` `\italic{…}` `\slanted{…}` `\smallcaps{…}` | shape-wrapping commands |
-| `\textrm{…}` `\textsf{…}` `\texttt{…}` | roman / sans / typewriter member of the super-family |
+| `\serif{…}` `\sans{…}` `\mono{…}` | roman / sans / typewriter member of the super-family |
 | `\itshape` `\slshape` `\bfseries` `\scshape` | declare italic / slanted / bold / small-caps for the group |
 | `\upshape` `\mdseries` `\normalfont` | clear the shape axis / clear bold / return to the plain face |
 | `\rmfamily` `\sffamily` `\ttfamily` | declare roman / sans / typewriter for the group |
-| `\ttdefault{name}` `\sfdefault{name}` | name the fallback typewriter / sans family for `\texttt` / `\textsf` |
+| `\ttdefault{name}` `\sfdefault{name}` | name the fallback typewriter / sans family for `\mono` / `\sans` |
 | `\accent{mark}{char}` | combine an accent mark with a base character |
 
 ### Bundled text faces

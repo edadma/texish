@@ -11,28 +11,28 @@
 \use{document}
 \use{chem}
 
-\title{Typesetting Chemistry with \texttt{chem}}
+\title{Typesetting Chemistry with \mono{chem}}
 \author{The texish project}
 \maketitle
 
 \section{Formula notation}
 
 A molecular formula is just running text with the atom counts dropped and
-shrunk into subscripts. The package supplies \texttt{\\dn} for a subscript count
-and \texttt{\\up} for a superscript charge; both size themselves from the current
-font through the engine's \texttt{\\textsub} and \texttt{\\textsup}.
+shrunk into subscripts. The package supplies \mono{\\dn} for a subscript count
+and \mono{\\up} for a superscript charge; both size themselves from the current
+font through the engine's \mono{\\textsub} and \mono{\\textsup}.
 
 \subsection{Subscripts}
 
-Write \texttt{H\\dn2 O} for water, H\dn2 O, or \texttt{C\\dn6 H\\dn{12} O\\dn6}
+Write \mono{H\\dn2 O} for water, H\dn2 O, or \mono{C\\dn6 H\\dn{12} O\\dn6}
 for glucose, C\dn6 H\dn{12} O\dn6. Multi-digit counts go in braces. A few more:
 sulfuric acid H\dn2 SO\dn4, ammonia NH\dn3, methane CH\dn4, and the carbonate of
 calcium CaCO\dn3.
 
 \subsection{Charges and ions}
 
-A charge is a superscript, set with \texttt{\\up}. Use a math plus or minus inside
-it — \texttt{Na\\up\{\$+\$\}} — so the sign is a true plus or minus glyph from the
+A charge is a superscript, set with \mono{\\up}. Use a math plus or minus inside
+it — \mono{Na\\up\{\$+\$\}} — so the sign is a true plus or minus glyph from the
 math font rather than a hyphen. The sodium ion Na\up{$+$} and the chloride ion
 Cl\up{$-$}; the doubly charged calcium Ca\up{$2+$}; and a polyatomic ion built
 from a subscript and a charge together, the sulfate SO\dn4\up{$2-$} and the
@@ -42,29 +42,29 @@ OH\up{$-$}.
 \subsection{Isotopes}
 
 An isotope carries its mass number as a leading superscript and, where useful, its
-atomic number as a leading subscript. Both are just \texttt{\\up} and \texttt{\\dn}
+atomic number as a leading subscript. Both are just \mono{\\up} and \mono{\\dn}
 written \italic{before} the symbol: \up{14}C is carbon-14, \up{235}U is the fissile
 uranium isotope, and with the atomic number too, \up{14}\dn6 C and \up{238}\dn{92} U.
 
 \section{Reaction equations}
 
-The \texttt{\\ce} macro typesets a whole reaction from compact, mhchem-style
+The \mono{\\ce} macro typesets a whole reaction from compact, mhchem-style
 notation. Species are separated by spaces; a leading number is a stoichiometric
 coefficient, a run of letters is an element symbol (set upright), a digit run after
-letters is a subscript count, \texttt{+} joins species, and the arrows are
-\texttt{->}, \texttt{<=>}, \texttt{<->}, and \texttt{<-}. Everything is assembled
-as math markup, so \texttt{+} comes out as a binary operator and the arrows as real
+letters is a subscript count, \mono{+} joins species, and the arrows are
+\mono{->}, \mono{<=>}, \mono{<->}, and \mono{<-}. Everything is assembled
+as math markup, so \mono{+} comes out as a binary operator and the arrows as real
 math glyphs centred on the text axis.
 
 \subsection{Combustion}
 
-\texttt{\\ce} flows inline in the running text. The complete combustion of methane,
+\mono{\\ce} flows inline in the running text. The complete combustion of methane,
 \ce{CH4 + 2 O2 -> CO2 + 2 H2O}, sits right in the sentence at the text size. So
 does the combustion of propane, \ce{C3H8 + 5 O2 -> 3 CO2 + 4 H2O}, and the burning
 of ethanol, \ce{C2H6O + 3 O2 -> 2 CO2 + 3 H2O}.
 
-To set a reaction on its own centred line — and at a larger size — put \texttt{\\ce}
-inside \texttt{\\centerline}:
+To set a reaction on its own centred line — and at a larger size — put \mono{\\ce}
+inside \mono{\\centerline}:
 
 \bigskip
 \centerline{\font lmroman 14 regular \ce{2 C8H18 + 25 O2 -> 16 CO2 + 18 H2O}}
@@ -72,17 +72,17 @@ inside \texttt{\\centerline}:
 
 \subsection{Equilibrium}
 
-A reversible reaction takes the equilibrium arrow \texttt{<=>}, which \texttt{\\ce}
+A reversible reaction takes the equilibrium arrow \mono{<=>}, which \mono{\\ce}
 renders as $\rightleftharpoons$. The Haber synthesis of ammonia is the classic
 example, \ce{N2 + 3 H2 <=> 2 NH3}, as is the contact-process step toward sulfuric
-acid, \ce{2 SO2 + O2 <=> 2 SO3}. A double-headed arrow \texttt{<->} reads
-$\leftrightarrow$, and a reverse arrow \texttt{<-} reads $\leftarrow$:
+acid, \ce{2 SO2 + O2 <=> 2 SO3}. A double-headed arrow \mono{<->} reads
+$\leftrightarrow$, and a reverse arrow \mono{<-} reads $\leftarrow$:
 \ce{2 NH3 <- N2 + 3 H2}.
 
 \subsection{Acid--base and precipitation}
 
-Because \texttt{\\ce} cannot carry a charge through its argument, ionic equations
-are written with \texttt{\\dn} and \texttt{\\up} directly in the running text. The
+Because \mono{\\ce} cannot carry a charge through its argument, ionic equations
+are written with \mono{\\dn} and \mono{\\up} directly in the running text. The
 neutralization of a strong acid and base, H\up{$+$} $+$ OH\up{$-$}
 $\longrightarrow$ H\dn2 O, and the dissolution of sodium chloride,
 NaCl $\longrightarrow$ Na\up{$+$} $+$ Cl\up{$-$}. A precipitation, silver chloride
@@ -93,22 +93,22 @@ falling out of solution: Ag\up{$+$} $+$ Cl\up{$-$} $\longrightarrow$ AgCl.
 A half-reaction shows electrons explicitly. The reduction of copper ions,
 Cu\up{$2+$} $+$ 2 e\up{$-$} $\longrightarrow$ Cu, and the oxidation of iron,
 Fe $\longrightarrow$ Fe\up{$3+$} $+$ 3 e\up{$-$}. The full neutral reaction
-between zinc and hydrochloric acid is easy in \texttt{\\ce}:
+between zinc and hydrochloric acid is easy in \mono{\\ce}:
 \ce{Zn + 2 HCl -> ZnCl2 + H2}.
 
 \section{Structural drawings}
 
 The drawing half of the package builds structural formulas over the picture
-primitives. Name an atom and its label with \texttt{\\atom}, then connect named
-atoms with \texttt{\\bond} (single), \texttt{\\dbond} (double), or \texttt{\\tbond}
+primitives. Name an atom and its label with \mono{\\atom}, then connect named
+atoms with \mono{\\bond} (single), \mono{\\dbond} (double), or \mono{\\tbond}
 (triple). Every bond is shortened at both ends by \italic{bondgap} so the atom
 labels stay clear; \italic{doublesep} sets how far apart the lines of a multiple
 bond run. The geometry is pure point arithmetic — no engine code.
 
 \subsection{Atoms and single bonds: water}
 
-\texttt{\\atom} places a centred element label and names the point;
-\texttt{\\bond} joins two named atoms by name.
+\mono{\\atom} places a centred element label and names the point;
+\mono{\\bond} joins two named atoms by name.
 
 \bigskip
 \centerline{\picture width:2in height:1.4in {
@@ -124,7 +124,7 @@ bond run. The geometry is pure point arithmetic — no engine code.
 
 \subsection{Double bonds: carbon dioxide}
 
-\texttt{\\dbond} draws two parallel lines. Here the linear O=C=O of carbon dioxide,
+\mono{\\dbond} draws two parallel lines. Here the linear O=C=O of carbon dioxide,
 both bonds double.
 
 \bigskip
@@ -141,7 +141,7 @@ both bonds double.
 
 \subsection{Triple bonds: acetylene}
 
-\texttt{\\tbond} draws three parallel lines. Acetylene is H--C$\equiv$C--H, a
+\mono{\\tbond} draws three parallel lines. Acetylene is H--C$\equiv$C--H, a
 triple bond between the carbons.
 
 \bigskip
