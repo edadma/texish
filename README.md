@@ -43,6 +43,13 @@ calendars (`\use{calendar}` — a month grid with leap-year arithmetic, a config
 start, and a today highlight), and geographic maps (`\use{map}` — real longitude/latitude
 linework, place labels, routes and regions in the Web Mercator projection).
 
+The everyday conveniences `\use{document}` builds on — a font-size ladder, vertical skips,
+single-line alignment, the alignment and quotation environments and the `\TeX` logos — live
+in a lighter `\use{base}` package that loads on its own, without the article machinery, for a
+caption, flyer, or title card. The inline shape commands (`\bold`, `\italic`, `\smallcaps`,
+`\slanted`, and the family roles `\mono`, `\sans`, `\serif`) are engine primitives, available
+with no package at all.
+
 **Documentation: [texish.edadma.dev](https://texish.edadma.dev/).**
 
 ## Vector graphics
@@ -112,12 +119,13 @@ texish [options] [input-file]
   -o, --output <file>           output path (default: beside the input file, or out)
   -t, --type <pdf | png>        output type (default: pdf)
   -p, --paper <letter|legal|a3|a4|a5>  paper size (default: letter)
-  -r, --resolution <sd|hd|fhd>  PNG device resolution (default: hd)
+  -r, --resolution <sd|hd|fhd|dpi>  PNG resolution: a named size or a DPI number (72 = one pixel per point; default: hd)
 ```
 
 ```sh
 texish doc.texish -o doc -p a4          # writes doc.pdf
 texish doc.texish -t png -r fhd         # writes doc.png (or doc_1.png, doc_2.png, … for multiple pages)
+texish frame.texish -t png -r 72        # 1 point = 1 pixel: a 1280x720pt page becomes a 1280x720 PNG
 cat doc.texish | texish -o doc          # read the source from standard input
 ```
 
@@ -167,7 +175,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.20.4"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.21.0"
 ```
 
 ## License
