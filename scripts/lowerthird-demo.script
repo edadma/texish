@@ -1,7 +1,7 @@
 // lowerthird-demo — a broadcast-style caption for compositing over video: a translucent
-// black panel across the foot of the frame, the rest fully transparent, holding a large,
-// clearly readable scripture verse. It uses only engine primitives — no document package.
-// The three pieces are \pagecolor{transparent} (an unpainted page, so everything outside
+// black panel across the foot of the frame, the rest fully transparent, holding a bold
+// reference heading over the scripture text. It uses only engine primitives — no document
+// package. The pieces are \pagecolor{transparent} (an unpainted page, so everything outside
 // the panel shows the video through it), \colorbox[alpha] (the translucent fill), and a
 // \parbox (the panel, sized to its text plus \fboxsep padding).
 //
@@ -17,17 +17,19 @@
 // Push the panel to the foot of the frame.
 \vfill
 
-// The panel fills the width of the text area (1208px) — its \parbox is 1152px and \fboxsep
-// adds 28px of padding on each side, so 1152 + 2*28 = 1208. It grows to fit whatever text
-// it holds. The verse is set large in EB Garamond so it stays legible over moving footage.
-\set fboxsep {28}
-\colorbox[0.6]{black}{\parbox{1152pt}{
+// The panel fills the width of the text area (1208px) — its \parbox is 1136px and \fboxsep
+// adds 36px of padding on each side, so 1136 + 2*36 = 1208. It grows to fit its text: a bold
+// 30pt reference heading, a little vertical space, then the verses at 28pt set flush left.
+\set fboxsep {36}
+\colorbox[0.55]{black}{\parbox{1136pt}{
 \color{white}
-\font ebgaramond 46 regular
-For God so loved the world that He gave His one and only Son, that everyone who believes
-in Him shall not perish but have eternal life.
-\par
-\vskip 16
+\set parindent {0}
 \font ebgaramond 30 bold
-— John 3:16
+John 3:16--17 (NLT)
+\par
+\vskip 14
+\font ebgaramond 28 regular
+For this is how God loved the world: He gave his one and only Son, so that everyone who
+believes in him will not perish but have eternal life. God sent his Son into the world not
+to judge the world, but to save the world through him.
 }}
