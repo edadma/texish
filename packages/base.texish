@@ -112,11 +112,3 @@
   \set leftskip {40}
   \set rightskip {40}
 } {}
-
-// ---- Conditionals --------------------------------------------------------------
-// \ifthenelse{test}{then}{else} chooses one of two branches on a boolean test, over the
-// engine's \if. The test is an ordinary expression — a comparison such as \> {\x} {3}, or
-// \equal for strings; compound tests use the expression operators. \equal{a}{b} is true
-// when the two expand to the same string, the common ifthen test.
-\def equal a b {\={\a}{\b}}
-\def ifthenelse c a b {\if {\c} \a \else \b \fi}

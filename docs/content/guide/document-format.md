@@ -201,11 +201,11 @@ A *length* is a dimension variable. `\newlength` declares one, `\setlength` assi
 \hskip\gutter
 ```
 
-`\ifthenelse{test}{then}{else}` chooses a branch on a boolean test, and `\equal{a}{b}` is true when
-the two expand to the same string; numeric tests use the comparison operators (`\>`, `\<`, `\=`).
+`\if {test} … \else … \fi` chooses a branch on a boolean test. The test is an ordinary expression, so
+`\=` compares two strings and the comparison operators (`\>`, `\<`) compare numbers.
 
 ```texish
-\ifthenelse{\> {\the\pageno} {1}}{not the first page}{the first page}
+\if {\> {\the\pageno} {1}} not the first page \else the first page \fi
 ```
 
 ## Running heads and feet

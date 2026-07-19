@@ -253,11 +253,11 @@ And this is the right minipage, the same width, set as its own little paragraph.
 
 \medskip
 
-\noindent The \mono{ifthenelse} command chooses between two branches on a boolean
-test, and \mono{equal} tests two strings for equality. For example,
-\ifthenelse{\equal{texish}{texish}}{the two strings \italic{are} equal}{they are not}
-— and \ifthenelse{\equal{texish}{tex}}{they are equal}{the two strings are
-\italic{not} equal}.
+\noindent The \mono{if} command chooses between two branches on a boolean test, with
+\mono{=} testing two strings for equality. For example,
+\if {\={texish}{texish}}the two strings \italic{are} equal\else they are not\fi
+— and \if {\={texish}{tex}}they are equal\else the two strings are \italic{not}
+equal\fi.
 
 \appendix
 

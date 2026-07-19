@@ -432,7 +432,6 @@ linework and the run-time overlay cannot drift out of register.
 | `\newenvironment name {begin}{end}` | define a `\begin`/`\end` environment |
 | `\let` `\global` `\gdef` | aliasing and global definitions |
 | `\if` `\ifx` `\else` `\fi` | conditionals |
-| `\ifthenelse{test}{then}{else}` `\equal{a}{b}` | LaTeX-style branch on a boolean test / string comparison *(format)* |
 | `\calc{…}` `\+ \- \* \/` | arithmetic |
 | `\round{value}{places}` | round a number to a fixed number of decimals |
 | `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |
