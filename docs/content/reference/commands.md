@@ -191,8 +191,8 @@ The amsmath operator and connective names, on top of the built-in math above.
 | `\hbox` `\vbox` `\vtop` | explicit boxes |
 | `\mbox{…}` | an unbreakable horizontal box of its natural width |
 | `\makebox[width][l\|c\|r\|s]{…}` | a box of a set width, content aligned (width = a dimension or a `\linewidth` factor) |
-| `\parbox[t\|c\|b]{width}{…}` | set a paragraph in a box of the given width, aligned on the baseline |
-| `\begin{minipage}[t\|c\|b]{width}…\end{minipage}` | the environment form of `\parbox` (over the `\beginminipage`/`\endminipage` primitives) |
+| `\parbox[t\|c\|b][height][t\|c\|b\|s]{width}{…}` | set text (one or more paragraphs) in a box of the given width, aligned on the baseline; the optional `[height]` fixes the box height and `[inner-pos]` places the content within it (top/centre/bottom/stretch, default = outer pos) |
+| `\begin{minipage}[t\|c\|b][height][t\|c\|b\|s]{width}…\end{minipage}` | the environment form of `\parbox`, same optional `[height]`/`[inner-pos]` (over the `\beginminipage`/`\endminipage` primitives) |
 | `\wrapbox{side}{width}{…}` | anchor a box at the left/right margin so following text wraps beside it |
 | `\wrapshape{shape}{side}{width}{…}` | the same, with text following a non-rectangular silhouette |
 | `\cutout{width}{height}{side}` `\cutshape{shape}{width}{height}{side}` | reserve a rectangular / shaped hole in the running text |

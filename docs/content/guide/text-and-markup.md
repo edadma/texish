@@ -90,12 +90,28 @@ document's pages, so give it in the preamble. A translucent or transparent page 
 correctly when the output is used as an overlay (for example a video lower-third):
 
 ```texish
-\pagecolor[0.6]{black}   % a 60%-opaque black band the video shows through
-\pagecolor{transparent}  % clear page; only the drawn content is opaque
+\pagecolor[0.6]{black}   // a 60%-opaque black band the video shows through
+\pagecolor{transparent}  // clear page; only the drawn content is opaque
 ```
 
 The optional `[alpha]` and eight-digit codes work for the box fills too — `\colorbox` and
 `\fcolorbox` (see [Boxes](/reference/commands/)) and the picture-mode `\fill` / `\stroke`.
+
+For a band of a **fixed size regardless of the text** — a lower-third that is always, say, a
+third of the frame tall — put the text in a fixed-height `\parbox` inside a translucent
+`\colorbox`. The `[height]` and inner-position arguments of `\parbox` hold the content (a
+heading and a paragraph here) top, centre, or bottom within a box that keeps its size:
+
+```texish
+\pagecolor{transparent}
+\vfill
+\noindent\colorbox[0.6]{black}{\parbox[c][180pt][c]{\linewidth}{
+  \color{white}\font lmroman 40 {sans bold}A Lower-Third Heading
+
+  \color{white}\font lmroman 22 {sans}A paragraph of normal flowing text beneath it, which
+  wraps as usual while the band around it stays a fixed 180pt tall.
+}}
+```
 
 ## Clickable links
 

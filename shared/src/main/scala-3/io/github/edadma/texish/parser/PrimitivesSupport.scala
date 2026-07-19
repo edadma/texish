@@ -183,6 +183,22 @@ private[parser] def alignParbox(vb: VerticalBox, align: Char): Box = align match
   case 't' | 'b' => vb
   case _         => new RaiseBox(vb, (vb.descent - vb.ascent) / 2)
 
+// Open the vertical builder for a \parbox / \minipage. Without a fixed height it is a \vtop when top-aligned and a
+// \vbox otherwise, exactly as before. With a fixed `height` it is always a \vbox set to that height, and the content
+// is positioned within it by fil glue: this adds the glue ABOVE the content (so `b` sinks it to the bottom, and `c`
+// centres it once the caller adds the matching glue below with `closeFixedVbox`). `t` and `s` add nothing here.
+private[parser] def openFixedVbox(t: Typesetter, align: Char, height: Option[Double], inner: Char): Unit =
+  val toVal: Double | Null = height match
+    case Some(h) => h
+    case None    => null
+  if align == 't' && height.isEmpty then t.vtop(toVal, null) else t.vbox(toVal, null)
+  if height.isDefined && (inner == 'b' || inner == 'c') then t.fil
+
+// Add the fil glue BELOW a fixed-height \parbox / \minipage body (after the paragraph is closed), so `t` holds the
+// content at the top and `c` completes the centring begun by openFixedVbox. `b` and `s` add nothing here.
+private[parser] def closeFixedVbox(t: Typesetter, height: Option[Double], inner: Char): Unit =
+  if height.isDefined && (inner == 't' || inner == 'c') then t.fil
+
 // Build an \hbox or \vbox whose command token has already been consumed: read its optional `to:` target
 // and braced body, typeset the body into a fresh builder, and return the finished box *without* adding it
 // to the current list. Shared by the \hbox / \vbox / \vtop / \setbox primitives and \lower / \raise. `vertical`

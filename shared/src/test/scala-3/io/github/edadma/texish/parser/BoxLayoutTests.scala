@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, HeadlessTypesetter, HSpaceBox, RaiseBox, Typesetter, VerticalBox}
+import io.github.edadma.texish.{Box, CharBox, HBox, HeadlessTypesetter, HSpaceBox, RaiseBox, Typesetter, VerticalBox, VSpaceBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -107,6 +107,40 @@ class BoxLayoutTests extends AnyFreeSpec with Matchers:
       t.getNumber("hsize") shouldBe (200.0 +- tol)
       t.added.last shouldBe a[VerticalBox]
     }
+
+    "[height] fixes the box height, whatever the amount of text" in {
+      val (t, proc) = fixture()
+      t.set("hsize", 200.0)
+      proc.process("\\parbox[t][100pt][t]{60pt}{AB}")
+      (t.added.last.ascent + t.added.last.descent) shouldBe (100.0 +- tol)
+
+      val (t2, proc2) = fixture()
+      t2.set("hsize", 200.0)
+      proc2.process("\\parbox[t][100pt][t]{60pt}{A B C D E F G H}") // wraps to several lines, still 100 tall
+      (t2.added.last.ascent + t2.added.last.descent) shouldBe (100.0 +- tol)
+    }
+
+    "[inner-pos] holds the content top, bottom, or centred within the fixed height" in {
+      // fill above the content vs below it: top-aligned fills below, bottom-aligned fills above, centred fills both
+      def fills(src: String): (Double, Double) =
+        val (t, proc) = fixture()
+        t.set("hsize", 200.0)
+        proc.process(src)
+        val boxes     = t.added.last.asInstanceOf[VerticalBox].boxes.toList
+        val firstLine = boxes.indexWhere(_.isInstanceOf[HBox])
+        val lastLine  = boxes.lastIndexWhere(_.isInstanceOf[HBox])
+        def space(bs: List[Box]) = bs.collect { case s: VSpaceBox => s.height }.sum
+        (space(boxes.take(firstLine)), space(boxes.drop(lastLine + 1)))
+
+      val (topAbove, topBelow) = fills("\\parbox[t][100pt][t]{60pt}{AB}")
+      topBelow should be > topAbove // content held at the top
+
+      val (botAbove, botBelow) = fills("\\parbox[t][100pt][b]{60pt}{AB}")
+      botAbove should be > botBelow // content held at the bottom
+
+      val (cAbove, cBelow) = fills("\\parbox[t][100pt][c]{60pt}{AB}")
+      cAbove shouldBe (cBelow +- 1.0) // centred: equal fill above and below
+    }
   }
 
   "\\beginminipage / \\endminipage" - {
@@ -123,6 +157,13 @@ class BoxLayoutTests extends AnyFreeSpec with Matchers:
       t.set("hsize", 300.0)
       proc.process("\\beginminipage[b]{80pt}AB\\endminipage")
       t.added.last shouldBe a[VerticalBox]
+    }
+
+    "[height] fixes the minipage height like \\parbox" in {
+      val (t, proc) = fixture()
+      t.set("hsize", 300.0)
+      proc.process("\\beginminipage[t][120pt][t]{80pt}AB\\endminipage")
+      (t.added.last.ascent + t.added.last.descent) shouldBe (120.0 +- tol)
     }
   }
 

@@ -150,25 +150,32 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
     },
   )
 
-  // parbox - optional [pos] then {width} and {body}: typeset the body as a paragraph in a vertical box of the given
-  // width, so a block of text sits in the running line like a single box. [pos] aligns the box on the surrounding
-  // baseline: t (first line's baseline), b (last line's baseline), or c (vertical centre, the default). The width
-  // is a dimension or a factor of \linewidth. \minipage is the environment form, over the same machinery.
+  // parbox - optional [pos], [height] and [inner-pos], then {width} and {body}: typeset the body — one paragraph or
+  // several — in a vertical box of the given width, so a block of text sits in the running line like a single box.
+  // [pos] aligns the box on the surrounding baseline: t (first line's baseline), b (last line's baseline), or c
+  // (vertical centre, the default). The width is a dimension or a factor of \linewidth. With the full LaTeX
+  // signature, [height] fixes the box height and [inner-pos] places the content within it — t (top), c (centre), b
+  // (bottom), or s (stretch the content's own glue) — defaulting to [pos]; the box then stays that tall regardless
+  // of the text (which overflows if it does not fit). \minipage is the environment form, over the same machinery.
   proc.registerPrimitive(
     "parbox",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val align    = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse('c')
-        val widthRaw = tokensToSource(proc.readArgument(pos))
-        val body     = proc.readArgument(pos)
-        val w        = resolveLength(proc, t, widthRaw, pos, "\\parbox")
+        val align     = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse('c')
+        val heightRaw = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty)
+        val inner     = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse(align)
+        val widthRaw  = tokensToSource(proc.readArgument(pos))
+        val body      = proc.readArgument(pos)
+        val w         = resolveLength(proc, t, widthRaw, pos, "\\parbox")
+        val height    = heightRaw.map(h => resolveLength(proc, t, h, pos, "\\parbox"))
 
         handler.flushPendingSpace()
         val saved = t.getNumber("hsize")
         t.set("hsize", w)
-        if align == 't' then t.vtop() else t.vbox()
+        openFixedVbox(t, align, height, inner)
         proc.processTokenList(body)
         t.paragraph()
+        closeFixedVbox(t, height, inner)
         val box = t.mode.exit
         t.set("hsize", saved)
 
@@ -178,24 +185,28 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
     },
   )
 
-  // \minipage's begin/end pair: \beginminipage [pos] {width} opens a vertical box of the given width and routes the
-  // environment body into it; \endminipage closes it and contributes the finished box, aligned by [pos] like
-  // \parbox. The width and alignment ride a stack so minipages can nest. Wired to \begin{minipage}/\end{minipage}
-  // by the document package.
-  val minipageStack = scala.collection.mutable.Stack[(Double, Char)]() // (saved hsize, alignment) per open minipage
+  // \minipage's begin/end pair: \beginminipage [pos] [height] [inner-pos] {width} opens a vertical box of the given
+  // width and routes the environment body into it; \endminipage closes it and contributes the finished box, aligned
+  // by [pos] like \parbox. It takes the same optional [height] / [inner-pos] as \parbox for a fixed-height box. The
+  // saved state rides a stack so minipages can nest. Wired to \begin{minipage}/\end{minipage} by the document
+  // package.
+  val minipageStack = scala.collection.mutable.Stack[(Double, Char, Option[Double], Char)]() // (saved hsize, align, height, inner)
 
   proc.registerPrimitive(
     "beginminipage",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val align    = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse('c')
-        val widthRaw = tokensToSource(proc.readArgument(pos))
-        val w        = resolveLength(proc, t, widthRaw, pos, "\\minipage")
+        val align     = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse('c')
+        val heightRaw = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty)
+        val inner     = proc.readOptionalArg(pos).map(tokensToSource).map(_.trim).filter(_.nonEmpty).map(_.charAt(0)).getOrElse(align)
+        val widthRaw  = tokensToSource(proc.readArgument(pos))
+        val w         = resolveLength(proc, t, widthRaw, pos, "\\minipage")
+        val height    = heightRaw.map(h => resolveLength(proc, t, h, pos, "\\minipage"))
 
-        minipageStack.push((t.getNumber("hsize"), align))
+        minipageStack.push((t.getNumber("hsize"), align, height, inner))
         handler.flushPendingSpace()
         t.set("hsize", w)
-        if align == 't' then t.vtop() else t.vbox()
+        openFixedVbox(t, align, height, inner)
     },
   )
 
@@ -205,9 +216,10 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
       def execute(proc: Processor, pos: CharReader): Unit =
         if minipageStack.isEmpty then handler.error("\\endminipage without a matching \\beginminipage", pos)
         else
-          val (savedHsize, align) = minipageStack.pop()
+          val (savedHsize, align, height, inner) = minipageStack.pop()
 
           t.paragraph()
+          closeFixedVbox(t, height, inner)
           val box = t.mode.exit
           t.set("hsize", savedHsize)
 
