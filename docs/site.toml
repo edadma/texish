@@ -39,7 +39,7 @@ output = "/juicerdocs.js"
 minify = true
 
 [juicerdocs]
-version    = "v0.20.2"
+version    = "v0.20.3"
 getStarted = true
 
 # Indigo palette. Light mode.
