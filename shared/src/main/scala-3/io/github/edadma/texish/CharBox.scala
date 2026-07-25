@@ -94,10 +94,15 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
       while i < segMetrics.length do { w += segMetrics(i).xAdvance; i += 1 }
       w
     else
+      // A glyph carries its own advance unless it is a mark that attaches to another glyph, which is drawn
+      // relative to that one and so adds nothing of its own. Attachment, not mark class, is the test: a
+      // font's attached marks have a zero advance anyway, but Indic scripts also carry *spacing* subjoined
+      // forms that the font classes as marks while giving them a real width — the Telugu subscript in క్క
+      // advances 421 units — and dropping that width would let the next syllable overlap this one.
       var w = 0.0
       var i = 0
       while i < shapedGlyphs.length do
-        if !shapedPlaces(i).isMark then w += t.glyphExtents(rf, shapedGlyphs(i)).xAdvance
+        if shapedPlaces(i).attach < 0 then w += t.glyphExtents(rf, shapedGlyphs(i)).xAdvance
         i += 1
       w
   override val xAdvance: Double = width
@@ -146,7 +151,10 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
       t.drawGlyph(rf, glyphs(i), ox, oy)
       originX(i) = ox
       originY(i) = oy
-      if !p.isMark then cursor += t.glyphExtents(rf, glyphs(i)).xAdvance
+      // The pen moves by the glyph's own advance unless the glyph attached to another, in which case it was
+      // drawn relative to that one and the pen stays where it was. See the note on width above: a mark class
+      // alone does not mean weightless, and a spacing subjoined form must move the pen.
+      if p.attach < 0 then cursor += t.glyphExtents(rf, glyphs(i)).xAdvance
       i += 1
 
   /** Draw a run of Hebrew text with combining marks: map the characters to glyphs, position the marks by

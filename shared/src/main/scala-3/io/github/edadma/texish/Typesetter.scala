@@ -555,6 +555,15 @@ abstract class Typesetter:
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
   aliasTypeface("punjabi", "gurmukhi")
 
+  // Noto Serif Telugu, the bundled face for Telugu: \font telugu 12 sets it, with a bold cut. Telugu is left
+  // to right; the engine does the cluster segmentation (see Telugu and IndicShaper) and the font does the
+  // rest, which for this script is a great deal — a consonant and its vowel sign commonly fuse into one
+  // glyph, and a virama-joined consonant is drawn as a subscript beneath the base, placed by GPOS. Nothing
+  // reorders and there is no reph. Loaded by file like the other complex-script cuts; the in-browser build
+  // does not ship it. Like the other Indic faces it sets its punctuation as a Latin text face.
+  loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\mono, Latin Modern Mono) used for inline code in running text: that one is cut to match
   // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall
