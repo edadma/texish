@@ -233,6 +233,17 @@ abstract class Typesetter:
   def smcpShaper(font: RenderFont): Option[Gsub] =
     smcpShaperCache.getOrElseUpdate(font, Gsub.fromSmallCaps(sfntTable(font, "GSUB"), sfntTable(font, "GDEF")))
 
+  // Parsed Hebrew shapers, one per render font whose GSUB combines a letter with the point drawn inside it.
+  // Read once and cached like the other shapers, since a pointed Hebrew page draws many runs in one font.
+  private val hebrewShaperCache = mutable.HashMap.empty[Any, Option[Gsub]]
+
+  /** The pointed-Hebrew shaper for `font`, or None when the font places every point by anchor instead of
+    * combining it into the letter — in which case Hebrew takes the plain path and the mark shaper positions
+    * the points, which is what the Noto Hebrew face wants. See
+    * [[io.github.edadma.texish.opentype.HebrewShaping]] for why a face like Ezra SIL needs the substitution. */
+  def hebrewShaper(font: RenderFont): Option[Gsub] =
+    hebrewShaperCache.getOrElseUpdate(font, Gsub.fromHebrew(sfntTable(font, "GSUB"), sfntTable(font, "GDEF")))
+
   // Parsed Indic shapers, one per render font whose GSUB carries an Indic script (Devanagari, Bengali, …).
   // Read once and cached like the other shapers, since an Indic paragraph draws many runs in the same font.
   private val indicShaperCache = mutable.HashMap.empty[Any, Option[IndicShaper]]

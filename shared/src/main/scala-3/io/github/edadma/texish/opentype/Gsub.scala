@@ -104,6 +104,17 @@ object Gsub:
       if g.hasFeature("smcp") then Some(g) else None
     }
 
+  /** Build a shaper for pointed Hebrew, or None when the font neither binds to the Hebrew script nor carries
+    * the composition feature there. A face cut for pointed text draws a letter and the point inside it as one
+    * glyph, reached through `ccmp`; one that places every point by anchor carries no such feature and takes
+    * the plain path (see `io.github.edadma.texish.opentype.HebrewShaping`). Gating on the feature keeps this
+    * to the fonts that actually need it. */
+  def fromHebrew(gsub: Option[Array[Byte]], gdef: Option[Array[Byte]] = None): Option[Gsub] =
+    gsub.flatMap { data =>
+      val g = new Gsub(data, Seq("hebr"), Gdef.from(gdef))
+      if g.boundToRequestedScript && g.hasFeature("ccmp") then Some(g) else None
+    }
+
   /** Build an Indic shaper from a font's raw `GSUB` (and `GDEF`) bytes for the script whose OpenType tags are
     * `scriptTags` (Devanagari passes `dev2`, `deva`; Bengali passes `bng2`, `beng`), or None when the font
     * carries none of those script tables — a font that does not shape the script keeps the plain text path.

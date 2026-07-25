@@ -90,6 +90,26 @@ they are positioned automatically:
 
 Unpointed Hebrew needs none of this and takes the plain text path, so it costs nothing.
 
+Some faces cut for pointed text draw a letter and the point inside it — a dagesh, a mapiq, a
+shin or sin dot — as a single shape rather than as a letter with a mark laid over it, and give
+no anchor for placing that point on its own. The bundled Ezra SIL, cut in the style of the
+Biblia Hebraica Stuttgartensia and selected with `\font ezra`, is such a face. texish combines
+the pair through the font's own composition feature, so the dagesh sets inside its letter:
+
+```texish
+\rtl
+{\font ezra 18 regular
+בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ׃
+}
+\ltr
+```
+
+Which pairs combine is the font's decision, not the engine's: Ezra combines a letter with its
+dagesh but leaves an alef and its patah to be placed by anchor, and Noto Serif Hebrew combines
+nothing at all. Both are set correctly without any choice on your part. The points of a syllable
+are put into drawing order first, so a dagesh reaches its letter even though the stored order
+sorts a vowel in front of it.
+
 ## Arabic
 
 Arabic is cursive: within a word the letters connect, and each takes one of four shapes —

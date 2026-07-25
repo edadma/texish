@@ -1,6 +1,6 @@
 package io.github.edadma.texish
 
-import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, JoiningForm}
+import io.github.edadma.texish.opentype.{GlyphPlacement, Gpos, HebrewShaping, JoiningForm}
 
 /** A run of text set in one font and colour. Latin text takes the plain path: the backend measures and
   * draws the string directly. Several scripts need the engine to place glyphs itself, and all end at the
@@ -58,6 +58,16 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
               case Some(gs) =>
                 val nominal = Array.tabulate(text.length)(i => t.glyphIndex(rf, text.charAt(i).toInt))
                 gs.applyFeatureByTag(nominal, "smcp")
+              case None => null
+          else if HebrewShaping.hasHebrew(text) then
+            // A font cut for pointed Hebrew draws a letter and the point inside it as one glyph and gives no
+            // anchor for placing that point on its own, so its composition feature has to run or the dagesh
+            // sets beside its letter. A face that positions every point by anchor carries no such feature and
+            // has no shaper here, leaving the plain mark-placing path exactly as it was.
+            t.hebrewShaper(rf) match
+              case Some(gs) =>
+                val cps = Array.tabulate(text.length)(i => text.charAt(i).toInt)
+                HebrewShaping.shape(cps, cp => t.glyphIndex(rf, cp), gs.applyFeatureByTag(_, "ccmp"))
               case None => null
           else null
 

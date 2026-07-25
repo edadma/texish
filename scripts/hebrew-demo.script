@@ -91,3 +91,28 @@ The reverse case needs no change of base direction. In an ordinary left-to-right
 paragraph a Hebrew word — here {\font hebrew 12 regular דבר}, meaning ``word'' —
 is reversed in place by the same algorithm, while the English around it is left
 exactly as it was.
+
+\section{The scholarly face}
+
+A second Hebrew face is bundled: Ezra SIL, cut in the style of the Biblia Hebraica
+Stuttgartensia and selected with \mono{\\font ezra}. It draws a letter and the point
+inside it — a dagesh, a mapiq, a shin or sin dot — as a single shape rather than as a
+letter with a mark laid over it, which is what a critical edition sets. The engine
+combines the pair through the font's own composition feature, so the dagesh sits inside
+its letter and not beside it:
+
+\medskip
+
+\rtl
+{\font ezra 18 regular
+בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ׃
+}
+\ltr
+
+\medskip
+
+\rtl
+{\font ezra 18 bold
+וַיֹּאמֶר אֱלֹהִים יְהִי אוֹר וַיְהִי־אוֹר׃
+}
+\ltr
