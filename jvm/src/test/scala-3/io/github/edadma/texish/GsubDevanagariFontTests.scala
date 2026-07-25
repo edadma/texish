@@ -138,3 +138,15 @@ class GsubDevanagariFontTests extends AnyFreeSpec with Matchers:
     shape("क़").head shouldBe g(0x0958)
     shape("ड़").length shouldBe 1
   }
+
+  "everyday words shape glyph for glyph as hb-shape does" in {
+    // This font builds much of its above-base and conjunct behaviour with rule- and class-based context
+    // lookups (types 5 and 6, formats 1 and 2). Those were once skipped by the parser, so whole lookups went
+    // unapplied; these sequences are what `hb-shape --shaper=ot` reports and pin that they now run.
+    shape("नमस्ते").toSeq shouldBe Seq(77, 82, 259, 73, 40)
+    shape("हिन्दी").toSeq shouldBe Seq(557, 90, 248, 75, 33)
+    shape("क्षत्रिय").toSeq shouldBe Seq(92, 561, 307, 83)
+    shape("पुस्तक").toSeq shouldBe Seq(78, 34, 259, 73, 57)
+    shape("धर्म").toSeq shouldBe Seq(76, 82, 514)
+    shape("विद्या").toSeq shouldBe Seq(558, 86, 457, 31)
+  }

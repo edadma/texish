@@ -93,14 +93,15 @@ class GsubTeluguFontTests extends AnyFreeSpec with Matchers:
     gpos.position(glyphs).exists(_.isMark) shouldBe false // it advances, it does not attach
   }
 
-  "పుస్తకం shapes into its three clusters" in {
+  "పుస్తకం shapes into its three clusters, glyph for glyph as hb-shape does" in {
     // పు | స్త | కం → [pu, sa, ta.subscript, ka, anusvara]: the pu fuses, the ta subjoins under the sa, and
-    // the last cluster is a plain ka with its anusvara. Five glyphs, confirmed with hb-shape.
+    // the last cluster is a plain ka with its anusvara. The exact sequence `hb-shape --shaper=ot` reports,
+    // which this font builds partly through class-based context lookups — the formats texish once skipped.
     val glyphs = shape("పుస్తకం")
-    glyphs.length shouldBe 5
-    glyphs(1) shouldBe g(0x0c38)     // సa, the base of the middle cluster
+    glyphs.toSeq shouldBe Seq(250, 57, 485, 23, 6)
+    glyphs(1) shouldBe g(0x0c38)           // స, the base of the middle cluster
     glyphs(3) shouldBe g(Ka)
-    glyphs(4) shouldBe g(0x0c02)     // the anusvara closes the run
+    glyphs(4) shouldBe g(0x0c02)           // the anusvara closes the run
     glyphs.head should not equal g(0x0c2a) // the pu is fused, not a bare pa
   }
 
