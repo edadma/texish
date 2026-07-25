@@ -99,6 +99,19 @@ JVM and Native builds (the browser build ships only Latin Modern):
 
 Any other face is brought in with `\loadfont{name}{path}`.
 
+### Glyph fallback (Cyrillic, Greek)
+
+A codepoint the current face has no glyph for is set from New Computer Modern (`\font newcm`) rather
+than drawn as a missing-glyph box, so **Cyrillic and Greek work in ordinary text with no setup** —
+`Привет`, `αβγ` — and, because New Computer Modern *is* Computer Modern, the substituted glyphs sit
+invisibly beside Latin Modern.
+
+The substitution matches the weight and slope of the text around it: Cyrillic inside a `\bold{…}`
+heading is set from the fallback's bold cut, so the weight does not break mid-phrase. The family role
+is the one thing not carried over — the fallback stands in for a face's *coverage*, not its family, so
+Cyrillic inside `\mono` is set in the fallback's roman rather than sent to the typewriter family, which
+is no likelier to have the glyph.
+
 ## Chinese, Japanese and Korean
 
 Chinese and Japanese text has no spaces between characters, so the line breaker inserts its own break

@@ -12,12 +12,30 @@ build (see [Rendering in the Browser](/guide/browser-rendering/)).
 Add texish with the `%%%` operator so sbt selects the right platform artifact:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.22.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.23.0"
 ```
 
 The library gives you the engine and the `parser` layer — construct a typesetter for your
 target backend, feed it a source document, and flush it. On the JVM the backend is a
 Graphics2D raster typesetter; on Scala Native it is the Cairo PDF and image backends.
+
+### Errors
+
+A fault in the document raises `io.github.edadma.texish.TexishException`, carrying the message,
+the source position (`pos`), and a formatted excerpt pointing at the offending token:
+
+```
+font for typeface 'nosuchfont' not found (line 5, column 2):
+{\font nosuchfont 12 regular oops}
+ ^
+```
+
+Catch it to report the mistake to whoever wrote the document. Anything else escaping the engine
+is a defect in texish rather than in the input: such a failure still arrives as a
+`TexishException` located at the token being handled, but its message is prefixed
+`internal error (…)` and the original exception is kept as the cause, so the stack trace that
+locates the bug survives. The two are worth telling apart — one is your user's to fix, the other
+is a bug report.
 
 ## As a command-line tool
 
