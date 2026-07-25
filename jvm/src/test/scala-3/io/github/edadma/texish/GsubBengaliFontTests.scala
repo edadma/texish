@@ -155,3 +155,14 @@ class GsubBengaliFontTests extends AnyFreeSpec with Matchers:
     glyphs.length shouldBe 1
     glyphs.head shouldBe g(0x09DF)
   }
+
+  "everyday words shape glyph for glyph as hb-shape does" in {
+    // Some of this font's akhand, pre-base and above-base behaviour is written as rule- and class-based
+    // context lookups (types 5 and 6, formats 1 and 2), which the parser once skipped entirely. These are the
+    // sequences `hb-shape --shaper=ot` reports.
+    shape("বাংলা").toSeq shouldBe Seq(47, 59, 11, 52, 478)
+    shape("কিন্তু").toSeq shouldBe Seq(60, 25, 573)
+    shape("ছাত্র").toSeq shouldBe Seq(31, 59, 258)
+    shape("জ্ঞান").toSeq shouldBe Seq(197, 59, 44)
+    shape("কর্ম").toSeq shouldBe Seq(25, 49, 124)
+  }

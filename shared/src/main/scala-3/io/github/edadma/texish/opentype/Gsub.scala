@@ -13,8 +13,12 @@ package io.github.edadma.texish.opentype
   * apply nested lookups at chosen positions; the required-ligature feature `rlig` is built from these. In
   * this font the lam-alef ligature is not a one-to-one ligature glyph but a contextual pair: where an
   * initial lam meets a final alef, each is swapped for a specially shaped `.rlig` variant that together
-  * draw the ligature. Extension lookups (type 7) are followed to the real subtable. Only the coverage-based
-  * format 3 of the contextual kinds is read — the one this font (and modern Arabic fonts generally) uses.
+  * draw the ligature. Extension lookups (type 7) are followed to the real subtable.
+  *
+  * All three formats of the contextual kinds are read. Arabic fonts generally use the coverage-based format
+  * 3, but Indic fonts write a great deal of their behaviour as the rule-based format 1 and the class-based
+  * format 2 — Noto Serif Devanagari builds the conjunct of a word as ordinary as विद्या that way. Reading
+  * only format 3, as this once did, skipped those lookups in silence and left such words unshaped.
   *
   * Unlike the mark positioning in [[Gpos]], which can run every lookup blindly, form selection must be
   * driven by feature: the same font has separate `init`/`medi`/`fina`/`isol` lookups and only the one
@@ -45,11 +49,17 @@ private sealed trait SubstSubtable
 private final case class SingleSubst(map: Map[Int, Int])          extends SubstSubtable
 private final case class MultipleSubst(map: Map[Int, Array[Int]]) extends SubstSubtable
 private final case class LigatureSubst(ligatures: Map[Int, Array[(Array[Int], Int)]]) extends SubstSubtable
-private final case class ContextSubst(input: Array[Set[Int]], records: Array[(Int, Int)]) extends SubstSubtable
+// A position in a contextual match is a predicate over glyphs rather than a glyph set, so the three ways
+// OpenType writes such a rule all reduce to one representation: format 3 gives a coverage table (a set is
+// already a predicate), format 1 a specific glyph (equality), and format 2 a class (the class the glyph is
+// assigned). The class form is why a set will not do — class 0 means "every glyph not named in the ClassDef",
+// which no enumerable set can express without knowing the whole font.
+private final case class ContextSubst(input: Array[Int => Boolean], records: Array[(Int, Int)])
+    extends SubstSubtable
 private final case class ChainContextSubst(
-    backtrack: Array[Set[Int]],
-    input: Array[Set[Int]],
-    lookahead: Array[Set[Int]],
+    backtrack: Array[Int => Boolean],
+    input: Array[Int => Boolean],
+    lookahead: Array[Int => Boolean],
     records: Array[(Int, Int)],
 ) extends SubstSubtable
 
@@ -171,6 +181,7 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
 
   /** Whether the chosen script's language system enables `tag`. */
   def hasFeature(tag: String): Boolean = featureLookups.contains(tag)
+
 
   /** Apply the lookups of feature `tag`, in order, across the whole glyph buffer, returning the substituted
     * run (or the input unchanged when the font lacks the feature). This is how the Indic shaper runs the
@@ -333,8 +344,13 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
   // The buffer positions the input coverages match starting at `i` — the first coverage must cover the
   // glyph at `i` itself, each later coverage the next non-skipped glyph — or None when the run does not
   // match.
-  private def matchInput(glyphs: Array[Int], i: Int, covs: Array[Set[Int]], lk: SubstLookup): Option[Array[Int]] =
-    if covs.isEmpty || !covs(0).contains(glyphs(i)) then None
+  private def matchInput(
+      glyphs: Array[Int],
+      i: Int,
+      covs: Array[Int => Boolean],
+      lk: SubstLookup,
+  ): Option[Array[Int]] =
+    if covs.isEmpty || !covs(0)(glyphs(i)) then None
     else
       val pos = new Array[Int](covs.length)
       pos(0) = i
@@ -343,7 +359,7 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
       var ok = true
       while ok && j < covs.length do
         p = nextAt(glyphs, p, lk)
-        if p >= glyphs.length || !covs(j).contains(glyphs(p)) then ok = false
+        if p >= glyphs.length || !covs(j)(glyphs(p)) then ok = false
         else
           pos(j) = p
           p += 1
@@ -354,26 +370,35 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
   // produced before the match position, so a pair this same pass substituted is seen in its substituted
   // form. Backtrack is given in reverse text order: `bt(0)` matches the closest preceding glyph, `bt(1)` the
   // one before that, and so on.
-  private def matchBacktrack(prior: collection.IndexedSeq[Int], bt: Array[Set[Int]], lk: SubstLookup): Boolean =
+  private def matchBacktrack(
+      prior: collection.IndexedSeq[Int],
+      bt: Array[Int => Boolean],
+      lk: SubstLookup,
+  ): Boolean =
     var p  = prior.length - 1
     var j  = 0
     var ok = true
     while ok && j < bt.length do
       while p >= 0 && skips(lk, prior(p)) do p -= 1
-      if p < 0 || !bt(j).contains(prior(p)) then ok = false
+      if p < 0 || !bt(j)(prior(p)) then ok = false
       else
         p -= 1
         j += 1
     ok
 
   // Whether the lookahead coverages match the non-skipped glyphs after the input's last matched position.
-  private def matchLookahead(glyphs: Array[Int], lastInput: Int, la: Array[Set[Int]], lk: SubstLookup): Boolean =
+  private def matchLookahead(
+      glyphs: Array[Int],
+      lastInput: Int,
+      la: Array[Int => Boolean],
+      lk: SubstLookup,
+  ): Boolean =
     var p  = lastInput + 1
     var j  = 0
     var ok = true
     while ok && j < la.length do
       p = nextAt(glyphs, p, lk)
-      if p >= glyphs.length || !la(j).contains(glyphs(p)) then ok = false
+      if p >= glyphs.length || !la(j)(glyphs(p)) then ok = false
       else
         p += 1
         j += 1
@@ -571,11 +596,13 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
   // substitution are materialised — together they cover Arabic form selection, ccmp composition, the rlig
   // lam-alef pair and the liga "Allah" ligature; other types, and the older formats 1/2 of the contextual
   // kinds, are skipped.
-  private def parseSubtable(lookupType: Int, off: Int): Option[SubstSubtable] =
+  // One subtable can yield several parsed rules: the rule- and class-based context formats each hold a set of
+  // alternative sequences, and every one becomes a match of its own.
+  private def parseSubtable(lookupType: Int, off: Int): Seq[SubstSubtable] =
     lookupType match
-      case 1 => Some(parseSingle(off))
-      case 2 => Some(parseMultiple(off))
-      case 4 => Some(parseLigature(off))
+      case 1 => Seq(parseSingle(off))
+      case 2 => Seq(parseMultiple(off))
+      case 4 => Seq(parseLigature(off))
       case 5 => parseContext(off)
       case 6 => parseChainContext(off)
       case 7 =>
@@ -584,7 +611,7 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
         val extType = c.u16
         val extOff  = off + c.u32.toInt
         parseSubtable(extType, extOff)
-      case _ => None
+      case _ => Nil
 
   private def parseSingle(off: Int): SingleSubst =
     val c      = ByteCursor(data, off)
@@ -640,36 +667,161 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
     }
     LigatureSubst(covered.iterator.zipWithIndex.collect { case (g, i) if i < sets.length => g -> sets(i) }.toMap)
 
-  // ContextSubstFormat3: a coverage per input glyph, then the nested-lookup records. Formats 1 and 2 (rule
-  // and class based) are not read — modern Arabic fonts use format 3 — so they parse to nothing.
-  private def parseContext(off: Int): Option[SubstSubtable] =
-    val c = ByteCursor(data, off)
-    if c.u16 != 3 then None
-    else
-      val glyphCount = c.u16
-      val substCount = c.u16
-      val covOffs    = Array.fill(glyphCount)(off + c.u16)
-      val records    = Array.fill(substCount) { val seq = c.u16; (seq, c.u16) }
-      Some(ContextSubst(covOffs.map(coverageSet), records))
+  /** Context substitution, in all three of the ways OpenType writes it. Format 3 states a coverage per input
+    * position and is one rule; formats 1 and 2 instead hold a *set* of alternative sequences, selected by the
+    * first glyph — by its coverage index in format 1, by its class in format 2 — so each alternative is
+    * returned as a rule of its own. Reading only format 3, as this once did, silently dropped every rule an
+    * Indic font writes the other two ways: Noto Serif Telugu builds its above-base substitutions that way, so
+    * a subjoined ra never took its final form.
+    */
+  private def parseContext(off: Int): Seq[SubstSubtable] =
+    ByteCursor(data, off).u16 match
+      case 1 =>
+        val c        = ByteCursor(data, off)
+        c.u16
+        val byIndex  = Coverage.parse(data, off + c.u16).map((g, i) => i -> g)
+        val setOffs  = Array.fill(c.u16)(c.u16)
+        for
+          i     <- setOffs.indices if setOffs(i) != 0
+          first <- byIndex.get(i).toSeq
+          ro    <- ruleOffsets(off + setOffs(i))
+        yield
+          val (seq, records) = sequenceRule(ro)
+          ContextSubst(is(first) +: seq.map(is), records)
+      case 2 =>
+        val c       = ByteCursor(data, off)
+        c.u16
+        val covers  = coverageSet(off + c.u16)
+        val classOf = classDef(off + c.u16)
+        val setOffs = Array.fill(c.u16)(c.u16)
+        for
+          cls <- setOffs.indices if setOffs(cls) != 0
+          ro  <- ruleOffsets(off + setOffs(cls))
+        yield
+          val (seq, records) = sequenceRule(ro)
+          val head: Int => Boolean = g => covers(g) && classOf(g) == cls
+          ContextSubst(head +: seq.map(inClass(classOf, _)), records)
+      case 3 =>
+        val c          = ByteCursor(data, off)
+        c.u16
+        val glyphCount = c.u16
+        val substCount = c.u16
+        val covOffs    = Array.fill(glyphCount)(off + c.u16)
+        val records    = Array.fill(substCount) { val seq = c.u16; (seq, c.u16) }
+        Seq(ContextSubst(covOffs.map(covers), records))
+      case _ => Nil
 
-  // ChainContextSubstFormat3: backtrack, input and lookahead coverages, then the nested-lookup records.
-  // Backtrack coverages are stored in reverse text order. Formats 1 and 2 are not read.
-  private def parseChainContext(off: Int): Option[SubstSubtable] =
+  /** Chaining-context substitution, in all three formats. As with [[parseContext]], formats 1 and 2 hold
+    * alternative sequences and each becomes its own rule; the backtrack sequence is stored in reverse text
+    * order in every format, which is the order the matcher wants.
+    */
+  private def parseChainContext(off: Int): Seq[SubstSubtable] =
+    ByteCursor(data, off).u16 match
+      case 1 =>
+        val c       = ByteCursor(data, off)
+        c.u16
+        val byIndex = Coverage.parse(data, off + c.u16).map((g, i) => i -> g)
+        val setOffs = Array.fill(c.u16)(c.u16)
+        for
+          i     <- setOffs.indices if setOffs(i) != 0
+          first <- byIndex.get(i).toSeq
+          ro    <- ruleOffsets(off + setOffs(i))
+        yield
+          val (bt, seq, la, records) = chainRule(ro)
+          ChainContextSubst(bt.map(is), is(first) +: seq.map(is), la.map(is), records)
+      case 2 =>
+        val c        = ByteCursor(data, off)
+        c.u16
+        val covers   = coverageSet(off + c.u16)
+        val btClass  = classDef(off + c.u16)
+        val inClassD = classDef(off + c.u16)
+        val laClass  = classDef(off + c.u16)
+        val setOffs  = Array.fill(c.u16)(c.u16)
+        for
+          cls <- setOffs.indices if setOffs(cls) != 0
+          ro  <- ruleOffsets(off + setOffs(cls))
+        yield
+          val (bt, seq, la, records) = chainRule(ro)
+          val head: Int => Boolean   = g => covers(g) && inClassD(g) == cls
+          ChainContextSubst(
+            bt.map(inClass(btClass, _)),
+            head +: seq.map(inClass(inClassD, _)),
+            la.map(inClass(laClass, _)),
+            records,
+          )
+      case 3 =>
+        val c             = ByteCursor(data, off)
+        c.u16
+        val backtrackOffs = Array.fill(c.u16)(off + c.u16)
+        val inputOffs     = Array.fill(c.u16)(off + c.u16)
+        val lookaheadOffs = Array.fill(c.u16)(off + c.u16)
+        val records       = Array.fill(c.u16) { val seq = c.u16; (seq, c.u16) }
+        Seq(
+          ChainContextSubst(
+            backtrackOffs.map(covers),
+            inputOffs.map(covers),
+            lookaheadOffs.map(covers),
+            records,
+          ),
+        )
+      case _ => Nil
+
+  // A position matching one particular glyph (the rule-based formats), and one matching a class value (the
+  // class-based formats). Class 0 is every glyph the ClassDef does not name, which is why these are
+  // predicates rather than sets.
+  private def is(glyph: Int): Int => Boolean                         = _ == glyph
+  private def inClass(classOf: Int => Int, cls: Int): Int => Boolean = g => classOf(g) == cls
+
+  // A position matching any glyph a coverage table covers (the format 3 case). A Set[Int] is already a
+  // predicate; this only fixes the type where an array of them is wanted.
+  private def covers(off: Int): Int => Boolean = coverageSet(off)
+
+  // The rule offsets of a RuleSet (a count then that many offsets, relative to the set).
+  private def ruleOffsets(setOff: Int): Array[Int] =
+    val c = ByteCursor(data, setOff)
+    Array.fill(c.u16)(setOff + c.u16)
+
+  // A SequenceRule: the input glyphs or classes after the first (which the rule set itself selected), then
+  // the nested-lookup records.
+  private def sequenceRule(off: Int): (Array[Int], Array[(Int, Int)]) =
+    val c       = ByteCursor(data, off)
+    val count   = c.u16
+    val lookups = c.u16
+    val seq     = Array.fill(math.max(count - 1, 0))(c.u16)
+    (seq, Array.fill(lookups) { val s = c.u16; (s, c.u16) })
+
+  // A ChainedSequenceRule: backtrack (already in reverse text order), the input after the first, lookahead,
+  // then the nested-lookup records.
+  private def chainRule(off: Int): (Array[Int], Array[Int], Array[Int], Array[(Int, Int)]) =
+    val c     = ByteCursor(data, off)
+    val bt    = Array.fill(c.u16)(c.u16)
+    val count = c.u16
+    val seq   = Array.fill(math.max(count - 1, 0))(c.u16)
+    val la    = Array.fill(c.u16)(c.u16)
+    (bt, seq, la, Array.fill(c.u16) { val s = c.u16; (s, c.u16) })
+
+  // A ClassDef table: the class a glyph is assigned, 0 for any glyph it does not name.
+  private def classDef(off: Int): Int => Int =
     val c = ByteCursor(data, off)
-    if c.u16 != 3 then None
-    else
-      val backtrackOffs = Array.fill(c.u16)(off + c.u16)
-      val inputOffs     = Array.fill(c.u16)(off + c.u16)
-      val lookaheadOffs = Array.fill(c.u16)(off + c.u16)
-      val records       = Array.fill(c.u16) { val seq = c.u16; (seq, c.u16) }
-      Some(
-        ChainContextSubst(
-          backtrackOffs.map(coverageSet),
-          inputOffs.map(coverageSet),
-          lookaheadOffs.map(coverageSet),
-          records,
-        ),
-      )
+    c.u16 match
+      case 1 =>
+        val start  = c.u16
+        val values = Array.fill(c.u16)(c.u16)
+        g => if g >= start && g < start + values.length then values(g - start) else 0
+      case 2 =>
+        val ranges = Array.fill(c.u16) { val s = c.u16; val e = c.u16; (s, e, c.u16) }
+        g =>
+          var lo  = 0
+          var hi  = ranges.length - 1
+          var out = 0
+          while lo <= hi do
+            val mid          = (lo + hi) >>> 1
+            val (s, e, cls)  = ranges(mid)
+            if g < s then hi = mid - 1
+            else if g > e then lo = mid + 1
+            else { out = cls; lo = hi + 1 }
+          out
+      case _ => _ => 0
 
   // The set of glyphs a coverage table at `off` covers (the membership is all a contextual match needs).
   private def coverageSet(off: Int): Set[Int] = Coverage.parse(data, off).keySet
