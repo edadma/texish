@@ -35,6 +35,19 @@ class GsubArabicFontTests extends AnyFreeSpec with Matchers:
 
   private val Beh = 0x0628
 
+  /** Shape a word the way the engine does: the marks of each syllable are put into drawing order first (see
+    * [[ArabicShaping.orderMarks]], driven from the reorder units in `Bidi`), then the run is shaped. Returns
+    * the glyphs in logical order — `hb-shape` prints a right-to-left run reversed, so its output is compared
+    * back to front. */
+  private def shapeOrdered(word: String): Seq[Int] =
+    val units = scala.collection.mutable.ArrayBuffer.empty[scala.collection.mutable.ArrayBuffer[Int]]
+    for i <- word.indices do
+      if Bidi.classify(word.charAt(i).toInt) == BidiClass.NSM && units.nonEmpty then units.last += i
+      else units += scala.collection.mutable.ArrayBuffer(i)
+    for u <- units do ArabicShaping.orderMarks(u, ci => word.charAt(ci).toInt)
+    val cps = units.flatten.map(i => word.charAt(i).toInt).toArray
+    gsub.shape(cps.map(g), ArabicShaping.resolveForms(cps)).toSeq
+
   "the font carries Arabic form substitution" in {
     gsub.hasFormSubstitution shouldBe true
   }
@@ -133,3 +146,32 @@ class GsubArabicFontTests extends AnyFreeSpec with Matchers:
     val glyphs = gsub.shape(cps.map(g), ArabicShaping.resolveForms(cps))
     glyphs.length shouldBe 4
   }
+
+  "vocalized words shape glyph for glyph as hb-shape does" in {
+    // A syllable carrying both a shadda and a vowel is typed vowel-first and drawn shadda-first, so these
+    // depend on the marks being reordered before shaping: without it the shadda and the vowel come out
+    // stacked the wrong way up. The unvocalized words alongside them shape the same either way and are here
+    // to show the reordering leaves them alone; they run longer than their letter count because this font
+    // splits a dotted letter into a skeleton and a separate dot. These are the sequences `hb-shape` reports.
+    shapeOrdered("اللَّهِ") shouldBe Seq(8, 70, 68, 374, 380, 81, 436)
+    shapeOrdered("مُحَمَّدٌ") shouldBe Seq(77, 381, 24, 380, 76, 374, 380, 27, 385)
+    shapeOrdered("بِسْمِ") shouldBe Seq(19, 323, 436, 34, 388, 75, 436)
+    shapeOrdered("الْعَالَمِينَ") shouldBe Seq(8, 70, 388, 46, 380, 9, 70, 380, 76, 436, 18, 325, 79, 288, 380)
+    shapeOrdered("كِتَابٌ") shouldBe Seq(59, 436, 18, 294, 380, 9, 14, 323, 385)
+    shapeOrdered("كتاب") shouldBe Seq(59, 18, 294, 9, 14, 323)
+    shapeOrdered("السلام") shouldBe Seq(8, 70, 34, 69, 11, 72)
+  }
+
+  "the shadda is placed on the letter and the vowel above it, however the two are typed" in {
+    // The doubled lam of the word above, spelled out. Canonical order puts the fatha first, its combining
+    // class being the lower; a writer may equally type the shadda first, the order it is drawn in. Both must
+    // give the same run — the shadda nearest the letter, the fatha stacked above it.
+    def word(marks: Int*) = (Seq(0x0627, 0x0644, 0x0644) ++ marks ++ Seq(0x0647, 0x0650)).map(_.toChar).mkString
+    val canonical = shapeOrdered(word(0x064e, 0x0651)) // fatha then shadda, as normalized text arrives
+    val asDrawn   = shapeOrdered(word(0x0651, 0x064e)) // shadda then fatha, as a writer may type it
+    canonical shouldBe asDrawn
+    canonical.slice(3, 5) shouldBe Seq(374, 380) // the shadda, then the fatha above it
+    g(0x0651) shouldBe 374                       // …which is indeed the shadda
+    g(0x064e) shouldBe 380                       // …and the fatha
+  }
+

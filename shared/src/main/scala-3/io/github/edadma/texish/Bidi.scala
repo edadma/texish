@@ -579,6 +579,13 @@ object Bidi:
         unitLevel += levels(i)
       i += 1
 
+    // A unit is a base and the marks that follow it, which is the span Arabic mark ordering works over: a
+    // shadda is typed after the vowel but drawn under it, so the marks are put into drawing order here, while
+    // the cluster is still together and before any glyph is chosen. Every other script's units come back
+    // unchanged (see ArabicShaping.orderMarks), and because a unit's characters carry their resolved joining
+    // form by index, the forms follow the marks without further work.
+    for u <- unitChars do ArabicShaping.orderMarks(u, ci => s.charAt(ci).toInt)
+
     val order = Bidi.reorderByLevels(unitLevel.toArray)
 
     // Walk the units in visual order, recombining runs of one font and colour into word boxes whose text is

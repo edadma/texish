@@ -86,6 +86,48 @@ object ArabicShaping:
       i += Character.charCount(cp)
     false
 
+  // ─── mark ordering (Unicode Technical Report #53) ────────────────────────────
+  //
+  // A letter carrying both a shadda and a vowel is typed in canonical order — the vowel first, since its
+  // combining class is lower — but must be *drawn* the other way round: the shadda sits on the letter and the
+  // vowel above the shadda. Rendering therefore reorders the marks of a syllable before shaping, which is what
+  // UTR #53 (the Arabic Mark Transient Reordering Algorithm) specifies. Without it a font's shadda-plus-vowel
+  // ligature never matches and the two marks stack the wrong way up.
+  //
+  // The order the algorithm produces is: the modifier combining marks that sit below the letter, then those
+  // that sit above, then the shadda, then every other mark unmoved. Modifier combining marks are a small fixed
+  // set — hamza and the Qur'anic reading marks — which belong to the letter more closely than a vowel does and
+  // so are drawn nearest to it. The two tables below were confirmed mark by mark against HarfBuzz using the
+  // bundled Noto Naskh face, which covers every Arabic mark of either class.
+
+  private val markBelow = Set(0x0655, 0x06e3, 0x08cf, 0x08d3)
+  private val markAbove =
+    Set(0x0654, 0x0658, 0x06dc, 0x06e7, 0x06e8, 0x08ca, 0x08cb, 0x08cd, 0x08ce, 0x08f3)
+  private val Shadda = 0x0651
+
+  // How near the letter a mark is drawn: lower sorts closer. Everything the algorithm does not move shares the
+  // last rank, so a stable sort leaves marks of any other script — and any two ordinary vowels — as they were.
+  private def markRank(cp: Int): Int =
+    if markBelow(cp) then 0
+    else if markAbove(cp) then 1
+    else if cp == Shadda then 2
+    else 3
+
+  /** Reorder the marks of one syllable — a base character followed by its combining marks, given as indices
+    * into some text with `cpAt` reading the codepoint at an index — into the order they are drawn in (see
+    * above). The base stays put and only the marks after it move; the sort is stable, so marks the algorithm
+    * has no opinion about keep the order they were typed in. Text is assumed to be in canonical order already,
+    * as text normalized to either NFC or NFD is: this supplies the reordering canonical ordering does not do,
+    * rather than repeating it. A syllable of fewer than two marks, or one no mark needs moving in, is left
+    * untouched, so the common case costs one scan and no allocation. */
+  def orderMarks(unit: scala.collection.mutable.ArrayBuffer[Int], cpAt: Int => Int): Unit =
+    if unit.length >= 3 && (1 until unit.length).exists(k => markRank(cpAt(unit(k))) < 3) then
+      val marks = unit.drop(1).sortBy(i => markRank(cpAt(i)))
+      var k     = 1
+      while k < unit.length do
+        unit(k) = marks(k - 1)
+        k += 1
+
   // Whether a joining type connects on its leading side (toward the following letter in memory order) and
   // on its trailing side (toward the preceding letter). Dual joins both ways; right-joining connects only
   // to the preceding letter, left-joining only to the following; a join-causer connects both ways.

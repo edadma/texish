@@ -116,7 +116,14 @@ traditional typography uses; unpointed, it stays as the ordinary connected lette
 Arabic vowels (harakat) are combining marks placed by the same anchor mechanism as the Hebrew
 points, and they stack: a vowel written over a shadda sits above it, and a vowel clears a
 letter's own dots. Write the letters and marks in logical order and they are positioned
-automatically:
+automatically.
+
+The marks of a syllable are put into drawing order before the text is shaped, following the
+Unicode rules for Arabic mark rendering, so the shadda is drawn on the letter with the vowel
+stacked above it. This is the reverse of the order the two are normally stored in — a vowel's
+combining class is the lower, so normalized text puts it first — which means the typed order
+does not matter: a shadda typed before its vowel and one typed after it set identically. Hamza
+and the Qur'anic reading marks are drawn nearest the letter of all, ahead of the shadda.
 
 ```texish
 \rtl
