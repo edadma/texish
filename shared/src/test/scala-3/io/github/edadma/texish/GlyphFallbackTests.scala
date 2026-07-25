@@ -15,9 +15,10 @@ class GlyphFallbackTests extends AnyFreeSpec with Matchers:
   private val gamma = cp(0x03B3) // Greek small gamma
   private val pua   = cp(0xE000) // a private-use codepoint — in neither font in the last test
 
+  // Every cut of the primary face lacks the high codepoints, so a styled run falls back exactly as a plain one does.
   private class T extends HeadlessTypesetter:
     override def glyphIndex(font: RenderFont, c: Int): Int =
-      if font == "primaryface" && c >= 0x100 then 0 else c
+      if font.startsWith("primaryface") && c >= 0x100 then 0 else c
 
   private def setup(): (T, Font) =
     val t = new T
@@ -51,6 +52,45 @@ class GlyphFallbackTests extends AnyFreeSpec with Matchers:
     val (t, primary) = setup()
     t.fallbackTypeface = None
     t.coverageSegments("a" + alpha + "b", primary).toSeq.map(_._1) shouldBe Seq("a" + alpha + "b")
+  }
+
+  // The substituted glyphs must match the weight and slope of the text around them: a Cyrillic word inside a bold
+  // heading is set from the fallback's bold cut, so the weight does not break mid-phrase.
+
+  private def styled(): T =
+    val t = new T
+    t.loadFont("primary", "primaryface", Set.empty[String], Set.empty[String])
+    t.loadFont("primary", "primaryface-bold", Set.empty[String], Set("bold"))
+    t.loadFont("primary", "primaryface-mono", Set.empty[String], Set("mono"))
+    t.loadFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
+    t.loadFont("fallback", "fallbackface-bold", Set.empty[String], Set("bold"))
+    t.fallbackTypeface = Some("fallback")
+    t
+
+  "a fallback segment takes the primary's weight, not the regular cut" in {
+    val t    = styled()
+    val segs = t.coverageSegments("a" + alpha + "b", t.makeFont("primary", 10, Set("bold"))).toSeq
+    segs.map(_._1) shouldBe Seq("a", alpha, "b")
+    // The real proof is which face file each segment resolved to — the fallback picked its *bold* cut.
+    segs.map(_._2.renderFont) shouldBe Seq("primaryface-bold", "fallbackface-bold", "primaryface-bold")
+    segs.map(_._2.style) shouldBe Seq(Set("bold"), Set("bold"), Set("bold"))
+  }
+
+  "a fallback with no cut for the requested style degrades to what it has" in {
+    // The fallback here has no italic cut; the segment must still set (in the regular cut) rather than fail.
+    val t    = styled()
+    val segs = t.coverageSegments(alpha, t.makeFont("primary", 10, Set("italic"))).toSeq
+    segs.map(_._2.typeface) shouldBe Seq("fallback")
+    segs.map(_._2.renderFont) shouldBe Seq("fallbackface")
+  }
+
+  "the mono/sans role is dropped rather than redirecting the fallback to the typewriter family" in {
+    // The fallback stands in for coverage, not family. Keeping the role would send makeFont to the mono default
+    // (an unrelated family, no likelier to have the glyph — and not loaded here at all).
+    val t    = styled()
+    val segs = t.coverageSegments("a" + alpha, t.makeFont("primary", 10, Set("mono"))).toSeq
+    segs.map(_._2.typeface) shouldBe Seq("primary", "fallback")
+    segs.map(_._2.renderFont) shouldBe Seq("primaryface-mono", "fallbackface")
   }
 
   "a codepoint neither font has stays with the primary" in {

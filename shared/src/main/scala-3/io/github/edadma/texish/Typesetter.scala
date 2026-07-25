@@ -694,8 +694,12 @@ abstract class Typesetter:
   // its own selectable face (\font newcm …) and, more usefully, registered as the glyph-fallback face: when a run
   // hits a codepoint lmroman has no glyph for (a Greek word in a footnote, say), that codepoint is set from NewCM
   // instead of a missing-glyph box. Because NewCM *is* Computer Modern, the substituted glyphs sit invisibly beside
-  // the surrounding Latin Modern text.
+  // the surrounding Latin Modern text. All four cuts are loaded, not just the regular one, so a substituted run
+  // keeps the weight and slope of the text around it — a bold Cyrillic heading sets bold (see fallbackFontAt).
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-Regular.otf", lmLigatures, Set.empty)
+  loadFont("newcm", "fonts/NewComputerModern/NewCM10-Bold.otf", lmLigatures, Set("bold"))
+  loadFont("newcm", "fonts/NewComputerModern/NewCM10-Italic.otf", lmLigatures, Set("italic"))
+  loadFont("newcm", "fonts/NewComputerModern/NewCM10-BoldItalic.otf", lmLigatures, Set("bold", "italic"))
   fallbackTypeface = Some("newcm")
 
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
@@ -964,10 +968,19 @@ abstract class Typesetter:
 
     new CharBox(this, if ligatures then Ligatures(rep, currentFont.ligatures) else rep)
 
-  /** The glyph-fallback font at a given size, if a fallback face is registered — the face used to set codepoints the
-    * active font has no glyph for. Built at `size` so the substitute matches the surrounding text's size. */
-  def fallbackFontAt(size: Double): Option[Font] =
-    fallbackTypeface.filter(typefaces.contains).map(tf => makeFont(tf, size, Set.empty))
+  /** The glyph-fallback font at a given size and style, if a fallback face is registered — the face used to set
+    * codepoints the active font has no glyph for. Built at `size` and in `style` so the substitute matches the
+    * surrounding text: a Cyrillic word inside a bold heading is set from the fallback's bold cut, not its regular
+    * one, so the weight does not break mid-phrase.
+    *
+    * The family role (the mono/sans axis) is dropped. The fallback stands in for the primary face's *coverage*,
+    * not its family, and it is a single roman family; keeping the role would send makeFont to the typewriter or
+    * sans-serif default instead, which is no likelier to have the glyph. Weight, slope and caps carry over, and
+    * makeFont substitutes the nearest loaded cut, so a fallback face missing the exact combination degrades to
+    * what it has rather than failing. */
+  def fallbackFontAt(size: Double, style: Set[String] = Set.empty): Option[Font] =
+    val wanted = style.filterNot(s => axisOf(s) == StyleAxis.Role)
+    fallbackTypeface.filter(typefaces.contains).map(tf => makeFont(tf, size, wanted))
 
   /** Split a text run into maximal pieces, each set in one font: the primary font over the stretches it has glyphs
     * for, the fallback font over the stretches it does not (where the fallback does). When the primary covers the
@@ -985,7 +998,7 @@ abstract class Typesetter:
 
     if !gap then Array((text, primary))
     else
-      fallbackFontAt(primary.size) match
+      fallbackFontAt(primary.size, primary.style) match
         case None => Array((text, primary))
         case Some(fb) =>
           val frf = fb.renderFont.asInstanceOf[RenderFont]
