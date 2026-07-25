@@ -308,13 +308,24 @@ Both read their text raw from the input, so — like LaTeX's `\verb` — they ca
 macro. `\code` colours by the theme in `codetheme`; the `code` environment takes its language from
 `codelang`.
 
-## Hyphenation
+## Language
+
+These set the document's language, which decides both the hyphenation patterns the line breaker uses
+and the typography the language sets its punctuation by.
 
 | Command | Effect |
 |---------|--------|
-| `\usehyphenation{tag}` | enable the bundled patterns for a language tag (`en-us`, `es`, `fr`, …) and make it active |
-| `\loadhyphenation{lang}{path}` | load Liang patterns from a `.tex` file and make `lang` active |
+| `\usehyphenation{tag}` | enable the bundled patterns for a language tag (`en-us`, `es`, `fr`, …) and make it the document language |
+| `\loadhyphenation{lang}{path}` | load Liang patterns from a `.tex` file and make `lang` the document language |
 | `\language{lang}` | switch to an already-loaded language |
+
+Declaring French — `\usehyphenation{fr}`, or any regional tag built on it — also switches on French
+spacing of high punctuation. French sets a space before the colon, semicolon, exclamation and question
+marks, and inside its guillemets: a full space before the colon, a narrower one before the rest. That
+space neither stretches when the line is justified nor offers the line breaker a place to break, so the
+mark cannot drift from its word or be carried alone to the head of the next line. Type the space or
+leave it out as you prefer — `« Oui ! »` and `«Oui!»` set alike — and the comma and full stop, which
+French sets tight as English does, are left alone.
 
 ## Hooks
 

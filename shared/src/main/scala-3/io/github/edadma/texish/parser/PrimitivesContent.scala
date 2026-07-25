@@ -31,7 +31,7 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
         (lang, path) match
           case (Value.Text(l), Value.Text(p)) =>
             Hyphenation.loadPatterns(l, p)
-            handler.typesetter.hyphenationLanguage = Some(l)
+            handler.typesetter.language = Some(l)
           case _ => handler.error("\\loadhyphenation expects {language}{path}", pos)
     },
   )
@@ -44,7 +44,7 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
         val arg = evalArg(proc, pos)
         arg match
           case Value.Text(lang) =>
-            if Hyphenation.isLoaded(lang) then handler.typesetter.hyphenationLanguage = Some(lang)
+            if Hyphenation.isLoaded(lang) then handler.typesetter.language = Some(lang)
             else handler.error(s"\\language: no hyphenation patterns loaded for '$lang'", pos)
           case _ => handler.error("\\language expects a language name", pos)
     },
@@ -60,7 +60,7 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
       def execute(proc: Processor, pos: CharReader): Unit =
         evalArg(proc, pos) match
           case Value.Text(lang) =>
-            if Hyphenation.enableEmbedded(lang) then handler.typesetter.hyphenationLanguage = Some(lang)
+            if Hyphenation.enableEmbedded(lang) then handler.typesetter.language = Some(lang)
             else
               val have = Hyphenation.embeddedLanguages.toSeq.sorted.mkString(", ")
               handler.error(

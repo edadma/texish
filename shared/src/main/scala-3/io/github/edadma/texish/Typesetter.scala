@@ -1090,11 +1090,13 @@ abstract class Typesetter:
 
   // ---- Hyphenation ----
 
-  /** The hyphenation language active for this document, or `None` for no hyphenation. This is per-document
-    * state — `\usehyphenation` / `\loadhyphenation` / `\language` set it on the typesetter — so two documents
-    * (or two concurrent test suites) never affect each other's line breaking. The pattern tables themselves
-    * are a shared, append-only cache in the [[Hyphenation]] object; only the *selection* lives here. */
-  var hyphenationLanguage: Option[String] = None
+  /** The language this document is written in, or `None` when it is not declared. It decides two things: the
+    * hyphenation patterns the line breaker uses, and the typography a language sets its punctuation by —
+    * French, for one, spaces its high punctuation differently from English (see [[FrenchSpacing]]). This is
+    * per-document state — `\usehyphenation` / `\loadhyphenation` / `\language` set it on the typesetter — so
+    * two documents (or two concurrent test suites) never affect each other. The hyphenation pattern tables
+    * themselves are a shared, append-only cache in the [[Hyphenation]] object; only the *selection* is here. */
+  var language: Option[String] = None
 
   // ---- Math mode ----
 

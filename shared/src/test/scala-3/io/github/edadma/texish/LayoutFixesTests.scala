@@ -27,7 +27,7 @@ class LayoutFixesTests extends AnyFreeSpec with Matchers:
     Hyphenation(Some("en-us"), "hyphenation") should not be None // the word must actually offer break points
 
     val t = new HeadlessTypesetter
-    t.hyphenationLanguage = Some("en-us")
+    t.language = Some("en-us")
     val sp = t.getGlue("spaceskip")
     // "hyphenation"(66) + space + "x"(6) exactly fills the measure, so it is one perfect line — unless each
     // hyphenation point inside the word wrongly adds a hyphen's width to the measured line

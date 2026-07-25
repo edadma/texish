@@ -5,7 +5,7 @@ package io.github.edadma.texish
   * parsed and expensive to build, so they are shared across every document and loaded at most once per tag.
   *
   * The *active* language is NOT held here — it is per-document state on the [[Typesetter]]
-  * (`hyphenationLanguage`). Keeping selection out of this singleton is what lets two documents, or two
+  * (`language`). Keeping selection out of this singleton is what lets two documents, or two
   * concurrent test suites, choose different languages (or none) without affecting each other's line breaking.
   *
   * The cache is append-only and thread-safe: writes are serialised, and the map is published through a

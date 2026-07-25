@@ -168,13 +168,13 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
   it should "select a hyphenation language per document, not globally" in {
     Hyphenation.enableEmbedded("en-us")
     val withLang = new HeadlessTypesetter
-    withLang.hyphenationLanguage = Some("en-us")
+    withLang.language = Some("en-us")
     val without = new HeadlessTypesetter
     // the document that selected a language hyphenates; a fresh document does not, no matter what any other
     // document or concurrently-running suite has loaded or selected
-    Hyphenation(withLang.hyphenationLanguage, "pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
-    without.hyphenationLanguage shouldBe None
-    Hyphenation(without.hyphenationLanguage, "pneumonoultramicroscopicsilicovolcanoconiosis") shouldBe None
+    Hyphenation(withLang.language, "pneumonoultramicroscopicsilicovolcanoconiosis") should not be None
+    without.language shouldBe None
+    Hyphenation(without.language, "pneumonoultramicroscopicsilicovolcanoconiosis") shouldBe None
   }
 
   // Real English word hyphenation tests

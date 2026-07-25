@@ -62,6 +62,12 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
       bls = t.getGlue("baselineskip").naturalSize
       cutBands = galley.cutouts.flatMap(c => galley.cutoutBand(c).map((top, bottom) => (top, bottom, c.side, c.profile))).toSeq
 
+      // A language may space its punctuation differently from English. French sets a space before the colon,
+      // semicolon, exclamation and question marks and inside its guillemets, and that space must neither
+      // stretch nor break; this puts it in before the paragraph is broken into lines, so both the optimal
+      // breaker and the greedy fallback see it.
+      if FrenchSpacing.applies(t.language) then FrenchSpacing(boxes)
+
       // The paragraph's writing direction, decided once: whether to reorder at all, and at which base.
       val base   = baseLevel
       val doBidi = needsBidi(base)
@@ -201,7 +207,12 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
   // not a legal breakpoint, so the greedy fallback must skip past it to the real glue, exactly as Knuth-Plass
   // does (to the optimal breaker a kern is a plain rigid box). Without this, the negative kerns inside a
   // wordmark like \TeX read as interword spaces and the greedy breaker splits the logo across a line.
-  private def isBreakSpace(b: Box): Boolean = b.isInstanceOf[Glue]
+  // Glue the greedy setter may break a line at. Glue marked `nobreak` — a tie, or the space French sets
+  // before its high punctuation — is space but not a break opportunity, exactly as in the optimal breaker.
+  private def isBreakSpace(b: Box): Boolean =
+    b match
+      case g: Glue => !g.nobreak
+      case _       => false
 
   private def buildLinesGreedy(hsize: Double, base: Int, doBidi: Boolean): Unit =
     var first   = true
@@ -242,7 +253,7 @@ class ParagraphMode(val t: Typesetter) extends HorizontalMode:
               case b: CharBox =>
                 b.text.indexOf('-') match
                   case -1 =>
-                    Hyphenation(t.hyphenationLanguage, b.text) match
+                    Hyphenation(t.language, b.text) match
                       case None =>
                       case Some(hyphenation) =>
                         var lastBefore: CharBox = null

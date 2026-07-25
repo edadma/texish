@@ -111,7 +111,7 @@ object KnuthPlass:
     // Convert boxes to items, expanding hyphenation points. Trailing discardables are dropped, as TeX drops
     // a paragraph's final glue before appending \parfillskip — otherwise a break at that last glue would
     // offer a legal empty final line.
-    val allItems = buildItems(boxes, hyphenpenalty, t.hyphenationLanguage)
+    val allItems = buildItems(boxes, hyphenpenalty, t.language)
     val items    = allItems.take(allItems.lastIndexWhere(it => !isDiscardable(it)) + 1)
 
     if items.isEmpty then return Some(Seq.empty)
@@ -411,7 +411,7 @@ object KnuthPlass:
 
     Some(lines.toSeq)
 
-  private def buildItems(boxes: Seq[Box], hyphenpenalty: Double, hyphLang: Option[String]): Seq[Item] =
+  private[texish] def buildItems(boxes: Seq[Box], hyphenpenalty: Double, hyphLang: Option[String]): Seq[Item] =
     val items = ArrayBuffer[Item]()
 
     for (box, idx) <- boxes.zipWithIndex do
@@ -431,7 +431,14 @@ object KnuthPlass:
           // Check for hyphenation opportunities, in the document's active language
           Hyphenation(hyphLang, cb.text) match
             case Some(hyphenation) =>
-              val hyphenPoints = hyphenation.toList
+              // A word already carrying a hyphen — `Croyez-vous`, `self-evident` — must not be offered a
+              // break beside it: the line would end with the hyphen it already has and the one added for the
+              // break, setting `Croyez--`. The explicit hyphen is a break opportunity in its own right, taken
+              // without adding anything, so nothing is lost by dropping these points.
+              val hyphenPoints = hyphenation.toList.filter { (before, _) =>
+                val at = before.length - 1
+                at > 0 && at < cb.text.length && cb.text.charAt(at - 1) != '-' && cb.text.charAt(at) != '-'
+              }
               if hyphenPoints.nonEmpty then
                 // Build segments with penalties between them
                 // Note: 'before' includes the hyphen (e.g., "com-"), so actual break pos is before.length - 1
