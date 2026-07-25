@@ -86,6 +86,25 @@ class GsubGurmukhiFontTests extends AnyFreeSpec with Matchers:
     places.last.isMark shouldBe true
   }
 
+  "everyday words shape glyph for glyph as hb-shape does" in {
+    // The sequences `hb-shape --shaper=ot` reports for this font. The tests above check one behaviour each,
+    // which cannot catch a lookup that is skipped wholesale — the glyphs stay plausible and only the exact
+    // run gives it away. These pin the whole pipeline: subjoined forms, the reordered sihari, the addak, the
+    // nasal marks and the word-position forms together.
+    shape("ਪੰਜਾਬੀ").toSeq shouldBe Seq(38, 78, 25, 52, 40, 54)
+    shape("ਸਤਿ").toSeq shouldBe Seq(49, 53, 33)
+    shape("ਸ੍ਰੀ").toSeq shouldBe Seq(49, 112, 54)
+    shape("ਦਿਨ").toSeq shouldBe Seq(53, 35, 37)
+    shape("ਪ੍ਰੇਮ").toSeq shouldBe Seq(38, 112, 57, 42)
+    shape("ਚਿੰਨ੍ਹ").toSeq shouldBe Seq(53, 23, 78, 37, 113)
+    shape("ਇੱਕ").toSeq shouldBe Seq(10, 79, 18)
+    shape("ਪੱਕਾ").toSeq shouldBe Seq(38, 79, 18, 52)
+    shape("ਗੁਰਮੁਖੀ").toSeq shouldBe Seq(20, 55, 44, 42, 55, 19, 54)
+    shape("ਵਿਦਿਆਰਥੀ").toSeq shouldBe Seq(53, 47, 53, 35, 9, 44, 34, 54)
+    shape("ਧੰਨਵਾਦ").toSeq shouldBe Seq(36, 78, 37, 47, 52, 35)
+    shape("ਸ੍ਵਰਗ").toSeq shouldBe Seq(49, 114, 44, 20)
+  }
+
   "ਸਿੰਘ reorders the sihari and marks the tippi" in {
     // ਸ ਿ ੰ ਘ (sa, sihari, tippi | gha): the sihari of the first syllable leads the run, the tippi is a mark on
     // that syllable, and the gha opens a new cluster. Four glyphs, the sihari first, one mark.
