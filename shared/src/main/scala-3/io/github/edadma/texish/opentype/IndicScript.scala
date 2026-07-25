@@ -61,10 +61,11 @@ trait IndicScript:
     * substitutions that select contextual glyph variants, and the halant and contextual-alternate cleanups. */
   def presFeatures: Seq[String]
 
-  /** The two parts of a two-part matra — a pre-base part and a post-base part — or None for every other
-    * character. A two-part vowel sign is one codepoint in memory that renders as a sign before the base and a
-    * sign after it (Bengali o and au); it is split into its parts, per Unicode canonical decomposition, before
-    * the cluster is shaped. Scripts with no two-part matras (Devanagari) leave this at its default. */
+  /** The two parts a two-part matra is written as, in reading order, or None for every other character. A
+    * two-part vowel sign is one codepoint in memory that the font draws as two signs: Bengali o and au as a
+    * sign before the base and one after it, Telugu ai as an e sign and a length mark, both on the base. It is
+    * split into its parts before the cluster is shaped, so each part can be placed and substituted on its own.
+    * Scripts with no two-part matras (Devanagari) leave this at its default. */
   def decompose(cp: Int): Option[(Int, Int)] = None
 
   /** The GSUB feature that selects a word-initial form of the pre-base vowel sign, or None when the script has
@@ -86,6 +87,15 @@ trait IndicScript:
   /** The dependent vowel signs that stay after the base — where a [[rephBeforePostBase]] script's reph is
     * inserted in front of. Unused (and empty) for a script whose reph closes the cluster. */
   def postBaseMatras: Set[Int] = Set.empty
+
+  /** The dependent vowel signs drawn on the base consonant itself, which therefore sit immediately after it
+    * and ahead of any consonants subjoined beneath the cluster. A sign is typed after the whole conjunct but
+    * belongs to the base alone, so in a script that subjoins its joined consonants the sign must be moved back
+    * across them before the presentation features run — only then are the base and its sign adjacent for the
+    * font's fused consonant-vowel glyph to match. Telugu's are all of its signs but the vocalic r pair, which
+    * hang below the subjoined forms; a script whose joined consonants stand beside the base rather than under
+    * it (Devanagari, Bengali) leaves this empty and nothing moves. */
+  def preSubjoinedMatras: Set[Int] = Set.empty
 
   /** Whether a run contains letters or signs of this script worth shaping (a digit or punctuation mark alone
     * does not need the Indic path). */
@@ -156,3 +166,17 @@ trait IndicScript:
       val j = glyphs.indexOf(preBaseMatraGlyph)
       if j <= 0 then glyphs
       else Array(preBaseMatraGlyph) ++ glyphs.slice(0, j) ++ glyphs.slice(j + 1, glyphs.length)
+
+  /** Move a cluster's vowel signs back across the consonants subjoined beneath it, so they land immediately
+    * after the base they are drawn on (see [[preSubjoinedMatras]]). `matraGlyphs` are the glyphs the font maps
+    * those signs to, in reading order — a two-part sign contributes both of its parts. Like the pre-base sign
+    * they survive the basic-form pass unconsumed, so each can be found by glyph and lifted out. The base opens
+    * the cluster in a script that subjoins — nothing is drawn to its left — so the signs' place is right after
+    * it, and whatever else the cluster carries, subjoined forms and trailing syllable modifiers alike, follows
+    * in its existing order. A cluster with no such sign is returned unchanged. */
+  def reorderPreSubjoinedMatra(glyphs: Array[Int], matraGlyphs: Array[Int]): Array[Int] =
+    if matraGlyphs.isEmpty || glyphs.length < 2 then glyphs
+    else
+      val at = matraGlyphs.map(m => glyphs.indexOf(m)).filter(_ > 0)
+      if at.isEmpty then glyphs
+      else (glyphs(0) +: at.map(glyphs)) ++ (1 until glyphs.length).filterNot(at.contains).map(glyphs)

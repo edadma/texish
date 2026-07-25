@@ -1,0 +1,110 @@
+// telugu-demo — Telugu script typesetting in texish.
+//
+// Render with:  texish-cli scripts/telugu-demo.script
+//
+// Telugu is written left to right, so it needs none of the bidirectional
+// reordering Hebrew and Arabic do. What it needs is work inside each syllable,
+// and that work falls differently than it does for the other Indic scripts.
+//
+// Telugu builds downward. A consonant and its vowel sign commonly fuse into a
+// single drawn glyph, and a consonant joined by the virama hangs beneath the
+// base as a subscript. That inverts the base: where Devanagari's is the last
+// consonant of a conjunct, Telugu's is the first, with everything after it
+// underneath.
+//
+// Nothing is drawn to the left of its consonant, so no sign is ever lifted to
+// the front of a syllable — no short-i as in Devanagari, no e or ai as in
+// Bengali. What does move is the vowel sign of the base: typed after the whole
+// conjunct, it is drawn on the base itself, so it is moved back across the
+// subscripts to reach it. Nor is there a reph: a word-initial ra with a virama
+// stays an ordinary letter rather than rising as a mark over the syllable.
+//
+// \font telugu selects the bundled face, in a regular and a bold cut. No \rtl is
+// needed — the script is left to right.
+
+\use{document}
+
+\title{The Telugu Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Telugu paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the consonants stack downward and the vowel signs fuse with the base; between
+syllables the line breaker finds its breaks at the interword spaces exactly as for Latin
+text.
+
+\medskip
+
+{\font telugu 14 regular
+తెలుగు ఒక సుందరమైన భాష. ఇది ఎడమ నుండి కుడికి వ్రాయబడుతుంది. ప్రతి అక్షరం ఒక హల్లు
+మరియు దానితో కలిసిన అచ్చుతో ఏర్పడుతుంది, మరియు రెండు హల్లులు విరామంతో కలిసి
+సంయుక్తాక్షరం అవుతాయి.
+}
+
+\section{Vowel signs fuse with the consonant}
+
+A consonant and its vowel sign are usually drawn as one glyph rather than a letter and a
+mark beside it. The same consonant carries each of the vowels below, and each combination
+is a form of its own:
+
+\medskip
+
+{\font telugu 16 regular
+క కా కి కీ కు కూ కృ కె కే కై కొ కో కౌ
+}
+
+\section{Conjuncts hang beneath the base}
+
+Two consonants joined by the virama do not stand side by side: the second is drawn as a
+subscript under the first, which remains the base of the syllable. A vowel sign on such a
+syllable belongs to the base, so it is set beside the base and the subscripts hang below
+the pair — in {\font telugu 12 regular ప్రేమ} the vowel joins the \italic{pa}, not the
+subjoined \italic{ra}. Book, word, and friend:
+
+\medskip
+
+{\font telugu 16 regular
+పుస్తకం   పదం   స్నేహితుడు
+}
+
+\section{No reph}
+
+The consonant \italic{ra} takes no special form at the head of a syllable. In
+{\font telugu 12 regular ర్క} the ra stays where it is and the following consonant subjoins beneath it,
+where Devanagari would lift the ra above the syllable as a reph. After another consonant
+the ra hangs below, as in these words for love and village:
+
+\medskip
+
+{\font telugu 16 regular
+ర్క   ప్రేమ   గ్రామం
+}
+
+\section{Independent vowels and syllable signs}
+
+A vowel that opens a syllable is written with its own letter, not a sign. The anusvara and
+visarga follow the base as spacing marks:
+
+\medskip
+
+{\font telugu 16 regular
+అ ఆ ఇ ఈ ఉ ఊ ఋ ఎ ఏ ఐ ఒ ఓ ఔ
+}
+
+\medskip
+
+{\font telugu 16 regular
+కం కః అం అః
+}
+
+\section{A closing line}
+
+A greeting, set in the bold cut:
+
+\medskip
+
+{\font telugu 18 bold
+నమస్కారం! ఇది తెలుగు లిపిలో వ్రాయబడింది.
+}
