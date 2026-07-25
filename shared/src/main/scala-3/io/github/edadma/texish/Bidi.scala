@@ -91,6 +91,11 @@ object Bidi:
         else if cp >= 0x08a0 && cp <= 0x08ff then AL // Arabic Extended-A
         else if cp >= 0xfb50 && cp <= 0xfdff then AL // Arabic Presentation Forms-A
         else if cp >= 0xfe70 && cp <= 0xfeff then AL // Arabic Presentation Forms-B
+        // Thai: the above and below vowels, the tone marks and the remaining combining signs are non-spacing
+        // marks, which is their true bidi class. Thai is left to right and needs no reordering, but the
+        // classification is also what tells a character box that a run carries marks and must have them
+        // placed by the font's anchors rather than simply drawn in sequence.
+        else if cp == 0x0e31 || (cp >= 0x0e34 && cp <= 0x0e3a) || (cp >= 0x0e47 && cp <= 0x0e4e) then NSM
         // Common Latin/ASCII numbers, separators and terminators.
         else if cp >= 0x0030 && cp <= 0x0039 then EN
         else if cp == 0x002b || cp == 0x002d then ES

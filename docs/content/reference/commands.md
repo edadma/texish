@@ -168,11 +168,13 @@ between orthographic clusters, and never parts a vowel or tone mark from its con
 pre-posed vowel from the consonant that follows it. Charm is bundled: `\font thai 12 regular` (or
 `\font charm`), with a bold cut.
 
-**Two limitations to know.** Thai lines properly break at *word* boundaries, and finding those needs a
+Vowels and tone marks are placed on their consonant by the font's anchors, so the stacked combinations
+Thai builds set correctly.
+
+**One limitation to know.** Thai lines properly break at *word* boundaries, and finding those needs a
 dictionary, which texish does not carry — so a cluster break may land inside a word. Because of that it
 is offered only as a last resort, at a heavy penalty: text with normal phrase spacing breaks at those
-spaces and never sees one. Separately, Thai combining marks are not yet positioned by the font's
-anchors, so a vowel or tone mark may sit beside its consonant rather than on it.
+spaces and never sees one.
 
 ## Right-to-left scripts
 

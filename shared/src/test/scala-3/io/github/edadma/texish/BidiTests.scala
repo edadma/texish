@@ -30,6 +30,19 @@ class BidiTests extends AnyFreeSpec with Matchers:
     Bidi.classify('ְ'.toInt) shouldBe BidiClass.NSM // Hebrew point sheva
   }
 
+  "Thai combining signs classify as non-spacing marks, and its spacing ones do not" in {
+    // Thai is left to right and so is never reordered, but the classification is also what routes a run to
+    // the mark-positioning path, where the marks are placed by the font's anchors rather than in sequence.
+    Bidi.classify(0x0e34) shouldBe BidiClass.NSM // sara i, an above vowel
+    Bidi.classify(0x0e39) shouldBe BidiClass.NSM // sara uu, a below vowel
+    Bidi.classify(0x0e48) shouldBe BidiClass.NSM // mai ek, a tone mark
+    Bidi.classify(0x0e4c) shouldBe BidiClass.NSM // thanthakhat
+    Bidi.classify(0x0e01) should not be BidiClass.NSM // ko kai, a consonant
+    Bidi.classify(0x0e32) should not be BidiClass.NSM // sara aa — spacing, not combining
+    Bidi.hasMarks("ผู้") shouldBe true
+    Bidi.hasMarks("กทย") shouldBe false
+  }
+
   "autoBaseLevel follows the first strong character (P2/P3)" in {
     Bidi.autoBaseLevel(Bidi.classifyString("abc")) shouldBe 0
     Bidi.autoBaseLevel(Bidi.classifyString(s"$Alef$Bet$Gimel")) shouldBe 1
