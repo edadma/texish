@@ -19,14 +19,26 @@ class CJKLineBreakTests extends AnyFreeSpec with Matchers:
     CJK.isCJK('中') shouldBe true
     CJK.isCJK('。') shouldBe true
     CJK.isCJK('あ') shouldBe true // hiragana
+    CJK.isCJK('カ') shouldBe true // katakana
+    CJK.isCJK('日') shouldBe true // a kanji
     CJK.isCJK('a') shouldBe false
     CJK.isCJK(' ') shouldBe false
   }
 
-  "CJK.hasCJK detects any CJK codepoint in a run" in {
+  "CJK.isCJK excludes Hangul, so Korean is not on the per-character break path" in {
+    // Korean is written with interword spaces and breaks at them like Latin; breaking between arbitrary
+    // syllables would split words. So Hangul is deliberately not a break-anywhere character.
+    CJK.isCJK('한') shouldBe false
+    CJK.isCJK('국') shouldBe false
+    CJK.isCJK('가') shouldBe false
+  }
+
+  "CJK.hasCJK detects any CJK codepoint in a run, but a pure-Korean run is not CJK" in {
     CJK.hasCJK("hello") shouldBe false
     CJK.hasCJK("中文") shouldBe true
     CJK.hasCJK("ABC中") shouldBe true
+    CJK.hasCJK("日本語") shouldBe true  // Japanese kanji still take the CJK path
+    CJK.hasCJK("한국어") shouldBe false // Korean does not — it breaks at its spaces
   }
 
   "breakableBetween offers a break between two ideographs" in {
@@ -43,6 +55,17 @@ class CJKLineBreakTests extends AnyFreeSpec with Matchers:
 
   "breakableBetween leaves two Latin letters to space-only breaking" in {
     CJK.breakableBetween('a', 'b') shouldBe false
+  }
+
+  "breakableBetween offers no break between two Hangul syllables" in {
+    // Korean breaks at its interword spaces, not between the syllables of a word.
+    CJK.breakableBetween('한', '국') shouldBe false
+    CJK.breakableBetween('안', '녕') shouldBe false
+  }
+
+  "breakableBetween still offers a break between two Japanese characters" in {
+    CJK.breakableBetween('日', '本') shouldBe true // kanji
+    CJK.breakableBetween('あ', 'い') shouldBe true // hiragana
   }
 
   "breakableBetween allows a break at a CJK–Latin boundary" in {
@@ -64,6 +87,20 @@ class CJKLineBreakTests extends AnyFreeSpec with Matchers:
     val result = KnuthPlass.breakParagraph(boxes, 30.0, t)
     result shouldBe defined
     result.get.length should be > 1
+  }
+
+  "a Korean run is not broken per character, unlike a Chinese one" in {
+    // At the same narrow measure a Chinese run breaks between its characters, but a Korean run — off the
+    // per-character path — stays a single box (in a real document it would break at its interword spaces).
+    val t  = loose
+    val zh = KnuthPlass.breakParagraph(Seq(t.charBox("中文中文中文中文中文中文")), 30.0, t) // 12 chars
+    val ko = KnuthPlass.breakParagraph(Seq(t.charBox("한국어한국어한국어한국어")), 30.0, t)  // 12 syllables
+    zh shouldBe defined
+    zh.get.length should be > 1 // Chinese breaks per character
+    // The Korean run has no per-character breaks and no spaces here, so it is one atomic box the breaker
+    // cannot fit at this measure — it finds no legal breakpoint at all. (A real Korean paragraph carries
+    // spaces and breaks at them.) Had Hangul stayed a break-anywhere character it would break like Chinese.
+    ko shouldBe empty
   }
 
   "kinsoku keeps a closing 。 off the start of every line" in {

@@ -13,8 +13,14 @@ package io.github.edadma.texish
 object CJK:
 
   /** Whether `cp` is a CJK codepoint that takes part in inter-character breaking — the Han ideographs and
-    * their extensions, the Japanese kana, the Hangul syllables, and the CJK-symbol and fullwidth-form
-    * punctuation blocks. A run of these has no spaces of its own, so each adjacency is a candidate break.
+    * their extensions, the Japanese kana, and the CJK-symbol and fullwidth-form punctuation blocks. A run of
+    * these has no spaces of its own, so each adjacency is a candidate break.
+    *
+    * The Hangul syllables are deliberately excluded. Korean, unlike Chinese and Japanese, is written with
+    * interword spaces (between eojeol), and its lines break at those spaces the way Latin does — breaking
+    * between arbitrary syllables would split words. So Hangul stays off the per-character break path and a
+    * Korean run breaks only at its spaces. (A word of Han among Korean text still breaks per character, as
+    * that Han is not spaced.)
     */
   def isCJK(cp: Int): Boolean =
     (cp >= 0x4e00 && cp <= 0x9fff) ||   // CJK Unified Ideographs
@@ -24,7 +30,6 @@ object CJK:
       (cp >= 0xf900 && cp <= 0xfaff) ||   // CJK Compatibility Ideographs
       (cp >= 0x3040 && cp <= 0x309f) ||   // Hiragana
       (cp >= 0x30a0 && cp <= 0x30ff) ||   // Katakana
-      (cp >= 0xac00 && cp <= 0xd7af) ||   // Hangul syllables
       (cp >= 0x3000 && cp <= 0x303f) ||   // CJK Symbols and Punctuation
       (cp >= 0xff00 && cp <= 0xffef)      // Halfwidth and Fullwidth Forms
 

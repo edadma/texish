@@ -10,7 +10,8 @@ operators whose limits stack in display style, and matrices (`\matrix`, `\pmatri
 `\mathbb`, `\mathfrak`, `\mathcal`) and the phantom/`\smash` spacing boxes round out the math surface.
 
 It breaks paragraphs into lines and lines into pages the way TeX does — Knuth-Plass line breaking,
-Liang hyphenation, CJK (Chinese) line breaking with kinsoku rules, right-to-left scripts
+Liang hyphenation, CJK line breaking with kinsoku rules (Chinese and Japanese `\font cjksc`/`cjktc`/`japanese`
+with region-specific Han forms, and Korean `\font korean` — Hangul that breaks at word spaces), right-to-left scripts
 (`\rtl`/`\ltr` — Hebrew and Arabic, with Unicode bidirectional reordering, mirrored brackets,
 cursive Arabic joining and ligatures via GSUB, and GPOS positioning of niqqud and harakat vowel
 marks), Devanagari (Hindi) syllable shaping (`\font devanagari` — conjuncts and half-forms, short-i
@@ -177,7 +178,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.22.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.23.0"
 ```
 
 ## License

@@ -99,15 +99,25 @@ JVM and Native builds (the browser build ships only Latin Modern):
 
 Any other face is brought in with `\loadfont{name}{path}`.
 
-## Chinese and CJK
+## Chinese, Japanese and Korean
 
-Chinese text has no spaces between characters, so the line breaker inserts its own break
-opportunities between adjacent CJK characters and applies kinsoku — a closing mark never starts a
-line and an opening mark never ends one — then justifies the line by stretching the inter-character
-space. This happens automatically for any run of CJK text; the line breaker is otherwise unchanged.
-Noto Serif CJK is bundled for setting it: `\font cjksc 12 regular` for Simplified Chinese and
-`\font cjktc 12 regular` for Traditional, each with a bold cut (`\font cjksc 12 bold`) for headings
-and labels. Any other CJK font can be brought in with `\loadfont{name}{path}`.
+Chinese and Japanese text has no spaces between characters, so the line breaker inserts its own break
+opportunities between adjacent characters and applies kinsoku — a closing mark never starts a line and
+an opening mark never ends one — then justifies the line by stretching the inter-character space. This
+happens automatically for any run of Chinese or Japanese text; the line breaker is otherwise unchanged.
+
+Noto Serif CJK is bundled with a face for each region, since Han (kanji/hanja) has region-specific
+glyph forms and Korean adds the Hangul syllables the Chinese faces do not carry:
+
+- `\font cjksc` — Simplified Chinese (also the default `noto`-adjacent face for Han)
+- `\font cjktc` — Traditional Chinese
+- `\font cjkjp` (alias `\font japanese`) — Japanese, with the Japanese kanji forms and the kana
+- `\font cjkkr` (alias `\font korean`) — Korean Hangul (and Hanja)
+
+Each has a regular and a bold cut (`\font cjkjp 12 bold`). **Korean breaks differently:** it is written
+with interword spaces, so its lines break at those spaces the way Latin does — a Korean word is never
+split across a line — rather than between syllables. Any other CJK font can be brought in with
+`\loadfont{name}{path}`.
 
 ## Devanagari (Hindi)
 

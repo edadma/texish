@@ -1,0 +1,72 @@
+// japanese-korean-demo — Japanese and Korean typesetting in texish.
+//
+// Render with:  texish-cli scripts/japanese-korean-demo.script
+//
+// Japanese and Korean join Chinese on the CJK path, each with its own bundled face,
+// because Han (kanji / hanja) has region-specific letterforms and Korean adds the
+// Hangul syllables the Chinese faces have no glyph for.
+//
+// Japanese sets like Chinese: it has no interword spaces, so the engine offers a break
+// between adjacent characters and applies kinsoku (a closing mark never starts a line,
+// an opening mark never ends one). Korean is different — it is written with spaces
+// between words and its lines break at those spaces, the way Latin does, so its syllables
+// are kept off the per-character break path and a word is never split across a line.
+//
+// \font japanese (alias \font cjkjp) and \font korean (alias \font cjkkr), each with a
+// bold cut.
+
+\use{document}
+
+\title{Japanese and Korean in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Japanese}
+
+Japanese mixes kanji with the two kana syllabaries, hiragana and katakana. It is set with
+its own face so the kanji take their Japanese forms rather than the Chinese ones. Like
+Chinese it has no interword spaces, so the engine inserts the break opportunities between
+characters and stretches them to justify, keeping closing marks off the start of a line and
+opening marks off the end.
+
+\medskip
+
+{\font japanese 12 regular
+これは日本語の組版の例です。テキシュ・エンジンは、空白のない一続きの文章を複数の行に分割し、
+それぞれの行を右側の版面の端までそろえます。文字と文字のあいだには幅がゼロで伸縮する空きが
+入るので、行末が版面からはみ出すことも、みっともない余白が残ることもありません。句読点の
+禁則も守られます。句点や読点のような閉じ括弧「このような始め括弧も、行のはじめや終わりには
+置かれず、となりの文字といっしょに動きます。}
+
+\section{Korean}
+
+Korean is written in Hangul, whose syllable blocks the Chinese faces do not carry at all.
+It uses spaces between words, so — unlike Chinese and Japanese — its lines break at those
+spaces, exactly as Latin does, and a word is never broken across a line. Hanja (Han
+characters) appear occasionally and the same face sets them.
+
+\medskip
+
+{\font korean 12 regular
+이것은 한국어 조판의 예입니다. 텍시 엔진은 한글로 쓰인 문단을 여러 줄로 나누되, 낱말의
+사이에 있는 공백에서만 줄을 바꾸므로 한 낱말이 두 줄에 걸쳐 잘리는 일이 없습니다. 이는
+라틴 문자를 다루는 방식과 같습니다. 한자를 섞어 쓸 수도 있는데, 예를 들어 大韓民國과 같은
+낱말이 그러합니다.}
+
+\medskip
+
+\noindent The same paragraph wraps at its word spaces inside a narrower measure too:
+
+\begin{quote}
+{\font korean 12 regular
+한글은 자음과 모음을 모아 하나의 음절 글자를 이루며, 낱말과 낱말 사이는 공백으로 띄어
+씁니다. 그래서 줄바꿈은 그 공백에서 일어납니다.}
+\end{quote}
+
+\section{A closing line}
+
+A greeting in each, set in the bold cut:
+
+\medskip
+
+{\font japanese 16 bold こんにちは！}\quad{\font korean 16 bold 안녕하세요!}

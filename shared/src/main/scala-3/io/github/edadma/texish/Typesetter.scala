@@ -453,6 +453,21 @@ abstract class Typesetter:
   loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Bold.ttf", Set.empty, Set("bold"))
   loadFont("cjktc", "fonts/NotoSerifCJK/NotoSerifTC-Bold.ttf", Set.empty, Set("bold"))
 
+  // The Japanese and Korean members of the same family. Han (kanji/hanja) has region-specific glyph forms —
+  // the Japanese cut draws them the Japanese way rather than the Chinese, and the Korean cut carries the
+  // Hangul syllables the Chinese cuts have no glyph for at all. \font cjkjp 12 (alias \font japanese) and
+  // \font cjkkr 12 (alias \font korean), each with a bold cut. Japanese sets left to right with the same
+  // kinsoku breaking as Chinese; Korean is written with interword spaces and breaks at them like Latin (see
+  // CJK.isCJK), so its Hangul is not put on the per-character break path.
+  loadFont("cjkjp", "fonts/NotoSerifCJK/NotoSerifJP-Regular.otf", Set.empty, Set.empty)
+  loadFont("cjkjp", "fonts/NotoSerifCJK/NotoSerifJP-Bold.otf", Set.empty, Set("bold"))
+  loadFont("japanese", "fonts/NotoSerifCJK/NotoSerifJP-Regular.otf", Set.empty, Set.empty)
+  loadFont("japanese", "fonts/NotoSerifCJK/NotoSerifJP-Bold.otf", Set.empty, Set("bold"))
+  loadFont("cjkkr", "fonts/NotoSerifCJK/NotoSerifKR-Regular.otf", Set.empty, Set.empty)
+  loadFont("cjkkr", "fonts/NotoSerifCJK/NotoSerifKR-Bold.otf", Set.empty, Set("bold"))
+  loadFont("korean", "fonts/NotoSerifCJK/NotoSerifKR-Regular.otf", Set.empty, Set.empty)
+  loadFont("korean", "fonts/NotoSerifCJK/NotoSerifKR-Bold.otf", Set.empty, Set("bold"))
+
   // Noto Serif Hebrew, the bundled face for right-to-left Hebrew: \font hebrew 12 sets it, with a bold cut
   // so \font hebrew 12 bold is a real bold weight. These are static Regular and Bold instances drawn from
   // the variable upstream (wght 400 and 700 at default width). The reordering into visual order is the
