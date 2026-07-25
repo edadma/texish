@@ -72,21 +72,38 @@ object LiangHyphenation:
     if values.length == letters.length then values += 0
     (letters.toString, values.toIndexedSeq)
 
-  /** Parse TeX pattern file content. */
+  /** Parse TeX pattern file content.
+    *
+    * Comments are stripped first, and a TeX comment runs from its `%` to the end of the line — not merely to
+    * the next space. Dropping only the tokens that begin with one leaves the prose of a comment behind to be
+    * read as patterns: the French file heads its table with `% phonetic patterns % etymological patterns %`,
+    * which contributed `phonetic`, `patterns` and `etymological` and broke words wherever they matched. The
+    * English file is almost uncommented, which is why it alone came out right.
+    *
+    * The `\patterns{…}` block is then taken up to its closing brace. That search must also come after the
+    * comments are gone, since a brace inside one would end the block early and lose every pattern after it.
+    */
   def parsePatterns(content: String): Map[String, IndexedSeq[Int]] =
+    val text = content.linesIterator
+      .map { line =>
+        val c = line.indexOf('%')
+        if c >= 0 then line.substring(0, c) else line
+      }
+      .mkString("\n")
+
     val block =
-      val start = content.indexOf("\\patterns{")
+      val start = text.indexOf("\\patterns{")
       if start >= 0 then
         val s = start + "\\patterns{".length
-        val e = content.indexOf("}", s)
-        if e >= 0 then content.substring(s, e) else content
-      else content
+        val e = text.indexOf("}", s)
+        if e >= 0 then text.substring(s, e) else text
+      else text
 
     block
       .split("\\s+")
       .iterator
       .filter(_.nonEmpty)
-      .filterNot(s => s.startsWith("%") || s.startsWith("\\"))
+      .filterNot(_.startsWith("\\"))
       .map(parsePattern)
       .toMap
 
