@@ -32,7 +32,7 @@ object IndicShaper:
   // The Indic scripts texish can shape, tried in turn against a font's GSUB to see which script table it
   // carries. A font is built for one script (Noto Serif Devanagari carries the Devanagari tables, Noto Serif
   // Bengali the Bengali ones), so at most one matches.
-  private val scripts: Seq[IndicScript] = Seq(Devanagari, Bengali)
+  private val scripts: Seq[IndicScript] = Seq(Devanagari, Bengali, Gurmukhi)
 
   /** Build an Indic shaper from a font's raw `GSUB` (and `GDEF`) bytes by finding which Indic script the font
     * shapes, or None when the font carries no Indic script table — the caller then leaves the text on the

@@ -1,0 +1,102 @@
+// gurmukhi-demo — Gurmukhi (Punjabi) script typesetting in texish.
+//
+// Render with:  texish-cli scripts/gurmukhi-demo.script
+//
+// Gurmukhi is written left to right, so it needs none of the bidirectional
+// reordering Hebrew and Arabic do. What it needs instead is work inside each
+// syllable. A consonant carries an inherent vowel; a following vowel sign (a
+// matra) attaches above, below, before or after it; and a consonant joined to
+// the next by the virama (U+0A4D) takes a subjoined form beneath the base.
+//
+// The engine segments the run into orthographic syllables, then for each one asks
+// the bundled Noto Serif Gurmukhi font's GSUB table to build the subjoined forms
+// and reorders the sihari — the i-sign, typed after its consonant but drawn before
+// the whole syllable. The below- and above-base signs, the nasal tippi and the
+// gemination addak are then placed with the same GPOS anchors the engine uses for
+// Hebrew points and Arabic dots. Unlike Devanagari and Bengali, Gurmukhi has no
+// reph: a joined ra hangs below its base as the subjoined pairin, it never rises
+// as a mark above the syllable.
+//
+// \font gurmukhi selects the bundled face (also \font punjabi), in a regular and a
+// bold cut. No \rtl is needed — the script is left to right.
+
+\use{document}
+
+\title{The Gurmukhi Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Gurmukhi paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the consonants may take subjoined forms and the vowel signs attach around the
+base; between syllables the line breaker finds its breaks at the interword spaces exactly
+as for Latin text.
+
+\medskip
+
+{\font gurmukhi 14 regular
+ਪੰਜਾਬੀ ਇੱਕ ਅਮੀਰ ਭਾਸ਼ਾ ਹੈ। ਇਹ ਖੱਬੇ ਤੋਂ ਸੱਜੇ ਲਿਖੀ ਜਾਂਦੀ ਹੈ। ਹਰ ਅੱਖਰ ਇੱਕ ਵਿਅੰਜਨ ਅਤੇ ਉਸ ਦੇ
+ਨਾਲ ਦਾ ਸਵਰ ਮਿਲ ਕੇ ਬਣਦਾ ਹੈ, ਅਤੇ ਦੋ ਵਿਅੰਜਨ ਵਿਰਾਮ ਨਾਲ ਜੁੜ ਕੇ ਸੰਯੁਕਤ ਰੂਪ ਬਣਾਉਂਦੇ ਹਨ।
+}
+
+\section{The pre-base sihari}
+
+The i-sign, the sihari, is typed after its consonant but drawn before it. In each word
+below the sign appears at the left of its syllable even though it follows the consonant
+in memory --- day, father, and written:
+
+\medskip
+
+{\font gurmukhi 16 regular
+ਦਿਨ   ਪਿਤਾ   ਲਿਖਿਆ
+}
+
+\section{Subjoined consonants}
+
+A consonant joined to the next by the virama takes a subjoined form beneath the base ---
+the pairin. The joined ra, ha and va hang below their base, as in love, holy, and sign:
+
+\medskip
+
+{\font gurmukhi 16 regular
+ਪ੍ਰੇਮ   ਸ੍ਰੀ   ਚਿੰਨ੍ਹ
+}
+
+\section{Addak and the nasals}
+
+The addak doubles the consonant that follows it, and the tippi and bindi mark a nasal.
+They are placed as marks over the base, as in one, true, Punjab, and colour:
+
+\medskip
+
+{\font gurmukhi 16 regular
+ਇੱਕ   ਸੱਚ   ਪੰਜਾਬ   ਰੰਗ
+}
+
+\section{Independent vowels and signs}
+
+A vowel that opens a syllable is written with its own independent letter, not a matra.
+The below- and above-base signs stack onto their base:
+
+\medskip
+
+{\font gurmukhi 16 regular
+ਅ ਆ ਇ ਈ ਉ ਊ ਏ ਐ ਓ ਔ
+}
+
+\medskip
+
+{\font gurmukhi 16 regular
+ਕਾ ਕਿ ਕੀ ਕੁ ਕੂ ਕੇ ਕੈ ਕੋ ਕੌ
+}
+
+\section{A closing line}
+
+The traditional Sikh greeting, set in the bold cut:
+
+\medskip
+
+{\font gurmukhi 18 bold
+ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਇਹ ਗੁਰਮੁਖੀ ਲਿਪੀ ਵਿੱਚ ਲਿਖਿਆ ਹੈ।
+}

@@ -528,6 +528,18 @@ abstract class Typesetter:
   loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
+  // Noto Serif Gurmukhi, the bundled face for Gurmukhi (Punjabi as written in India): \font gurmukhi 12 sets
+  // it, or the alias \font punjabi 12, each with a bold cut. Gurmukhi is left to right; the engine does the
+  // cluster segmentation and the pre-base sihari (i-sign) reordering (see Gurmukhi and IndicShaper), and the
+  // font supplies the subjoined pairin, conjunct and vowel-sign glyphs through its GSUB and positions the
+  // marks — tippi, addak, the below-base vowel signs — through its GPOS. Gurmukhi has no reph. Loaded by file
+  // like the other complex-script cuts; the in-browser build does not ship it. Like the other Indic faces it
+  // sets its punctuation as a Latin text face, so the curly-quote and dash shorthands come out typographic.
+  loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  loadFont("punjabi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("punjabi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\mono, Latin Modern Mono) used for inline code in running text: that one is cut to match
   // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall

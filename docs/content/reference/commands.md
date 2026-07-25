@@ -127,6 +127,15 @@ vowel signs are positioned by the font — all automatically from text typed in 
 Serif Bengali is bundled: `\font bengali 12 regular` (or the alias `\font assamese`), with a bold cut
 (`\font bengali 12 bold`). See [Bengali–Assamese](/guide/bengali/) for the full treatment.
 
+## Gurmukhi (Punjabi)
+
+Gurmukhi text is shaped a syllable at a time: a consonant joined by the virama takes a subjoined
+*pairin* form beneath the base, the pre-base sihari (i-sign) is reordered, and the addak, the nasal
+tippi and bindi, and the vowel signs are positioned by the font — all automatically from text typed
+in Unicode order. Unlike Devanagari and Bengali, Gurmukhi has no reph. Noto Serif Gurmukhi is
+bundled: `\font gurmukhi 12 regular` (or the alias `\font punjabi`), with a bold cut
+(`\font gurmukhi 12 bold`). See [Gurmukhi (Punjabi)](/guide/gurmukhi/) for the full treatment.
+
 ## Right-to-left scripts
 
 `\rtl` and `\ltr` set the paragraph base direction. Faces are bundled for both scripts, each in a

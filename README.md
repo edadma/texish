@@ -16,7 +16,9 @@ cursive Arabic joining and ligatures via GSUB, and GPOS positioning of niqqud an
 marks), Devanagari (Hindi) syllable shaping (`\font devanagari` — conjuncts and half-forms, short-i
 and reph reordering, nukta composition, and GPOS-positioned vowel signs), Bengali–Assamese syllable
 shaping (`\font bengali` — conjuncts, pre-base i/e/ai reordering, two-part o/au decomposition,
-reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), author break control
+reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), Gurmukhi (Punjabi)
+syllable shaping (`\font gurmukhi` — subjoined pairin forms, pre-base sihari reordering, and
+GPOS-positioned addak, tippi and vowel signs), author break control
 (`\discretionary` and leaders for dotted contents lines),
 and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout
 (`\columns`), page imposition onto physical sheets (`\arrange` — saddle-stitch booklets and n-up), and glue/kern spacing in a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
@@ -175,7 +177,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.21.1"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.22.0"
 ```
 
 ## License
