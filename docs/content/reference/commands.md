@@ -160,6 +160,20 @@ in Unicode order. Unlike Devanagari and Bengali, Gurmukhi has no reph. Noto Seri
 bundled: `\font gurmukhi 12 regular` (or the alias `\font punjabi`), with a bold cut
 (`\font gurmukhi 12 bold`). See [Gurmukhi (Punjabi)](/guide/gurmukhi/) for the full treatment.
 
+## Thai
+
+Thai is written without spaces between words and uses them to separate phrases instead, so a run of it
+would reach the line breaker as one box and overflow the measure. The breaker offers somewhere to break
+between orthographic clusters, and never parts a vowel or tone mark from its consonant, nor strands a
+pre-posed vowel from the consonant that follows it. Charm is bundled: `\font thai 12 regular` (or
+`\font charm`), with a bold cut.
+
+**Two limitations to know.** Thai lines properly break at *word* boundaries, and finding those needs a
+dictionary, which texish does not carry — so a cluster break may land inside a word. Because of that it
+is offered only as a last resort, at a heavy penalty: text with normal phrase spacing breaks at those
+spaces and never sees one. Separately, Thai combining marks are not yet positioned by the font's
+anchors, so a vowel or tone mark may sit beside its consonant rather than on it.
+
 ## Right-to-left scripts
 
 `\rtl` and `\ltr` set the paragraph base direction. Faces are bundled for both scripts, each in a

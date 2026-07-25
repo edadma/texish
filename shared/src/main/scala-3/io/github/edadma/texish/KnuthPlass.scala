@@ -423,10 +423,10 @@ object KnuthPlass:
           items += PenaltyItem(p.penalty.toDouble, false, 0, idx)
         case d: DiscretionaryBox =>
           items += DiscItem(d.pre, d.post, d.noBreak, hyphenpenalty, idx)
-        case cb: CharBox if CJK.needsCharacterBreaks(cb.text) =>
+        case cb: CharBox if CJK.needsCharacterBreaks(cb.text) || Thai.has(cb.text) =>
           // A run containing CJK has no interword spaces, so break it between characters instead of
           // hyphenating it (Latin words inside the run keep their own spelling, just unbroken).
-          appendCJKItems(items, cb, idx)
+          appendCharacterBreaks(items, cb, idx)
         case cb: CharBox =>
           // Check for hyphenation opportunities, in the document's active language
           Hyphenation(hyphLang, cb.text) match
@@ -458,24 +458,26 @@ object KnuthPlass:
 
     items.toSeq
 
-  // The cost of a break inside a Korean word (CJK.lastResortBetween). Far above \hyphenpenalty (50), so the
-  // breaker prefers any break at a space over splitting a word, but well under the 10000 that would forbid the
-  // break outright — so a run with no space in it still wraps instead of running off the page.
+  // The cost of a break a script would rather not make: inside a Korean word (CJK.lastResortBetween), or
+  // between two Thai clusters, where the word boundary the break belongs at is invisible without a dictionary
+  // (Thai.breakableBetween). Far above \hyphenpenalty (50), so the breaker prefers any break at a space, but
+  // well under the 10000 that would forbid the break outright — so a run with no space in it still wraps
+  // instead of running off the page.
   private val lastResortPenalty = 5000.0
 
-  // Expand a text run containing CJK into per-segment boxes joined by breakable, stretchable glue. A break
-  // is offered between two characters when CJK.breakableBetween allows it; characters kinsoku keeps together
-  // (a closing mark and what precedes it, an opening mark and what follows) stay in one box. The inserted
-  // glue has zero natural width — CJK is set solid, with no visible inter-character space — but carries a
-  // little stretch and shrink so a line can reach the measure; without any stretch every short CJK line
-  // would be infinitely bad and the paragraph would not break. The amounts are deliberately small (a sixth
-  // of a character of stretch, a twentieth of shrink) so the breaker is rewarded for packing each line
-  // nearly full — the even, solid grid CJK wants — rather than spreading characters loosely; the last line
-  // is left ragged by \parfillskip as usual.
+  // Expand a text run whose script does not break at spaces alone into per-segment boxes joined by breakable,
+  // stretchable glue. A break is offered between two characters when CJK.breakableBetween allows it;
+  // characters kinsoku keeps together (a closing mark and what precedes it, an opening mark and what follows)
+  // stay in one box. The inserted glue has zero natural width — CJK is set solid, with no visible
+  // inter-character space — but carries a little stretch and shrink so a line can reach the measure; without
+  // any stretch every short CJK line would be infinitely bad and the paragraph would not break. The amounts
+  // are deliberately small (a sixth of a character of stretch, a twentieth of shrink) so the breaker is
+  // rewarded for packing each line nearly full — the even, solid grid CJK wants — rather than spreading
+  // characters loosely; the last line is left ragged by \parfillskip as usual.
   //
-  // A Korean run takes the same pass but is joined by penalties rather than glue: it breaks at its spaces,
-  // and only splits a word when nothing else fits.
-  private def appendCJKItems(items: ArrayBuffer[Item], cb: CharBox, idx: Int): Unit =
+  // Korean and Thai take the same pass but are joined by penalties rather than free glue: both break at their
+  // spaces, and give up a word only when nothing else fits.
+  private def appendCharacterBreaks(items: ArrayBuffer[Item], cb: CharBox, idx: Int): Unit =
     val text = cb.text
 
     // Walk by codepoint so a surrogate pair (an Extension-B ideograph) is never split, keeping each
@@ -503,14 +505,16 @@ object KnuthPlass:
           val charWidth = cb.newCharBox(pieces(j)).width
           flush()
           items += GlueItem(Glue(0, charWidth / 6.0, charWidth / 20.0), idx)
-        else if CJK.lastResortBetween(codes(j), codes(j + 1)) then
-          // Inside a Korean word: a legal break, but a costly one. The penalty is what keeps ordinary Korean
-          // prose breaking at its spaces — splitting a word costs far more than any space break. The glue that
-          // follows carries no natural width (Korean is set solid) but the same small flex as the CJK glue
-          // above, because a line of solid syllables has no other stretch: without it such a line could never
-          // reach the measure, every candidate would be infinitely bad, and the paragraph would fail over to
-          // the greedy fallback — which breaks on boxes, never sees these penalties, and so would set the run
-          // as one long overfull line. Glue after a penalty is discardable, so the penalty is the breakpoint.
+        else if CJK.lastResortBetween(codes(j), codes(j + 1)) || Thai.breakableBetween(codes(j), codes(j + 1))
+        then
+          // Inside a Korean word, or between two Thai clusters: a legal break, but a costly one. The penalty
+          // is what keeps ordinary prose breaking at its spaces — splitting a word, or breaking Thai away from
+          // a word boundary it cannot see, costs far more than any space break. The glue that follows carries
+          // no natural width (both scripts are set solid) but the same small flex as the CJK glue above,
+          // because a line of solid syllables has no other stretch: without it such a line could never reach
+          // the measure, every candidate would be infinitely bad, and the paragraph would fail over to the
+          // greedy fallback — which breaks on boxes, never sees these penalties, and so would set the run as
+          // one long overfull line. Glue after a penalty is discardable, so the penalty is the breakpoint.
           val charWidth = cb.newCharBox(pieces(j)).width
           flush()
           items += PenaltyItem(lastResortPenalty, false, 0, idx)

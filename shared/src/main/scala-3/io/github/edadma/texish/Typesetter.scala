@@ -376,6 +376,9 @@ abstract class Typesetter:
     "Italic",
     ("Bold", "Italic"),
   )
+  // Charm, a Thai face with a Latin companion, in a regular and a bold cut. Thai is written without spaces
+  // between words and uses them to separate phrases instead, so its line breaking needs the per-character
+  // pass (see Thai and KnuthPlass.appendCharacterBreaks); the script is left to right and needs no reordering.
   loadTypeface(
     "charm",
     "fonts/Charm/Charm",
@@ -384,6 +387,7 @@ abstract class Typesetter:
     "Regular",
     "Bold",
   )
+  aliasTypeface("thai", "charm")
   loadTypeface(
     "nosifer",
     "fonts/Nosifer/Nosifer",
