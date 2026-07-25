@@ -178,7 +178,7 @@ texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an 
 `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.23.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.22.0"
 ```
 
 ## License
