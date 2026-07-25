@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.HeadlessTypesetter
+import io.github.edadma.texish.{HeadlessTypesetter, TexishException}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -716,6 +716,6 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
     }
 
     "should error on unknown accent combination" in {
-      a[ParserException] should be thrownBy process("\\accent c x")
+      a[TexishException] should be thrownBy process("\\accent c x")
     }
   }

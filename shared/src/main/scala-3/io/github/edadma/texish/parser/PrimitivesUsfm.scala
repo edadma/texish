@@ -2,6 +2,7 @@ package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.path.Path
+import io.github.edadma.texish.TexishException
 
 /** `\usfm{path}` — typeset a book of Scripture written in USFM (Unified Standard Format Markers, the format
   * Bible translations are exchanged in). The named file is read, its markers are translated into calls on the
@@ -48,7 +49,7 @@ object UsfmPrimitive extends Primitive:
       val text = Path(resolved).readText()
       proc.processContent(Usfm.translate(text, skipIntro))
     catch
-      case e: ParserException => throw e
+      case e: TexishException => throw e
       case e: Exception       => proc.handler.error(s"\\usfm: cannot read '$rel': ${e.getMessage}", pos)
 
 /** Translator from USFM marker source into texish source.

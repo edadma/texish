@@ -1,5 +1,6 @@
 package io.github.edadma.texish.parser
 
+import io.github.edadma.texish.TexishException
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -37,7 +38,7 @@ class EnvironmentTests extends AnyFreeSpec with Matchers:
   }
 
   "an unknown environment is an error" in {
-    a[ParserException] should be thrownBy run("\\begin{nope}x\\end{nope}")
+    a[TexishException] should be thrownBy run("\\begin{nope}x\\end{nope}")
   }
 
   "an environment can take arguments, bound in the begin-code" in {
@@ -49,11 +50,11 @@ class EnvironmentTests extends AnyFreeSpec with Matchers:
   }
 
   "\\end must match the innermost \\begin" in {
-    a[ParserException] should be thrownBy run(
+    a[TexishException] should be thrownBy run(
       "\\newenvironment a {(}{)}\\newenvironment b {[}{]}\\begin{a}\\begin{b}x\\end{a}\\end{b}",
     )
   }
 
   "an \\end with no open environment is an error" in {
-    a[ParserException] should be thrownBy run("\\newenvironment e {}{}\\end{e}")
+    a[TexishException] should be thrownBy run("\\newenvironment e {}{}\\end{e}")
   }

@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{HeadlessTypesetter, MathFont, MathMode}
+import io.github.edadma.texish.{HeadlessTypesetter, MathFont, MathMode, TexishException}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -144,7 +144,7 @@ class ParserFixesTests extends AnyFreeSpec with Matchers:
   }
 
   "a stray } is reported at its own position" in {
-    val ex = the[ParserException] thrownBy process("abc}")
+    val ex = the[TexishException] thrownBy process("abc}")
     ex.getMessage should include("Unmatched '}'")
   }
 

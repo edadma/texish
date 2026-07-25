@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.path.Path
-import io.github.edadma.texish.{Color, EmbeddedPackages}
+import io.github.edadma.texish.{Color, EmbeddedPackages, TexishException}
 import scala.collection.mutable
 
 /** The streaming processor/expander for parser.
@@ -208,8 +208,18 @@ class Processor(val handler: Handler):
   private def processTokens(): Unit =
     while hasMoreTokens do dispatch(nextToken())
 
-  /** Dispatch one token to the handler, attaching the token's source position to any error the host raises while
+  /** Dispatch one token to the handler, attaching the token's source position to any error raised while
     * handling it. Errors from the language layer already carry a position and pass through unchanged.
+    *
+    * An error that already carries a position was raised by the language layer, which knew where it was, and
+    * passes through untouched. One without a position came from the engine — which has no notion of where in
+    * a document it is — and is re-raised against the token being handled, which is what puts a line and column
+    * on a failure thrown from deep inside the typesetter.
+    *
+    * Anything that is not a [[io.github.edadma.texish.TexishException]] is a defect in texish rather than in
+    * the document, and reporting it as though the author erred sends them hunting through their source for a
+    * mistake that is not there. Such a failure is labelled an internal error and keeps the original exception
+    * as its cause, so the stack trace that locates the bug survives the formatting.
     */
   private def dispatch(token: Token): Unit =
     try
@@ -223,9 +233,13 @@ class Processor(val handler: Handler):
         case Token.Active(c, pos)        => handleActive(c, pos)
         case Token.EOF(_)                => // done
     catch
-      case e: ParserException => throw e
+      case e: TexishException if e.pos != null => throw e
+      case e: TexishException =>
+        handler.error(Option(e.getMessage).getOrElse(e.toString), Token.pos(token), e)
       case e: RuntimeException =>
-        handler.error(Option(e.getMessage).getOrElse(e.toString), Token.pos(token))
+        handler.error(s"internal error (${e.getClass.getName}): ${Option(e.getMessage).getOrElse("no message")}",
+                      Token.pos(token),
+                      e)
 
   // Open groups seen at dispatch, so a stray `}` is reported at its own position instead of unbalancing the
   // handler's scope stack (whose eventual underflow would surface much later as a cryptic empty-stack crash).

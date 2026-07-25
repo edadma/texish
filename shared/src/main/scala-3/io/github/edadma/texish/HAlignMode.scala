@@ -43,20 +43,20 @@ class HAlignMode(val t: Typesetter) extends Mode:
         state = "ROW"
       case "omit" => omit()
       case "newColumn" =>
-        if state == "NOALIGN" then sys.error("can't add a new column in 'noalign'")
+        if state == "NOALIGN" then throw TexishException("can't add a new column in 'noalign'")
         newColumn()
       case "newLine"     => newLine()
       case "placeholder" => placeholder()
-      case _             => sys.error(s"illegal operation '$operation'")
+      case _             => throw TexishException(s"illegal operation '$operation'")
 
   def newColumn(): Unit =
     state match
-      case "FORMAT_LEFT" => sys.error("missing # in column format")
+      case "FORMAT_LEFT" => throw TexishException("missing # in column format")
       case "START" | "FORMAT_RIGHT" =>
         format += Format(new ListBuffer, new ListBuffer)
         state = "FORMAT_LEFT"
       case "ROW" | "NOALIGN" =>
-        if column == format.length then sys.error("too many columns")
+        if column == format.length then throw TexishException("too many columns")
         if content.last.row.nonEmpty && content.last.row.last.format then
           content.last.row.last.material addSeq format(column - 1).right
 
@@ -66,13 +66,13 @@ class HAlignMode(val t: Typesetter) extends Mode:
 
   def newLine(): Unit =
     state match
-      case "START"       => sys.error("empty format line")
-      case "FORMAT_LEFT" => sys.error("missing # in column format")
+      case "START"       => throw TexishException("empty format line")
+      case "FORMAT_LEFT" => throw TexishException("missing # in column format")
       case "FORMAT_RIGHT" =>
-        if format.isEmpty then sys.error("need at least one column")
+        if format.isEmpty then throw TexishException("need at least one column")
         state = "ROW"
       case "ROW" =>
-        if column < format.length then sys.error("too few columns")
+        if column < format.length then throw TexishException("too few columns")
         if content.last.row.last.format then content.last.row.last.material addSeq format(column - 1).right
         column = 0
       case "NOALIGN" =>
@@ -87,21 +87,21 @@ class HAlignMode(val t: Typesetter) extends Mode:
         content.last.row.last.material.clear()
         content.last.row.last.format = false
         content.last.row.last.started = false // a fresh cell entry: its leading space is dropped too
-      case "NOALIGN" => sys.error("\\omit cannot be used in 'noalign'")
-      case _         => sys.error("\\omit cannot be used in the format line")
+      case "NOALIGN" => throw TexishException("\\omit cannot be used in 'noalign'")
+      case _         => throw TexishException("\\omit cannot be used in the format line")
 
   def placeholder(): Unit =
     state match
       case "START" | "FORMAT_LEFT" => state = "FORMAT_RIGHT"
-      case "FORMAT_RIGHT"          => sys.error("only one # in column format")
-      case "ROW"                   => sys.error("no # in content cell")
-      case "NOALIGN"               => sys.error("no # in 'noalign'")
+      case "FORMAT_RIGHT"          => throw TexishException("only one # in column format")
+      case "ROW"                   => throw TexishException("no # in content cell")
+      case "NOALIGN"               => throw TexishException("no # in 'noalign'")
 
   def init(): Unit = ()
 
   def add(box: Box): Unit =
     state match
-      case "START"        => sys.error("can't add a box in the START state")
+      case "START"        => throw TexishException("can't add a box in the START state")
       case "FORMAT_LEFT"  => format.last.left += box
       case "FORMAT_RIGHT" => format.last.right += box
       case "ROW" =>
@@ -139,7 +139,8 @@ class HAlignMode(val t: Typesetter) extends Mode:
     // If the table did not end with \cr, its last row was never closed by newLine; close its final cell's right
     // template now. (When a trailing \cr was dropped, the real last row is already closed — don't double-add.)
     if !droppedTrailing && content.last.noalign == null then
-      if content.last.row.length < format.length then sys.error("too few columns in the last row (missing \\cr?)")
+      if content.last.row.length < format.length then
+        throw TexishException("too few columns in the last row (missing \\cr?)")
       if content.last.row.last.format then content.last.row.last.material addSeq format.last.right
 
     val hboxes   = ArrayBuffer.fill[ArrayBuffer[HBox]](content.length)(new ArrayBuffer[HBox])

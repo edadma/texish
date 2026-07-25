@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, DocumentMode, HBox, HeadlessTypesetter, ImageBox, VBox}
+import io.github.edadma.texish.{Box, DocumentMode, HBox, HeadlessTypesetter, ImageBox, TexishException, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -97,10 +97,10 @@ class IncludeGraphicsTests extends AnyFreeSpec with Matchers:
 
   "an unknown option is an error" in {
     val (_, _, proc) = fixture()
-    intercept[ParserException](proc.process("\\includegraphics[depth=2pt]{frog.png}"))
+    intercept[TexishException](proc.process("\\includegraphics[depth=2pt]{frog.png}"))
   }
 
   "a malformed length is an error" in {
     val (_, _, proc) = fixture()
-    intercept[ParserException](proc.process("\\includegraphics[width=wide]{frog.png}"))
+    intercept[TexishException](proc.process("\\includegraphics[width=wide]{frog.png}"))
   }

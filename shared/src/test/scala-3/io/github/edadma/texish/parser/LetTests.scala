@@ -1,5 +1,6 @@
 package io.github.edadma.texish.parser
 
+import io.github.edadma.texish.TexishException
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -42,5 +43,5 @@ class LetTests extends AnyFreeSpec with Matchers:
   }
 
   "\\let of a name with no meaning is an error" in {
-    a[ParserException] should be thrownBy run("\\let a nothingHere")
+    a[TexishException] should be thrownBy run("\\let a nothingHere")
   }

@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, HeadlessTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, HBox, Mode, RuleBox, HeadlessTypesetter, TexishException, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -98,9 +98,9 @@ class TabularTests extends AnyFreeSpec with Matchers:
   }
 
   "an unknown column specifier is an error" in {
-    a[ParserException] should be thrownBy run("\\tabular{lxr}{a&b&c}")
+    a[TexishException] should be thrownBy run("\\tabular{lxr}{a&b&c}")
   }
 
   "an empty column spec is an error" in {
-    a[ParserException] should be thrownBy run("\\tabular{}{a}")
+    a[TexishException] should be thrownBy run("\\tabular{}{a}")
   }

@@ -65,7 +65,8 @@ class MathMode(
     * list becomes the numerator, and what follows becomes the denominator. As in TeX a group may hold only one
     * such operator, so a second is an error — `{a \over b \over c}` is ambiguous and must be parenthesised. */
   def setFraction(bar: Boolean): Unit =
-    if fractionBar.isDefined then sys.error("ambiguous fraction: more than one \\over or \\atop in the same group")
+    if fractionBar.isDefined then
+      throw TexishException("ambiguous fraction: more than one \\over or \\atop in the same group")
     fractionBar = Some(bar)
     numeratorNodes = nodes.toVector
     nodes.clear()
@@ -77,7 +78,7 @@ class MathMode(
     nodes.lastOption match
       case Some(a: MathAtom) if a.cls == MathClass.Op =>
         nodes(nodes.length - 1) = a.copy(limits = Some(on))
-      case _ => sys.error("limit controls must follow a math operator")
+      case _ => throw TexishException("limit controls must follow a math operator")
 
   /** Attach an already-laid-out script box to the most recent atom. When no atom precedes — a leading `^`
     * or `_`, or one right after an explicit space — an empty-nucleus Ord atom is created to carry it, as in
@@ -89,10 +90,10 @@ class MathMode(
 
     val updated =
       if superscript then
-        if atom.sup.isDefined then sys.error("double superscript")
+        if atom.sup.isDefined then throw TexishException("double superscript")
         atom.copy(sup = Some(scriptBox))
       else
-        if atom.sub.isDefined then sys.error("double subscript")
+        if atom.sub.isDefined then throw TexishException("double subscript")
         atom.copy(sub = Some(scriptBox))
 
     nodes += updated

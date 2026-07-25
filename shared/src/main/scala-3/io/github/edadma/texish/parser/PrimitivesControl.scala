@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.path.Path
-import io.github.edadma.texish.EmbeddedPackages
+import io.github.edadma.texish.{EmbeddedPackages, TexishException}
 
 // ============ FOR LOOP ============
 
@@ -141,7 +141,7 @@ object UsePrimitive extends Primitive:
           val dir = resolved.parent.map(_.toPlatformString).getOrElse(".")
           try proc.loadModule(file.readText(), dir)
           catch
-            case e: ParserException => throw e
+            case e: TexishException => throw e
             case e: Exception       => proc.handler.error(s"\\use: cannot load module '$name': ${e.getMessage}", pos)
       case None =>
         // No file on disk: fall back to a module embedded in the build. This is how a host with no package

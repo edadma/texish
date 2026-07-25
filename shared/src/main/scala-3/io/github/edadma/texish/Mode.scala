@@ -9,7 +9,7 @@ trait Mode:
 
   def result: Box | Null
 
-  def op(operation: String): Unit = sys.error(s"illegal operation '$operation'")
+  def op(operation: String): Unit = throw TexishException(s"illegal operation '$operation'")
 
   def exit: Box | Null =
     pop

@@ -76,5 +76,5 @@ class GeometryTests extends AnyFreeSpec with Matchers:
   }
 
   "over-constrained margins that leave no text width are an error" in {
-    a[ParserException] should be thrownBy geom("\\geometry margin:5in")
+    a[TexishException] should be thrownBy geom("\\geometry margin:5in")
   }

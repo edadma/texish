@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Anchor, Box, Color, GlyphBox, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
+import io.github.edadma.texish.{Anchor, Box, Color, GlyphBox, PictureBox, PictureOp, HeadlessTypesetter, TexishException, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -138,7 +138,7 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
 
   "a drawing command outside \\picture is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\rect{0 0 1 1}")
+    a[TexishException] should be thrownBy proc.process("\\rect{0 0 1 1}")
   }
 
   // \arrow / \arrowhead lower to the existing path + paint ops, so they need no new backend support; these check the
@@ -173,13 +173,13 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
 
   "an unknown arrowhead style is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy
+    a[TexishException] should be thrownBy
       proc.process("\\picture width:1in height:1in { \\stroke{black} \\arrowhead head:wedge {0 0 1 0} }")
   }
 
   "\\arrow outside \\picture is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\arrow{0 0 1 1}")
+    a[TexishException] should be thrownBy proc.process("\\arrow{0 0 1 1}")
   }
 
   // \path arrow:… caps the path with a head oriented to its TRUE end tangent, not the start→end chord. The curve
@@ -218,6 +218,6 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
 
   "an unknown \\path arrow value is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy
+    a[TexishException] should be thrownBy
       proc.process("\\picture width:1in height:1in { \\stroke{black} \\path arrow:middle { \\moveto{0 0} \\lineto{1 0} } }")
   }

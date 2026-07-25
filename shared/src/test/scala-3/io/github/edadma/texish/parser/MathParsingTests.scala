@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{MathMode, HeadlessTypesetter}
+import io.github.edadma.texish.{MathMode, HeadlessTypesetter, TexishException}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -30,14 +30,14 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "an unknown control sequence in math is reported as an unknown math symbol" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$\\notarealsymbol$")
+    val ex = the[TexishException] thrownBy proc.process("$\\notarealsymbol$")
     ex.getMessage should include("Unknown math symbol")
   }
 
   "the same control sequence is a math symbol in math and an error in text" in {
     val (_, proc) = fixture()
     // \leq is only meaningful inside math; outside, it is an unknown command
-    the[ParserException] thrownBy proc.process("\\leq") // text mode: unknown command
+    the[TexishException] thrownBy proc.process("\\leq") // text mode: unknown command
     noException should be thrownBy {
       val (_, p2) = fixture()
       p2.process("$\\leq$")
@@ -84,7 +84,7 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "a double superscript on one atom is reported as an error" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$x^2^3$")
+    val ex = the[TexishException] thrownBy proc.process("$x^2^3$")
     ex.getMessage should include("double superscript")
   }
 
@@ -100,7 +100,7 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\frac outside math is reported as a math-only command" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("\\frac{a}{b}")
+    val ex = the[TexishException] thrownBy proc.process("\\frac{a}{b}")
     ex.getMessage should include("math mode")
   }
 
@@ -116,7 +116,7 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\sqrt outside math is reported as a math-only command" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("\\sqrt{x}")
+    val ex = the[TexishException] thrownBy proc.process("\\sqrt{x}")
     ex.getMessage should include("math mode")
   }
 
@@ -142,13 +142,13 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\left without a matching \\right is reported" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$\\left( x $")
+    val ex = the[TexishException] thrownBy proc.process("$\\left( x $")
     ex.getMessage should include("\\right")
   }
 
   "\\right standing alone is reported" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$ x \\right)$")
+    val ex = the[TexishException] thrownBy proc.process("$ x \\right)$")
     ex.getMessage should include("\\left")
   }
 
@@ -159,7 +159,7 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\limits after something that is not an operator is reported" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$x\\limits_2$")
+    val ex = the[TexishException] thrownBy proc.process("$x\\limits_2$")
     ex.getMessage should include("operator")
   }
 
@@ -170,7 +170,7 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "an accent outside math is reported as a math-only command" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("\\hat{x}")
+    val ex = the[TexishException] thrownBy proc.process("\\hat{x}")
     ex.getMessage should include("math mode")
   }
 
@@ -199,7 +199,7 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\eqno outside display math is reported" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$x \\eqno{(1)}$") // inline, not a display
+    val ex = the[TexishException] thrownBy proc.process("$x \\eqno{(1)}$") // inline, not a display
     ex.getMessage should include("display math")
   }
 
@@ -217,13 +217,13 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\over outside math is reported as a math-only command" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("a \\over b")
+    val ex = the[TexishException] thrownBy proc.process("a \\over b")
     ex.getMessage should include("math mode")
   }
 
   "two \\over in one group is reported as ambiguous" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("$1 \\over 2 \\over 3$")
+    val ex = the[TexishException] thrownBy proc.process("$1 \\over 2 \\over 3$")
     ex.getMessage should include("ambiguous")
   }
 
@@ -257,6 +257,6 @@ class MathParsingTests extends AnyFreeSpec with Matchers:
 
   "\\matrix outside math is reported as a math-only command" in {
     val (_, proc) = fixture()
-    val ex = the[ParserException] thrownBy proc.process("\\matrix{a & b}")
+    val ex = the[TexishException] thrownBy proc.process("\\matrix{a & b}")
     ex.getMessage should include("math mode")
   }

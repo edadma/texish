@@ -1,6 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
+import io.github.edadma.texish.TexishException
 
 /** Handler interface for integrating parser with a typesetter or other backend.
   *
@@ -83,10 +84,12 @@ trait Handler:
     */
   def fontUnit(unit: String): Option[Double] = None
 
-  /** Report an error at the given position. Uses char-reader's error formatting. */
-  def error(msg: String, pos: CharReader): Nothing =
-    if pos == null then throw ParserException(msg, null)
-    else throw ParserException(pos.longErrorText(msg), pos)
+  /** Report an error at the given position. Uses char-reader's error formatting. `cause` is the exception
+    * being reported, when there is one, so that its stack trace is not lost behind the formatted message.
+    */
+  def error(msg: String, pos: CharReader, cause: Throwable = null): Nothing =
+    if pos == null then throw TexishException(msg, null, cause)
+    else throw TexishException(pos.longErrorText(msg), pos, cause)
 
   /** Report a warning at the given position */
   def warning(msg: String, pos: CharReader): Unit =
@@ -154,5 +157,3 @@ object Template:
     proc.process(template)
     handler.result
 
-/** Exception thrown for parser errors */
-case class ParserException(msg: String, pos: CharReader) extends RuntimeException(msg)

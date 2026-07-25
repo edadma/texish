@@ -98,6 +98,9 @@ final class MathConstants(
     private val values: Map[String, Double],   // em, keyed by MathValueRecord field name
 ):
   /** A length constant by its MathConstants field name (e.g. "subscriptShiftDown"), in em. */
+  // Deliberately not a TexishException: the names asked for here are written into the engine, never into a
+  // document, so a miss is a defect in texish (or in the font table it was built from) rather than the
+  // author's mistake, and it should be reported as the internal error it is.
   def value(name: String): Double = values.getOrElse(name, sys.error(s"unknown math constant '$name'"))
 
   def axisHeight: Double            = values("axisHeight")

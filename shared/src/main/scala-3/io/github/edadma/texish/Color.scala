@@ -79,7 +79,7 @@ object Color:
               new Color(Integer.parseInt(r, 16), Integer.parseInt(g, 16), Integer.parseInt(b, 16), Integer.parseInt(a, 16))
             case RGBRegex(r, g, b) =>
               new Color(Integer.parseInt(r, 16), Integer.parseInt(g, 16), Integer.parseInt(b, 16), (alpha * 255).toInt)
-            case _ => sys.error(s"color code not recognized: $c")
+            case _ => throw TexishException(s"color code not recognized: $c")
 
   val TRANSPARENT: Color = new Color(0, 0, 0, 0)
 

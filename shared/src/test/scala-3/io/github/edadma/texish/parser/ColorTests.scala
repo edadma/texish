@@ -1,6 +1,6 @@
 package io.github.edadma.texish.parser
 
-import io.github.edadma.texish.{Box, CharBox, Color, DocumentMode, FrameBox, HBox, HeadlessTypesetter, VBox}
+import io.github.edadma.texish.{Box, CharBox, Color, DocumentMode, FrameBox, HBox, HeadlessTypesetter, TexishException, VBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -76,7 +76,7 @@ class ColorTests extends AnyFreeSpec with Matchers:
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
-    intercept[ParserException](proc.process("\\color{notacolour}X"))
+    intercept[TexishException](proc.process("\\color{notacolour}X"))
   }
 
   "an #RRGGBBAA hex code carries its own alpha" in {

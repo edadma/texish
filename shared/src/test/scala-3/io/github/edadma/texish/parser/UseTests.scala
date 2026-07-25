@@ -1,6 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.path.Path
+import io.github.edadma.texish.TexishException
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -112,6 +113,6 @@ class UseTests extends AnyFreeSpec with Matchers:
 
   "\\use of a missing module is an error" in {
     withModules() { dir =>
-      a[ParserException] should be thrownBy runIn(dir.toPlatformString, "\\use{nothingHere}")
+      a[TexishException] should be thrownBy runIn(dir.toPlatformString, "\\use{nothingHere}")
     }
   }

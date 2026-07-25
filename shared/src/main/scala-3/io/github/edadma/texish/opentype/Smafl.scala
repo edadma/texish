@@ -66,6 +66,8 @@ object Smafl:
 
       def nextFreePua(): Int =
         while next <= 0xf8ff && usedCps.contains(next) do next += 1
+        // Deliberately not a TexishException: no document can cause this, only a font with more variants than
+        // the private-use area holds, so it is an internal limit and is reported as one.
         if next > 0xf8ff then sys.error("SMaFL: ran out of private-use codepoints (U+E000–F8FF)")
         val cp = next
         next += 1

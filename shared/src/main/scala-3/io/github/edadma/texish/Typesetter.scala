@@ -756,19 +756,20 @@ abstract class Typesetter:
 
   infix def get(name: String): Option[Value] = scopes.top.get(name)
 
-  infix def getVar(name: String): Value = scopes.top.getOrElse(name, sys.error(s"variable '$name' not found"))
+  infix def getVar(name: String): Value =
+    scopes.top.getOrElse(name, throw TexishException(s"variable '$name' not found"))
 
   infix def getGlue(name: String): Glue = getVar(name) match
     case Value.Native(g: Glue)           => g
     case Value.Glue(n, st, sh, sto, sho) => Glue(n, st, sh, sto, sho)
     case Value.Dimen(p)                  => Glue(p) // a plain dimension is rigid glue
     case Value.Num(n)                    => Glue(n)
-    case v                               => sys.error(s"variable '$name' is not glue: ${Value.display(v)}")
+    case v                               => throw TexishException(s"variable '$name' is not glue: ${Value.display(v)}")
 
   infix def getNumber(name: String): Double = getVar(name) match
     case Value.Num(n)   => n
     case Value.Dimen(p) => p
-    case v              => sys.error(s"variable '$name' is not a number: ${Value.display(v)}")
+    case v              => throw TexishException(s"variable '$name' is not a number: ${Value.display(v)}")
 
   def set(name: String, value: Any): Unit =
     scopes(0) += (name -> Value.from(value))
@@ -854,7 +855,8 @@ abstract class Typesetter:
       case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> (font, ligatures)), None)
       case Some(Typeface(fonts, _)) =>
         if fonts contains styleSet then
-          sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has already been loaded")
+          throw TexishException(
+            s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has already been loaded")
         else fonts(styleSet) = (font, ligatures)
   end loadFont
 
@@ -883,7 +885,7 @@ abstract class Typesetter:
 
   def overrideBaseline(typeface: String, baseline: Double): Unit =
     typefaces get typeface match
-      case None                     => sys.error(s"typeface '$typeface' not found")
+      case None                     => throw TexishException(s"typeface '$typeface' not found")
       case Some(Typeface(fonts, _)) => typefaces(typeface) = Typeface(fonts, Some(baseline))
 
   /** Whether a typeface of this name has been loaded — used to validate a family name a document names (e.g.
@@ -905,7 +907,7 @@ abstract class Typesetter:
 
   def makeFont(typeface: String, size: Double, styleSet: Set[String]): Font =
     typefaces get typeface match
-      case None => sys.error(s"font for typeface '$typeface' not found")
+      case None => throw TexishException(s"font for typeface '$typeface' not found")
       case Some(Typeface(fonts, baseline)) =>
         val wanted = styleSet.map(_.toLowerCase).filterNot(_ == "regular")
         // Resolve the exact style if it was loaded; otherwise substitute the nearest available cut by dropping the
@@ -953,13 +955,15 @@ abstract class Typesetter:
               case Some(role) =>
                 val fam = if role == "mono" then monoDefaultTypeface else sansDefaultTypeface
                 if fam == typeface || !typefaces.contains(fam) then
-                  sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
+                  throw TexishException(
+                    s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
                 else
                   val stripped  = styleSet.filterNot(s => axisOf(s) == StyleAxis.Role)
                   val keepsRole = typefaces.get(fam).exists(_.fonts.keys.exists(_.contains(role)))
                   makeFont(fam, size, if keepsRole then stripped + role else stripped)
               case None =>
-                sys.error(s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
+                throw TexishException(
+                  s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has not been loaded")
 
   infix def add(text: String): Typesetter = add(charBox(text))
 

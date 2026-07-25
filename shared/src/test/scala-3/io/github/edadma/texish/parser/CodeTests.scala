@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HeadlessTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HeadlessTypesetter, TexishException, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -96,7 +96,7 @@ class CodeTests extends AnyFreeSpec with Matchers:
 
     "reports an unknown language as an error" in {
       val (_, proc) = fixture()
-      a[ParserException] should be thrownBy proc.process("\\code[nope]{x}")
+      a[TexishException] should be thrownBy proc.process("\\code[nope]{x}")
     }
   }
 

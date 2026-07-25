@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, CharBox, HBox, HSpaceBox, HeadlessTypesetter, Typesetter, VBox, VerticalBox}
+import io.github.edadma.texish.{Box, CharBox, HBox, HSpaceBox, HeadlessTypesetter, TexishException, Typesetter, VBox, VerticalBox}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -115,27 +115,27 @@ class BoxRegisterTests extends AnyFreeSpec with Matchers:
 
   "a box rejects both to: and spread:" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\hbox to:10 spread:5{x}")
+    a[TexishException] should be thrownBy proc.process("\\hbox to:10 spread:5{x}")
   }
 
   "\\setbox without a following box is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\setbox a {plain text}")
+    a[TexishException] should be thrownBy proc.process("\\setbox a {plain text}")
   }
 
   "measuring an empty register is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\wd nosuchbox")
+    a[TexishException] should be thrownBy proc.process("\\wd nosuchbox")
   }
 
   "measuring a non-box variable is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\set a {5} \\wd a")
+    a[TexishException] should be thrownBy proc.process("\\set a {5} \\wd a")
   }
 
   "\\unhbox of a vbox register is an error" in {
     val (_, proc) = fixture()
-    a[ParserException] should be thrownBy proc.process("\\setbox v \\vbox{\\hbox{AB}} \\unhbox v")
+    a[TexishException] should be thrownBy proc.process("\\setbox v \\vbox{\\hbox{AB}} \\unhbox v")
   }
 
   "\\isvoid is true for a register that was never set, and does not error" in {

@@ -11,6 +11,7 @@ import io.github.edadma.texish.{
   MathMode,
   MathStyle,
   MatrixBox,
+  TexishException,
   VBox,
 }
 import org.scalatest.freespec.AnyFreeSpec
@@ -113,8 +114,8 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
 
   "the fraction primitives are math-mode only" in {
     val (_, proc) = fixture()
-    the[ParserException] thrownBy proc.process("\\dfrac{a}{b}") // text mode
-    the[ParserException] thrownBy {
+    the[TexishException] thrownBy proc.process("\\dfrac{a}{b}") // text mode
+    the[TexishException] thrownBy {
       val (_, p) = fixture()
       p.process("\\binom{n}{k}")
     }
@@ -178,7 +179,7 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
 
   "an array environment outside math is an error" in {
     val (_, proc) = fixture()
-    the[ParserException] thrownBy proc.process("\\begin{pmatrix} a & b \\end{pmatrix}")
+    the[TexishException] thrownBy proc.process("\\begin{pmatrix} a & b \\end{pmatrix}")
   }
 
   /** The natural width of the whole math formula in `src`. Every horizontal box that holds glyph nuclei
@@ -309,7 +310,7 @@ class MathAmsTests extends AnyFreeSpec with Matchers:
   "\\underline still wraps text outside math, and \\overline is math-only" in {
     val (_, proc) = fixture()
     noException should be thrownBy proc.process("\\underline{hello}") // the text path is preserved
-    the[ParserException] thrownBy {
+    the[TexishException] thrownBy {
       val (_, p) = fixture()
       p.process("\\overline{x}")
     }
