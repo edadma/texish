@@ -71,11 +71,20 @@ class HebrewShapingTests extends AnyFreeSpec with Matchers:
       Seq(Dalet, Dagesh, Qamats, Shin, ShinDot, Qamats)
   }
 
-  "a run the font combines nothing in stays on the plain path" in {
-    // Reordering alone is not a reason to leave the plain path: the mark shaper places the points from their
-    // anchors either way, and this is what the Noto Hebrew face does.
-    HebrewShaping.shape(Array(Dalet, Qamats, Dagesh), identity, run => run) shouldBe null
+  "a run with nothing to move and nothing to combine stays on the plain path" in {
+    // The plain path draws the letters and lets the mark shaper place the points, which is right whenever
+    // neither the order nor the glyphs need changing. Only then is null the answer.
     HebrewShaping.shape(Array(Dalet), identity, run => run) shouldBe null
+    HebrewShaping.shape(Array(Dalet, Dagesh, Qamats), identity, run => run) shouldBe null
+    HebrewShaping.shape(Array(0x05d1, 0x05dc), identity, run => run) shouldBe null // unpointed
+  }
+
+  "a run whose points had to move comes back reordered, combined or not" in {
+    // A face that combines nothing still wants the points in drawing order, so the run is returned even when
+    // the glyphs are unchanged — the order alone is the change.
+    val out = HebrewShaping.shape(Array(Dalet, Qamats, Dagesh), identity, run => run)
+    out should not be null
+    out.toSeq shouldBe Seq(Dalet, Dagesh, Qamats)
   }
 
   "a combined pair gives the run to draw" in {

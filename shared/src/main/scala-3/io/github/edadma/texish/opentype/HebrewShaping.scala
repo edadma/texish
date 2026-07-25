@@ -20,10 +20,12 @@ package io.github.edadma.texish.opentype
   * combines, because a point is kept from its letter only by an earlier point of at least its own class —
   * the standard blocking rule for canonical composition — and the qamats, ranking lower, does not block it.
   *
-  * A face that combines nothing is left entirely alone, points and order alike. Its output then differs from
-  * HarfBuzz's, which moves a letter's own point to sit beside it whether or not anything combines; that
-  * ordering was checked against the Noto Hebrew face and makes no difference to the page, each point being
-  * placed on the letter by its own anchor.
+  * A face that combines nothing still has its points ordered. Nothing on the page depends on it there — each
+  * point is anchored to the letter rather than to another point, and the Noto Hebrew face renders identically
+  * either way, checked to the pixel on letters carrying two points on the same side. It is done because it
+  * costs nothing, keeps one path for Hebrew whichever face is set, and is what a face that stacked one point
+  * on another would need. A run with nothing to move and nothing to combine is returned untouched, so
+  * unpointed Hebrew never leaves the plain path.
   */
 object HebrewShaping:
 
@@ -58,8 +60,9 @@ object HebrewShaping:
     * fires, as Ezra SIL's does for a lamed and its holam. Returns null when nothing combined, the signal that
     * the run needs no substitution and can take the plain path where the mark shaper places its points. */
   def shape(cps: Array[Int], glyphOf: Int => Int, ccmp: Array[Int] => Array[Int]): Array[Int] =
-    val shaped = ccmp(reordered(cps).map(glyphOf))
-    if shaped.length != cps.length then shaped else null
+    val ordered = reordered(cps)
+    val shaped  = ccmp(ordered.map(glyphOf))
+    if shaped.length != cps.length || !(ordered sameElements cps) then shaped else null
 
   // A letter's points sorted into the order they are drawn in, which is not the order they are stored in.
   // Canonical ordering sorts the points of a syllable by combining class, which interleaves the point drawn

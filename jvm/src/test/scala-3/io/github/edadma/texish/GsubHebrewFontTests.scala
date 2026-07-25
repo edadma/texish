@@ -69,10 +69,23 @@ class GsubHebrewFontTests extends AnyFreeSpec with Matchers:
     shape(noto, "שלום") shouldBe null
   }
 
-  "the face that places every point by anchor is never taken off the plain path" in {
-    // Noto Serif Hebrew combines nothing, pointed or not, so every word comes back null and is drawn as it
-    // always was, the mark shaper placing the points.
-    for w <- Seq("שָׁלוֹם", "בְּרֵאשִׁית", "דָּבָר", "כָּל", "צַדִּיק") do shape(noto, w) shouldBe null
+  "the face that combines nothing still has its points put in drawing order" in {
+    // Noto Serif Hebrew combines no pair, placing every point from its own anchor, so it keeps its letters
+    // and points as separate glyphs. It is still ordered: the letter's own point comes to its side, which is
+    // the order hb-shape reports. Nothing on the page depends on it in this face — each point is anchored to
+    // the letter, not to another point — but ordering both faces alike keeps one path for Hebrew, and a face
+    // that stacked one point on another would need it.
+    shape(noto, "שָׁלוֹם").toSeq shouldBe Seq(61, 97, 140, 38, 23, 141, 40)
+    shape(noto, "בְּרֵאשִׁית").toSeq shouldBe Seq(14, 144, 129, 59, 137, 10, 61, 97, 136, 31, 67)
+    shape(noto, "דָּבָר").toSeq shouldBe Seq(19, 144, 140, 14, 140, 59)
+    shape(noto, "יִשְׂרָאֵל").toSeq shouldBe Seq(31, 136, 61, 147, 129, 59, 140, 10, 137, 38)
+    // …and the letters themselves are untouched: only the points moved.
+    shape(noto, "דָּבָר").count(_ == 19) shouldBe 1
+  }
+
+  "a word whose points are already in order is left on the plain path" in {
+    // Nothing to combine and nothing to move, so the run is not taken off the path it was always drawn on.
+    shape(noto, "הָאָרֶץ") shouldBe null
   }
 
   "the Arabic face is not mistaken for a Hebrew one" in {
