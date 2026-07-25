@@ -458,7 +458,8 @@ abstract class Typesetter:
   // Hangul syllables the Chinese cuts have no glyph for at all. \font cjkjp 12 (alias \font japanese) and
   // \font cjkkr 12 (alias \font korean), each with a bold cut. Japanese sets left to right with the same
   // kinsoku breaking as Chinese; Korean is written with interword spaces and breaks at them like Latin (see
-  // CJK.isCJK), so its Hangul is not put on the per-character break path.
+  // CJK.isCJK), so its Hangul gets no free per-character break — only a heavily penalized last-resort one,
+  // which keeps a run with no space in it from running off the page (see CJK.lastResortBetween).
   loadFont("cjkjp", "fonts/NotoSerifCJK/NotoSerifJP-Regular.otf", Set.empty, Set.empty)
   loadFont("cjkjp", "fonts/NotoSerifCJK/NotoSerifJP-Bold.otf", Set.empty, Set("bold"))
   loadFont("japanese", "fonts/NotoSerifCJK/NotoSerifJP-Regular.otf", Set.empty, Set.empty)

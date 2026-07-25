@@ -12,15 +12,15 @@ package io.github.edadma.texish
   */
 object CJK:
 
-  /** Whether `cp` is a CJK codepoint that takes part in inter-character breaking — the Han ideographs and
-    * their extensions, the Japanese kana, and the CJK-symbol and fullwidth-form punctuation blocks. A run of
-    * these has no spaces of its own, so each adjacency is a candidate break.
+  /** Whether `cp` is a CJK codepoint that breaks *freely* between characters — the Han ideographs and their
+    * extensions, the Japanese kana, and the CJK-symbol and fullwidth-form punctuation blocks. A run of these
+    * has no spaces of its own, so each adjacency is a candidate break.
     *
     * The Hangul syllables are deliberately excluded. Korean, unlike Chinese and Japanese, is written with
     * interword spaces (between eojeol), and its lines break at those spaces the way Latin does — breaking
-    * between arbitrary syllables would split words. So Hangul stays off the per-character break path and a
-    * Korean run breaks only at its spaces. (A word of Han among Korean text still breaks per character, as
-    * that Han is not spaced.)
+    * between arbitrary syllables would split words. A break inside a Korean word is instead offered as a last
+    * resort ([[isHangul]], [[lastResortBetween]]), so an unspaced run still wraps rather than overflowing.
+    * (A word of Han among Korean text still breaks per character, as that Han is not spaced.)
     */
   def isCJK(cp: Int): Boolean =
     (cp >= 0x4e00 && cp <= 0x9fff) ||   // CJK Unified Ideographs
@@ -43,6 +43,10 @@ object CJK:
   private val NoBreakAfter =
     "（［｛〔〈《「『【〖〘〝‘“"
 
+  /** Whether `cp` is a Hangul syllable. Korean breaks at its interword spaces, so a break between two of these
+    * is not a free opportunity but a last resort — see [[lastResortBetween]]. */
+  def isHangul(cp: Int): Boolean = cp >= 0xac00 && cp <= 0xd7af
+
   /** A closing character that kinsoku forbids at the start of a line. */
   def noBreakBefore(cp: Int): Boolean = NoBreakBefore.indexOf(cp) >= 0
 
@@ -54,12 +58,25 @@ object CJK:
   def breakableBetween(a: Int, b: Int): Boolean =
     (isCJK(a) || isCJK(b)) && !noBreakBefore(b) && !noBreakAfter(a)
 
-  /** Whether `s` contains any CJK codepoint, deciding whether a text run needs the per-character break pass
-    * at all; a pure-Latin run skips it and keeps Liang hyphenation unchanged. */
-  def hasCJK(s: String): Boolean =
+  /** A break between `a` and `b` that is legal but costly: inside a Korean word, between two Hangul syllables.
+    * Korean prose breaks at its interword spaces, so the breaker takes one of these only when no break at a
+    * space can be made to fit. It is the escape hatch that keeps a long unspaced run — a compound, a title set
+    * without spaces, a narrow column — wrapping instead of running off the page. */
+  def lastResortBetween(a: Int, b: Int): Boolean =
+    isHangul(a) && isHangul(b) && !noBreakBefore(b) && !noBreakAfter(a)
+
+  /** Whether `s` contains a freely-breaking CJK codepoint. */
+  def hasCJK(s: String): Boolean = existsCodepoint(s, isCJK)
+
+  /** Whether `s` needs the per-character break pass at all — it carries either CJK that breaks freely or
+    * Hangul that can break as a last resort. A pure-Latin run skips the pass and keeps Liang hyphenation
+    * unchanged. */
+  def needsCharacterBreaks(s: String): Boolean = existsCodepoint(s, cp => isCJK(cp) || isHangul(cp))
+
+  private def existsCodepoint(s: String, p: Int => Boolean): Boolean =
     var i = 0
     while i < s.length do
       val cp = s.codePointAt(i)
-      if isCJK(cp) then return true
+      if p(cp) then return true
       i += Character.charCount(cp)
     false

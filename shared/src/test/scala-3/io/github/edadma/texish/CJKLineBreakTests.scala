@@ -57,10 +57,25 @@ class CJKLineBreakTests extends AnyFreeSpec with Matchers:
     CJK.breakableBetween('a', 'b') shouldBe false
   }
 
-  "breakableBetween offers no break between two Hangul syllables" in {
-    // Korean breaks at its interword spaces, not between the syllables of a word.
+  "breakableBetween offers no free break between two Hangul syllables" in {
+    // Korean breaks at its interword spaces, not freely between the syllables of a word.
     CJK.breakableBetween('한', '국') shouldBe false
     CJK.breakableBetween('안', '녕') shouldBe false
+  }
+
+  "lastResortBetween offers a costly break inside a Korean word, and nowhere else" in {
+    CJK.lastResortBetween('한', '국') shouldBe true
+    CJK.lastResortBetween('안', '녕') shouldBe true
+    CJK.lastResortBetween('中', '文') shouldBe false // Chinese already breaks freely
+    CJK.lastResortBetween('한', 'a') shouldBe false  // a script boundary, not inside a Korean word
+    CJK.lastResortBetween('a', 'b') shouldBe false
+  }
+
+  "needsCharacterBreaks routes Korean into the per-character pass, hasCJK still does not" in {
+    CJK.needsCharacterBreaks("한국어") shouldBe true // Korean needs the pass (for its last-resort breaks)
+    CJK.hasCJK("한국어") shouldBe false              // but it is not freely-breaking CJK
+    CJK.needsCharacterBreaks("hello") shouldBe false
+    CJK.needsCharacterBreaks("中文") shouldBe true
   }
 
   "breakableBetween still offers a break between two Japanese characters" in {
@@ -89,18 +104,37 @@ class CJKLineBreakTests extends AnyFreeSpec with Matchers:
     result.get.length should be > 1
   }
 
-  "a Korean run is not broken per character, unlike a Chinese one" in {
-    // At the same narrow measure a Chinese run breaks between its characters, but a Korean run — off the
-    // per-character path — stays a single box (in a real document it would break at its interword spaces).
-    val t  = loose
-    val zh = KnuthPlass.breakParagraph(Seq(t.charBox("中文中文中文中文中文中文")), 30.0, t) // 12 chars
-    val ko = KnuthPlass.breakParagraph(Seq(t.charBox("한국어한국어한국어한국어")), 30.0, t)  // 12 syllables
-    zh shouldBe defined
-    zh.get.length should be > 1 // Chinese breaks per character
-    // The Korean run has no per-character breaks and no spaces here, so it is one atomic box the breaker
-    // cannot fit at this measure — it finds no legal breakpoint at all. (A real Korean paragraph carries
-    // spaces and breaks at them.) Had Hangul stayed a break-anywhere character it would break like Chinese.
-    ko shouldBe empty
+  "an unspaced Korean run breaks as a last resort rather than overflowing" in {
+    // A Korean run with no space in it cannot break at a space, so the breaker falls back on the costly
+    // in-word breaks; without them the run would be one atomic box that runs off the page.
+    //
+    // Deliberately unforgiving: the ordinary tolerance rather than `loose`, so this exercises what a real
+    // document does, and a measure of 31 against a 6-unit syllable, so no line can come out to an exact fit
+    // and the breaking cannot be a coincidence of the numbers.
+    val t  = new HeadlessTypesetter
+    val ko = KnuthPlass.breakParagraph(Seq(t.charBox("한국어한국어한국어한국어")), 31.0, t) // 12 syllables
+    ko shouldBe defined
+    ko.get.length should be > 1
+    ko.get.map(lineText).mkString shouldBe "한국어한국어한국어한국어" // every syllable survives, in order
+    // The point of the exercise: no line runs past the measure. Six syllables would be 36 units, over 31.
+    ko.get.foreach(line => lineText(line).length should be <= 5)
+  }
+
+  "a Korean run that fits is not broken at all" in {
+    val t = loose
+    val r = KnuthPlass.breakParagraph(Seq(t.charBox("한국어조판")), 200.0, t)
+    r shouldBe defined
+    r.get.length shouldBe 1
+  }
+
+  "the breaker splits at a space rather than inside a Korean word when it can" in {
+    // Two whole words with glue between them, at a measure that fits one word per line. The in-word breaks
+    // are legal here too, but far more expensive, so the space is chosen and neither word is split.
+    val t     = loose
+    val boxes = Seq(t.charBox("한국어"), Glue(6, 3, 2), t.charBox("조판법"))
+    val r     = KnuthPlass.breakParagraph(boxes, 20.0, t) // each word is 3 chars x 6 = 18 units
+    r shouldBe defined
+    r.get.map(lineText) shouldBe Seq("한국어", "조판법")
   }
 
   "kinsoku keeps a closing 。 off the start of every line" in {

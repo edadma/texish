@@ -10,7 +10,9 @@
 // between adjacent characters and applies kinsoku (a closing mark never starts a line,
 // an opening mark never ends one). Korean is different — it is written with spaces
 // between words and its lines break at those spaces, the way Latin does, so its syllables
-// are kept off the per-character break path and a word is never split across a line.
+// are kept off the free per-character break path. A break inside a Korean word is offered
+// only as a last resort, at a heavy penalty, so that a run with no space in it still wraps
+// instead of running off the page — the same bargain TeX strikes with hyphenation.
 //
 // \font japanese (alias \font cjkjp) and \font korean (alias \font cjkkr), each with a
 // bold cut.
@@ -42,15 +44,17 @@ opening marks off the end.
 
 Korean is written in Hangul, whose syllable blocks the Chinese faces do not carry at all.
 It uses spaces between words, so — unlike Chinese and Japanese — its lines break at those
-spaces, exactly as Latin does, and a word is never broken across a line. Hanja (Han
-characters) appear occasionally and the same face sets them.
+spaces, exactly as Latin does, and a word is not broken across a line. Only where no break
+at a space will fit does the engine split a word, as a last resort, the way \TeX{} reaches
+for a hyphen. Hanja (Han characters) appear occasionally and the same face sets them.
 
 \medskip
 
 {\font korean 12 regular
 이것은 한국어 조판의 예입니다. 텍시 엔진은 한글로 쓰인 문단을 여러 줄로 나누되, 낱말의
-사이에 있는 공백에서만 줄을 바꾸므로 한 낱말이 두 줄에 걸쳐 잘리는 일이 없습니다. 이는
-라틴 문자를 다루는 방식과 같습니다. 한자를 섞어 쓸 수도 있는데, 예를 들어 大韓民國과 같은
+사이에 있는 공백에서 줄을 바꾸므로 한 낱말이 두 줄에 걸쳐 잘리지 않습니다. 이는 라틴
+문자를 다루는 방식과 같습니다. 공백에서 줄을 바꿀 수 없을 만큼 단이 좁을 때에만 마지막
+수단으로 낱말 안에서 줄을 바꿉니다. 한자를 섞어 쓸 수도 있는데, 예를 들어 大韓民國과 같은
 낱말이 그러합니다.}
 
 \medskip

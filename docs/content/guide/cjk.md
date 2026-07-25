@@ -18,8 +18,12 @@ closing mark (`。`, `、`, `」`, …) never starts a line, and an opening mark
 one. The Knuth–Plass breaker itself is untouched. This happens automatically for any run of CJK text.
 
 **Korean is different.** It is written *with* spaces between words, so its lines break at those spaces
-exactly the way Latin does — and a Korean word is never split across a line. Its Hangul syllables are
-therefore kept off the per-character break path; only Chinese and Japanese get inter-character breaks.
+exactly the way Latin does, and a Korean word is not split across a line. Its Hangul syllables are
+therefore kept off the *free* per-character break path; only Chinese and Japanese get inter-character
+breaks. A break inside a Korean word is still offered, but at a heavy penalty, so the breaker reaches
+for one only where no break at a space will fit — the same bargain TeX strikes with hyphenation. That
+is what keeps a run with no space in it (a long compound, a spaceless title, a very narrow column)
+wrapping instead of running off the page.
 
 ## The bundled faces
 

@@ -115,8 +115,9 @@ glyph forms and Korean adds the Hangul syllables the Chinese faces do not carry:
 - `\font cjkkr` (alias `\font korean`) — Korean Hangul (and Hanja)
 
 Each has a regular and a bold cut (`\font cjkjp 12 bold`). **Korean breaks differently:** it is written
-with interword spaces, so its lines break at those spaces the way Latin does — a Korean word is never
-split across a line — rather than between syllables. Any other CJK font can be brought in with
+with interword spaces, so its lines break at those spaces the way Latin does, rather than between
+syllables. A break inside a Korean word is offered only as a last resort, at a heavy penalty, so a run
+with no space in it still wraps instead of overflowing. Any other CJK font can be brought in with
 `\loadfont{name}{path}`.
 
 ## Devanagari (Hindi)
