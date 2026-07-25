@@ -11,8 +11,9 @@ import scala.collection.mutable.ArrayBuffer
   *   2. map the cluster's characters to their nominal glyphs;
   *   3. run the basic-form features, which fuse consonant + virama sequences into conjuncts, half-forms and
   *      post-base forms;
-  *   4. reorder the pre-base vowel sign to the front of the cluster (it is typed after its consonant but drawn
-  *      before it), and append the reph mark after the base;
+  *   4. reorder the vowel signs — the pre-base sign to the front of the cluster (it is typed after its
+  *      consonant but drawn before it), and, in a script that subjoins its joined consonants, the sign drawn
+  *      on the base back across them to the base's side — and append the reph mark after the base;
   *   5. run the presentation features, which pick the width-matched contextual variants and stack the above-
   *      and below-base vowel signs.
   *
@@ -80,6 +81,7 @@ final class IndicShaper(val script: IndicScript, gsub: Gsub):
     for tag <- script.basicFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
     val preBaseGlyph = coreCps.find(script.preBaseMatras.contains).map(cmap).getOrElse(-1)
     glyphs = script.reorderPreBaseMatra(coreCps, glyphs, preBaseGlyph)
+    glyphs = script.reorderPreSubjoinedMatra(glyphs, coreCps.filter(script.preSubjoinedMatras.contains).map(cmap))
     if reph then
       val rg = rephGlyphs(cmap)
       // where the reph lands is a per-script convention: at the cluster's very end, or — Bengali — between

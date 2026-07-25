@@ -4,17 +4,18 @@ package io.github.edadma.texish.opentype
   * [[IndicScript]] segmentation and reordering build on. Telugu is written left to right, so like the other
   * Indic scripts texish sets it needs no bidirectional reordering, only cluster-scoped work.
   *
-  * Telugu asks less of the reordering machinery than Devanagari or Bengali and more of the font. Nothing
-  * reorders: every vowel sign is written above the base or after it, so unlike the short-i of Devanagari or
-  * the e/ai of Bengali there is no sign typed after its consonant but drawn before it. Nor is there a reph —
+  * Telugu builds downward. A consonant joined by the virama is drawn as a subscript beneath the base rather
+  * than as a half-form beside it, which inverts the base: where Devanagari's base is the *last* consonant of a
+  * conjunct, Telugu's is the *first*, and everything after it hangs below (see [[baseIndex]]). A consonant and
+  * its vowel sign commonly fuse into a single glyph as well — `కి` is one glyph, not two. The font's
+  * below-base and post-base features do that work, and GPOS places the subscripts.
+  *
+  * Nothing is drawn to the left of its consonant, so unlike the short-i of Devanagari or the e/ai of Bengali
+  * no sign is ever lifted to the front of a cluster. What does move is the vowel sign that belongs to the
+  * base: typed after the whole conjunct, it is drawn on the base itself and so must be moved back across the
+  * subjoined consonants before the font can fuse the two (see [[preSubjoinedMatras]]). Nor is there a reph —
   * a word-initial ra with a virama does not rise as a mark over the syllable, as `ర్క` shows, where the ra
   * stays a base and the following consonant subjoins under it.
-  *
-  * What Telugu does instead is build: a consonant and its vowel sign commonly fuse into a single glyph
-  * (`కి` is one glyph, not two), and a consonant joined by the virama is drawn as a subscript beneath the
-  * base rather than as a half-form beside it. That last point inverts the base: where Devanagari's base is
-  * the *last* consonant of a conjunct, Telugu's is the *first*, and everything after it hangs below (see
-  * [[baseIndex]]). The font's below-base and post-base features do the work, and GPOS places the subscripts.
   */
 object Telugu extends IndicScript:
 
@@ -57,6 +58,19 @@ object Telugu extends IndicScript:
   /** Telugu has no pre-base vowel signs: nothing is drawn to the left of the consonant it follows, so no
     * sign is ever lifted to the front of its cluster. */
   def preBaseMatras: Set[Int] = Set.empty
+
+  /** Almost every Telugu vowel sign is drawn on the base consonant, so it belongs beside the base and ahead
+    * of whatever is subjoined beneath the cluster: `స్త్రే` sets sa, its e sign, then the subjoined ta and ra.
+    * The exceptions are the vocalic r and rr signs (U+0C43, U+0C44), which are themselves drawn below and
+    * stay after the subjoined forms. */
+  override def preSubjoinedMatras: Set[Int] =
+    (0x0c00 to 0x0c7f).filter(cp => isDependentSign(cp) && cp != 0x0c43 && cp != 0x0c44).toSet
+
+  /** The ai sign is written as the e sign followed by the ai length mark, both drawn on the base. The font
+    * carries the pair, not the single sign, so it is split before the cluster is shaped; every other Telugu
+    * vowel sign is one part. */
+  override def decompose(cp: Int): Option[(Int, Int)] =
+    if cp == 0x0c48 then Some((0x0c46, 0x0c56)) else None
 
   /** The consonant ra and the virama. Telugu forms no reph from them (see [[startsWithReph]]), but the
     * shared trait still needs them named. */

@@ -64,12 +64,40 @@ class GsubTeluguFontTests extends AnyFreeSpec with Matchers:
     glyphs.last should not equal g(0x0c4d) // and not the bare virama
   }
 
-  "a joined ra subjoins beneath the base as a zero-width mark" in {
-    // క్ర (ka, virama, ra) → [ka, ra.subscript], the ra placed under the base by GPOS.
+  "a joined ra subjoins beneath the base, in the form the base calls for" in {
+    // క్ర (ka, virama, ra) → [ka, ka-ra.subscript]: the below-base feature forms a generic subjoined ra, and
+    // the above-base feature then swaps it for the variant drawn under a ka. That second step is reached
+    // through a chaining-context lookup whose record names another chaining-context lookup — a nesting the
+    // parser once refused to follow, leaving the generic form in place.
     val glyphs = shape("క్ర")
-    glyphs.length shouldBe 2
+    glyphs.toSeq shouldBe Seq(23, 539)
     glyphs.head shouldBe g(Ka)
     glyphs.last should not equal g(Ra)
+    shape("ప్ర").toSeq shouldBe Seq(43, 559) // and a different base calls for a different variant
+  }
+
+  "a vowel sign is drawn beside its base, ahead of the consonants subjoined beneath it" in {
+    // ప్రేమ (pa virama ra ee | ma): the ee sign is typed after the whole conjunct but belongs to the pa, so
+    // it moves back to the pa's side — close enough for the font to fuse the two into one drawn glyph — and
+    // the subjoined ra follows. Without the move the sign is stranded after the ra and no fusion matches.
+    shape("ప్రేమ").toSeq shouldBe Seq(313, 559, 47)
+    shape("స్త్రే").toSeq shouldBe Seq(326, 594) // and it moves back across two subjoined consonants
+  }
+
+  "the vocalic r sign is the exception: it stays below, after the subjoined consonant" in {
+    // సంస్కృతం (samskrutam): the ృ of the స్కృ cluster is drawn below the syllable, not on the base, so
+    // unlike every other Telugu sign it keeps its place after the subjoined ka.
+    val glyphs = shape("సంస్కృతం")
+    glyphs.toSeq shouldBe Seq(57, 6, 57, 736, 535, 38, 6)
+    glyphs(3) shouldBe shape("క్క").last // the subjoined ka comes first…
+    glyphs(4) should not equal g(0x0c43) // …then the vocalic r in its drawn form
+  }
+
+  "the ai sign splits into the two parts the font draws" in {
+    // హై (ha, ai) is one glyph in memory but the font carries the ai as an e sign plus a length mark; split
+    // into the pair, both parts land on the ha and fuse into the single drawn ha-ai.
+    shape("హై").toSeq shouldBe Seq(363)
+    shape("హైదరాబాద్").toSeq shouldBe Seq(363, 40, 167, 163, 122)
   }
 
   "a word-initial ra with a virama is not a reph: the ra stays the base" in {
@@ -103,6 +131,22 @@ class GsubTeluguFontTests extends AnyFreeSpec with Matchers:
     glyphs(3) shouldBe g(Ka)
     glyphs(4) shouldBe g(0x0c02)           // the anusvara closes the run
     glyphs.head should not equal g(0x0c2a) // the pu is fused, not a bare pa
+  }
+
+  "everyday words shape glyph for glyph as hb-shape does" in {
+    // The sequences `hb-shape --shaper=ot` reports for this font, covering the whole Telugu path: fused
+    // consonant-vowel glyphs, conjuncts of two and three consonants, subjoined ra and ya, the reordered vowel
+    // signs, the anusvara, and a word-final virama.
+    shape("తెలుగు").toSeq shouldBe Seq(272, 51, 63, 25, 63)
+    shape("విద్య").toSeq shouldBe Seq(207, 40, 732)
+    shape("స్త్రీ").toSeq shouldBe Seq(246, 594)
+    shape("అమ్మ").toSeq shouldBe Seq(9, 47, 738)
+    shape("కృష్ణ").toSeq shouldBe Seq(23, 65, 56, 484)
+    shape("శ్రీ").toSeq shouldBe Seq(244, 570)
+    shape("జ్ఞానం").toSeq shouldBe Seq(148, 479, 42, 6)
+    shape("తెలంగాణ").toSeq shouldBe Seq(272, 51, 6, 143, 37)
+    shape("ధన్యవాదాలు").toSeq shouldBe Seq(41, 42, 732, 171, 158, 51, 63)
+    shape("స్వాతంత్ర్యం").toSeq shouldBe Seq(174, 731, 38, 6, 38, 554, 525, 6)
   }
 
   "a subjoined consonant is placed under its base by GPOS" in {

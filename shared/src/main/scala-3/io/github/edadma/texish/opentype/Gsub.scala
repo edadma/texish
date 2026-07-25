@@ -79,6 +79,11 @@ object Gsub:
   // (`dlig`) are left off, as in conventional typesetting.
   private val PostFeatures = Seq("rlig", "liga")
 
+  // How deep a contextual lookup may nest inside another before the font is taken to be nesting in a cycle.
+  // Two levels is what the Indic faces need; the limit only has to keep a malformed table from recursing
+  // without end.
+  private val MaxNestDepth = 8
+
   /** Build an Arabic shaper from a font's raw `GSUB` (and `GDEF`) bytes, or None when the font has no Arabic
     * form features (so the caller keeps the plain text path). */
   def from(gsub: Option[Array[Byte]], gdef: Option[Array[Byte]] = None): Option[Gsub] =
@@ -331,12 +336,12 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
         case LigatureSubst(l) => tryLigature(glyphs, i, l, lk).foreach((rep, n) => res = Some((rep, n, false)))
         case ContextSubst(input, records) =>
           matchInput(glyphs, i, input, lk).foreach { pos =>
-            res = Some((applyRecords(glyphs, i, pos, records), pos.last - i + 1, true))
+            res = Some((applyRecords(glyphs, i, pos, records, prior), pos.last - i + 1, true))
           }
         case ChainContextSubst(bt, input, la, records) =>
           matchInput(glyphs, i, input, lk).foreach { pos =>
             if matchBacktrack(prior, bt, lk) && matchLookahead(glyphs, pos.last, la, lk) then
-              res = Some((applyRecords(glyphs, i, pos, records), pos.last - i + 1, true))
+              res = Some((applyRecords(glyphs, i, pos, records, prior), pos.last - i + 1, true))
           }
       s += 1
     res
@@ -410,8 +415,16 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
   // lookup on the element still carrying that logical index — a record may substitute one glyph for one
   // (the lam and the alef each take their `.rlig` form) or ligate glyphs (a shadda and a following
   // dagger-alef into one composed mark), so the span can shorten; later records read it as it then stands.
-  // Returns the resulting glyphs; the caller advances by the original span length.
-  private def applyRecords(glyphs: Array[Int], i: Int, positions: Array[Int], records: Array[(Int, Int)]): Array[Int] =
+  // Returns the resulting glyphs; the caller advances by the original span length. `prior` is the output
+  // already emitted before the span and `glyphs` holds what follows it — the context a nested contextual
+  // lookup matches its own backtrack and lookahead against, which reach outside the span.
+  private def applyRecords(
+      glyphs: Array[Int],
+      i: Int,
+      positions: Array[Int],
+      records: Array[(Int, Int)],
+      prior: collection.IndexedSeq[Int],
+  ): Array[Int] =
     val buf     = scala.collection.mutable.ArrayBuffer.empty[Int]
     val logical = scala.collection.mutable.ArrayBuffer.empty[Int]
     var k = i
@@ -419,20 +432,26 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
       buf += glyphs(k)
       logical += positions.indexOf(k)
       k += 1
+    val after = glyphs.view.slice(positions.last + 1, glyphs.length).toIndexedSeq
     for (seqIdx, lookupIdx) <- records do
       val pos = logical.indexOf(seqIdx)
-      if pos >= 0 then applyNestedAt(buf, logical, pos, lookupIdx)
+      if pos >= 0 then applyNestedAt(prior, buf, logical, pos, after, lookupIdx, 0)
     buf.toArray
 
   // The substitution a nested lookup makes at one element of a working span: a single (one glyph), multiple
   // (one to many) or ligature (many to one) replacement, spliced in place. A nested ligature matches its
   // components with the nested lookup's own flag, so it too can reach across skipped glyphs, which stay in
-  // the span after the ligature. Nested context lookups are not followed (no bundled font nests one).
+  // the span after the ligature. A nested lookup may itself be contextual — Noto Serif Telugu reaches its
+  // subjoined ra through two levels of chaining context — so those are followed too, up to
+  // [[Gsub.MaxNestDepth]], the depth beyond which a font is taken to be nesting in a cycle.
   private def applyNestedAt(
+      before: collection.IndexedSeq[Int],
       buf: scala.collection.mutable.ArrayBuffer[Int],
       logical: scala.collection.mutable.ArrayBuffer[Int],
       pos: Int,
+      after: collection.IndexedSeq[Int],
       li: Int,
+      depth: Int,
   ): Unit =
     val lk = lookups(li)
     if skips(lk, buf(pos)) then return
@@ -474,8 +493,51 @@ final class Gsub(data: Array[Byte], scriptTags: Seq[String], gdef: Gdef = Gdef.e
                 done = true
               k += 1
           }
-        case _ =>
+        case ContextSubst(input, records) =>
+          if applyNestedContext(before, buf, logical, pos, after, lk, Array.empty, input, Array.empty, records, depth)
+          then done = true
+        case ChainContextSubst(bt, input, la, records) =>
+          if applyNestedContext(before, buf, logical, pos, after, lk, bt, input, la, records, depth) then done = true
       s += 1
+
+  // A nested contextual lookup, matched against the whole run rather than the working span alone: its
+  // backtrack and lookahead routinely reach outside the span the outer match carved out, so the span is
+  // rejoined to the output already emitted (`before`) and the glyphs still to come (`after`) and the match
+  // made against that. Only records landing inside the span are applied — a nested lookup that would
+  // substitute outside the outer match is not the caller's to make. Returns whether the subtable matched.
+  private def applyNestedContext(
+      before: collection.IndexedSeq[Int],
+      buf: scala.collection.mutable.ArrayBuffer[Int],
+      logical: scala.collection.mutable.ArrayBuffer[Int],
+      pos: Int,
+      after: collection.IndexedSeq[Int],
+      lk: SubstLookup,
+      bt: Array[Int => Boolean],
+      input: Array[Int => Boolean],
+      la: Array[Int => Boolean],
+      records: Array[(Int, Int)],
+      depth: Int,
+  ): Boolean =
+    if depth >= Gsub.MaxNestDepth then false
+    else
+      val seq = (before ++ buf ++ after).toArray
+      val at  = before.length + pos
+      matchInput(seq, at, input, lk) match
+        case Some(ps) if matchBacktrack(seq.view.slice(0, at).toIndexedSeq, bt, lk) &&
+            matchLookahead(seq, ps.last, la, lk) =>
+          // the span's own indices, kept in step as a record's substitution lengthens or shortens the buffer
+          val targets = Array.tabulate(ps.length)(k => ps(k) - before.length)
+          for (seqIdx, lookupIdx) <- records do
+            if seqIdx < targets.length then
+              val q = targets(seqIdx)
+              if q >= 0 && q < buf.length then
+                val len = buf.length
+                applyNestedAt(before, buf, logical, q, after, lookupIdx, depth + 1)
+                val delta = buf.length - len
+                if delta != 0 then
+                  for k <- targets.indices do if targets(k) > q then targets(k) += delta
+          true
+        case _ => false
 
   // The ligature a lookup forms starting at `i`, if any: the first ligature whose remaining components
   // match the following non-skipped glyphs. Returns the replacement — the ligature glyph followed by the

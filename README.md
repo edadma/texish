@@ -19,7 +19,9 @@ and reph reordering, nukta composition, and GPOS-positioned vowel signs), Bengal
 shaping (`\font bengali` — conjuncts, pre-base i/e/ai reordering, two-part o/au decomposition,
 reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), Gurmukhi (Punjabi)
 syllable shaping (`\font gurmukhi` — subjoined pairin forms, pre-base sihari reordering, and
-GPOS-positioned addak, tippi and vowel signs), automatic glyph fallback (Cyrillic and Greek set in
+GPOS-positioned addak, tippi and vowel signs), Telugu syllable shaping (`\font telugu` — fused
+consonant-vowel glyphs, subscript conjuncts built beneath a leading base, vowel signs moved back to
+that base, two-part ai decomposition, and GPOS-positioned subscripts), automatic glyph fallback (Cyrillic and Greek set in
 ordinary text with no setup, matching the surrounding weight and slope), author break control
 (`\discretionary` and leaders for dotted contents lines),
 and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout

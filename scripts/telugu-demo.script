@@ -6,17 +6,18 @@
 // reordering Hebrew and Arabic do. What it needs is work inside each syllable,
 // and that work falls differently than it does for the other Indic scripts.
 //
-// Nothing reorders: every Telugu vowel sign is drawn above its consonant or
-// after it, so there is no sign typed after a consonant but rendered before it
-// — no short-i to lift as in Devanagari, no e or ai as in Bengali. Nor is there
-// a reph: a word-initial ra with a virama stays an ordinary letter rather than
-// rising as a mark over the syllable.
+// Telugu builds downward. A consonant and its vowel sign commonly fuse into a
+// single drawn glyph, and a consonant joined by the virama hangs beneath the
+// base as a subscript. That inverts the base: where Devanagari's is the last
+// consonant of a conjunct, Telugu's is the first, with everything after it
+// underneath.
 //
-// What Telugu does instead is build. A consonant and its vowel sign commonly
-// fuse into a single drawn glyph, and a consonant joined by the virama hangs
-// beneath the base as a subscript. That inverts the base: where Devanagari's is
-// the last consonant of a conjunct, Telugu's is the first, with everything after
-// it underneath.
+// Nothing is drawn to the left of its consonant, so no sign is ever lifted to
+// the front of a syllable — no short-i as in Devanagari, no e or ai as in
+// Bengali. What does move is the vowel sign of the base: typed after the whole
+// conjunct, it is drawn on the base itself, so it is moved back across the
+// subscripts to reach it. Nor is there a reph: a word-initial ra with a virama
+// stays an ordinary letter rather than rising as a mark over the syllable.
 //
 // \font telugu selects the bundled face, in a regular and a bold cut. No \rtl is
 // needed — the script is left to right.
@@ -57,7 +58,10 @@ is a form of its own:
 \section{Conjuncts hang beneath the base}
 
 Two consonants joined by the virama do not stand side by side: the second is drawn as a
-subscript under the first, which remains the base of the syllable. Book, word, and friend:
+subscript under the first, which remains the base of the syllable. A vowel sign on such a
+syllable belongs to the base, so it is set beside the base and the subscripts hang below
+the pair — in {\font telugu 12 regular ప్రేమ} the vowel joins the \italic{pa}, not the
+subjoined \italic{ra}. Book, word, and friend:
 
 \medskip
 
@@ -68,7 +72,7 @@ subscript under the first, which remains the base of the syllable. Book, word, a
 \section{No reph}
 
 The consonant \italic{ra} takes no special form at the head of a syllable. In
-\mono{ర్క} the ra stays where it is and the following consonant subjoins beneath it,
+{\font telugu 12 regular ర్క} the ra stays where it is and the following consonant subjoins beneath it,
 where Devanagari would lift the ra above the syllable as a reph. After another consonant
 the ra hangs below, as in these words for love and village:
 
