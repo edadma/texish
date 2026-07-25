@@ -462,12 +462,10 @@ abstract class Typesetter:
   // which keeps a run with no space in it from running off the page (see CJK.lastResortBetween).
   loadFont("cjkjp", "fonts/NotoSerifCJK/NotoSerifJP-Regular.otf", Set.empty, Set.empty)
   loadFont("cjkjp", "fonts/NotoSerifCJK/NotoSerifJP-Bold.otf", Set.empty, Set("bold"))
-  loadFont("japanese", "fonts/NotoSerifCJK/NotoSerifJP-Regular.otf", Set.empty, Set.empty)
-  loadFont("japanese", "fonts/NotoSerifCJK/NotoSerifJP-Bold.otf", Set.empty, Set("bold"))
+  aliasTypeface("japanese", "cjkjp")
   loadFont("cjkkr", "fonts/NotoSerifCJK/NotoSerifKR-Regular.otf", Set.empty, Set.empty)
   loadFont("cjkkr", "fonts/NotoSerifCJK/NotoSerifKR-Bold.otf", Set.empty, Set("bold"))
-  loadFont("korean", "fonts/NotoSerifCJK/NotoSerifKR-Regular.otf", Set.empty, Set.empty)
-  loadFont("korean", "fonts/NotoSerifCJK/NotoSerifKR-Bold.otf", Set.empty, Set("bold"))
+  aliasTypeface("korean", "cjkkr")
 
   // Noto Serif Hebrew, the bundled face for right-to-left Hebrew: \font hebrew 12 sets it, with a bold cut
   // so \font hebrew 12 bold is a real bold weight. These are static Regular and Bold instances drawn from
@@ -528,8 +526,7 @@ abstract class Typesetter:
   // documents type the marks literally rather than through the ASCII shorthands.)
   loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("devanagari", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
-  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
-  loadFont("hindi", "fonts/NotoSerifDevanagari/NotoSerifDevanagari-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  aliasTypeface("hindi", "devanagari")
 
   // Noto Serif Bengali, the bundled face for the Bengali–Assamese script: \font bengali 12 sets it, or the
   // alias \font assamese 12, each with a bold cut. Static Regular and Bold instances drawn from the variable
@@ -541,8 +538,7 @@ abstract class Typesetter:
   // shorthands become proper typographic characters in a Bengali run.
   loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
-  loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
-  loadFont("assamese", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  aliasTypeface("assamese", "bengali")
 
   // Noto Serif Gurmukhi, the bundled face for Gurmukhi (Punjabi as written in India): \font gurmukhi 12 sets
   // it, or the alias \font punjabi 12, each with a bold cut. Gurmukhi is left to right; the engine does the
@@ -553,8 +549,7 @@ abstract class Typesetter:
   // sets its punctuation as a Latin text face, so the curly-quote and dash shorthands come out typographic.
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
-  loadFont("punjabi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
-  loadFont("punjabi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  aliasTypeface("punjabi", "gurmukhi")
 
   // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
   // typewriter *role* (\mono, Latin Modern Mono) used for inline code in running text: that one is cut to match
@@ -859,6 +854,18 @@ abstract class Typesetter:
             s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has already been loaded")
         else fonts(styleSet) = (font, ligatures)
   end loadFont
+
+  /** Give an already-loaded typeface a second name — `\font hindi` for the Devanagari family, `\font korean` for
+    * the Korean CJK one. The alias shares the faces the family already opened rather than opening the files a
+    * second time: loading a font by name twice would leave the backend holding two faces over the same file,
+    * which for the large CJK cuts is a real duplication, and an alias is not a separate family in any case.
+    */
+  def aliasTypeface(alias: String, target: String): Unit =
+    typefaces get target match
+      case None => throw TexishException(s"typeface '$target' not found")
+      case Some(tf) =>
+        if typefaces contains alias then throw TexishException(s"typeface '$alias' has already been loaded")
+        typefaces(alias) = tf
 
   def loadTypeface(
       typeface: String,
