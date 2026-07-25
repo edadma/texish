@@ -12,7 +12,7 @@ build (see [Rendering in the Browser](/guide/browser-rendering/)).
 Add texish with the `%%%` operator so sbt selects the right platform artifact:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.23.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.0"
 ```
 
 The library gives you the engine and the `parser` layer — construct a typesetter for your

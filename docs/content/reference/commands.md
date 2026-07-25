@@ -160,6 +160,17 @@ in Unicode order. Unlike Devanagari and Bengali, Gurmukhi has no reph. Noto Seri
 bundled: `\font gurmukhi 12 regular` (or the alias `\font punjabi`), with a bold cut
 (`\font gurmukhi 12 bold`). See [Gurmukhi (Punjabi)](/guide/gurmukhi/) for the full treatment.
 
+## Telugu
+
+Telugu builds downward: a consonant joined by the virama is drawn as a subscript beneath the base, so
+the base of a conjunct is its *first* consonant rather than its last, and a consonant and its vowel sign
+commonly fuse into a single drawn glyph. A vowel sign belongs to the base, so it is moved back across
+the subscripts to reach it — `ప్రేమ` joins its vowel to the *pa*, not to the subjoined *ra*. The ai sign
+is split into the two parts the font draws, and a word-initial *ra* with a virama forms no reph. All of
+it happens automatically from text typed in Unicode order. Noto Serif Telugu is bundled:
+`\font telugu 12 regular`, with a bold cut (`\font telugu 12 bold`). See [Telugu](/guide/telugu/) for
+the full treatment.
+
 ## Thai
 
 Thai is written without spaces between words and uses them to separate phrases instead, so a run of it
