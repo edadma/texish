@@ -1,28 +1,22 @@
 // math-demo — a single comprehensive tour of texish mathematics.
 //
-// Two layers are on show. The first is the engine's own math mode — fractions,
-// roots, scripts, big operators, matrices, the math-array environments, the
-// stacking and framing boxes, and the math alphabets — all of which work with no
-// package loaded at all. The second is the small \mono{math} package, which adds
-// the amsmath operator and connective names the engine does not define on its own:
-// \arcsin / \arccos / \arctan / \Pr, the modular \bmod / \pmod / \mod / \pod, the
-// implication arrows \implies / \iff / \impliedby, and the \dots ellipsis.
+// Everything here is the engine's own math mode — fractions, roots, scripts, big
+// operators, matrices, the math-array environments, the stacking and framing boxes,
+// the math alphabets, the operator names, the modular forms and the implication
+// arrows. None of it needs a package.
 //
-// \use{document} gives us the title block, numbered sections and prose styling;
-// \use{math} layers the amsmath names on top of the engine's built-in math.
+// \use{document} is only for the title block, numbered sections and prose styling.
 
 \use{document}
-\use{math}
 
 \title {A Tour of Mathematics in texish}
 \author {The texish project}
 \date {June 2026}
 \maketitle
 
-This document exercises the whole of texish math mode in one place: the
-constructions built into the engine and the amsmath names the \mono{math}
-package adds on top. Every formula below is live — what you see is what the
-engine set.
+This document exercises the whole of texish math mode in one place, all of it
+built into the engine and none of it needing a package. Every formula below is
+live — what you see is what the engine set.
 
 \section {Inline and display math}
 
@@ -101,8 +95,8 @@ $$\alpha \; \beta \; \gamma \; \delta \; \theta \; \lambda \; \mu \; \pi \; \sig
   \Gamma \; \Delta \; \Theta \; \Lambda \; \Pi \; \Sigma \; \Omega.$$
 
 The named functions are set upright, like \mono{\\sin}, \mono{\\log} and
-\mono{\\lim}, and take operator spacing. The \mono{math} package adds the
-inverse trigonometric and probability names alongside them:
+\mono{\\lim}, and take operator spacing. The inverse trigonometric and
+probability names sit in the same set:
 
 $$\sin^2\theta + \cos^2\theta = 1
   \qquad
@@ -118,7 +112,7 @@ $$\operatorname{argmax}_{x} f(x)
   \qquad
   \arcsin x + \arccos x = \frac{\pi}{2}.$$
 
-The modular forms also come from the package. \mono{\\bmod} is the binary "mod"
+The modular forms are built in too. \mono{\\bmod} is the binary "mod"
 of $a \bmod b$, set with a medium space on each side; \mono{\\pmod} closes a
 congruence with a parenthesised modulus after a quad of space:
 
@@ -235,7 +229,7 @@ qualifying phrase reads beside an equation:
 
 $$x^2 = 4 \quad \text{if and only if} \quad x = \pm 2.$$
 
-The implication arrows from the package join whole statements, each a heavy arrow
+The implication arrows join whole statements, each a heavy arrow
 with a thick space on either side, so a chain of reasoning reads naturally:
 
 $$x^2 = 4 \implies x = 2 \;\text{or}\; x = -2 \iff |x| = 2.$$

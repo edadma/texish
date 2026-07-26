@@ -75,13 +75,15 @@ That is the guaranteed baseline: running text, mathematics, the scripts Latin Mo
 and a syntax-highlighted source listing. A program that adds texish as a dependency and configures
 nothing gets all of it.
 
-Three **packages** are compiled in — what a document needs to be an ordinary document:
+Two **packages** are compiled in — what a document needs to be an ordinary document:
 
 | package | why |
 |---|---|
 | `base` | the primitives layer the rest builds on |
 | `document` | sectioning, lists, floats, the page furniture — includes `base` |
-| `math` | the amsmath name macros (`\arcsin`, `\bmod`, `\implies`, …); mathematics itself is built in |
+
+Mathematics is not among them because it needs no package: the operator names, modular forms and
+implication arrows are built into the engine alongside `\frac` and the matrix environments.
 
 Everything else — `diagram`, `plot`, `book`, `usfm`, `railroad`, `music`, … — resolves from a
 `packages/` folder on disk. A package earns a place in the artifact only if it is basic enough to be

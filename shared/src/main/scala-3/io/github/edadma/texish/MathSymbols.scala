@@ -223,13 +223,20 @@ object MathSymbols:
   // below in a display, so \lim_{n\to\infty} drops its subscript underneath.
   private val nolimitsOperators: Set[String] = Set(
     "sin", "cos", "tan", "cot", "sec", "csc",
+    "arcsin", "arccos", "arctan",
     "sinh", "cosh", "tanh", "coth",
     "log", "ln", "lg", "exp", "deg", "arg", "dim", "ker", "hom",
   )
   private val limitsOperators: Set[String] = Set(
-    "lim", "limsup", "liminf", "max", "min", "sup", "inf", "det", "gcd",
+    "lim", "limsup", "liminf", "max", "min", "sup", "inf", "det", "gcd", "Pr",
   )
   private val operatorNames: Set[String] = nolimitsOperators ++ limitsOperators
+
+  // Upright operator names that are *not* Op-class atoms, with the text each one sets. \bmod is the binary
+  // "mod" of "a mod b", so it takes the medium space of a binary operator on either side rather than an
+  // operator's spacing — TeX writes it \mathbin{\operatorname{mod}}, and this is that, built in. The
+  // parenthesised forms (\pmod, \mod, \pod) take an argument and are primitives instead.
+  private val binaryOperatorNames: Map[String, String] = Map("bmod" -> "mod")
 
   // Explicit math spaces, in math units (18mu = 1em). \! is a negative thin space.
   private val spacesMu: Map[String, Double] = Map(
@@ -256,6 +263,7 @@ object MathSymbols:
           Some(MathAtom(Op, operatorBox(mf, name), limits = if nolimitsOperators(name) then Some(false) else None))
         else None,
       )
+      .orElse(binaryOperatorNames.get(name).map(text => MathAtom(Bin, operatorBox(mf, text))))
       .orElse(spacesMu.get(name).map(mu => MathSpace(Glue(mu / 18.0 * mf.size))))
 
   /** A single-glyph atom carrying that glyph's italic correction, so a superscript can be set out past a

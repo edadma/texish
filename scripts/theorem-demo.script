@@ -10,12 +10,11 @@
 //   * the proof environment with its run-in "Proof." head
 //   * \qed                                 — the flush-right end-of-proof box
 //
-// We pull in `document` for section headings and paragraph indentation, and `math`
-// for the formulas set inside the theorem bodies.
+// We pull in `document` for section headings and paragraph indentation. The formulas
+// inside the theorem bodies need nothing: math mode is built into the engine.
 
 \use{document}
 \use{theorem}
-\use{math}
 
 // Each \newtheorem defines a fresh environment. `theorem` gets its own counter.
 // `lemma` and `corollary` SHARE the theorem counter (the [theorem] optional before

@@ -20,7 +20,7 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
   private val CoreFamilies = Typesetter.CoreFamilies
 
   /** The packages compiled into the artifact: what a document needs to be an ordinary document. */
-  private val CorePackages = Set("base", "document", "math")
+  private val CorePackages = Set("base", "document")
 
 
   /** A typesetter that opens the paths the way any host does, and lets a test read back what got registered.

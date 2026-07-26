@@ -217,7 +217,11 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\binom{n}{k}` `\dbinom` `\tbinom` | binomial coefficients |
 | `\sqrt{x}` `\sqrt[3]{x}` | roots |
 | `\sum` `\int` `\prod` `\limits` `\nolimits` | big operators (`\nolimits` forces scripts to the side) |
+| `\sin` `\cos` `\arctan` `\log` `\exp` `\lim` `\max` `\det` `\Pr` … | the standard upright operator names |
 | `\operatorname{…}` | an upright custom operator (like `\sin`, with operator spacing) |
+| `\bmod` `\pmod{m}` `\mod{m}` `\pod{m}` | modular-arithmetic forms |
+| `\implies` `\impliedby` `\iff` | spaced implication arrows |
+| `\ldots` `\cdots` `\vdots` `\ddots` `\dots` | ellipses (`\dots` is the low one, as `\ldots`) |
 | `\left( … \right)` | stretchy delimiters |
 | `\hat` `\vec` `\widehat` | accents |
 | `\overset{a}{b}` `\underset{a}{b}` `\substack{a \\ b}` | stack material above / below / in a script pile |
@@ -232,17 +236,6 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\matrix` `\pmatrix` `\bmatrix` `\vmatrix` `\Vmatrix` `\Bmatrix` `\smallmatrix` `\cases` | matrices |
 | `\begin{aligned}…\end{aligned}` | equations aligned on their `&` relations (`\\` between rows) |
 | `\eqno(…)` | display equation number |
-
-## More mathematics *(`\use{math}`)*
-
-The amsmath operator and connective names, on top of the built-in math above.
-
-| Command | Effect |
-|---------|--------|
-| `\arcsin` `\arccos` `\arctan` `\Pr` | further upright operators |
-| `\bmod` `\pmod{m}` `\mod{m}` `\pod{m}` | modular-arithmetic forms |
-| `\implies` `\impliedby` `\iff` | spaced implication arrows |
-| `\dots` | low ellipsis (alias for `\ldots`) |
 
 ## Boxes, spacing, and pages
 

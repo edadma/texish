@@ -38,10 +38,9 @@ writes `name_1.png`, `name_2.png`, and so on.
 
 The core faces are compiled into the binary: Latin Modern (roman body with its bold, italic, slanted
 and small-caps cuts, plus the sans and typewriter roles), Latin Modern Math, New Computer Modern as
-the glyph-fallback face, and JetBrains Mono for `\code` listings. The `base`, `document` and `math`
-packages are compiled in too. So texish renders an ordinary document — Latin, Greek, Cyrillic,
-mathematics, highlighted source code — from any directory with nothing installed and nothing
-configured.
+the glyph-fallback face, and JetBrains Mono for `\code` listings. The `base` and `document` packages
+are compiled in too. So texish renders an ordinary document — Latin, Greek, Cyrillic, mathematics,
+highlighted source code — from any directory with nothing installed and nothing configured.
 
 The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
 SMuFL music faces — is too large for that and lives in a `fonts/` directory, alongside the packages

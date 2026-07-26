@@ -105,9 +105,8 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
     // small enough for the compiler and rejoined at runtime.
     //
     // This is a whitelist, not everything in packages/, and the bar is what a document needs to be an ordinary
-    // document: `base` and the `document` format it builds on, plus `math` for the amsmath name macros the
-    // engine does not define itself (35 lines, no fonts of its own — mathematics already works without it).
-    // The set is closed under module inclusion: document includes base, math includes nothing.
+    // document: `base` and the `document` format it builds on. The set is closed under module inclusion, since
+    // document includes base and base includes nothing.
     //
     // Everything else — the diagram family, plot, book, usfm, music, … — resolves from a packages/ folder on
     // disk. That is where a package with its own font requirements belongs anyway: `music` needs a SMuFL face
@@ -121,7 +120,7 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedPackages.scala"
       def esc(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
-      val embedded = Set("base", "document", "math")
+      val embedded = Set("base", "document")
       val files    = (pkgDir * "*.texish").get.filter(f => embedded(f.getName.stripSuffix(".texish"))).sortBy(_.getName)
       val sb    = new StringBuilder
       sb.append("package io.github.edadma.texish\n\n")

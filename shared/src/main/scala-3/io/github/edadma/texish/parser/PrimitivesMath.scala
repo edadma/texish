@@ -429,6 +429,68 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
       },
     )
 
+  // A math space of `mu` math units, the unit \, \; \quad and the inter-atom spacing are all measured in
+  // (18mu = 1em, scaled to the current math size).
+  def mathSpace(parent: MathMode, mu: Double): MathSpace = MathSpace(Glue(mu / 18.0 * parent.mathFont.size))
+
+  // The parenthesised modular forms - 1 body arg each. TeX writes a congruence's modulus set off from the
+  // formula by a quad of space: \pmod{m} closes it off as "(mod m)", \mod{m} drops the parentheses and \pod{m}
+  // drops the word, leaving the bare "(m)". The argument is typeset as a sub-formula, so the modulus may be any
+  // expression. Math-mode only.
+  def modulusPrimitive(name: String, word: Boolean, parens: Boolean): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val box = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+
+              if box ne null then
+                val mf = parent.mathFont
+
+                parent.addNode(mathSpace(parent, 18.0)) // \quad, setting the modulus off from the formula
+                if parens then parent.addNode(MathAtom(MathClass.Open, mf.glyphBox('('.toInt)))
+                if word then
+                  parent.addNode(MathAtom(MathClass.Op, HBox("mod".map(ch => mf.glyphBox(ch.toInt)).toVector),
+                                          limits = Some(false)))
+                  parent.addNode(mathSpace(parent, 3.0)) // \, between the word and the modulus
+                parent.addNode(MathAtom(MathClass.Ord, box))
+                if parens then parent.addNode(MathAtom(MathClass.Close, mf.glyphBox(')'.toInt)))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  modulusPrimitive("pmod", word = true, parens = true)
+  modulusPrimitive("mod", word = true, parens = false)
+  modulusPrimitive("pod", word = false, parens = true)
+
+  // The implication arrows of a proof - no args: a heavy arrow with a thick space on either side, so it reads
+  // as a connective between whole statements rather than as a symbol inside one. A Rel atom already earns
+  // thickspace from the inter-atom spacing; these add another, which is what sets a connective apart from an
+  // ordinary relation like = in the same formula. Math-mode only.
+  def implicationPrimitive(name: String, symbol: String): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              // The arrow is an ordinary math symbol; going through commandNode keeps one definition of it.
+              MathSymbols.commandNode(parent.mathFont, symbol) match
+                case Some(arrow) =>
+                  parent.addNode(mathSpace(parent, 5.0)) // \;
+                  parent.addNode(arrow)
+                  parent.addNode(mathSpace(parent, 5.0))
+                case None => handler.error(s"\\$name: no math symbol '$symbol'", pos)
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  implicationPrimitive("implies", "Rightarrow")
+  implicationPrimitive("impliedby", "Leftarrow")
+  implicationPrimitive("iff", "Leftrightarrow")
+
   mathClassPrimitive("mathord", MathClass.Ord)
   mathClassPrimitive("mathop", MathClass.Op)
   mathClassPrimitive("mathbin", MathClass.Bin)

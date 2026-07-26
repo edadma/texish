@@ -198,8 +198,8 @@ libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
 That is the whole setup. There is no font tree to install and no environment variable to set. Compiled
 into the artifact are the core faces — Latin Modern with its sans and typewriter roles, Latin Modern
 Math, New Computer Modern for glyph fallback (Greek, Cyrillic), and JetBrains Mono for `\code`
-listings — and the three packages a document needs to be an ordinary document: `base`, `document` and
-`math`.
+listings — and the two packages a document needs to be an ordinary document: `base` and `document`.
+Mathematics needs no package at all; it is part of the engine.
 
 The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
 SMuFL music faces — is 151MB and lives in this repository's `fonts/` folder, alongside the remaining
