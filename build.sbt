@@ -98,16 +98,22 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
       )
       Seq(out)
     }.taskValue,
-    // Embed the bundled `packages/*.texish` modules as Scala constants at build time, so they ship compiled
-    // into every target. The module loader consults these as a fallback after its filesystem search, which
-    // lets a host with no package directory on disk — chiefly the browser — resolve the standard modules,
-    // while a local package file still shadows the embedded one wherever the filesystem search finds it first.
-    // Each module's source is split into chunks small enough for the compiler and rejoined at runtime.
+    // Embed a small set of `packages/*.texish` modules as Scala constants at build time, so they ship compiled
+    // into every target. The module loader consults these as a fallback after its filesystem search, which lets
+    // a host with no package directory on disk resolve them, while a local package file still shadows the
+    // embedded one wherever the filesystem search finds it first. Each module's source is split into chunks
+    // small enough for the compiler and rejoined at runtime.
     //
-    // A package is embedded only if it can actually work from the embed alone. `music` cannot: it sets notation
-    // from a SMuFL face, and those are catalogue fonts that come from a font tree on disk. Embedding it would
-    // ship a module that resolves and then cannot draw. It stays in packages/ and resolves from disk like any
-    // other file there, alongside the fonts it needs.
+    // This is a whitelist, not everything in packages/, and the bar is what a document needs to be an ordinary
+    // document: `base` and the `document` format it builds on, plus `math` for the amsmath name macros the
+    // engine does not define itself (35 lines, no fonts of its own — mathematics already works without it).
+    // The set is closed under module inclusion: document includes base, math includes nothing.
+    //
+    // Everything else — the diagram family, plot, book, usfm, music, … — resolves from a packages/ folder on
+    // disk. That is where a package with its own font requirements belongs anyway: `music` needs a SMuFL face
+    // and those are catalogue fonts, so embedding it would ship a module that resolves and then cannot draw a
+    // note. A package is embedded only if it can work from the embed alone, and only if it is basic enough to
+    // be worth the weight in every artifact.
     Compile / sourceGenerators += Def.task {
       val root   = (LocalRootProject / baseDirectory).value
       val pkgDir = root / "packages"
@@ -115,8 +121,8 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedPackages.scala"
       def esc(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
-      val notEmbedded = Set("music")
-      val files       = (pkgDir * "*.texish").get.filterNot(f => notEmbedded(f.getName.stripSuffix(".texish"))).sortBy(_.getName)
+      val embedded = Set("base", "document", "math")
+      val files    = (pkgDir * "*.texish").get.filter(f => embedded(f.getName.stripSuffix(".texish"))).sortBy(_.getName)
       val sb    = new StringBuilder
       sb.append("package io.github.edadma.texish\n\n")
       sb.append("// Generated at build time from the packages/ directory — do not edit.\n")
@@ -137,9 +143,9 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
     // Embed the core faces as base64 in a generated Scala source, so a consumer that adds texish as a dependency
     // gets a working engine with no font tree on disk and nothing to configure — a browser has no filesystem at
     // all, and a Native binary has no resource loading, so the bytes must be compiled in. Only the core ships
-    // this way: the full bundled set is ~151MB against this curated stack's ~5.6MB. It is exactly the set
-    // Typesetter.loadCoreFonts registers, and that method is the engine's guaranteed baseline — the body, math
-    // and glyph-fallback faces every host has. The wider set is opt-in (loadBundledCatalogue) and comes
+    // this way: the full bundled set is ~151MB against this curated stack's ~5.8MB. It is exactly the set
+    // Typesetter.loadCoreFonts registers, and that method is the engine's guaranteed baseline — the body, math,
+    // glyph-fallback and code faces every host has. The wider set is opt-in (loadBundledCatalogue) and comes
     // from a font tree on disk. The path list MUST stay in sync with loadCoreFonts: a path here that nothing
     // loads is dead weight in every artifact, and a core load missing from here is a face that vanishes wherever
     // there is no font tree. EmbeddedCoreTests asserts both directions.
@@ -170,6 +176,10 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         "fonts/NewComputerModern/NewCM10-Bold.otf",
         "fonts/NewComputerModern/NewCM10-Italic.otf",
         "fonts/NewComputerModern/NewCM10-BoldItalic.otf",
+        // JetBrains Mono, the face \code sets a listing in. \code is a primitive whose TextMate grammars are
+        // compiled in, so the face has to be too. Two cuts only; the rest of the weight range is catalogue.
+        "fonts/JetBrainsMono/static/JetBrainsMono-Regular.ttf",
+        "fonts/JetBrainsMono/static/JetBrainsMono-Bold.ttf",
       )
       val enc = java.util.Base64.getEncoder
       val sb  = new StringBuilder

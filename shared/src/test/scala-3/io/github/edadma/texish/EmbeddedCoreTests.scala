@@ -16,12 +16,17 @@ import org.scalatest.matchers.should.Matchers
 class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
 
   /** The families the engine guarantees on every host — the body super-family with its mono and sans roles, the
-    * math face, and the glyph-fallback face. */
-  private val CoreFamilies = Seq("lmroman", "lmmath", "newcm")
+    * math face, the glyph-fallback face, and the code face `\code` sets a listing in. */
+  private val CoreFamilies = Typesetter.CoreFamilies
+
+  /** The packages compiled into the artifact: what a document needs to be an ordinary document. */
+  private val CorePackages = Set("base", "document", "math")
 
 
-  /** A typesetter that opens the paths the way any host does, and lets a test read back what got registered. */
-  private class Reader extends HeadlessTypesetter:
+  /** A typesetter that opens the paths the way any host does, and lets a test read back what got registered.
+    * Constructed without the catalogue, so what it holds is exactly what `loadCoreFonts` registered — the
+    * catalogue extends `jetbrains` with the rest of its weight range, and those cuts are not core. */
+  private class Reader extends HeadlessTypesetter(catalogue = false):
     def facesOf(typeface: String): Set[String] =
       typefaces.get(typeface).map(_.fonts.values.map(_._1).toSet).getOrElse(Set.empty)
 
@@ -98,12 +103,26 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
     t.facesOf("newcm") should have size 4 // regular, bold, italic, bold-italic — a substitution keeps its weight
   }
 
-  // A package that is embedded has to work from the embed alone. `music` sets notation from a SMuFL face, and
-  // those are catalogue fonts, so embedding it would ship a module that resolves and then cannot draw a note.
-  // It resolves from a packages/ folder on disk instead, alongside the fonts it needs.
-  "a package whose fonts are not embedded is not embedded either" in {
-    EmbeddedPackages.sources.keySet should not contain "music"
-    EmbeddedPackages.sources.keySet should contain("document") // the ones that do work from the embed still are
+  // The embedded packages are a whitelist: what a document needs to be an ordinary document, and nothing whose
+  // own font requirements the embed cannot meet. `music` is the clearest case of the second — it sets notation
+  // from a SMuFL face, and those are catalogue fonts, so embedding it would ship a module that resolves and then
+  // cannot draw a note.
+  "the embedded packages are exactly the core set" in {
+    EmbeddedPackages.sources.keySet shouldBe CorePackages
     EmbeddedFontData.chunks.keys.filter(_.contains("Bravura")) shouldBe empty
     EmbeddedFontData.chunks.keys.filter(_.contains("Petaluma")) shouldBe empty
+  }
+
+  // The set has to be closed under \use, or an embedded package resolves and then fails on its dependency —
+  // which is a worse failure than not resolving at all, because it happens deeper in.
+  "every package the embedded ones depend on is embedded too" in {
+    val used = """\\use\{([a-z]+)\}""".r
+
+    for name <- CorePackages do
+      val source = EmbeddedPackages.sources(name).mkString
+
+      for m <- used.findAllMatchIn(source) do
+        withClue(s"$name uses ${m.group(1)}, which is not embedded: ") {
+          CorePackages should contain(m.group(1))
+        }
   }

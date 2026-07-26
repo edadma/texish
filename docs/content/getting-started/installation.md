@@ -68,22 +68,34 @@ The core ships inside the artifact and needs no configuration on any platform:
 - **New Computer Modern** — the glyph-fallback face, in all four cuts. A codepoint the body face has
   no glyph for (a Greek word, a Cyrillic name) is set from this instead of a missing-glyph box, and
   keeps the weight and slope of the text around it.
+- **JetBrains Mono**, regular and bold — the face `\code` sets a listing in. `\code` is a primitive
+  and its syntax grammars are compiled in, so the face has to be too.
 
-That is the guaranteed baseline: running text, mathematics, and the scripts Latin Modern does not
-cover. A program that adds texish as a dependency and configures nothing gets all of it.
+That is the guaranteed baseline: running text, mathematics, the scripts Latin Modern does not cover,
+and a syntax-highlighted source listing. A program that adds texish as a dependency and configures
+nothing gets all of it.
 
-The standard packages are compiled in on the same terms — every package that can work from the core
-alone. `music` is the exception: it sets notation from a SMuFL face, and those are catalogue fonts, so
-embedding it would ship a module that resolves and then cannot draw a note. It comes from a
-`packages/` folder on disk, alongside the fonts it needs.
+Three **packages** are compiled in — what a document needs to be an ordinary document:
+
+| package | why |
+|---|---|
+| `base` | the primitives layer the rest builds on |
+| `document` | sectioning, lists, floats, the page furniture — includes `base` |
+| `math` | the amsmath name macros (`\arcsin`, `\bmod`, `\implies`, …); mathematics itself is built in |
+
+Everything else — `diagram`, `plot`, `book`, `usfm`, `railroad`, `music`, … — resolves from a
+`packages/` folder on disk. A package earns a place in the artifact only if it is basic enough to be
+worth the weight in every build *and* can work from the core alone. `music` fails the second test as
+well as the first: it sets notation from a SMuFL face, and those are catalogue fonts, so embedding it
+would ship a module that resolves and then cannot draw a note.
 
 ### The catalogue — opt in
 
 Everything else texish bundles — the complex-script faces (Hebrew, Arabic, Devanagari, Bengali,
 Gurmukhi, Telugu), the CJK cuts, the alternative text families (Gentium, Charis, EB Garamond, Noto,
-…) and the SMuFL music faces (Bravura, Petaluma) — comes to about 151MB, far too much to compile in.
-It lives in the source tree's `fonts/` folder, and a host asks for it in two steps: say where the
-tree is, then load it.
+…), the SMuFL music faces (Bravura, Petaluma) and the rest of JetBrains Mono's weight range — comes
+to about 151MB, far too much to compile in. It lives in the source tree's `fonts/` folder, and a host
+asks for it in two steps: say where the tree is, then load it.
 
 ```scala
 Typesetter.fontsDir = "/opt/texish"   // set before constructing a typesetter

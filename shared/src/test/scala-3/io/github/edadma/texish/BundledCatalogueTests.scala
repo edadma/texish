@@ -25,7 +25,7 @@ class BundledCatalogueTests extends AnyFreeSpec with Matchers:
   "the core families are there with no font tree and no catalogue" in {
     val t = bare()
 
-    for family <- Seq("lmroman", "lmmath", "newcm") do
+    for family <- Typesetter.CoreFamilies do
       withClue(s"$family: ") { noException should be thrownBy t.makeFont(family, 10, Set.empty) }
 
     // The roles of the body family come out of the embed too, not just its roman.
@@ -85,14 +85,17 @@ class BundledCatalogueTests extends AnyFreeSpec with Matchers:
   // Typesetter.BundledFamilies is a written-down copy of what the catalogue's code does, needed because a host
   // that never loaded the catalogue still has to recognise its names. A family added to one and not the other
   // silently loses its diagnostic, which is the whole point of having it.
+  //
+  // Less the core families, because the catalogue also extends one of them: jetbrains has its regular and bold
+  // cuts in the core and the rest of its weight range here. Naming it always resolves, so it needs no diagnostic.
   "the written-down catalogue names match the families the catalogue actually attempts" in {
     val t = new HeadlessTypesetter()
 
-    t.attemptedCatalogueFamilies shouldBe Typesetter.BundledFamilies
+    t.attemptedCatalogueFamilies diff Typesetter.CoreFamilies shouldBe Typesetter.BundledFamilies
   }
 
   "no core family is listed as bundled, since a core family can never be missing" in {
-    Typesetter.BundledFamilies.intersect(Set("lmroman", "lmmath", "newcm")) shouldBe empty
+    Typesetter.BundledFamilies intersect Typesetter.CoreFamilies shouldBe empty
   }
 
   // --- sources -------------------------------------------------------------

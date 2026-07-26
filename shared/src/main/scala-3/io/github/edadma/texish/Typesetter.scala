@@ -34,22 +34,30 @@ object Typesetter:
     * [[Typesetter.loadBundledCatalogue]], which a host calls when it wants them. */
   var fontsDir: String = ""
 
-  /** The families [[Typesetter.loadBundledCatalogue]] registers, named here so that they can be recognised
-    * without having been loaded. That is what lets a document naming one get told the catalogue is not loaded
+  /** The families [[Typesetter.loadCoreFonts]] registers — the ones compiled into the artifact, present on every
+    * host whatever its filesystem holds. Nothing here can ever be missing, so nothing here needs a diagnostic
+    * about a font tree.
+    *
+    * `jetbrains` is in both this and [[BundledFamilies]]' neighbourhood in a way worth stating: its regular and
+    * bold cuts are core, because `\code` needs them, and the rest of its weight range is catalogue. It counts as
+    * core, since naming the family always resolves to something. */
+  val CoreFamilies: Set[String] = Set("lmroman", "lmmath", "newcm", "jetbrains")
+
+  /** The families [[Typesetter.loadBundledCatalogue]] registers *and the core does not*, named here so that they
+    * can be recognised without having been loaded. That is what lets a document naming one get told the catalogue is not loaded
     * rather than that the family does not exist — the difference between "your installation is missing its font
     * tree" and "you misspelled a name", which are fixed in entirely different places.
     *
     * This is a second copy of what the catalogue's code says, kept honest by a test that compares it against the
-    * families the catalogue actually attempts, so a family added there and forgotten here is caught at once.
-    * The core families ([[Typesetter.loadCoreFonts]]) are deliberately absent: they are always present, so no
-    * document can ever ask for one and be told it is missing.
+    * families the catalogue actually attempts, less [[CoreFamilies]] — so a family added there and forgotten here
+    * is caught at once.
     */
   val BundledFamilies: Set[String] = Set(
     "noto", "gentium", "charm", "thai", "nosifer", "rubik-wet-paint", "cinzel", "gentiumbook", "pt",
     "cjksc", "cjktc", "cjkjp", "japanese", "cjkkr", "korean",
     "hebrew", "ezra", "arabic", "amiri",
     "devanagari", "hindi", "bengali", "assamese", "gurmukhi", "punjabi", "telugu",
-    "jetbrains", "alegreya", "ebgaramond", "bravura", "petaluma",
+    "alegreya", "ebgaramond", "bravura", "petaluma",
   )
 
 abstract class Typesetter:
@@ -644,17 +652,16 @@ abstract class Typesetter:
   loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
-  // JetBrains Mono — a dedicated code face for setting source code listings in a document, distinct from the
-  // typewriter *role* (\mono, Latin Modern Mono) used for inline code in running text: that one is cut to match
-  // the Latin Modern body, while this is a screen-bred programming face with a large character set, a tall
-  // x-height and disambiguated glyphs (0/O, 1/l/I) better suited to a block of code. No ligatures — code is set
-  // literally — across the family's full weight range. Selected by name, e.g. \font jetbrains 9 regular.
+  // The rest of the JetBrains Mono weight range. The regular and bold cuts are core (see loadCoreFonts) because
+  // \code needs them wherever it is used; these are the ones a document asks for on purpose, so they come from
+  // the font tree like any other catalogue face. Regular and Bold are deliberately absent from this list —
+  // registering a style twice for one family is an error, and it should be, since the second would shadow the
+  // first.
   loadTypeface(
     "jetbrains",
     "fonts/JetBrainsMono/static/JetBrainsMono",
     "",
     Set(),
-    "Bold",
     ("Bold", "Italic"),
     "ExtraBold",
     ("ExtraBold", "Italic"),
@@ -665,7 +672,6 @@ abstract class Typesetter:
     ("Light", "Italic"),
     "Medium",
     ("Medium", "Italic"),
-    "Regular",
     "SemiBold",
     ("SemiBold", "Italic"),
     "Thin",
@@ -757,8 +763,9 @@ abstract class Typesetter:
 
   /** Register the faces compiled into the artifact — the engine's guaranteed baseline, present on every host
     * whatever its filesystem holds. That is the Latin Modern super-family (the roman body with its mono and sans
-    * roles, its small-caps and slanted cuts), Latin Modern Math, and New Computer Modern as the glyph-fallback
-    * face: what it takes to set running text, mathematics, and the scripts Latin Modern does not cover.
+    * roles, its small-caps and slanted cuts), Latin Modern Math, New Computer Modern as the glyph-fallback face,
+    * and two cuts of JetBrains Mono for `\code`: what it takes to set running text, mathematics, the scripts
+    * Latin Modern does not cover, and a source listing.
     *
     * Strict, unlike [[loadBundledCatalogue]]: these bytes ship inside the artifact, so a face that will not open
     * is a broken build rather than an installation without it, and saying so at once beats rendering a document
@@ -811,6 +818,18 @@ abstract class Typesetter:
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-Italic.otf", lmLigatures, Set("italic"))
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-BoldItalic.otf", lmLigatures, Set("bold", "italic"))
   fallbackTypeface = Some("newcm")
+
+  // JetBrains Mono — the code face, distinct from the typewriter *role* (\mono, Latin Modern Mono) used for
+  // inline code in running text: that one is cut to match the Latin Modern body, while this is a screen-bred
+  // programming face with a large character set, a tall x-height and disambiguated glyphs (0/O, 1/l/I) better
+  // suited to a block of code. No ligatures — code is set literally.
+  //
+  // Core rather than catalogue because \code is a primitive, not a package: its TextMate grammars are compiled
+  // in, so the face they are drawn in has to be too, or highlighting ships in every artifact and cannot render
+  // in any of them. Only the two cuts that are actually needed — \code sets colour alone, and bold is what a
+  // titling or emphasised label asks for. The rest of the weight range is a catalogue face.
+  loadFont("jetbrains", "fonts/JetBrainsMono/static/JetBrainsMono-Regular.ttf", Set.empty, Set.empty)
+  loadFont("jetbrains", "fonts/JetBrainsMono/static/JetBrainsMono-Bold.ttf", Set.empty, Set("bold"))
 
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
   // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
