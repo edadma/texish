@@ -77,7 +77,7 @@ class TeluguTests extends AnyFreeSpec with Matchers:
   "Telugu has no pre-base vowel signs, so nothing reorders" in {
     preBaseMatras shouldBe empty
     // With no pre-base sign there is nothing to lift, so the glyphs come back in the order they were shaped.
-    reorderPreBaseMatra(cps("కి"), Array(100, 200), 200).toList shouldBe List(100, 200)
+    reorderPreBaseMatra(cps("కి"), Array(100, 200), 200, 900).toList shouldBe List(100, 200)
   }
 
   "almost every vowel sign belongs beside the base, ahead of the subjoined consonants" in {

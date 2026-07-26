@@ -58,7 +58,7 @@ object Typesetter:
     "noto", "gentium", "charm", "thai", "nosifer", "rubik-wet-paint", "cinzel", "gentiumbook", "pt",
     "cjksc", "cjktc", "cjkjp", "japanese", "cjkkr", "korean",
     "hebrew", "ezra", "arabic", "amiri",
-    "devanagari", "hindi", "bengali", "assamese", "gurmukhi", "punjabi", "telugu",
+    "devanagari", "hindi", "bengali", "assamese", "gurmukhi", "punjabi", "telugu", "tamil",
     "alegreya", "ebgaramond", "bravura", "petaluma",
   )
 
@@ -653,6 +653,16 @@ abstract class Typesetter:
   // faces it sets its punctuation as a Latin text face.
   loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+
+  // Noto Serif Tamil, the bundled face for Tamil: \font tamil 12 sets it, with a bold cut. Tamil is left to
+  // right; the engine does the cluster segmentation, the two-part vowel signs and the pre-base reordering (see
+  // Tamil and IndicShaper), and the font fuses the u signs into their consonant, picks the width-matched i
+  // signs and draws the two surviving conjunct ligatures, positioning the pulli through its GPOS. Tamil has no
+  // half-forms, no subjoined consonants and no reph, so a pre-base sign moves before its own consonant rather
+  // than to the front of the cluster. Loaded by file like the other complex-script cuts. Like the other Indic
+  // faces it sets its punctuation as a Latin text face.
+  loadFont("tamil", "fonts/NotoSerifTamil/NotoSerifTamil-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("tamil", "fonts/NotoSerifTamil/NotoSerifTamil-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
   // The rest of the JetBrains Mono weight range. The regular and bold cuts are core (see loadCoreFonts) because
   // \code needs them wherever it is used; these are the ones a document asks for on purpose, so they come from

@@ -88,6 +88,15 @@ trait IndicScript:
     * inserted in front of. Unused (and empty) for a script whose reph closes the cluster. */
   def postBaseMatras: Set[Int] = Set.empty
 
+  /** Whether a pre-base vowel sign is drawn before the live consonant it belongs to rather than before the
+    * whole cluster. In most Indic scripts a consonant joined by the virama gives up the virama to a half-form
+    * or a conjunct ligature, so by the time the sign is placed nothing stands between the front of the cluster
+    * and the base and the two placements agree. Tamil keeps the virama visible as the pulli — `க்` is a
+    * complete dead consonant, not a half-form — and the sign leaps only over the consonant it belongs to:
+    * `க்கே` sets ka, pulli, the ee sign, ka. Where this is on, the sign lands after the last virama the
+    * cluster still shows, and at the front when a ligature has consumed them all. */
+  def preBaseMatraBeforeBase: Boolean = false
+
   /** The dependent vowel signs drawn on the base consonant itself, which therefore sit immediately after it
     * and ahead of any consonants subjoined beneath the cluster. A sign is typed after the whole conjunct but
     * belongs to the base alone, so in a script that subjoins its joined consonants the sign must be moved back
@@ -159,13 +168,23 @@ trait IndicScript:
     * by `preBaseMatraGlyph`, the glyph the font maps the pre-base sign to; it is lifted out and prepended.
     * When the cluster has no pre-base sign, or its glyph is already first, the run is returned unchanged.
     * `clusterCps` is the cluster's source codepoints (after any two-part decomposition), used only to tell
-    * whether a pre-base sign is present. */
-  def reorderPreBaseMatra(clusterCps: Array[Int], glyphs: Array[Int], preBaseMatraGlyph: Int): Array[Int] =
+    * whether a pre-base sign is present. `halantGlyph` is the glyph the font maps the virama to, which locates
+    * the base for a script that places the sign there rather than at the front (see [[preBaseMatraBeforeBase]])
+    * and is unused by every other script. */
+  def reorderPreBaseMatra(
+      clusterCps: Array[Int],
+      glyphs: Array[Int],
+      preBaseMatraGlyph: Int,
+      halantGlyph: Int,
+  ): Array[Int] =
     if !clusterCps.exists(preBaseMatras.contains) then glyphs
     else
       val j = glyphs.indexOf(preBaseMatraGlyph)
       if j <= 0 then glyphs
-      else Array(preBaseMatraGlyph) ++ glyphs.slice(0, j) ++ glyphs.slice(j + 1, glyphs.length)
+      else
+        val rest = glyphs.patch(j, Nil, 1)
+        val at   = if preBaseMatraBeforeBase then rest.lastIndexOf(halantGlyph) + 1 else 0
+        rest.patch(at, Array(preBaseMatraGlyph), 0)
 
   /** Move a cluster's vowel signs back across the consonants subjoined beneath it, so they land immediately
     * after the base they are drawn on (see [[preSubjoinedMatras]]). `matraGlyphs` are the glyphs the font maps

@@ -70,17 +70,17 @@ class BengaliTests extends AnyFreeSpec with Matchers:
     // কে — ka then the e-sign. After the (empty here) basic pass the glyphs stand in memory order [ka, e];
     // the e-sign is lifted to the front so it is drawn before its base. Glyph ids are stand-ins: 100 for ka,
     // 200 for the e-sign U+09C7.
-    reorderPreBaseMatra(cps("কে"), Array(100, 200), 200).toList shouldBe List(200, 100)
+    reorderPreBaseMatra(cps("কে"), Array(100, 200), 200, 900).toList shouldBe List(200, 100)
   }
 
   "a pre-base sign moves ahead of a conjunct and its base" in {
     // A conjunct cluster with an i-sign (300 = half-form, 400 = base consonant, 200 = i-sign U+09BF).
-    reorderPreBaseMatra(cps("ন্তি"), Array(300, 400, 200), 200).toList shouldBe List(200, 300, 400)
+    reorderPreBaseMatra(cps("ন্তি"), Array(300, 400, 200), 200, 900).toList shouldBe List(200, 300, 400)
   }
 
   "a cluster with only a post-base sign is left untouched" in {
     // কা — ka aa-sign: the aa is post-base, no reordering.
-    reorderPreBaseMatra(cps("কা"), Array(100, 250), 200).toList shouldBe List(100, 250)
+    reorderPreBaseMatra(cps("কা"), Array(100, 250), 200, 900).toList shouldBe List(100, 250)
   }
 
   "a word-initial ra + virama before a base is a reph" in {

@@ -64,17 +64,17 @@ class GurmukhiTests extends AnyFreeSpec with Matchers:
     // ਕਿ — ka then the sihari. After the (empty here) basic pass the glyphs stand in memory order [ka, i];
     // the sihari is lifted to the front so it is drawn before its base. Glyph ids are stand-ins: 100 for ka,
     // 200 for the sihari U+0A3F.
-    reorderPreBaseMatra(cps("ਕਿ"), Array(100, 200), 200).toList shouldBe List(200, 100)
+    reorderPreBaseMatra(cps("ਕਿ"), Array(100, 200), 200, 900).toList shouldBe List(200, 100)
   }
 
   "the sihari moves ahead of a conjunct and its base" in {
     // A conjunct cluster with a sihari (300 = the subjoined form, 400 = base consonant, 200 = sihari U+0A3F).
-    reorderPreBaseMatra(cps("ਸ੍ਰਿ"), Array(300, 400, 200), 200).toList shouldBe List(200, 300, 400)
+    reorderPreBaseMatra(cps("ਸ੍ਰਿ"), Array(300, 400, 200), 200, 900).toList shouldBe List(200, 300, 400)
   }
 
   "a cluster with only a post-base sign is left untouched" in {
     // ਕਾ — ka aa-sign: the aa is post-base, no reordering.
-    reorderPreBaseMatra(cps("ਕਾ"), Array(100, 250), 200).toList shouldBe List(100, 250)
+    reorderPreBaseMatra(cps("ਕਾ"), Array(100, 250), 200, 900).toList shouldBe List(100, 250)
   }
 
   "Gurmukhi never forms a reph, even on a word-initial ra with a virama" in {

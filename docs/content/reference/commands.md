@@ -183,6 +183,20 @@ it happens automatically from text typed in Unicode order. Noto Serif Telugu is 
 `\font telugu 12 regular`, with a bold cut (`\font telugu 12 bold`). See [Telugu](/guide/telugu/) for
 the full treatment.
 
+## Tamil
+
+Tamil keeps its virama on the page as the *pulli*, a dot above the consonant it silences, rather than
+folding that consonant into a half-form or subjoining it beneath the base. A silenced consonant is
+therefore a letter in its own right, and a pre-base vowel sign moves before the consonant it belongs
+to rather than to the front of the syllable: `க்கே` sets *ka*, pulli, the ee sign, *ka*. The two-part
+o, oo and au signs are split into the parts the font draws, the u signs fuse with their consonant,
+the short-i and long-i signs take width-matched forms, and the two surviving conjuncts (`க்ஷ` and
+`ஸ்ரீ`) are drawn as single ligatures — a pre-base sign does reach the front of those, since the
+ligature has swallowed the pulli. A word-initial *ra* with a virama forms no reph. All of it happens
+automatically from text typed in Unicode order. Noto Serif Tamil is bundled:
+`\font tamil 12 regular`, with a bold cut (`\font tamil 12 bold`). See [Tamil](/guide/tamil/) for the
+full treatment.
+
 ## Thai
 
 Thai is written without spaces between words and uses them to separate phrases instead, so a run of it

@@ -1,0 +1,114 @@
+// tamil-demo — Tamil script typesetting in texish.
+//
+// Render with:  texish-cli scripts/tamil-demo.script
+//
+// Tamil is written left to right, so it needs none of the bidirectional
+// reordering Hebrew and Arabic do. What it needs is work inside each syllable,
+// and Tamil asks for less of that than the scripts to its north — but asks for
+// it differently.
+//
+// A consonant silenced by the virama keeps the virama as a visible dot, the
+// pulli, and stands as a complete letter of its own. It does not fold into a
+// half-form the way Devanagari's does, and nothing is ever subjoined beneath
+// the base as in Telugu. Only two conjuncts survive from Sanskrit, ksha and the
+// sacred shrii, each drawn as a single ligature. There is no reph: a
+// word-initial ra with a pulli stays an ordinary letter.
+//
+// The consequence for the shaper is where a pre-base vowel sign lands. Three
+// signs are drawn before their consonant, and because a silenced consonant is a
+// letter in its own right the sign moves before the consonant it belongs to and
+// no further — not to the front of the whole syllable as it would in
+// Devanagari.
+//
+// \font tamil selects the bundled face, in a regular and a bold cut. No \rtl is
+// needed — the script is left to right.
+
+\use{document}
+
+\title{The Tamil Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Tamil paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the vowel signs are placed around the consonant and the pulli is hung above it;
+between syllables the line breaker finds its breaks at the interword spaces exactly as for
+Latin text.
+
+\medskip
+
+{\font tamil 14 regular
+தமிழ் ஒரு அழகான மொழி. இது இடமிருந்து வலமாக எழுதப்படுகிறது. ஒவ்வொரு எழுத்தும் ஒரு
+மெய்யெழுத்தும் அதனுடன் சேர்ந்த உயிரெழுத்தும் இணைந்து உருவாகிறது.
+}
+
+\section{The twelve vowel signs}
+
+The same consonant carries each of the twelve vowels. Some signs follow the consonant, some
+precede it, and three are written as two parts — one before and one after:
+
+\medskip
+
+{\font tamil 16 regular
+க கா கி கீ கு கூ கெ கே கை கொ கோ கௌ
+}
+
+\section{The pulli silences a consonant}
+
+A consonant with a pulli above it is a letter in its own right, not half of a conjunct. It
+keeps its full shape and its dot, and the syllable that follows begins afresh — which is
+why a pre-base vowel sign stops at the pulli rather than leaping over it. In
+{\font tamil 12 regular க்கே} the vowel belongs to the second \italic{ka}, and is drawn
+between the two. Hello, thank you, and school:
+
+\medskip
+
+{\font tamil 16 regular
+வணக்கம்   நன்றி   பள்ளி
+}
+
+\section{The two surviving conjuncts}
+
+Tamil borrowed only a handful of Sanskrit conjuncts, and the font draws each as a single
+ligature. Here the pulli disappears into the drawn form, and a vowel sign on such a
+syllable does reach the front, since nothing is left to stand in its way:
+
+\medskip
+
+{\font tamil 16 regular
+க்ஷ   ஸ்ரீ   க்ஷே   ஸ்ரீதர்
+}
+
+\section{No reph}
+
+The consonant \italic{ra} takes no special form at the head of a syllable. In
+{\font tamil 12 regular ர்க} the ra keeps its pulli and stays where it is, where Devanagari
+would lift it above the syllable as a reph:
+
+\medskip
+
+{\font tamil 16 regular
+ர்க   கார்   பார்வை
+}
+
+\section{Independent vowels and the aytham}
+
+A vowel that opens a syllable is written with its own letter, not a sign. The aytham, which
+Tamil uses to write sounds it has no letter for, stands alone between them:
+
+\medskip
+
+{\font tamil 16 regular
+அ ஆ இ ஈ உ ஊ எ ஏ ஐ ஒ ஓ ஔ ஃ
+}
+
+\section{A closing line}
+
+A greeting, set in the bold cut:
+
+\medskip
+
+{\font tamil 18 bold
+வணக்கம்! இது தமிழ் எழுத்தில் எழுதப்பட்டுள்ளது.
+}

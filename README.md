@@ -23,7 +23,10 @@ reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), Gurmukh
 syllable shaping (`\font gurmukhi` — subjoined pairin forms, pre-base sihari reordering, and
 GPOS-positioned addak, tippi and vowel signs), Telugu syllable shaping (`\font telugu` — fused
 consonant-vowel glyphs, subscript conjuncts built beneath a leading base, vowel signs moved back to
-that base, two-part ai decomposition, and GPOS-positioned subscripts), automatic glyph fallback (Cyrillic and Greek set in
+that base, two-part ai decomposition, and GPOS-positioned subscripts), Tamil syllable shaping
+(`\font tamil` — pre-base signs placed before their own consonant rather than the whole syllable,
+two-part o/oo/au decomposition, fused u signs and width-matched i signs, the ksha and shrii
+ligatures, and GPOS-positioned pulli), automatic glyph fallback (Cyrillic and Greek set in
 ordinary text with no setup, matching the surrounding weight and slope), author break control
 (`\discretionary` and leaders for dotted contents lines),
 and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout
