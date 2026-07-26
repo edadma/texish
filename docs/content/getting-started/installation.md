@@ -100,15 +100,21 @@ to about 151MB, far too much to compile in. It lives in the source tree's `fonts
 asks for it in two steps: say where the tree is, then load it.
 
 ```scala
-Typesetter.fontsDir = "/opt/texish"   // set before constructing a typesetter
+Typesetter.home = "/opt/texish"   // set before constructing a typesetter
 
 val t = new CairoPDFTypesetter("out.pdf")
 
-t.loadBundledCatalogue()              // then ask for the families
+t.loadBundledCatalogue()          // then ask for the families
 ```
 
-`Typesetter.fontsDir` is shorthand for one font source; a host with more to say registers them
-directly, and they are consulted in the order registered:
+`Typesetter.home` is the **texish home**: a directory holding the `fonts/` and `packages/` an
+installation ships, and the programmatic equivalent of `$TEXISHHOME`. Both halves are found through
+it — fonts as a search root, and modules under its `packages/` folder — so one setting covers a whole
+installation. A program that can work out where its own files live never needs the environment
+variable at all; see [Finding an installation](#finding-an-installation) below.
+
+For fonts it is shorthand for one font source; a host with more to say registers them directly, and
+they are consulted in the order registered:
 
 ```scala
 t.registerFontSource(DirectoryFontSource("/opt/texish"))
@@ -132,6 +138,30 @@ in the embedded core. So a document's own `\loadfont` finds a font kept beside i
 host was launched from, and a font tree carrying a core path shadows the compiled-in copy.
 
 The command-line tool does all of this for you — see [Fonts](/reference/cli/#fonts) there.
+
+## Finding an installation
+
+A packaged program should not have to be told where its own files are. On Native, `Install.configure()`
+locates the running executable and looks upward from it for a `share/texish/` or a `fonts/`/`packages/`
+directory, setting `Typesetter.home` if it finds one:
+
+```scala
+Install.configure()               // before constructing a typesetter
+```
+
+It searches from the path the executable was *reached* by as well as the symlink-resolved one, and that
+covers two different installations:
+
+- **A program finding its own files.** The resolved path lands in the versioned directory holding both
+  the binary and its data (`…/Cellar/texish/0.24.0/{bin,share}`), so nothing depends on a prefix's links
+  being intact.
+- **A program finding a dependency's.** A package manager links each program into a shared prefix and
+  links each package's data alongside — so an application whose package depends on texish's finds
+  `/opt/homebrew/share/texish/` from `/opt/homebrew/bin/itself`, even though its own versioned directory
+  contains no texish data at all.
+
+Either way there is no wrapper script and no environment variable. `$TEXISHHOME` still works as a
+fallback, for a tree kept somewhere neither of those finds.
 
 ## Requirements
 

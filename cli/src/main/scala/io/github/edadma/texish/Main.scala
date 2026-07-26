@@ -27,9 +27,10 @@ private def fail(msg: String): Nothing =
   sys.exit(1)
 
 @main def run(args: String*): Unit =
-  // Before anything constructs a typesetter: a packaged texish carries a font tree beside its own binary, and
-  // finding it is what lets an installed copy set Devanagari or Chinese with nothing configured.
-  Install.offerBundledFonts()
+  // Before anything constructs a typesetter: a packaged texish carries its fonts and packages beside its own
+  // binary, and finding them is what lets an installed copy set Devanagari or draw a diagram with nothing
+  // configured — no wrapper script, no environment variable.
+  Install.configure()
 
   val builder = OParser.builder[Config]
   val parser =

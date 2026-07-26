@@ -34,7 +34,7 @@ cat doc.texish | texish -o doc          # read the source from standard input
 PDF is the default output. A single-page document writes `name.png`; a multi-page document
 writes `name_1.png`, `name_2.png`, and so on.
 
-## Fonts
+## Fonts and packages
 
 The core faces are compiled into the binary: Latin Modern (roman body with its bold, italic, slanted
 and small-caps cuts, plus the sans and typewriter roles), Latin Modern Math, New Computer Modern as
@@ -42,17 +42,19 @@ the glyph-fallback face, and JetBrains Mono for `\code` listings. The `base` and
 are compiled in too. So texish renders an ordinary document — Latin, Greek, Cyrillic, mathematics,
 highlighted source code — from any directory with nothing installed and nothing configured.
 
-The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
-SMuFL music faces — is too large for that and lives in a `fonts/` directory, alongside the packages
-that need it. **An installed texish finds its own**: on
-startup it locates its executable and looks upward for `share/texish/fonts` or a `fonts/` beside it,
-so a package that installs the binary and the tree needs no wrapper script and no environment
-variable. Symlinks are resolved, so invoking it through `$PATH` or through a package manager's link
-farm works the same.
+The rest is too large for that, and lives in a `fonts/` and a `packages/` folder: the complex-script
+faces, the CJK cuts, the alternative text families, the SMuFL music faces, and every package beyond
+those two.
 
-Failing that, a font path is looked for beside the document, then in the current working directory,
-then under `$TEXISHHOME` — so running from the texish source tree just works, and `TEXISHHOME` still
-covers a tree kept somewhere unusual:
+**An installed texish finds its own.** On startup it locates its own executable and looks upward for a
+`share/texish/` directory, or a `fonts/`/`packages/` beside it. A package that installs the binary and
+the tree therefore needs **no wrapper script and no environment variable**, and it works the same
+invoked by absolute path, through `$PATH`, or through a package manager's link farm.
+
+Otherwise a font path is looked for beside the document and then in the current working directory (so
+running from the texish source tree just works), and a module beside the document, in the current
+directory, and in `./packages/`. `$TEXISHHOME` remains as a fallback for a tree kept somewhere none of
+that finds:
 
 ```sh
 TEXISHHOME=/opt/texish texish doc.texish   # reads /opt/texish/fonts/… and /opt/texish/packages/…

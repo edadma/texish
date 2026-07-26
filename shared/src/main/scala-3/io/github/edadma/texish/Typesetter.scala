@@ -19,20 +19,22 @@ final case class FragmentMetrics(width: Double, height: Double, baseline: Double
 
 object Typesetter:
 
-  /** Where a host keeps the `fonts/` folder, when it ships one. The engine names each bundled face by a relative
-    * path that begins at that folder (`fonts/LatinModernRoman/lmroman10-regular.otf`), and this directory is one
-    * of the roots such a path is resolved against — so an application embedding the engine can keep the fonts
-    * wherever it likes and point the loader at their parent, without touching the environment.
+  /** The texish home: a directory holding the `fonts/` and `packages/` folders that an installation ships. This
+    * is `$TEXISHHOME` set programmatically, and the two are searched alike — a host that can work out where its
+    * own files are (a packaged command-line tool locating its executable, an application that manages its own
+    * folder) sets this and never touches the environment.
     *
-    * It is empty by default, and *nothing requires it to be set*: the core is compiled into the artifact (see
-    * [[EmbeddedFonts]]), so the engine draws with no font tree at all. Setting it is the one-liner form of
-    * `registerFontSource(DirectoryFontSource(dir))` — convenient for a host with a single tree, and read once
-    * when a typesetter is constructed, so set it before constructing one. A host with more to say (several
-    * folders, fonts that are not files at all) registers sources instead.
+    * Both halves of the tree are found through it. A bundled face is named by a path beginning at `fonts/`
+    * (`fonts/LatinModernRoman/lmroman10-regular.otf`), resolved against this directory among others; a module
+    * `\use` names is looked for under `packages/` beneath it. Setting it does not by itself *load* the wider
+    * bundled font families — that is [[Typesetter.loadBundledCatalogue]], which a host calls when it wants them.
     *
-    * Pointing the engine at a tree does not by itself load the wider bundled families — that is
-    * [[Typesetter.loadBundledCatalogue]], which a host calls when it wants them. */
-  var fontsDir: String = ""
+    * It is empty by default and *nothing requires it to be set*: the core faces and the `base` and `document`
+    * packages are compiled into the artifact (see [[EmbeddedFonts]], `EmbeddedPackages`), so the engine sets an
+    * ordinary document with no tree at all. For fonts it is the one-liner form of
+    * `registerFontSource(DirectoryFontSource(dir))`; a host with more to say (several folders, fonts that are not
+    * files at all) registers sources instead. Read when a typesetter is constructed, so set it before then. */
+  var home: String = ""
 
   /** The families [[Typesetter.loadCoreFonts]] registers — the ones compiled into the artifact, present on every
     * host whatever its filesystem holds. Nothing here can ever be missing, so nothing here needs a diagnostic
@@ -392,14 +394,14 @@ abstract class Typesetter:
   def getDocument: DocumentMode = document
 
   /** Where this typesetter looks for font files, in order. Seeded with the roots that have always been searched
-    * — the current directory, [[Typesetter.fontsDir]] if a host set one, and `$TEXISHHOME` — and extended by a
+    * — the current directory, [[Typesetter.home]] if a host set one, and `$TEXISHHOME` — and extended by a
     * host through [[registerFontSource]]. The core embedded in the artifact is not in this list: it is consulted
     * after everything in it, so that a font tree carrying the same path shadows it.
     *
     * Declared before the core faces are loaded, because loading them reads it. */
   private val fontSources = ArrayBuffer[FontSource](DirectoryFontSource("."))
 
-  if Typesetter.fontsDir.nonEmpty then fontSources += DirectoryFontSource(Typesetter.fontsDir)
+  if Typesetter.home.nonEmpty then fontSources += DirectoryFontSource(Typesetter.home)
 
   PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty).foreach(home => fontSources += DirectoryFontSource(home))
 

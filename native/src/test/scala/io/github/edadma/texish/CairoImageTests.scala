@@ -137,20 +137,20 @@ class CairoImageTests extends AnyFreeSpec with Matchers:
     (data(3) & 0xff) shouldBe 128 +- 3
   }
 
-  "the font base directory is one of the roots a bundled font is looked for under" in {
-    // Each bundled face is named `fonts/…`; Typesetter.fontsDir is the directory *containing* that `fonts/`
-    // folder, so an embedding application can keep the tree anywhere and point the engine at its parent. The
-    // other tests here rely on the current directory finding ./fonts from the source tree; this confirms the
-    // configured root is consulted too, and that a root with nothing under it is harmless rather than fatal —
-    // the engine falls back to the core compiled into the artifact.
-    val original = Typesetter.fontsDir
+  "the texish home is one of the roots a bundled font is looked for under" in {
+    // Each bundled face is named `fonts/…`; Typesetter.home is the directory *containing* that `fonts/` folder,
+    // so an embedding application can keep the tree anywhere and point the engine at its parent. The other tests
+    // here rely on the current directory finding ./fonts from the source tree; this confirms the configured root
+    // is consulted too, and that a root with nothing under it is harmless rather than fatal — the engine falls
+    // back to the core compiled into the artifact.
+    val original = Typesetter.home
     try
-      Typesetter.fontsDir = new java.io.File("fonts").getAbsoluteFile.getParent
+      Typesetter.home = new java.io.File("fonts").getAbsoluteFile.getParent
       new CairoImageTypesetter(100).destroy() // constructed and tore down without a font-load error
 
-      Typesetter.fontsDir = "/no/such/fonts/dir"
+      Typesetter.home = "/no/such/texish/home"
       new CairoImageTypesetter(100).destroy()
-    finally Typesetter.fontsDir = original
+    finally Typesetter.home = original
   }
 
   // The engine must work as a plain library dependency, with no font tree anywhere: FreeType opens the Latin

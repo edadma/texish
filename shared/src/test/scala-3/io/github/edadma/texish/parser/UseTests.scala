@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.path.Path
-import io.github.edadma.texish.TexishException
+import io.github.edadma.texish.{TexishException, Typesetter}
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -114,5 +114,58 @@ class UseTests extends AnyFreeSpec with Matchers:
   "\\use of a missing module is an error" in {
     withModules() { dir =>
       a[TexishException] should be thrownBy runIn(dir.toPlatformString, "\\use{nothingHere}")
+    }
+  }
+
+  // Most packages are not compiled into the artifact — only `base` and `document` are — so an installation keeps
+  // the rest in a packages/ folder beside its fonts. Typesetter.home names that installation, and this root is
+  // what lets a packaged program find the modules it shipped without an environment variable. Without it the
+  // fonts resolve and the packages do not, which is a confusing half-working install.
+  "\\use finds a module under the texish home, with no environment variable set" in {
+    val original = Typesetter.home
+
+    // The document is run from an unrelated directory, so nothing but the home can find the module.
+    withModules() { elsewhere =>
+      val home = Path.createTempDirectory("texish-home-")
+      val pkgs = home / "packages"
+
+      pkgs.createDirectories()
+
+      val module = pkgs / "installed.texish"
+
+      module.writeText("\\def fromInstall {found}\n")
+
+      try
+        Typesetter.home = home.toPlatformString
+        runIn(elsewhere.toPlatformString, "\\use{installed}\\fromInstall").result shouldBe "found"
+      finally
+        Typesetter.home = original
+        try module.delete() catch { case _: Exception => () }
+        try pkgs.delete() catch { case _: Exception => () }
+        try home.delete() catch { case _: Exception => () }
+    }
+  }
+
+  "a module beside the document still shadows one under the home" in {
+    val original = Typesetter.home
+
+    withModules("m.texish" -> "\\def which {local}\n") { dir =>
+      val home = Path.createTempDirectory("texish-home-")
+      val pkgs = home / "packages"
+
+      pkgs.createDirectories()
+
+      val module = pkgs / "m.texish"
+
+      module.writeText("\\def which {installed}\n")
+
+      try
+        Typesetter.home = home.toPlatformString
+        runIn(dir.toPlatformString, "\\use{m}\\which").result shouldBe "local"
+      finally
+        Typesetter.home = original
+        try module.delete() catch { case _: Exception => () }
+        try pkgs.delete() catch { case _: Exception => () }
+        try home.delete() catch { case _: Exception => () }
     }
   }

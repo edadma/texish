@@ -203,9 +203,11 @@ Mathematics needs no package at all; it is part of the engine.
 
 The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
 SMuFL music faces — is 151MB and lives in this repository's `fonts/` folder, alongside the remaining
-packages (`diagram`, `plot`, `book`, `usfm`, `music`, …). Point `Typesetter.fontsDir` at its parent
-and call `loadBundledCatalogue()` to make the fonts available; the command-line tool finds a tree
-installed beside itself and does this for you. See
+packages (`diagram`, `plot`, `book`, `usfm`, `music`, …). Point `Typesetter.home` at the directory
+holding both and call `loadBundledCatalogue()` to make the fonts available. On Native,
+`Install.configure()` works that out for you by locating the running executable, so an installed
+program — the command-line tool, or an application whose package depends on texish's — needs no
+wrapper script and no environment variable. See
 [Installation](https://texish.edadma.dev/getting-started/installation/).
 
 ## License

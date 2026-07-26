@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
 import io.github.edadma.path.Path
-import io.github.edadma.texish.{EmbeddedPackages, TexishException}
+import io.github.edadma.texish.{EmbeddedPackages, TexishException, Typesetter}
 
 // ============ FOR LOOP ============
 
@@ -97,9 +97,15 @@ object IncludePrimitive extends Primitive:
   * file. This is the module loader; `\include` remains the raw input that re-reads and typesets a literal path.
   *
   * Resolution searches, in order: the directory of the file doing the `\use`, the current directory, the `packages`
-  * folder under `$TEXISHHOME` if that environment variable is set, and a `./packages/` folder under the current
-  * directory. The first existing file wins, so a local module shadows a standard one. The search roots are an
-  * ordered list, so more roots can be added later without changing the ones already in effect.
+  * folder under [[io.github.edadma.texish.Typesetter.home]] if a host set one, the same folder under `$TEXISHHOME`
+  * if that environment variable is set, and a `./packages/` folder under the current directory. The first existing
+  * file wins, so a local module shadows a standard one. The search roots are an ordered list, so more roots can be
+  * added later without changing the ones already in effect.
+  *
+  * The `Typesetter.home` root is what lets an installation find the modules it shipped without an environment
+  * variable — the same directory its `fonts/` comes from. Most packages live on disk rather than in the artifact
+  * (only `base` and `document` are embedded), so without it a packaged texish resolves its fonts and not its
+  * packages.
   */
 object UsePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
@@ -114,9 +120,11 @@ object UsePrimitive extends Primitive:
 
     val fileName = if name.endsWith(".texish") then name else s"$name.texish"
 
-    // Read TEXISHHOME from the live environment (see PlatformEnv — `System.getenv`/`sys.env` snapshot
-    // the environment on Native, so a host that sets the variable after start would not be seen).
-    val texishHome = PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty)
+    // The texish home a host set, and the environment variable as a fallback for a tree in neither the usual
+    // place nor beside the program. TEXISHHOME is read from the live environment (see PlatformEnv —
+    // `System.getenv`/`sys.env` snapshot it on Native, so a host that set it after start would not be seen).
+    val home    = Option(Typesetter.home).filter(_.nonEmpty)
+    val envHome = PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty)
 
     // Search the filesystem first, but tolerate a host that has no working filesystem at all — a browser, where
     // the path layer reaches for Node APIs that are absent. If probing the filesystem throws, treat it as "no
@@ -127,7 +135,8 @@ object UsePrimitive extends Primitive:
           List(
             Some(Path(proc.currentDir)),
             Some(Path(".")),
-            texishHome.map(h => Path(h) / "packages"),
+            home.map(h => Path(h) / "packages"),
+            envHome.map(h => Path(h) / "packages"),
             Some(Path(".") / "packages"),
           ).flatten
         roots.map(_ / fileName).find(p => p.exists && p.isFile)
