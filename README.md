@@ -1,7 +1,7 @@
 # texish
 
-A TeX-style document layout and rendering engine for Scala, cross-built for the JVM, Scala Native,
-and Scala.js. Body text is set in Latin Modern Roman, with TeX-style math mode set in the matching
+A TeX-style document layout and rendering engine for Scala, cross-built for the JVM and Scala
+Native. Body text is set in Latin Modern Roman, with TeX-style math mode set in the matching
 Latin Modern Math through an OpenType `MATH` table. Math covers inline `$…$` and centered display
 `$$…$$` (with `\eqno` equation numbers): atoms and spacing, super/subscripts, fractions (`\frac` and
 the infix `\over`/`\atop`), radicals (including higher roots), stretchy delimiters, accents, big
@@ -30,9 +30,12 @@ and cost-based page breaks with widow/orphan control, footnotes, balanced multi-
 (`\columns`), page imposition onto physical sheets (`\arrange` — saddle-stitch booklets and n-up), and glue/kern spacing in a point-space coordinate system. Documents are written in a small TeX-like language (a `parser`
 layer over the engine's primitives, with macros, a standard prelude/"format", `\hbox`/`\vbox`,
 `\kern`, `\lower`/`\raise`, the `\TeX` and `\TeXish` logos, units like `pt`/`in`/`em`/`ex`, and
-more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM, a
-Cairo image-and-PDF backend on Native, and an SVG and an HTML-canvas backend on Scala.js for rendering
-in the browser (see [In the browser](#in-the-browser)).
+more). Pages render through pluggable backends — a Graphics2D raster (image) backend on the JVM and
+a Cairo image-and-PDF backend on Native (there are also SVG and HTML-canvas backends for the browser,
+kept in the tree but not currently built — see [In the browser](#in-the-browser)).
+
+The Latin Modern core and the standard packages are compiled into the artifact, so texish works as a
+plain library dependency: nothing to install, no font tree, no environment variable.
 
 It also has a vector-graphics mode (see below) for figures drawn inline in the document — shapes,
 freeform paths, transforms, and placed type — built on the same rendering pipeline as the text.
@@ -143,6 +146,12 @@ Build the binary with `sbt texishCli/nativeLink`; it is produced at
 
 ## In the browser
 
+> **Not currently built or published.** The browser backends are kept in the tree (`js/`), and what
+> they need — the fonts and packages compiled into the artifact — is now how every platform loads
+> them, so bringing them back is a build-configuration change: add `JSPlatform` to the `crossProject`
+> in `build.sbt` and restore the `.jsSettings` block. The rest of this section then applies as
+> written. Meanwhile, render to PNG or SVG and serve the images.
+
 texish runs in the browser through its Scala.js build, so a web page can typeset math — and whole
 documents — on the client the way [KaTeX](https://katex.org/) does: no server, no pre-baked images,
 and no fonts to download separately (the Latin Modern text and math fonts and the standard packages
@@ -179,12 +188,18 @@ browser, where there is no filesystem — full details, the API table, and runna
 
 ## Installation
 
-texish is cross-published for the JVM, Scala Native, and Scala.js. Add it to an sbt build with the
-`%%%` operator so the right platform artifact is selected:
+texish is cross-published for the JVM and Scala Native. Add it to an sbt build with the `%%%`
+operator so the right platform artifact is selected:
 
 ```scala
 libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
 ```
+
+That is the whole setup. The Latin Modern core and the standard packages ship inside the artifact,
+so there is no font tree to install and no environment variable to set. The wider bundled font set
+— the complex-script faces, the CJK cuts, the alternative text families — lives in this repository's
+`fonts/` folder; point `Typesetter.fontsDir` at its parent (or set `TEXISHHOME`) to make it
+available. See [Installation](https://texish.edadma.dev/getting-started/installation/).
 
 ## License
 

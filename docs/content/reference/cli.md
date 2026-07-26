@@ -36,14 +36,21 @@ writes `name_1.png`, `name_2.png`, and so on.
 
 ## Bundled fonts
 
-The bundled faces are read from a `fonts/` directory. By default the tool looks for it in the
-current working directory, so running from the texish source tree just works. To render from
-anywhere — or to ship the fonts with an embedding application — set `TEXISH_FONTS_DIR` to the
-directory that contains `fonts/`:
+The Latin Modern core — the default roman body face in its bold, italic, slanted and small-caps
+cuts, the sans and typewriter roles, and Latin Modern Math — is compiled into the binary, so
+texish renders from any directory with nothing installed and nothing configured.
+
+The wider bundled set (the complex-script faces, the CJK cuts, the alternative text families)
+lives in a `fonts/` directory. It is looked for beside the document, then in the current working
+directory, then under `$TEXISHHOME` — so running from the texish source tree just works, and
+setting `TEXISHHOME` once makes the full set available from anywhere:
 
 ```sh
-TEXISH_FONTS_DIR=/opt/texish texish doc.texish   # reads /opt/texish/fonts/…
+TEXISHHOME=/opt/texish texish doc.texish   # reads /opt/texish/fonts/… and /opt/texish/packages/…
 ```
+
+A document that asks for a family this installation does not have gets a clear "typeface not
+found" at the point it asks, rather than rendering silently wrong.
 
 ## Building the binary
 

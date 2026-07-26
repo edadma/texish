@@ -3,6 +3,13 @@ title: "Rendering in the Browser"
 weight: 16
 ---
 
+> **The Scala.js target is not currently built or published.** The browser backends remain in
+> the source tree (`js/`), and the machinery they need — the embedded fonts and packages — is now
+> how *every* platform loads them, so this is a build-configuration change rather than a deletion.
+> To try it, add `JSPlatform` back to the `crossProject` in `build.sbt` and restore the
+> `.jsSettings` block; the instructions below then apply as written. Until then, render to PNG or
+> SVG and serve the images.
+
 texish runs in the browser through its Scala.js build, so a web page can typeset math and
 whole documents on the client the way [KaTeX](https://katex.org/) does — no server, no
 pre-baked images, and no fonts to download separately. The Latin Modern text and math fonts

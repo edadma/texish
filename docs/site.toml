@@ -6,7 +6,7 @@
 title       = "texish"
 author      = "Ed Maxedon"
 baseURL     = "https://texish.edadma.dev/"
-description = "A TeX-style document layout and rendering engine for Scala (JVM, Native, JS)."
+description = "A TeX-style document layout and rendering engine for Scala (JVM, Native)."
 
 # Drives the topbar GitHub icon and the homepage hero "Star on GitHub" button.
 repoURL = "https://github.com/edadma/texish"

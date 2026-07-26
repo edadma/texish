@@ -3,9 +3,9 @@ title: "Installation"
 weight: 1
 ---
 
-texish is cross-published for the JVM, Scala Native, and Scala.js. Use it as the standalone
-command-line renderer, as a library in an sbt build, or in the browser through its Scala.js
-build (see [Rendering in the Browser](/guide/browser-rendering/)).
+texish is cross-published for the JVM and Scala Native. Use it as the standalone command-line
+renderer or as a library in an sbt build. (The browser backends are still in the source tree but
+are not currently built or published — see [Rendering in the Browser](/guide/browser-rendering/).)
 
 ## As a library
 
@@ -14,6 +14,10 @@ Add texish with the `%%%` operator so sbt selects the right platform artifact:
 ```scala
 libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
 ```
+
+Nothing else is needed: the Latin Modern core and the standard packages are compiled into the
+artifact, so the dependency alone gives you a working engine. There is no font tree to install
+and no environment variable to set. See [Fonts](#fonts) below for the wider bundled set.
 
 The library gives you the engine and the `parser` layer — construct a typesetter for your
 target backend, feed it a source document, and flush it. On the JVM the backend is a
@@ -48,6 +52,27 @@ sbt texishNative/nativeLink
 
 The binary is produced at `native/target/scala-3.8.4/texish`. See the
 [command-line tool](/reference/cli/) reference for its options.
+
+## Fonts
+
+The **Latin Modern core** ships inside the artifact: the roman body face in its bold, italic,
+slanted and small-caps cuts, the sans and typewriter roles of the same super-family, and Latin
+Modern Math. That is the default look, and it needs no configuration on any platform.
+
+Everything else texish bundles — the complex-script faces (Hebrew, Arabic, Devanagari, Bengali,
+Gurmukhi, Telugu), the CJK cuts, and the alternative text families (Gentium, Charis, EB Garamond,
+Noto, …) — lives in the source tree's `fonts/` folder and is loaded when it can be found. A
+relative font path is looked for beside the document, then in the current working directory, then
+under `Typesetter.fontsDir` if the host set one, then under `$TEXISHHOME`. So an application that
+wants the full set ships the `fonts/` folder and points at its parent:
+
+```scala
+Typesetter.fontsDir = "/opt/texish"   // before constructing a typesetter — bundled faces load in the constructor
+```
+
+A family whose files are not found is simply not registered, and a document asking for it gets a
+clear "typeface not found". A document's own `\loadfont` resolves through the same roots, so a
+font kept beside the document is found no matter where the host was launched from.
 
 ## Requirements
 

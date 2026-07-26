@@ -3,7 +3,7 @@ title: texish
 splash: true
 heroTitle: A TeX-style document engine for
 heroHighlight: Scala
-summary: Write documents in a small TeX-like language and render them to PDF or images. Latin Modern type, real Knuth-Plass line breaking, TeX math mode, footnotes and floats, an inline vector-graphics mode — cross-built for the JVM, Scala Native, and Scala.js.
+summary: Write documents in a small TeX-like language and render them to PDF or images. Latin Modern type, real Knuth-Plass line breaking, TeX math mode, footnotes and floats, an inline vector-graphics mode — cross-built for the JVM and Scala Native.
 getStarted: true
 ---
 
@@ -57,5 +57,6 @@ coherent family across prose, equations, and code.
 - **Node-and-edge diagrams** — `\use{diagram}` places named, measured nodes in nine shapes
   and routes labelled arrows between them; `\use{flowchart}`, `\use{automaton}` and
   `\use{er}` add program-flowchart, state-machine and entity-relationship vocabularies on top.
-- **Three platforms** — the JVM (Graphics2D raster), Scala Native (Cairo PDF + image), and
-  Scala.js.
+- **Two platforms** — the JVM (Graphics2D raster) and Scala Native (Cairo PDF + image).
+- **Nothing to install** — the Latin Modern core and the standard packages are compiled into
+  the artifact, so the dependency alone renders: no font tree, no environment variable.

@@ -37,7 +37,13 @@ ThisBuild / description := "A TeX-style document layout and PDF rendering engine
 
 ThisBuild / publishTo := sonatypePublishToBundle.value
 
-lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+// Scala.js is not in the cross-build. The browser backends (`js/`) are kept on disk and in git — in-browser
+// rendering is still wanted for documentation someday — but they are not compiled, published or tested, and the
+// effort of keeping a third platform green is not currently paying for itself. Images cover the documentation
+// need meanwhile. To bring it back: add JSPlatform here and `texish.js` to the root aggregate, and restore the
+// .jsSettings block (jsEnv, ESModule linker config, scalajs-dom). The font and package embedding the browser
+// needs is no longer JS-specific — it is how every platform loads them (see EmbeddedFonts).
+lazy val texish = crossProject(JVMPlatform, NativePlatform)
   .in(file("."))
   .settings(
     name := "texish",
@@ -201,10 +207,7 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     }.taskValue,
   )
   .jvmSettings(
-    libraryDependencies ++= Seq(
-      "org.scala-js"           %% "scalajs-stubs" % "1.1.0" % "provided",
-      "org.scala-lang.modules" %% "scala-swing"   % "3.0.0" % "test",
-    ),
+    libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0" % "test",
   )
   .nativeSettings(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
@@ -213,13 +216,6 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       "io.github.edadma" %%% "freetype"  % "0.0.7",
       "io.github.edadma" %%% "turbojpeg" % "0.0.1",
     ),
-  )
-  .jsSettings(
-    jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(),
-    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
-    Test / scalaJSUseMainModuleInitializer := false,
-    Test / scalaJSUseTestModuleInitializer := true,
-    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0",
   )
 
 // The command-line tool is a native-only application, kept out of the published `texish` library so a library
@@ -249,7 +245,7 @@ lazy val texishCli = project
 
 lazy val root = project
   .in(file("."))
-  .aggregate(texish.js, texish.jvm, texish.native, texishCli)
+  .aggregate(texish.jvm, texish.native, texishCli)
   .settings(
     name                := "texish",
     publish / skip      := true,
