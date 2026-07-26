@@ -35,6 +35,9 @@ class CostPageBreakTests extends AnyFreeSpec with Matchers:
     registerTypesettingPrimitives(proc, handler)
     val doc = new CapturingDocument(t)
     t.document = doc
+    // The vsizes below are chosen against the interline leading, which follows the font size; pin the
+    // font so these heights mean the same thing whatever the engine's default happens to be.
+    t.selectFont("lmroman", 14, Set("regular"))
     t.set("vsize", vsize)
     t.set("topskip", Glue(0)) // no space before the first box, so heights are exactly the box heights
     (t, doc)

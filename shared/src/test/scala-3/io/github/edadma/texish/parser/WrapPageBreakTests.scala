@@ -40,6 +40,9 @@ class WrapPageBreakTests extends AnyFreeSpec with Matchers:
     registerTypesettingPrimitives(proc, handler)
     val doc = new CapturingDocument(t)
     t.document = doc
+    // How much filler overflows a page depends on the line height, and so on the font size; pin the font
+    // so these cases keep paginating the same way whatever the engine's default happens to be.
+    t.selectFont("lmroman", 14, Set("regular"))
     t.set("vsize", vsize)
     t.set("topskip", Glue(0)) // first baseline at the box ascent, so page heights are predictable
     (t, proc, doc)

@@ -189,7 +189,7 @@ class FontDeclarationTests extends AnyFreeSpec with Matchers:
     x.font.size shouldBe (20.0 +- 1e-9)
     x.font.style should contain("bold")
     val y = boxes.toList.flatMap(chars).collectFirst { case c if c.text.contains("Y") => c }.get
-    y.font.size shouldBe (14.0 +- 1e-9) // back to the default size after the group closes
+    y.font.size shouldBe (10.0 +- 1e-9) // back to the default size after the group closes
   }
 
   private def text(boxes: Seq[Box]): String = boxes.toList.flatMap(chars).map(_.text).mkString(" ")

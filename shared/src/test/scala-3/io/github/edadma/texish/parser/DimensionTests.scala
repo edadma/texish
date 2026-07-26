@@ -86,10 +86,10 @@ class DimensionTests extends AnyFreeSpec with Matchers:
   }
 
   "em defaults to the host's startup font" in {
-    // every Typesetter starts with a 14pt default font, so em works before any \font command
+    // every Typesetter starts with a 10pt default font, so em works before any \font command
     val (t, proc) = fixture()
     proc.process("\\set x {1em}")
-    t.getVar("x") shouldBe Value.Dimen(14)
+    t.getVar("x") shouldBe Value.Dimen(10)
   }
 
   "em without a font-aware host stays text" in {

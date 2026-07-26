@@ -7,7 +7,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 /** The wide manual spaces `\quad` (one em) and `\qquad` (two ems), the TeX gaps for setting formulas or
-  * examples apart. They scale with the font, so on the [[HeadlessTypesetter]]'s 14pt default one em is 14pt.
+  * examples apart. They scale with the font, so on the [[HeadlessTypesetter]]'s 10pt default one em is 10pt.
   */
 class QuadSpaceTests extends AnyFreeSpec with Matchers:
 
@@ -28,7 +28,7 @@ class QuadSpaceTests extends AnyFreeSpec with Matchers:
     cap.items.collectFirst { case s: HSpaceBox => s.width }.getOrElse(fail(s"no space box from '$src'"))
 
   "\\quad is a one-em space and \\qquad is two ems" in {
-    val em = 14.0 // the default font size
+    val em = 10.0 // the default font size
     spaceWidth("a\\quad b") shouldBe (em +- 0.001)
     spaceWidth("a\\qquad b") shouldBe (2 * em +- 0.001)
   }

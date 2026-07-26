@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class ScriptTests extends AnyFreeSpec with Matchers:
 
-  private val baseSize = 14.0
+  private val baseSize = 10.0 // the engine's default text size, which these render at
 
   private class CapturingDocument(t: HeadlessTypesetter) extends DocumentMode(t):
     val shipped = new ArrayBuffer[VBox]

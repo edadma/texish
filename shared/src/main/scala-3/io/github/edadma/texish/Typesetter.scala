@@ -742,7 +742,9 @@ abstract class Typesetter:
   }
 
   init(1, 1)
-  selectFont("lmroman", 14, Set("regular"))
+  // TeX's body size. `set(defaultParameters)` derives \baselineskip from it as 1.2x, giving TeX's
+  // 10pt on 12pt leading, and it matches the size ladder in the base package, whose \normalsize is 10.
+  selectFont("lmroman", 10, Set("regular"))
   set(defaultParameters)
   push(document)
   push(new PageMode(this))

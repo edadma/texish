@@ -10,8 +10,11 @@ import org.scalatest.matchers.should.Matchers
   */
 class MathModeTests extends AnyFreeSpec with Matchers:
 
-  // a math font over the stub's current (text) font: no MATH table, fixed 6-wide glyphs
-  def mathFont(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  // a math font over the stub's current (text) font: no MATH table, fixed 6-wide glyphs. The size is pinned
+  // rather than inherited, so `em` below stays meaningful whatever the engine's default text size happens to be.
+  def mathFont(t: HeadlessTypesetter): MathFont =
+    t.selectFont("lmroman", 14, Set("regular"))
+    new MathFont(t, t.currentFont, None)
 
   def mathBox(build: MathMode => Unit): HBox =
     val t = new HeadlessTypesetter
@@ -197,7 +200,8 @@ class MathModeTests extends AnyFreeSpec with Matchers:
 
   "translating draws each atom through the glyph seam at the spaced positions" in {
     val rec = new RecordingGlyphTypesetter
-    val m   = new MathMode(rec, new MathFont(rec, rec.currentFont, None))
+    rec.selectFont("lmroman", 14, Set("regular")) // the size `med` is derived from, as in mathFont above
+    val m = new MathMode(rec, new MathFont(rec, rec.currentFont, None))
 
     m.addChar('a'); m.addChar('+'); m.addChar('b')
     rec.draw(m.result.asInstanceOf[HBox])

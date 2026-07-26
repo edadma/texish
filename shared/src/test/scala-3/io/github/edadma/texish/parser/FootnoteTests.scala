@@ -118,11 +118,11 @@ class FootnoteTests extends AnyFreeSpec with Matchers:
     for
       line <- note.asInstanceOf[VBox].boxes.collect { case h: HBox => h }
       c    <- line.boxes.collect { case c: CharBox => c }
-    do c.font.size shouldBe (14.0 * 0.8) +- 1e-9
+    do c.font.size shouldBe (10.0 * 0.8) +- 1e-9
 
     // the text after the footnote is back at full size
     val bodyChars = items.collect { case h: HBox => h }.flatMap(_.boxes).collect { case c: CharBox => c }
-    bodyChars.find(_.text == "beta").get.font.size shouldBe 14.0 +- 1e-9
+    bodyChars.find(_.text == "beta").get.font.size shouldBe 10.0 +- 1e-9
   }
 
   "a footnote lands at the foot of the page its reference is on" in quietly {

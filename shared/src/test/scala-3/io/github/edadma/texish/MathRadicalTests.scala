@@ -9,7 +9,11 @@ import org.scalatest.matchers.should.Matchers
   */
 class MathRadicalTests extends AnyFreeSpec with Matchers:
 
-  def base(t: HeadlessTypesetter): MathFont = new MathFont(t, t.currentFont, None)
+  /** The math font these expectations are derived from. The size is pinned rather than inherited, so the
+    * geometry below stays meaningful whatever the engine's default text size happens to be. */
+  def base(t: HeadlessTypesetter): MathFont =
+    t.selectFont("lmroman", 14, Set("regular"))
+    new MathFont(t, t.currentFont, None)
 
   def part(t: HeadlessTypesetter, bf: MathFont, style: MathStyle, c: Char): Box =
     val sm = new MathMode(t, bf, style)
