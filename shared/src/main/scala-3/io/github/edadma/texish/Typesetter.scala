@@ -885,32 +885,50 @@ abstract class Typesetter:
 
   def removeStyle(style: String*): Font = setStyle(currentFont.style -- style)
 
-  /** Where a font file named by a relative path is looked for: as given (relative to the current directory)
-    * first, then under `$TEXISHHOME`. The current directory wins, so a document's own font files keep
-    * shadowing the bundled ones and the historical behaviour is unchanged; the fallback is what lets a host
-    * that embeds the engine — an editor, a preview app — find the fonts that ship with texish no matter which
-    * directory it was launched from, the way `\use` already finds `$TEXISHHOME/packages`.
+  /** Where a font file named by a relative path is looked for, most local root first: under `from` — the
+    * directory of the document or module doing the loading — then relative to the current directory, then
+    * under `$TEXISHHOME`. A document's own font files therefore shadow the bundled ones, the same order in
+    * which `\use` resolves a module.
+    *
+    * The `from` root is what lets a host that is not run from the document's directory — an editor, a preview
+    * app — find a font sitting beside the document; the `$TEXISHHOME` root is what lets that same host find
+    * the fonts that ship with texish no matter which directory it was launched from. The engine's own bundled
+    * loads pass no `from`, so they resolve exactly as before.
     *
     * An absolute path is returned untouched. Probing is guarded because a filesystem-less host (the browser
     * build) reaches for Node APIs that are absent; there, resolution falls back to the path as written.
     */
-  private def resolveFontPath(path: String): String =
+  private def resolveFontPath(path: String, from: String): String =
     try
       val p = Path(path)
 
-      if p.isAbsolute || p.exists then path
+      if p.isAbsolute then path
       else
-        PlatformEnv
-          .get("TEXISHHOME")
-          .filter(_.nonEmpty)
-          .map(Path(_) / path)
-          .filter(_.exists)
-          .map(_.toPlatformString)
-          .getOrElse(path)
+        val beside = Path(from) / path
+
+        if from != "." && beside.exists then beside.toPlatformString
+        else if p.exists then path
+        else
+          PlatformEnv
+            .get("TEXISHHOME")
+            .filter(_.nonEmpty)
+            .map(Path(_) / path)
+            .filter(_.exists)
+            .map(_.toPlatformString)
+            .getOrElse(path)
     catch case _: Throwable => path
 
-  def loadFont(typeface: String, path: String, ligatures: Set[String], styleSet: Set[String]): Unit =
-    val font = loadFont(resolveFontPath(path))
+  /** Register a font file under a typeface name. `from` is the directory a relative `path` is resolved against
+    * before the current directory and `$TEXISHHOME` — the document's own directory, for a `\loadfont` in a
+    * document. It defaults to the current directory, which is how the engine loads the faces it bundles. */
+  def loadFont(
+      typeface:  String,
+      path:      String,
+      ligatures: Set[String],
+      styleSet:  Set[String],
+      from:      String = ".",
+  ): Unit =
+    val font = loadFont(resolveFontPath(path, from))
 
     typefaces get typeface match
       case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> (font, ligatures)), None)

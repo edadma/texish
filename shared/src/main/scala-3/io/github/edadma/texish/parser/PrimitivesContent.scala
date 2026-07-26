@@ -109,6 +109,10 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
   // selected with \typeface or \font. Where the bundled families cover only Latin, this is how a document
   // brings in a face the build does not ship — most importantly a CJK font, since the line breaker can wrap
   // CJK text but has no glyphs to set it with until one is loaded.
+  //
+  // A relative path is resolved against the directory of the file doing the loading first, exactly as \use
+  // resolves a module, so a font kept beside the document is found however the engine was launched — a host
+  // that runs from elsewhere (an editor, a preview app) would otherwise miss it.
   proc.registerPrimitive(
     "loadfont",
     new Primitive {
@@ -117,7 +121,7 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
         val path = evalArg(proc, pos)
         (name, path) match
           case (Value.Text(nm), Value.Text(p)) =>
-            t.loadFont(nm, p, Set.empty, Set.empty)
+            t.loadFont(nm, p, Set.empty, Set.empty, proc.currentDir)
           case _ => handler.error("\\loadfont expects <name> <path>", pos)
     },
   )
