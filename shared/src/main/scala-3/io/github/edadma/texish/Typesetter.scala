@@ -24,11 +24,33 @@ object Typesetter:
     * of the roots such a path is resolved against — so an application embedding the engine can keep the fonts
     * wherever it likes and point the loader at their parent, without touching the environment.
     *
-    * It is empty by default, and *nothing requires it to be set*: the Latin Modern core is compiled into the
-    * artifact (see [[EmbeddedFonts]]), so the engine draws with no font tree at all. Setting it is how a host
-    * offers the wider bundled set — the complex-script faces, the CJK cuts, the alternative text families. Set it
-    * before constructing a typesetter, since the bundled faces are registered in the constructor. */
+    * It is empty by default, and *nothing requires it to be set*: the core is compiled into the artifact (see
+    * [[EmbeddedFonts]]), so the engine draws with no font tree at all. Setting it is the one-liner form of
+    * `registerFontSource(DirectoryFontSource(dir))` — convenient for a host with a single tree, and read once
+    * when a typesetter is constructed, so set it before constructing one. A host with more to say (several
+    * folders, fonts that are not files at all) registers sources instead.
+    *
+    * Pointing the engine at a tree does not by itself load the wider bundled families — that is
+    * [[Typesetter.loadBundledCatalogue]], which a host calls when it wants them. */
   var fontsDir: String = ""
+
+  /** The families [[Typesetter.loadBundledCatalogue]] registers, named here so that they can be recognised
+    * without having been loaded. That is what lets a document naming one get told the catalogue is not loaded
+    * rather than that the family does not exist — the difference between "your installation is missing its font
+    * tree" and "you misspelled a name", which are fixed in entirely different places.
+    *
+    * This is a second copy of what the catalogue's code says, kept honest by a test that compares it against the
+    * families the catalogue actually attempts, so a family added there and forgotten here is caught at once.
+    * The core families ([[Typesetter.loadCoreFonts]]) are deliberately absent: they are always present, so no
+    * document can ever ask for one and be told it is missing.
+    */
+  val BundledFamilies: Set[String] = Set(
+    "noto", "gentium", "charm", "thai", "nosifer", "rubik-wet-paint", "cinzel", "gentiumbook", "pt",
+    "cjksc", "cjktc", "cjkjp", "japanese", "cjkkr", "korean",
+    "hebrew", "ezra", "arabic", "amiri",
+    "devanagari", "hindi", "bengali", "assamese", "gurmukhi", "punjabi", "telugu",
+    "jetbrains", "alegreya", "ebgaramond", "petaluma",
+  )
 
 abstract class Typesetter:
 
@@ -361,16 +383,38 @@ abstract class Typesetter:
 
   def getDocument: DocumentMode = document
 
-  loadingBundled = true
-  try loadBundledFonts()
-  finally loadingBundled = false
+  /** Where this typesetter looks for font files, in order. Seeded with the roots that have always been searched
+    * — the current directory, [[Typesetter.fontsDir]] if a host set one, and `$TEXISHHOME` — and extended by a
+    * host through [[registerFontSource]]. The core embedded in the artifact is not in this list: it is consulted
+    * after everything in it, so that a font tree carrying the same path shadows it.
+    *
+    * Declared before the core faces are loaded, because loading them reads it. */
+  private val fontSources = ArrayBuffer[FontSource](DirectoryFontSource("."))
 
-  /** Register the typefaces texish bundles, each style of each family. A face is opened from a font tree on
-    * disk when a root has it (see resolveFontPath) and from the core compiled into the artifact otherwise; a
-    * family with neither is skipped, so this same list serves a host with the full tree, a host with none, and
-    * everything between. What is guaranteed everywhere is the Latin Modern core — the default body face and
-    * Latin Modern Math — because those are the faces the artifact carries. */
-  protected def loadBundledFonts(): Unit = {
+  if Typesetter.fontsDir.nonEmpty then fontSources += DirectoryFontSource(Typesetter.fontsDir)
+
+  PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty).foreach(home => fontSources += DirectoryFontSource(home))
+
+  loadCoreFonts()
+
+  /** Register the wider set of typefaces texish bundles — the complex-script faces, the CJK cuts, the
+    * alternative text families. These are far too large to compile into the artifact (~151MB against the core's
+    * ~6.1MB), so their files come from a font tree on disk, reached through a registered font source. Loading
+    * them is the host's decision: the CLI calls this after locating the tree its installation ships, an
+    * application does so if it has one to offer, and a program embedding texish as a library need never call it
+    * at all and still gets a working engine from [[loadCoreFonts]] alone.
+    *
+    * Tolerant by design, because a font tree may be partial: a family whose files no source has is skipped and
+    * remembered, so that naming it later fails with "texish bundles this, but its files were not found" rather
+    * than the bare "not found" a typo earns. Call it before typesetting begins — a face registered mid-document
+    * cannot retroactively set the text already laid out.
+    */
+  def loadBundledCatalogue(): Unit =
+    loadingCatalogue = true
+    try loadCatalogueFonts()
+    finally loadingCatalogue = false
+
+  protected def loadCatalogueFonts(): Unit = {
   loadTypeface(
     "noto",
     "fonts/NotoSerif/NotoSerif",
@@ -489,8 +533,8 @@ abstract class Typesetter:
   // CJK and KnuthPlass.appendCJKItems): \font cjksc 12 regular for Simplified, cjktc for Traditional, each
   // with a bold cut so \font cjksc 12 bold sets real bold rather than substituting the regular weight. They
   // are loaded by file rather than through loadTypeface, whose "-Style.ttf" naming and bundled-only weight
-  // set do not fit these single hand-instanced cuts. These are large faces — the host with no filesystem (the
-  // in-browser build) overrides loadBundledFonts and does not ship them.
+  // set do not fit these single hand-instanced cuts. At 74MB for the four regions these are far and away the
+  // largest thing the catalogue carries, which is the plainest illustration of why it is not embedded.
   loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Regular.ttf", Set.empty, Set.empty)
   loadFont("cjktc", "fonts/NotoSerifCJK/NotoSerifTC-Regular.ttf", Set.empty, Set.empty)
   loadFont("cjksc", "fonts/NotoSerifCJK/NotoSerifSC-Bold.ttf", Set.empty, Set("bold"))
@@ -514,8 +558,7 @@ abstract class Typesetter:
   // so \font hebrew 12 bold is a real bold weight. These are static Regular and Bold instances drawn from
   // the variable upstream (wght 400 and 700 at default width). The reordering into visual order is the
   // engine's (see Bidi and ParagraphMode); the font supplies the glyphs and, for pointed text, the marks.
-  // Loaded by file because the single instanced cuts do not fit loadTypeface's "-Style.ttf" naming. As with
-  // the CJK faces, the filesystem-less in-browser build overrides loadBundledFonts and does not ship them.
+  // Loaded by file because the single instanced cuts do not fit loadTypeface's "-Style.ttf" naming.
   loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf", Set.empty, Set.empty)
   loadFont("hebrew", "fonts/NotoSerifHebrew/NotoSerifHebrew-Bold.ttf", Set.empty, Set("bold"))
 
@@ -524,7 +567,7 @@ abstract class Typesetter:
   // SIL SR) mapped to the bold slot so \font ezra 12 bold selects it. Right to left like the Noto Hebrew face,
   // so the engine reorders into visual order (see Bidi and ParagraphMode) and the font carries the consonants,
   // the vowel points and the cantillation marks, which it positions through its GPOS. Loaded by file, like the
-  // Noto Hebrew cuts; the filesystem-less in-browser build overrides loadBundledFonts and does not ship it.
+  // Noto Hebrew cuts.
   loadFont("ezra", "fonts/EzraSIL/SILEOT.ttf", Set.empty, Set.empty)
   loadFont("ezra", "fonts/EzraSIL/SILEOTSR.ttf", Set.empty, Set("bold"))
 
@@ -533,8 +576,7 @@ abstract class Typesetter:
   // Regular and Bold instances drawn from the variable upstream (wght 400 and 700). The Naskh style is the
   // book hand the joining engine targets; the cursive forms come from the font's GSUB, selected per letter by
   // the engine (see ArabicShaping and Gsub), and the bidi reordering into visual order is the engine's (see
-  // Bidi and ParagraphMode). Loaded by file, like the Hebrew and CJK cuts; the filesystem-less in-browser
-  // build overrides loadBundledFonts and does not ship them.
+  // Bidi and ParagraphMode). Loaded by file, like the Hebrew and CJK cuts.
   loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf", Set.empty, Set.empty)
   loadFont("arabic", "fonts/NotoNaskhArabic/NotoNaskhArabic-Bold.ttf", Set.empty, Set("bold"))
 
@@ -543,7 +585,7 @@ abstract class Typesetter:
   // cursive joining and the bidi reordering are the engine's exactly as for the Noto face — shaping keys off
   // the Arabic script of the text, not the typeface name — and the font supplies the joined forms and the many
   // classical ligatures through its GSUB. The "-Style.ttf" cuts fit loadTypeface; no ligature set is enabled,
-  // as Arabic documents type their punctuation literally. Not shipped in the filesystem-less in-browser build.
+  // as Arabic documents type their punctuation literally.
   loadTypeface(
     "amiri",
     "fonts/Amiri/Amiri",
@@ -561,8 +603,7 @@ abstract class Typesetter:
   // left to right, so no bidi is involved; the cluster segmentation and the pre-base short-i reordering are
   // the engine's (see Devanagari and IndicShaper), and the font supplies the conjunct, half-form and vowel-sign
   // glyphs through its GSUB and positions the marks through its GPOS. Loaded by file, like the Hebrew, Arabic
-  // and CJK cuts; the filesystem-less in-browser build overrides loadBundledFonts and does not ship them.
-  // Devanagari sets its punctuation like a Latin text face — the same curly quotes, en/em dashes and ellipsis,
+  // and CJK cuts. Devanagari sets its punctuation like a Latin text face — the same curly quotes, en/em dashes and ellipsis,
   // all of which this font carries — so it enables the text representations and the `` ``''/''`` `` and dash
   // shorthands become the proper typographic characters, just as they do in the roman body. (The right-to-left
   // Hebrew and Arabic faces do not: Hebrew's quotes are the mirrored pair and Arabic's are guillemets, so those
@@ -576,7 +617,7 @@ abstract class Typesetter:
   // upstream (wght 400 and 700). Bengali is left to right; the engine does the cluster segmentation, the
   // pre-base i/e/ai reordering and the two-part o/au decomposition (see Bengali and IndicShaper), and the font
   // supplies the conjunct, ya-phalaa, reph and vowel-sign glyphs through its GSUB and positions the marks
-  // through its GPOS. Loaded by file like the other complex-script cuts; the in-browser build does not ship it.
+  // through its GPOS. Loaded by file like the other complex-script cuts.
   // Like the Devanagari face it sets its punctuation as a Latin text face, so the curly-quote and dash
   // shorthands become proper typographic characters in a Bengali run.
   loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
@@ -588,8 +629,8 @@ abstract class Typesetter:
   // cluster segmentation and the pre-base sihari (i-sign) reordering (see Gurmukhi and IndicShaper), and the
   // font supplies the subjoined pairin, conjunct and vowel-sign glyphs through its GSUB and positions the
   // marks — tippi, addak, the below-base vowel signs — through its GPOS. Gurmukhi has no reph. Loaded by file
-  // like the other complex-script cuts; the in-browser build does not ship it. Like the other Indic faces it
-  // sets its punctuation as a Latin text face, so the curly-quote and dash shorthands come out typographic.
+  // like the other complex-script cuts. Like the other Indic faces it sets its punctuation as a Latin text
+  // face, so the curly-quote and dash shorthands come out typographic.
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
   aliasTypeface("punjabi", "gurmukhi")
@@ -598,8 +639,8 @@ abstract class Typesetter:
   // to right; the engine does the cluster segmentation (see Telugu and IndicShaper) and the font does the
   // rest, which for this script is a great deal — a consonant and its vowel sign commonly fuse into one
   // glyph, and a virama-joined consonant is drawn as a subscript beneath the base, placed by GPOS. Nothing
-  // reorders and there is no reph. Loaded by file like the other complex-script cuts; the in-browser build
-  // does not ship it. Like the other Indic faces it sets its punctuation as a Latin text face.
+  // reorders and there is no reph. Loaded by file like the other complex-script cuts. Like the other Indic
+  // faces it sets its punctuation as a Latin text face.
   loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("telugu", "fonts/NotoSerifTelugu/NotoSerifTelugu-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
@@ -684,8 +725,7 @@ abstract class Typesetter:
   // running text: \font ebgaramond 12, with matching italic, the heavier weights on the free axis (medium,
   // semibold, extrabold) and their italics, and a real bold. Given the f-ligatures and the text
   // representations (curly quotes, dashes) it carries, but not the arrow ligatures, so a run sets clean without
-  // risking a missing-glyph box. Loaded on the JVM and Native hosts; the in-browser build ships only Latin
-  // Modern and does not include it.
+  // risking a missing-glyph box.
   val ebGaramondLigatures = "ﬃﬄﬁﬂﬀ".map(_.toString).toSet ++ Ligatures.TEXT_REPRESENTATIONS
   loadTypeface(
     "ebgaramond",
@@ -704,6 +744,22 @@ abstract class Typesetter:
     ("ExtraBold", "Italic"),
   )
 
+  // Petaluma, a handwritten-style SMuFL music face and the alternative to Bravura, which is core. A document
+  // choosing it is choosing something outside the guaranteed baseline, so it lives here rather than there.
+  loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
+  }
+
+  /** Register the faces compiled into the artifact — the engine's guaranteed baseline, present on every host
+    * whatever its filesystem holds. That is the Latin Modern super-family (the roman body with its mono and sans
+    * roles, its small-caps and slanted cuts), Latin Modern Math, New Computer Modern as the glyph-fallback face,
+    * and Bravura for the music package.
+    *
+    * Strict, unlike [[loadBundledCatalogue]]: these bytes ship inside the artifact, so a face that will not open
+    * is a broken build rather than an installation without it, and saying so at once beats rendering a document
+    * in a substituted face nobody chose. The one path by which the bytes could come from elsewhere is a font tree
+    * that shadows them (see [[FontSource]]), which is deliberate — a host may ship newer cuts.
+    */
+  protected def loadCoreFonts(): Unit = {
   // Latin Modern Roman — GUST's OpenType successor to Computer Modern and the text companion to Latin Modern
   // Math, so a document can set body text in the same family the math is set in (and a logo's hand-tuned kerns
   // land as designed). The 10-point optical size is the body face; its four core styles are registered by
@@ -748,9 +804,7 @@ abstract class Typesetter:
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-Bold.otf", lmLigatures, Set("bold"))
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-Italic.otf", lmLigatures, Set("italic"))
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-BoldItalic.otf", lmLigatures, Set("bold", "italic"))
-  // NewCM is not part of the embedded core, so an installation with no font tree has no fallback face at all —
-  // there, a codepoint outside Latin Modern is a missing-glyph box rather than a substitution.
-  if hasTypeface("newcm") then fallbackTypeface = Some("newcm")
+  fallbackTypeface = Some("newcm")
 
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
   // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
@@ -764,10 +818,10 @@ abstract class Typesetter:
   // noteheads, flags, rests, accidentals, time-signature figures, and more) in the Unicode Private Use Area and
   // the convention that one staff space is a quarter of the em, so the music package can set glyphs with
   // \fontglyph at a size of four staff spaces and have the font's own coordinates map straight onto the staff —
-  // and can swap one face for another. Bravura is the reference font; Petaluma is a handwritten-style face.
-  // Both are SIL OFL. Drawn by glyph index through the same seam math mode uses.
+  // and can swap one face for another. Both the faces texish bundles are SIL OFL. Bravura is the reference font,
+  // and is core so that \use{music} — an embedded package — can always draw; the handwritten-style Petaluma is
+  // an alternative the catalogue carries. Drawn by glyph index through the same seam math mode uses.
   loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
-  loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
   }
 
   init(1, 1)
@@ -914,56 +968,91 @@ abstract class Typesetter:
 
   def removeStyle(style: String*): Font = setStyle(currentFont.style -- style)
 
-  /** Where a font file named by a relative path is looked for, most local root first: under `from` — the
-    * directory of the document or module doing the loading — then relative to the current directory, then under
-    * [[Typesetter.fontsDir]] if a host set one, then under `$TEXISHHOME`. A document's own font files therefore
-    * shadow the bundled ones, the same order in which `\use` resolves a module. None when no root has the file.
-    *
-    * The `from` root is what lets a host that is not run from the document's directory — an editor, a preview
-    * app — find a font sitting beside the document; the `fontsDir` and `$TEXISHHOME` roots are what let that
-    * same host find a font tree that ships alongside texish no matter which directory it was launched from. The
-    * engine's own bundled loads pass no `from`, so they resolve exactly as before.
-    *
-    * An absolute path is returned as written if it exists. Probing is guarded because a filesystem-less host
-    * (the browser) reaches for Node APIs that are absent; there, nothing resolves and every face comes from the
-    * embedded core, which is exactly right.
+  /** Add a place to look for font files, after everywhere already registered and before the embedded core. This
+    * is how a host points the engine at fonts it ships or manages: the CLI registers the tree beside its own
+    * binary, an application registers a folder of its own. Register before typesetting begins, since a source
+    * added later cannot supply a face the document has already asked for.
     */
-  private def resolveFontPath(path: String, from: String): Option[String] =
-    try
-      val p = Path(path)
+  def registerFontSource(source: FontSource): Unit = fontSources += source
 
-      if p.isAbsolute then Option.when(p.exists)(path)
-      else
-        val roots =
-          LazyList(from).filter(_ != ".") #:::
-            LazyList(".") #:::
-            LazyList(Typesetter.fontsDir).filter(_.nonEmpty) #:::
-            PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty).to(LazyList)
+  /** Forget every registered source, leaving only the core embedded in the artifact. For a host that wants the
+    * engine to draw with exactly what it was given and nothing the machine happens to have lying about — and for
+    * tests, which must be able to reproduce a bare installation on a machine with a full font tree on it. */
+  def clearFontSources(): Unit = fontSources.clear()
 
-        roots.map(Path(_) / path).find(_.exists).map(_.toPlatformString)
+  /** The sources consulted for one load, in order: the directory of the document or module doing the loading,
+    * then everything registered, then the embedded core last.
+    *
+    * The `from` root is what lets a host that is not run from the document's directory — an editor, a preview app
+    * — find a font sitting beside the document, and it comes first so that a document's own font files shadow the
+    * bundled ones, the same order in which `\use` resolves a module. The engine's own core and catalogue loads
+    * pass no `from`. */
+  private def fontSearchPath(from: String): LazyList[FontSource] =
+    (if from == "." then LazyList.empty else LazyList(DirectoryFontSource(from))) #:::
+      fontSources.to(LazyList) #:::
+      LazyList(EmbeddedFontSource)
+
+  /** Open a face from one source, preferring a file over bytes: a backend reads a face from a path lazily, where
+    * bytes must be materialised whole and — on the backends whose font API does not copy — kept alive for the
+    * life of the face. */
+  private def openFrom(source: FontSource, path: String): Option[FontFace] =
+    source.file(path).map(loadFont) orElse source.bytes(path).map(loadFontBytes(_, path))
+
+  /** Guarded because a filesystem-less host reaches for platform APIs that may be absent; there nothing is
+    * absolute and every face comes from the embedded core, which is exactly right. */
+  private def isAbsolutePath(path: String): Boolean =
+    try Path(path).isAbsolute
+    catch case _: Throwable => false
+
+  private def openAbsolute(path: String): Option[FontFace] =
+    try Option.when(Path(path).exists)(loadFont(path))
     catch case _: Throwable => None
 
-  /** Open a face for a relative or absolute font path: from disk if any root has the file, otherwise from the
-    * core embedded in the artifact. None when neither has it — which for a bundled load means that family is
-    * simply not available in this installation, and for a `\loadfont` means the document named a file that is
-    * not there. */
+  /** Open a face for a relative or absolute font path. An absolute path names one file and no source can move
+    * it; a relative one is offered to each source in turn. None when nothing has it — which for a catalogue load
+    * means that family is not available in this installation, and for a `\loadfont` means the document named a
+    * file that is not there. */
   private def openFace(path: String, from: String): Option[FontFace] =
-    resolveFontPath(path, from) match
-      case Some(resolved) => Some(loadFont(resolved))
-      case None           => EmbeddedFonts.get(path).map(loadFontBytes(_, path))
+    if isAbsolutePath(path) then openAbsolute(path)
+    else fontSearchPath(from).iterator.flatMap(openFrom(_, path)).nextOption()
 
-  /** True while the constructor is registering the faces texish bundles. Inside that window a face whose file is
-    * on no root and is not part of the embedded core is skipped rather than fatal, and a family operation naming
-    * a family that was skipped is a no-op — so the engine starts with whatever the installation actually has,
-    * down to the embedded core alone. A document that then asks for an absent family gets a clear "typeface not
-    * found" at the point it asks. Outside the window a font that cannot be opened is an error, as a `\loadfont`
-    * naming a missing file should be. */
-  private var loadingBundled = false
+  /** True while [[loadBundledCatalogue]] is running. Inside that window a face no font source has is skipped
+    * rather than fatal, and a family operation naming a skipped family is a no-op — so a partial font tree gives
+    * a host whatever it does have instead of failing outright. Everywhere else a font that cannot be opened is an
+    * error: in [[loadCoreFonts]] because those bytes are in the artifact, and in a `\loadfont` because the
+    * document named a file that is not there. */
+  private var loadingCatalogue = false
+
+  /** The catalogue families this typesetter tried to register and could not, each against the first font file it
+    * went looking for. Read by [[unavailableNote]] to tell a document that named such a family that the family is
+    * real and the *files* are what is missing — which points at the installation rather than at the document.
+    * Insertion-ordered so a host reporting the whole set lists it in catalogue order. */
+  private val unavailable = mutable.LinkedHashMap[String, String]()
+
+  /** Every family [[loadBundledCatalogue]] attempted, whether or not its files were found. This is the catalogue's
+    * membership as the code actually defines it; [[Typesetter.BundledFamilies]] is the same list written down for
+    * hosts that have not loaded it, and a test holds the two together. */
+  private val attempted = mutable.LinkedHashSet[String]()
+
+  private[texish] def attemptedCatalogueFamilies: Set[String] = attempted.toSet
+
+  /** Why a typeface name did not resolve, when the engine can say something better than "not found": that the
+    * name is one texish bundles and either its files are missing or the catalogue was never loaded. Both readings
+    * send the reader to the installation instead of to a spell-check of their own document. */
+  private def unavailableNote(typeface: String): Option[String] =
+    if unavailable contains typeface then
+      Some(
+        s"typeface '$typeface' is one texish bundles, but its font files were not found — " +
+          s"no font source has '${unavailable(typeface)}'")
+    else if Typesetter.BundledFamilies contains typeface then
+      Some(
+        s"typeface '$typeface' is one texish bundles, but the bundled catalogue has not been loaded — " +
+          "call loadBundledCatalogue() with a font tree available")
+    else None
 
   /** Register a font file under a typeface name. `from` is the directory a relative `path` is resolved against
-    * before the current directory, [[Typesetter.fontsDir]] and `$TEXISHHOME` — the document's own directory, for
-    * a `\loadfont` in a document. It defaults to the current directory, which is how the engine loads the faces
-    * it bundles. */
+    * before any registered source — the document's own directory, for a `\loadfont` in a document. It defaults
+    * to the current directory, which is how the engine loads the faces it bundles (see [[fontSearchPath]]). */
   def loadFont(
       typeface:  String,
       path:      String,
@@ -971,10 +1060,14 @@ abstract class Typesetter:
       styleSet:  Set[String],
       from:      String = ".",
   ): Unit =
+    if loadingCatalogue then attempted += typeface
+
     openFace(path, from) match
-      case Some(face)             => registerFont(typeface, face, ligatures, styleSet)
-      case None if loadingBundled => () // this installation does not have that face
-      case None                   => throw TexishException(s"font file '$path' not found")
+      case Some(face) => registerFont(typeface, face, ligatures, styleSet)
+      case None if loadingCatalogue =>
+        unavailable.getOrElseUpdate(typeface, path) // this installation does not have that face
+        ()
+      case None => throw TexishException(s"font file '$path' not found")
 
   /** Register an already-opened face as one style of a typeface — the step [[loadFont]] takes once it has a
     * face in hand. A host holding a font as bytes rather than as a file (a resource bundle, a face fetched at
@@ -996,9 +1089,15 @@ abstract class Typesetter:
     * which for the large CJK cuts is a real duplication, and an alias is not a separate family in any case.
     */
   def aliasTypeface(alias: String, target: String): Unit =
+    if loadingCatalogue then attempted += alias
+
     typefaces get target match
-      case None if loadingBundled => () // the family it names was skipped for want of its files
-      case None                   => throw TexishException(s"typeface '$target' not found")
+      // The family it names was skipped for want of its files. Carry the missing path over to the alias so that
+      // \font hindi reports what \font devanagari would, rather than reading as a name texish has never heard of.
+      case None if loadingCatalogue =>
+        unavailable.get(target).foreach(path => unavailable.getOrElseUpdate(alias, path))
+        ()
+      case None => throw TexishException(s"typeface '$target' not found")
       case Some(tf) =>
         if typefaces contains alias then throw TexishException(s"typeface '$alias' has already been loaded")
         typefaces(alias) = tf
@@ -1028,7 +1127,7 @@ abstract class Typesetter:
 
   def overrideBaseline(typeface: String, baseline: Double): Unit =
     typefaces get typeface match
-      case None if loadingBundled   => () // the family it names was skipped for want of its files
+      case None if loadingCatalogue => () // the family it names was skipped for want of its files
       case None                     => throw TexishException(s"typeface '$typeface' not found")
       case Some(Typeface(fonts, _)) => typefaces(typeface) = Typeface(fonts, Some(baseline))
 
@@ -1051,7 +1150,8 @@ abstract class Typesetter:
 
   def makeFont(typeface: String, size: Double, styleSet: Set[String]): Font =
     typefaces get typeface match
-      case None => throw TexishException(s"font for typeface '$typeface' not found")
+      case None =>
+        throw TexishException(unavailableNote(typeface) getOrElse s"font for typeface '$typeface' not found")
       case Some(Typeface(fonts, baseline)) =>
         val wanted = styleSet.map(_.toLowerCase).filterNot(_ == "regular")
         // Resolve the exact style if it was loaded; otherwise substitute the nearest available cut by dropping the

@@ -55,24 +55,64 @@ The binary is produced at `native/target/scala-3.8.4/texish`. See the
 
 ## Fonts
 
-The **Latin Modern core** ships inside the artifact: the roman body face in its bold, italic,
-slanted and small-caps cuts, the sans and typewriter roles of the same super-family, and Latin
-Modern Math. That is the default look, and it needs no configuration on any platform.
+Fonts come in two tiers: a **core** compiled into the artifact, and a **catalogue** loaded from a
+font tree on disk.
+
+### The core — always there
+
+The core ships inside the artifact and needs no configuration on any platform:
+
+- **Latin Modern** — the roman body face in its bold, italic, slanted and small-caps cuts, plus the
+  sans and typewriter roles of the same super-family.
+- **Latin Modern Math** — the default math font.
+- **New Computer Modern** — the glyph-fallback face, in all four cuts. A codepoint the body face has
+  no glyph for (a Greek word, a Cyrillic name) is set from this instead of a missing-glyph box, and
+  keeps the weight and slope of the text around it.
+- **Bravura** — the SMuFL music face, so `\use{music}` can draw with nothing installed.
+
+That is the guaranteed baseline. A program that adds texish as a dependency and configures nothing
+gets all of it.
+
+### The catalogue — opt in
 
 Everything else texish bundles — the complex-script faces (Hebrew, Arabic, Devanagari, Bengali,
 Gurmukhi, Telugu), the CJK cuts, and the alternative text families (Gentium, Charis, EB Garamond,
-Noto, …) — lives in the source tree's `fonts/` folder and is loaded when it can be found. A
-relative font path is looked for beside the document, then in the current working directory, then
-under `Typesetter.fontsDir` if the host set one, then under `$TEXISHHOME`. So an application that
-wants the full set ships the `fonts/` folder and points at its parent:
+Noto, …) — comes to about 151MB, far too much to compile in. It lives in the source tree's `fonts/`
+folder, and a host asks for it in two steps: say where the tree is, then load it.
 
 ```scala
-Typesetter.fontsDir = "/opt/texish"   // before constructing a typesetter — bundled faces load in the constructor
+Typesetter.fontsDir = "/opt/texish"   // set before constructing a typesetter
+
+val t = new CairoPDFTypesetter("out.pdf")
+
+t.loadBundledCatalogue()              // then ask for the families
 ```
 
-A family whose files are not found is simply not registered, and a document asking for it gets a
-clear "typeface not found". A document's own `\loadfont` resolves through the same roots, so a
-font kept beside the document is found no matter where the host was launched from.
+`Typesetter.fontsDir` is shorthand for one font source; a host with more to say registers them
+directly, and they are consulted in the order registered:
+
+```scala
+t.registerFontSource(DirectoryFontSource("/opt/texish"))
+t.registerFontSource(myOwnSource)     // anything that can produce a file or bytes for a path
+t.clearFontSources()                  // or: use nothing but the embedded core
+```
+
+Loading the catalogue is tolerant, because a font tree may be partial: a family whose files no
+source has is skipped rather than fatal. Naming such a family later then says so —
+
+```
+typeface 'hebrew' is one texish bundles, but its font files were not found —
+no font source has 'fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf'
+```
+
+— and naming one when the catalogue was never loaded at all says *that* instead. Neither is the bare
+"not found" a misspelled name earns, because the three are fixed in three different places.
+
+A relative font path is resolved beside the document first, then through the registered sources, then
+in the embedded core. So a document's own `\loadfont` finds a font kept beside it no matter where the
+host was launched from, and a font tree carrying a core path shadows the compiled-in copy.
+
+The command-line tool does all of this for you — see [Fonts](/reference/cli/#fonts) there.
 
 ## Requirements
 

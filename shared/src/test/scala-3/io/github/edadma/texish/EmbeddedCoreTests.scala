@@ -3,17 +3,22 @@ package io.github.edadma.texish
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-/** The Latin Modern core the build compiles into the artifact as base64. It is what makes texish work as a plain
-  * library dependency: with no font tree on disk and nothing configured, these bytes are the only faces there
-  * are, so the default body family and the math family must be complete within them.
+/** The core the build compiles into the artifact as base64. It is what makes texish work as a plain library
+  * dependency: with no font tree on disk and nothing configured, these bytes are the only faces there are, so
+  * everything `loadCoreFonts` promises must be complete within them.
   *
   * These tests run with the source tree's `fonts/` folder present, so the engine here loads from disk — which is
-  * exactly what makes the coverage test below worth having. It compares what the bundled loads register under
-  * the default families against what the embed carries, and so catches the failure that is otherwise invisible
-  * until someone runs with no font tree: a cut added to `loadBundledFonts` and not to the build's embed list,
-  * which quietly disappears from every zero-configuration install.
+  * exactly what makes the coverage tests below worth having. They compare what the core loads register against
+  * what the embed carries, in both directions, and so catch the failure that is otherwise invisible until
+  * someone runs with no font tree: a cut added to `loadCoreFonts` and not to the build's embed list, which
+  * quietly disappears from every zero-configuration install.
   */
 class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
+
+  /** The families the engine guarantees on every host — the body super-family with its mono and sans roles, the
+    * math face, the glyph-fallback face, and the music face the embedded music package needs. */
+  private val CoreFamilies = Seq("lmroman", "lmmath", "newcm", "bravura")
+
 
   /** A typesetter that opens the paths the way any host does, and lets a test read back what got registered. */
   private class Reader extends HeadlessTypesetter:
@@ -50,7 +55,7 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
   }
 
   // Decoding is not cheap and a multi-pass document builds a typesetter per pass, so the same request must not
-  // re-decode 2.9MB of base64 each time.
+  // re-decode the whole core each time.
   "decoded bytes are cached rather than decoded again" in {
     val path  = "fonts/LatinModernRoman/lmroman10-regular.otf"
     val first = EmbeddedFonts.get(path).get
@@ -58,12 +63,12 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
     EmbeddedFonts.get(path).get should be theSameInstanceAs first
   }
 
-  // The failure this guards: a new lmroman cut loaded from disk but never added to the embed list renders fine
-  // for anyone with the font tree and vanishes for everyone without it.
-  "every face of the default body and math families is in the core" in {
+  // The failure this guards: a new core cut loaded from disk but never added to the embed list renders fine for
+  // anyone with the font tree and vanishes for everyone without it.
+  "every face of every core family is in the embed" in {
     val t = new Reader
 
-    for family <- Seq("lmroman", "lmmath") do
+    for family <- CoreFamilies do
       val faces = t.facesOf(family)
 
       withClue(s"$family registered no faces at all: ") { faces should not be empty }
@@ -75,9 +80,21 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
   }
 
   // The converse: a path carried in every artifact that nothing loads is dead weight in every artifact.
-  "the core carries nothing the default families do not use" in {
-    val t     = new Reader
-    val used  = (t.facesOf("lmroman") ++ t.facesOf("lmmath")).map(bundledName)
+  "the embed carries nothing outside the core families" in {
+    val t    = new Reader
+    val used = CoreFamilies.flatMap(t.facesOf).map(bundledName).toSet
 
     EmbeddedFontData.chunks.keySet.diff(used) shouldBe empty
+  }
+
+  // The core is what a host gets for free, so it is worth stating outright rather than only as a set relation.
+  // Glyph fallback in particular is easy to lose by accident: it is configured from a face that was for a long
+  // time loaded from disk only, so an embed that dropped it would leave every zero-configuration install setting
+  // missing-glyph boxes for the first Greek or Cyrillic word, with nothing to point at the cause.
+  "the guaranteed baseline includes a fallback face and the music face" in {
+    val t = new Reader
+
+    t.fallbackTypeface shouldBe Some("newcm")
+    t.facesOf("newcm") should have size 4      // regular, bold, italic, bold-italic — a substitution keeps its weight
+    t.facesOf("bravura") should have size 1
   }

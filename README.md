@@ -34,8 +34,8 @@ more). Pages render through pluggable backends — a Graphics2D raster (image) b
 a Cairo image-and-PDF backend on Native (there are also SVG and HTML-canvas backends for the browser,
 kept in the tree but not currently built — see [In the browser](#in-the-browser)).
 
-The Latin Modern core and the standard packages are compiled into the artifact, so texish works as a
-plain library dependency: nothing to install, no font tree, no environment variable.
+The core faces and the standard packages are compiled into the artifact, so texish works as a plain
+library dependency: nothing to install, no font tree, no environment variable.
 
 It also has a vector-graphics mode (see below) for figures drawn inline in the document — shapes,
 freeform paths, transforms, and placed type — built on the same rendering pipeline as the text.
@@ -195,11 +195,16 @@ operator so the right platform artifact is selected:
 libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
 ```
 
-That is the whole setup. The Latin Modern core and the standard packages ship inside the artifact,
-so there is no font tree to install and no environment variable to set. The wider bundled font set
-— the complex-script faces, the CJK cuts, the alternative text families — lives in this repository's
-`fonts/` folder; point `Typesetter.fontsDir` at its parent (or set `TEXISHHOME`) to make it
-available. See [Installation](https://texish.edadma.dev/getting-started/installation/).
+That is the whole setup. The core faces and the standard packages ship inside the artifact, so there
+is no font tree to install and no environment variable to set: Latin Modern with its sans and
+typewriter roles, Latin Modern Math, New Computer Modern for glyph fallback (Greek, Cyrillic), and
+Bravura for music notation.
+
+The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families — is
+151MB and lives in this repository's `fonts/` folder. Point `Typesetter.fontsDir` at its parent and
+call `loadBundledCatalogue()` to make it available; the command-line tool finds a tree installed
+beside itself and does this for you. See
+[Installation](https://texish.edadma.dev/getting-started/installation/).
 
 ## License
 

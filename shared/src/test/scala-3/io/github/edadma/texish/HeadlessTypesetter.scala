@@ -2,8 +2,15 @@ package io.github.edadma.texish
 
 /** A headless Typesetter with fixed metrics, for testing the engine and language layer without a rendering backend or
   * font files. Every character is 6 units wide; drawing is a no-op.
+  *
+  * Loads the bundled catalogue by default, because most tests are about the engine rather than about which faces an
+  * installation has, and they run against the source tree's own `fonts/` folder. Pass `catalogue = false` for a test
+  * that is specifically about the bare installation — a library consumer with the embedded core and nothing else.
   */
-class HeadlessTypesetter extends Typesetter:
+class HeadlessTypesetter(catalogue: Boolean = true) extends Typesetter:
+
+  if catalogue then loadBundledCatalogue()
+
 
   type ImageHandle = Unit
   type FontFace    = String

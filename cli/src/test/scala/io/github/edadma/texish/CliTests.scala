@@ -102,3 +102,87 @@ class CliTests extends AnyFreeSpec with Matchers:
     defaultOutputBase(None, None) shouldBe "out"                 // reading stdin
     defaultOutputBase(Some("scripts/picture.script"), Some("/x/y")) shouldBe "/x/y" // explicit -o wins
   }
+
+  // --- locating the installation's font tree ---------------------------------
+
+  /** Build a directory layout under a temporary root and return the root. Each entry is a relative path; one
+    * ending in `/` is a directory, anything else an empty file. */
+  private def layout(entries: String*): File =
+    val root = Files.createTempDirectory("texish-install").toFile
+
+    for entry <- entries do
+      val f = new File(root, entry)
+
+      if entry.endsWith("/") then f.mkdirs()
+      else
+        f.getParentFile.mkdirs()
+        f.createNewFile()
+
+    root
+
+  private def remove(f: File): Unit =
+    if f.isDirectory then f.listFiles.foreach(remove)
+    f.delete()
+
+  "a package layout is found from the binary, without an environment variable" in {
+    // what `brew install` leaves behind: the program in bin/, its data in share/<name>/
+    val root = layout("bin/texish", "share/texish/fonts/LatinModernRoman/lmroman10-regular.otf")
+
+    try Install.fontsDirNear(new File(root, "bin/texish").getPath) shouldBe
+      Some(new File(root, "share/texish").getPath)
+    finally remove(root)
+  }
+
+  "an unpacked archive with the fonts beside the binary is found too" in {
+    val root = layout("texish", "fonts/LatinModernRoman/lmroman10-regular.otf")
+
+    try Install.fontsDirNear(new File(root, "texish").getPath) shouldBe Some(root.getPath)
+    finally remove(root)
+  }
+
+  // Within one directory the package layout is the one to prefer: share/ is where the data belonging to a
+  // program is supposed to live, and a bare fonts/ at a prefix is more likely to be something else's.
+  "the package layout wins over a bare fonts/ at the same level" in {
+    val root = layout("bin/texish", "fonts/x.otf", "share/texish/fonts/x.otf")
+
+    try Install.fontsDirNear(new File(root, "bin/texish").getPath) shouldBe
+      Some(new File(root, "share/texish").getPath)
+    finally remove(root)
+  }
+
+  // Across levels the nearer tree wins, so a build tree or an unpacked archive sitting inside some larger
+  // installation is not overruled by whatever that installation happens to carry.
+  "a tree nearer the binary wins over one further up" in {
+    val root = layout("share/texish/fonts/x.otf", "nested/bin/texish", "nested/fonts/x.otf")
+
+    try Install.fontsDirNear(new File(root, "nested/bin/texish").getPath) shouldBe
+      Some(new File(root, "nested").getPath)
+    finally remove(root)
+  }
+
+  "an installation with no font tree offers nothing, rather than a directory with no fonts in it" in {
+    val root = layout("bin/texish", "share/texish/packages/document.texish")
+
+    try Install.fontsDirNear(new File(root, "bin/texish").getPath) shouldBe None
+    finally remove(root)
+  }
+
+  // The search stops before it can wander out of the installation and into whatever the user keeps further up.
+  "the walk up is bounded" in {
+    val root = layout("a/b/c/d/e/bin/texish", "fonts/x.otf")
+
+    try Install.fontsDirNear(new File(root, "a/b/c/d/e/bin/texish").getPath) shouldBe None
+    finally remove(root)
+  }
+
+  "the running executable can locate itself" in {
+    // The test binary, not an installed texish — all this asserts is that the platform call works and gives back
+    // an absolute path to something that exists. Which layout it sits in is the business of the tests above.
+    val exe = Install.executablePath()
+
+    withClue(s"executablePath() = $exe: ") {
+      exe should not be empty
+      new File(exe.get).isAbsolute shouldBe true
+      new File(exe.get).exists shouldBe true
+    }
+  }

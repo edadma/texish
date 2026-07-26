@@ -34,23 +34,35 @@ cat doc.texish | texish -o doc          # read the source from standard input
 PDF is the default output. A single-page document writes `name.png`; a multi-page document
 writes `name_1.png`, `name_2.png`, and so on.
 
-## Bundled fonts
+## Fonts
 
-The Latin Modern core — the default roman body face in its bold, italic, slanted and small-caps
-cuts, the sans and typewriter roles, and Latin Modern Math — is compiled into the binary, so
-texish renders from any directory with nothing installed and nothing configured.
+The core faces are compiled into the binary: Latin Modern (roman body with its bold, italic, slanted
+and small-caps cuts, plus the sans and typewriter roles), Latin Modern Math, New Computer Modern as
+the glyph-fallback face, and Bravura for `\use{music}`. So texish renders Latin, Greek, Cyrillic, math
+and music notation from any directory with nothing installed and nothing configured.
 
-The wider bundled set (the complex-script faces, the CJK cuts, the alternative text families)
-lives in a `fonts/` directory. It is looked for beside the document, then in the current working
-directory, then under `$TEXISHHOME` — so running from the texish source tree just works, and
-setting `TEXISHHOME` once makes the full set available from anywhere:
+The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families — is
+too large for that and lives in a `fonts/` directory. **An installed texish finds its own**: on
+startup it locates its executable and looks upward for `share/texish/fonts` or a `fonts/` beside it,
+so a package that installs the binary and the tree needs no wrapper script and no environment
+variable. Symlinks are resolved, so invoking it through `$PATH` or through a package manager's link
+farm works the same.
+
+Failing that, a font path is looked for beside the document, then in the current working directory,
+then under `$TEXISHHOME` — so running from the texish source tree just works, and `TEXISHHOME` still
+covers a tree kept somewhere unusual:
 
 ```sh
 TEXISHHOME=/opt/texish texish doc.texish   # reads /opt/texish/fonts/… and /opt/texish/packages/…
 ```
 
-A document that asks for a family this installation does not have gets a clear "typeface not
-found" at the point it asks, rather than rendering silently wrong.
+A document that asks for a family this installation does not have is told which font file was
+missing, at the point it asks, rather than rendering silently wrong:
+
+```
+typeface 'hebrew' is one texish bundles, but its font files were not found —
+no font source has 'fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf'
+```
 
 ## Building the binary
 

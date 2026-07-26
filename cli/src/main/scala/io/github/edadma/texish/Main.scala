@@ -27,6 +27,10 @@ private def fail(msg: String): Nothing =
   sys.exit(1)
 
 @main def run(args: String*): Unit =
+  // Before anything constructs a typesetter: a packaged texish carries a font tree beside its own binary, and
+  // finding it is what lets an installed copy set Devanagari or Chinese with nothing configured.
+  Install.offerBundledFonts()
+
   val builder = OParser.builder[Config]
   val parser =
     import builder.*
@@ -118,6 +122,11 @@ private[texish] def renderPdf(source: String, output: String, paper: String, bas
     val t      = new CairoPDFTypesetter(output)
     val (w, h) = paperDimensions(paper, t)
 
+    // The command-line tool is the full texish: whatever families the installation's font tree has, a document
+    // can name. Where there is no tree this registers nothing and costs nothing, and a document naming a family
+    // it would have supplied is told so rather than being left to guess.
+    t.loadBundledCatalogue()
+
     t.set("paperwidth", w)
     t.set("paperheight", h)
     t
@@ -137,6 +146,9 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
   val t = Passes.untilStable() { () =>
     val t      = new CairoImageTypesetter(dpi)
     val (w, h) = paperDimensions(paper, t)
+
+    t.loadBundledCatalogue() // as in renderPdf: the tool offers every family the installation has
+
 
     t.set("paperwidth", w)
     t.set("paperheight", h)

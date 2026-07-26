@@ -128,14 +128,15 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
       IO.write(out, sb.toString)
       Seq(out)
     }.taskValue,
-    // Embed the Latin Modern core as base64 in a generated Scala source, so a consumer that adds texish as a
-    // dependency gets a working engine with no font tree on disk and nothing to configure — a browser has no
-    // filesystem at all, and a Native binary has no resource loading, so the bytes must be compiled in. Only the
-    // core ships this way: the full bundled set is ~151MB, this curated stack ~2.9MB, and it is exactly the set
-    // Typesetter.loadBundledFonts registers under `lmroman` and `lmmath` (the default body and math faces). Every
-    // other bundled family is loaded from disk when it is there and skipped when it is not. The path list MUST
-    // stay in sync with those loads — a path here that nothing loads is dead weight in every artifact, and a load
-    // missing from here is a face that vanishes when there is no font tree.
+    // Embed the core faces as base64 in a generated Scala source, so a consumer that adds texish as a dependency
+    // gets a working engine with no font tree on disk and nothing to configure — a browser has no filesystem at
+    // all, and a Native binary has no resource loading, so the bytes must be compiled in. Only the core ships
+    // this way: the full bundled set is ~151MB against this curated stack's ~6.1MB. It is exactly the set
+    // Typesetter.loadCoreFonts registers, and that method is the engine's guaranteed baseline — the body, math,
+    // glyph-fallback and music faces every host has. The wider set is opt-in (loadBundledCatalogue) and comes
+    // from a font tree on disk. The path list MUST stay in sync with loadCoreFonts: a path here that nothing
+    // loads is dead weight in every artifact, and a core load missing from here is a face that vanishes wherever
+    // there is no font tree. EmbeddedCoreTests asserts both directions.
     Compile / sourceGenerators += Def.task {
       val root = (LocalRootProject / baseDirectory).value
       val out =
@@ -157,6 +158,16 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         "fonts/LatinModernSans/lmsans10-oblique.otf",
         "fonts/LatinModernSans/lmsans10-boldoblique.otf",
         "fonts/LatinModernMath/LatinModernMath-SMaFL.otf",
+        // New Computer Modern, the glyph-fallback face. All four cuts, so a substituted run keeps the weight and
+        // slope of the text around it rather than dropping to regular inside a bold heading.
+        "fonts/NewComputerModern/NewCM10-Regular.otf",
+        "fonts/NewComputerModern/NewCM10-Bold.otf",
+        "fonts/NewComputerModern/NewCM10-Italic.otf",
+        "fonts/NewComputerModern/NewCM10-BoldItalic.otf",
+        // Bravura, the SMuFL reference music face. The music package is embedded, so its font must be too, or
+        // that package resolves and then cannot draw a note. Petaluma, the alternative handwritten face, is
+        // not core — a document choosing it is choosing something beyond the baseline.
+        "fonts/Bravura/Bravura.otf",
       )
       val enc = java.util.Base64.getEncoder
       val sb  = new StringBuilder

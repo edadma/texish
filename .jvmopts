@@ -1,2 +1,5 @@
 -Dsun.net.client.defaultConnectTimeout=120000
 -Dsun.net.client.defaultReadTimeout=1800000
+# The Scala Native linker holds the whole program's NIR in memory, and the embedded core (EmbeddedFontData) is
+# several megabytes of base64 string constants. sbt's default heap is not enough to link it.
+-Xmx8G

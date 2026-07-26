@@ -105,6 +105,7 @@ class Graphics2DPageTests extends AnyFreeSpec with Matchers:
     // interword space after it
     val t = new Graphics2DTypesetter(dpi = 100)
 
+    t.loadBundledCatalogue() // noto is a catalogue family, not one of the core faces the artifact carries
     t.selectFont("noto", 11.2, Set("regular"))
 
     val text     = "mwiamwiamwiamwiamwia"
