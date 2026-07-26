@@ -143,9 +143,13 @@ texish frame.texish -t png -r 72        # 1 point = 1 pixel: a 1280x720pt page b
 cat doc.texish | texish -o doc          # read the source from standard input
 ```
 
-Build the binary with `sbt texishCli/nativeLink`; it is produced at
-`cli/target/scala-3.8.4/texish-cli`. To run it straight from sbt during development:
-`sbt "texishCli/run doc.texish"`.
+Every [release](https://github.com/edadma/texish/releases) attaches a binary for Linux (x86_64,
+arm64) and macOS (arm64), plus a `texish-<version>-share.tar.gz` carrying the font catalogue and the
+packages. Unpack the tarball at the same prefix as `bin/texish` — it lays down `share/texish/` — and
+the binary finds it with no wrapper script and no environment variable.
+
+Or build it: `sbt texishCli/nativeLink` produces `cli/target/scala-3.8.4/texish-cli`. To run it
+straight from sbt during development: `sbt "texishCli/run doc.texish"`.
 
 ## In the browser
 
@@ -206,7 +210,8 @@ Mathematics needs no package at all; it is part of the engine.
 
 The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
 SMuFL music faces — is 151MB and lives in this repository's `fonts/` folder, alongside the remaining
-packages (`diagram`, `plot`, `book`, `usfm`, `music`, …). Point `Typesetter.home` at the directory
+packages (`diagram`, `plot`, `book`, `usfm`, `music`, …); each release ships it as a
+`texish-<version>-share.tar.gz`. Point `Typesetter.home` at the directory
 holding both and call `loadBundledCatalogue()` to make the fonts available. On Native,
 `Install.configure()` works that out for you by locating the running executable, so an installed
 program — the command-line tool, or an application whose package depends on texish's — needs no

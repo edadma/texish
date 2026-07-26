@@ -101,3 +101,60 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ steps.ver.outputs.tag }}" "texish-${{ steps.ver.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}" --clobber
+
+  # The binaries carry only the compiled-in core, so on their own they cannot set Hebrew or
+  # resolve \use{diagram}. This job attaches the rest: the font catalogue and the packages, as
+  # one platform-independent archive. No matrix, no toolchain — a checkout and a tar.
+  share:
+    name: share tarball
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout texish
+        uses: actions/checkout@v7
+
+      - name: Resolve version
+        id: ver
+        run: |
+          TAG='${{ github.event.release.tag_name || inputs.tag }}'
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      # The archive carries its own share/texish/ prefix, which is one of the two layouts
+      # Install.homeNear searches for. Unpacking it at an install prefix therefore lands the tree
+      # exactly where the binary in that prefix's bin/ will look, with nothing left to move.
+      - name: Stage the tree
+        run: |
+          mkdir -p stage/share/texish
+          cp -R fonts packages stage/share/texish/
+
+      # Built deterministically — fixed member order, zeroed timestamps and ownership, and a gzip
+      # header with no embedded mtime — so re-running this workflow against an existing tag produces
+      # a byte-identical archive. A package manager's formula pins the checksum, and --clobber would
+      # otherwise replace the asset with an equivalent one whose hash no longer matches.
+      - name: Build the tarball
+        id: tar
+        run: |
+          NAME="texish-${{ steps.ver.outputs.version }}-share.tar.gz"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+              -I 'gzip -n' -cf "$NAME" -C stage share
+          sha256sum "$NAME" > "$NAME.sha256"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      # The checksum is what a formula pins, so surface it where it can be copied out of the run
+      # rather than only inside the uploaded file.
+      - name: Report
+        run: |
+          {
+            echo '### Share tarball'
+            echo
+            echo "\`$(cat "${{ steps.tar.outputs.name }}.sha256")\`"
+            echo
+            echo "$(du -h "${{ steps.tar.outputs.name }}" | cut -f1) compressed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.ver.outputs.tag }}" \
+            "${{ steps.tar.outputs.name }}" "${{ steps.tar.outputs.name }}.sha256" --clobber

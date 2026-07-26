@@ -51,6 +51,10 @@ those two.
 the tree therefore needs **no wrapper script and no environment variable**, and it works the same
 invoked by absolute path, through `$PATH`, or through a package manager's link farm.
 
+Every release attaches that tree as `texish-<version>-share.tar.gz`, which unpacks to
+`share/texish/fonts` and `share/texish/packages`. Unpack it at the prefix holding `bin/texish` and the
+binary finds it — see [Installation](/getting-started/installation/#from-a-release).
+
 Otherwise a font path is looked for beside the document and then in the current working directory (so
 running from the texish source tree just works), and a module beside the document, in the current
 directory, and in `./packages/`. `$TEXISHHOME` remains as a fallback for a tree kept somewhere none of
@@ -71,10 +75,10 @@ no font source has 'fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf'
 ## Building the binary
 
 ```sh
-sbt texishNative/nativeLink
+sbt texishCli/nativeLink
 ```
 
-The executable is produced at `native/target/scala-3.8.4/texish`.
+The executable is produced at `cli/target/scala-3.8.4/texish-cli`.
 
 ## Links and images in PDF output
 

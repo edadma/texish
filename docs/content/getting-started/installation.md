@@ -44,14 +44,46 @@ is a bug report.
 ## As a command-line tool
 
 The Scala Native build links a standalone `texish` executable that turns a source document
-into a PDF (or one PNG per page) using the Cairo backend. Build it with:
+into a PDF (or one PNG per page) using the Cairo backend. See the
+[command-line tool](/reference/cli/) reference for its options.
+
+### From a release
+
+Every [release](https://github.com/edadma/texish/releases) attaches a binary per platform —
+`linux-x86_64`, `linux-arm64`, `macos-arm64` — and one platform-independent
+`texish-<version>-share.tar.gz` holding the font catalogue and the packages. The binary alone is a
+working renderer; the tarball is what adds the complex-script faces, the CJK cuts and the packages
+beyond `base` and `document`.
 
 ```sh
-sbt texishNative/nativeLink
+V=<version>                      # the release to install, without the leading v
+P=$HOME/.local                   # any prefix whose bin/ is on your PATH
+
+curl -L -o "$P/bin/texish" \
+  "https://github.com/edadma/texish/releases/download/v$V/texish-$V-macos-arm64"
+chmod +x "$P/bin/texish"
+
+curl -L "https://github.com/edadma/texish/releases/download/v$V/texish-$V-share.tar.gz" \
+  | tar -xz -C "$P"
 ```
 
-The binary is produced at `native/target/scala-3.8.4/texish`. See the
-[command-line tool](/reference/cli/) reference for its options.
+The tarball unpacks to `share/texish/fonts` and `share/texish/packages`, which is one of the layouts
+[the binary looks for](#finding-an-installation) — so it belongs at the same prefix as `bin/`, and
+there is nothing further to configure. The archive is about 92MB compressed, most of it the CJK
+faces; a `.sha256` accompanies it on the release.
+
+Intel Macs have no binary (that runner is too scarce to build on reliably) and neither does Windows,
+since the PDF backend is Cairo-bound. Both can build from source, or use the library on the JVM for
+PNG and SVG output.
+
+### From source
+
+```sh
+sbt texishCli/nativeLink
+```
+
+The binary is produced at `cli/target/scala-3.8.4/texish-cli`. A checkout already has `fonts/` and
+`packages/` in it, so a binary run from the source tree finds the whole catalogue with no tarball.
 
 ## Fonts
 
