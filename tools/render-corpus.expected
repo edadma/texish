@@ -1,0 +1,18 @@
+# The demos that render from the compiled-in core alone — no font tree, no packages on disk.
+#
+# Everything reachable without an installation is here: the engine's own typesetting, mathematics
+# (which needs no package), the base and document packages, drop caps, page geometry and
+# arrangement, and QR codes. Every other demo names a catalogue face or a package that lives on
+# disk, and must fail with a diagnostic saying so rather than rendering something wrong.
+#
+# Regenerate with tools/render-corpus.sh and read the diff before accepting it: a demo LEAVING
+# this file means an unconfigured texish can do less than it used to.
+#
+# Lines starting with # are ignored. Keep the rest sorted.
+document-demo
+dropcap-demo
+four-up-dummy
+geometry-demo
+math-demo
+qr-demo
+texish-demo

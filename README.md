@@ -1,5 +1,7 @@
 # texish
 
+[![CI](https://github.com/edadma/texish/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/edadma/texish/actions/workflows/ci.yml)
+
 A TeX-style document layout and rendering engine for Scala, cross-built for the JVM and Scala
 Native. Body text is set in Latin Modern Roman, with TeX-style math mode set in the matching
 Latin Modern Math through an OpenType `MATH` table. Math covers inline `$…$` and centered display
