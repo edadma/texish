@@ -290,7 +290,8 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
   )
 
   // \glyph[anchor:]{x y}{codepoint} - place one glyph (a marker, arrowhead, charge sign) by codepoint, drawn in
-  // the current fill colour. Defaults to a baseline anchor, the natural attach point for a glyph.
+  // the current fill colour, or the pen where the picture sits if the picture set no colour of its own. Defaults
+  // to a baseline anchor, the natural attach point for a glyph.
   proc.registerPrimitive(
     "glyph",
     new Primitive {
@@ -300,13 +301,13 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
         val c      = readNumbers(proc, pos)
         val cp     = num1(proc, pos).toInt
         val rf     = t.currentFont.renderFont.asInstanceOf[t.RenderFont]
-        val color  = pm.fillColor.orElse(pm.strokeColor).getOrElse(Color("black"))
+        val color  = pm.fillInk
         pm.place(new GlyphBox(t, t.glyphIndex(rf, cp), t.currentFont, color), anchor, c(0), c(1))
     },
   )
 
   // \fontglyph[anchor:]{x y}{typeface}{size}{codepoint} - place one glyph from a named typeface at a given size,
-  // by codepoint, in the current fill colour. Unlike \glyph, which uses whatever font is current, this names the
+  // by codepoint, in the same ink \glyph uses. Unlike \glyph, which uses whatever font is current, this names the
   // face and the point size in the call, so a picture can stamp a glyph from a font it never selects for text —
   // a music symbol from Bravura, a dingbat, an icon. It selects the font without disturbing the current one (no
   // scope to manage), since the glyph is built and placed directly. Defaults to a baseline anchor, as \glyph does.
@@ -322,13 +323,14 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
         val cp     = num1(proc, pos).toInt
         val font   = t.makeFont(face, size, Set.empty[String])
         val rf     = font.renderFont.asInstanceOf[t.RenderFont]
-        val color  = pm.fillColor.orElse(pm.strokeColor).getOrElse(Color("black"))
+        val color  = pm.fillInk
         pm.place(new GlyphBox(t, t.glyphIndex(rf, cp), font, color), anchor, c(0), c(1))
     },
   )
 
-  // \arrow[head: size: heads:]{a b} - a shaft from a to b plus an arrowhead, drawn in the current \stroke colour
-  // (an arrow is ink: shaft and head share the pen, \fill is ignored). The shaft is shortened at each headed end so
+  // \arrow[head: size: heads:]{a b} - a shaft from a to b plus an arrowhead, drawn in the current \stroke colour,
+  // or the pen where the picture sits if it set none (an arrow is ink: shaft and head share one colour, and \fill
+  // is consulted only when there is no \stroke). The shaft is shortened at each headed end so
   // the line meets the back of the head rather than poking through its tip. heads = end (default) | start | both.
   proc.registerPrimitive(
     "arrow",
@@ -344,7 +346,7 @@ def registerPictureGraphicsPrimitives(proc: Processor, handler: TypesetterHandle
         val (ax, ay, bx, by) = (c(0), c(1), c(2), c(3))
         val d        = math.hypot(bx - ax, by - ay)
         val (ux, uy) = if d == 0 then (0.0, 0.0) else ((bx - ax) / d, (by - ay) / d)
-        val ink      = pm.strokeColor.orElse(pm.fillColor).getOrElse(Color("black"))
+        val ink      = pm.strokeInk
 
         val insetEnd   = if heads == "end"   || heads == "both" then emitArrowhead(pm, ax, ay, bx, by, style, len) else 0.0
         val insetStart = if heads == "start" || heads == "both" then emitArrowhead(pm, bx, by, ax, ay, style, len) else 0.0
@@ -396,8 +398,9 @@ private[parser] def arrowStyleOpt(handler: TypesetterHandler, opts: Map[String, 
       val s = Value.display(v)
       ArrowHead.fromString(s).getOrElse(handler.error(s"unknown arrowhead '$s' (triangle, stealth, bar, dot)", pos))
 
-// Draw an arrowhead of length `len` at tip `(tx,ty)` pointing away from `(ax,ay)`, in the picture's current pen
-// colour. Lowers to the existing path + paint ops, so no backend support beyond the shapes already render. Returns
+// Draw an arrowhead of length `len` at tip `(tx,ty)` pointing away from `(ax,ay)`, in the picture's pen colour —
+// its \stroke, or the ink in force where the picture sits if it set none (see PictureMode.strokeInk).
+// Lowers to the existing path + paint ops, so no backend support beyond the shapes already render. Returns
 // how far back along the shaft the line should stop at this end so it meets the head cleanly (0 when degenerate).
 //
 // `tipExtend` pushes the tip that many units further along the direction. A straight `\arrow` passes 0 and shortens
@@ -418,7 +421,7 @@ private[parser] def emitArrowhead(
   val ux = (tx - ax) / d; val uy = (ty - ay) / d // unit direction, toward the tip
   val px = -uy; val py = ux                       // unit perpendicular (quarter-turn counter-clockwise)
   val w  = 0.36 * len                             // half the base width — about a 20° half-angle
-  val ink = pm.strokeColor.orElse(pm.fillColor).getOrElse(Color("black"))
+  val ink = pm.strokeInk
   val tipx = tx + tipExtend * ux                  // the drawn tip, possibly pushed past the geometric endpoint
   val tipy = ty + tipExtend * uy
 

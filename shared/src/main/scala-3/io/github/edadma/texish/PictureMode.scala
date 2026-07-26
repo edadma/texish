@@ -108,6 +108,14 @@ class PictureMode(val t: Typesetter, val width: Double, val height: Double) exte
   def fillColor: Option[Color]   = fillColour.map(withOpacity(_, fillOpacity))
   def strokeColor: Option[Color] = strokeColour.map(withOpacity(_, strokeOpacity))
 
+  /** The ink for a mark the drawing command colours itself — an arrowhead, a placed glyph — rather than one the
+    * picture's fill/stroke state paints through [[paint]]. The two axes are consulted in the order that suits
+    * the mark: an arrow is a stroke that happens to end in a filled head, a glyph is a fill. With neither set,
+    * the mark takes the pen in force where the picture sits, so a picture that names no colour of its own draws
+    * in the document's ink — and follows it into a dark scheme — rather than in a fixed black. */
+  def strokeInk: Color = strokeColor.orElse(fillColor).getOrElse(t.currentColor)
+  def fillInk: Color   = fillColor.orElse(strokeColor).getOrElse(t.currentColor)
+
   /** The most recently set stroke width, so a `\path` arrowhead can push its tip far enough past the path end to
     * cover the stroke's end cap (the stroke runs to the exact endpoint, where a pointed head is infinitely thin). */
   def lineWidth: Double = lineWidthValue
