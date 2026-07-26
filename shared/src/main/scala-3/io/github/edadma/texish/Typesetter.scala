@@ -17,6 +17,19 @@ import scala.language.postfixOps
   * drops the element so its math baseline, not its bottom edge, sits on the text baseline. */
 final case class FragmentMetrics(width: Double, height: Double, baseline: Double)
 
+object Typesetter:
+
+  /** Where a host keeps the `fonts/` folder, when it ships one. The engine names each bundled face by a relative
+    * path that begins at that folder (`fonts/LatinModernRoman/lmroman10-regular.otf`), and this directory is one
+    * of the roots such a path is resolved against — so an application embedding the engine can keep the fonts
+    * wherever it likes and point the loader at their parent, without touching the environment.
+    *
+    * It is empty by default, and *nothing requires it to be set*: the Latin Modern core is compiled into the
+    * artifact (see [[EmbeddedFonts]]), so the engine draws with no font tree at all. Setting it is how a host
+    * offers the wider bundled set — the complex-script faces, the CJK cuts, the alternative text families. Set it
+    * before constructing a typesetter, since the bundled faces are registered in the constructor. */
+  var fontsDir: String = ""
+
 abstract class Typesetter:
 
   type ImageHandle
@@ -161,7 +174,17 @@ abstract class Typesetter:
 
   def fillRect(x: Double, y: Double, width: Double, height: Double): Unit
 
+  /** Open a face from a font file on disk. `path` has already been resolved to something that exists. */
   def loadFont(path: String): FontFace
+
+  /** Open a face from font-file bytes held in memory, for a face that has no file to open — the Latin Modern
+    * core the artifact carries as base64 (see [[EmbeddedFonts]]), which is the whole of what a consumer gets
+    * when there is no font tree on disk. `name` is the relative path the bytes were embedded under, for error
+    * messages and for a backend that keys a cache by it.
+    *
+    * A backend whose font API reads lazily from the buffer it is handed (FreeType does) must keep the bytes
+    * alive and unchanged for the lifetime of the face it returns. */
+  def loadFontBytes(bytes: Array[Byte], name: String): FontFace
 
   def getTextExtents(text: String, font: RenderFont): TextExtents
 
@@ -338,11 +361,15 @@ abstract class Typesetter:
 
   def getDocument: DocumentMode = document
 
-  loadBundledFonts()
+  loadingBundled = true
+  try loadBundledFonts()
+  finally loadingBundled = false
 
-  /** Load the bundled typefaces this backend draws with, registering each style of each family. The JVM and
-    * Native hosts load the full set from disk; the Scala.js host, which has no filesystem and must keep the
-    * download small, overrides this to load only the embedded fonts it ships. */
+  /** Register the typefaces texish bundles, each style of each family. A face is opened from a font tree on
+    * disk when a root has it (see resolveFontPath) and from the core compiled into the artifact otherwise; a
+    * family with neither is skipped, so this same list serves a host with the full tree, a host with none, and
+    * everything between. What is guaranteed everywhere is the Latin Modern core — the default body face and
+    * Latin Modern Math — because those are the faces the artifact carries. */
   protected def loadBundledFonts(): Unit = {
   loadTypeface(
     "noto",
@@ -721,7 +748,9 @@ abstract class Typesetter:
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-Bold.otf", lmLigatures, Set("bold"))
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-Italic.otf", lmLigatures, Set("italic"))
   loadFont("newcm", "fonts/NewComputerModern/NewCM10-BoldItalic.otf", lmLigatures, Set("bold", "italic"))
-  fallbackTypeface = Some("newcm")
+  // NewCM is not part of the embedded core, so an installation with no font tree has no fallback face at all —
+  // there, a codepoint outside Latin Modern is a missing-glyph box rather than a substitution.
+  if hasTypeface("newcm") then fallbackTypeface = Some("newcm")
 
   // The default math font: Latin Modern Math in its SMaFL form, an OpenType font with a full MATH table whose
   // cmap has been extended to give every size-variant and assembly glyph a private-use codepoint (see the
@@ -886,41 +915,55 @@ abstract class Typesetter:
   def removeStyle(style: String*): Font = setStyle(currentFont.style -- style)
 
   /** Where a font file named by a relative path is looked for, most local root first: under `from` — the
-    * directory of the document or module doing the loading — then relative to the current directory, then
-    * under `$TEXISHHOME`. A document's own font files therefore shadow the bundled ones, the same order in
-    * which `\use` resolves a module.
+    * directory of the document or module doing the loading — then relative to the current directory, then under
+    * [[Typesetter.fontsDir]] if a host set one, then under `$TEXISHHOME`. A document's own font files therefore
+    * shadow the bundled ones, the same order in which `\use` resolves a module. None when no root has the file.
     *
     * The `from` root is what lets a host that is not run from the document's directory — an editor, a preview
-    * app — find a font sitting beside the document; the `$TEXISHHOME` root is what lets that same host find
-    * the fonts that ship with texish no matter which directory it was launched from. The engine's own bundled
-    * loads pass no `from`, so they resolve exactly as before.
+    * app — find a font sitting beside the document; the `fontsDir` and `$TEXISHHOME` roots are what let that
+    * same host find a font tree that ships alongside texish no matter which directory it was launched from. The
+    * engine's own bundled loads pass no `from`, so they resolve exactly as before.
     *
-    * An absolute path is returned untouched. Probing is guarded because a filesystem-less host (the browser
-    * build) reaches for Node APIs that are absent; there, resolution falls back to the path as written.
+    * An absolute path is returned as written if it exists. Probing is guarded because a filesystem-less host
+    * (the browser) reaches for Node APIs that are absent; there, nothing resolves and every face comes from the
+    * embedded core, which is exactly right.
     */
-  private def resolveFontPath(path: String, from: String): String =
+  private def resolveFontPath(path: String, from: String): Option[String] =
     try
       val p = Path(path)
 
-      if p.isAbsolute then path
+      if p.isAbsolute then Option.when(p.exists)(path)
       else
-        val beside = Path(from) / path
+        val roots =
+          LazyList(from).filter(_ != ".") #:::
+            LazyList(".") #:::
+            LazyList(Typesetter.fontsDir).filter(_.nonEmpty) #:::
+            PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty).to(LazyList)
 
-        if from != "." && beside.exists then beside.toPlatformString
-        else if p.exists then path
-        else
-          PlatformEnv
-            .get("TEXISHHOME")
-            .filter(_.nonEmpty)
-            .map(Path(_) / path)
-            .filter(_.exists)
-            .map(_.toPlatformString)
-            .getOrElse(path)
-    catch case _: Throwable => path
+        roots.map(Path(_) / path).find(_.exists).map(_.toPlatformString)
+    catch case _: Throwable => None
+
+  /** Open a face for a relative or absolute font path: from disk if any root has the file, otherwise from the
+    * core embedded in the artifact. None when neither has it — which for a bundled load means that family is
+    * simply not available in this installation, and for a `\loadfont` means the document named a file that is
+    * not there. */
+  private def openFace(path: String, from: String): Option[FontFace] =
+    resolveFontPath(path, from) match
+      case Some(resolved) => Some(loadFont(resolved))
+      case None           => EmbeddedFonts.get(path).map(loadFontBytes(_, path))
+
+  /** True while the constructor is registering the faces texish bundles. Inside that window a face whose file is
+    * on no root and is not part of the embedded core is skipped rather than fatal, and a family operation naming
+    * a family that was skipped is a no-op — so the engine starts with whatever the installation actually has,
+    * down to the embedded core alone. A document that then asks for an absent family gets a clear "typeface not
+    * found" at the point it asks. Outside the window a font that cannot be opened is an error, as a `\loadfont`
+    * naming a missing file should be. */
+  private var loadingBundled = false
 
   /** Register a font file under a typeface name. `from` is the directory a relative `path` is resolved against
-    * before the current directory and `$TEXISHHOME` — the document's own directory, for a `\loadfont` in a
-    * document. It defaults to the current directory, which is how the engine loads the faces it bundles. */
+    * before the current directory, [[Typesetter.fontsDir]] and `$TEXISHHOME` — the document's own directory, for
+    * a `\loadfont` in a document. It defaults to the current directory, which is how the engine loads the faces
+    * it bundles. */
   def loadFont(
       typeface:  String,
       path:      String,
@@ -928,16 +971,24 @@ abstract class Typesetter:
       styleSet:  Set[String],
       from:      String = ".",
   ): Unit =
-    val font = loadFont(resolveFontPath(path, from))
+    openFace(path, from) match
+      case Some(face)             => registerFont(typeface, face, ligatures, styleSet)
+      case None if loadingBundled => () // this installation does not have that face
+      case None                   => throw TexishException(s"font file '$path' not found")
 
+  /** Register an already-opened face as one style of a typeface — the step [[loadFont]] takes once it has a
+    * face in hand. A host holding a font as bytes rather than as a file (a resource bundle, a face fetched at
+    * runtime, a font pack shipped as its own artifact) opens it with [[loadFontBytes]] and registers it here.
+    * Loading two faces into the same style of the same family is an error: the second would silently shadow the
+    * first, which is never what a caller means. */
+  def registerFont(typeface: String, face: FontFace, ligatures: Set[String], styleSet: Set[String]): Unit =
     typefaces get typeface match
-      case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> (font, ligatures)), None)
+      case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> (face, ligatures)), None)
       case Some(Typeface(fonts, _)) =>
         if fonts contains styleSet then
           throw TexishException(
             s"font for typeface '$typeface' with style '${styleSet.mkString(", ")}' has already been loaded")
-        else fonts(styleSet) = (font, ligatures)
-  end loadFont
+        else fonts(styleSet) = (face, ligatures)
 
   /** Give an already-loaded typeface a second name — `\font hindi` for the Devanagari family, `\font korean` for
     * the Korean CJK one. The alias shares the faces the family already opened rather than opening the files a
@@ -946,7 +997,8 @@ abstract class Typesetter:
     */
   def aliasTypeface(alias: String, target: String): Unit =
     typefaces get target match
-      case None => throw TexishException(s"typeface '$target' not found")
+      case None if loadingBundled => () // the family it names was skipped for want of its files
+      case None                   => throw TexishException(s"typeface '$target' not found")
       case Some(tf) =>
         if typefaces contains alias then throw TexishException(s"typeface '$alias' has already been loaded")
         typefaces(alias) = tf
@@ -976,6 +1028,7 @@ abstract class Typesetter:
 
   def overrideBaseline(typeface: String, baseline: Double): Unit =
     typefaces get typeface match
+      case None if loadingBundled   => () // the family it names was skipped for want of its files
       case None                     => throw TexishException(s"typeface '$typeface' not found")
       case Some(Typeface(fonts, _)) => typefaces(typeface) = Typeface(fonts, Some(baseline))
 

@@ -203,12 +203,14 @@ class SvgTypesetter extends Typesetter:
   def setColor(color: Color): Unit    = curColor = color
   def setLineWidth(width: Double): Unit = curLineWidth = width
 
-  def loadFont(path: String): FontFace = SvgFace(new OtfFont(readFontBytes(path)), path)
+  def loadFont(path: String): FontFace = loadFontBytes(readFontBytes(path), path)
+
+  def loadFontBytes(bytes: Array[Byte], name: String): FontFace = SvgFace(new OtfFont(bytes), name)
 
   def makeFont(font: FontFace, size: Double): RenderFont = SvgRenderFont(font.font, size)
 
-  /** Read a font file's bytes. On the JVM this reads from disk; the JS layer overrides font loading to supply
-    * the bundled bytes it embeds, since a browser has no filesystem. */
+  /** Read a font file's bytes from disk. Only ever called for a path that resolved, so a host with no
+    * filesystem — the browser — never reaches it; there every face comes from the embedded core instead. */
   protected def readFontBytes(path: String): Array[Byte] =
     java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path))
 

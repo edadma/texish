@@ -122,6 +122,54 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       IO.write(out, sb.toString)
       Seq(out)
     }.taskValue,
+    // Embed the Latin Modern core as base64 in a generated Scala source, so a consumer that adds texish as a
+    // dependency gets a working engine with no font tree on disk and nothing to configure — a browser has no
+    // filesystem at all, and a Native binary has no resource loading, so the bytes must be compiled in. Only the
+    // core ships this way: the full bundled set is ~151MB, this curated stack ~2.9MB, and it is exactly the set
+    // Typesetter.loadBundledFonts registers under `lmroman` and `lmmath` (the default body and math faces). Every
+    // other bundled family is loaded from disk when it is there and skipped when it is not. The path list MUST
+    // stay in sync with those loads — a path here that nothing loads is dead weight in every artifact, and a load
+    // missing from here is a face that vanishes when there is no font tree.
+    Compile / sourceGenerators += Def.task {
+      val root = (LocalRootProject / baseDirectory).value
+      val out =
+        (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedFontData.scala"
+      val fontPaths = Seq(
+        "fonts/LatinModernRoman/lmroman10-regular.otf",
+        "fonts/LatinModernRoman/lmroman10-bold.otf",
+        "fonts/LatinModernRoman/lmroman10-italic.otf",
+        "fonts/LatinModernRoman/lmroman10-bolditalic.otf",
+        "fonts/LatinModernRoman/lmromanslant10-regular.otf",
+        "fonts/LatinModernRoman/lmromancaps10-regular.otf",
+        "fonts/LatinModernRoman/lmromancaps10-oblique.otf",
+        "fonts/LatinModernMono/lmmono10-regular.otf",
+        "fonts/LatinModernMono/lmmonolt10-bold.otf",
+        "fonts/LatinModernMono/lmmono10-italic.otf",
+        "fonts/LatinModernMono/lmmonolt10-boldoblique.otf",
+        "fonts/LatinModernSans/lmsans10-regular.otf",
+        "fonts/LatinModernSans/lmsans10-bold.otf",
+        "fonts/LatinModernSans/lmsans10-oblique.otf",
+        "fonts/LatinModernSans/lmsans10-boldoblique.otf",
+        "fonts/LatinModernMath/LatinModernMath-SMaFL.otf",
+      )
+      val enc = java.util.Base64.getEncoder
+      val sb  = new StringBuilder
+      sb.append("package io.github.edadma.texish\n\n")
+      sb.append("// Generated at build time from the bundled font files — do not edit.\n")
+      sb.append("// Base64 of each embedded font, split into chunks small enough for the compiler.\n")
+      sb.append("private[texish] object EmbeddedFontData:\n")
+      sb.append("  val chunks: Map[String, Array[String]] = Map(\n")
+      for (p <- fontPaths) {
+        val b64   = enc.encodeToString(IO.readBytes(root / p))
+        val parts = b64.grouped(32000).toSeq // 32000 is a multiple of 4 — chunks split on base64 boundaries
+        sb.append("    \"").append(p).append("\" -> Array(\n")
+        for (part <- parts) sb.append("      \"").append(part).append("\",\n")
+        sb.append("    ),\n")
+      }
+      sb.append("  )\n")
+      IO.write(out, sb.toString)
+      Seq(out)
+    }.taskValue,
     // Embed the bundled TextMate grammars (grammars/*.tmLanguage.json) as Scala constants at build time, so the
     // \code highlighter can resolve a language with no grammar file on disk — chiefly in the browser. A local
     // grammar file may still shadow the embedded one. Each grammar's JSON is split into chunks small enough for
@@ -172,49 +220,6 @@ lazy val texish = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     Test / scalaJSUseMainModuleInitializer := false,
     Test / scalaJSUseTestModuleInitializer := true,
     libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0",
-    // Embed the fonts the in-browser SVG renderer draws with, as base64 in a generated Scala source, since a
-    // browser has no filesystem. Only the Latin Modern text/math/mono stack is shipped — the full set is 61MB;
-    // this curated subset is ~1.3MB. The path list MUST stay in sync with SvgTypesetterJS.loadBundledFonts.
-    Compile / sourceGenerators += Def.task {
-      val root = (LocalRootProject / baseDirectory).value
-      val out =
-        (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedFontData.scala"
-      val fontPaths = Seq(
-        "fonts/LatinModernRoman/lmroman10-regular.otf",
-        "fonts/LatinModernRoman/lmroman10-bold.otf",
-        "fonts/LatinModernRoman/lmroman10-italic.otf",
-        "fonts/LatinModernRoman/lmroman10-bolditalic.otf",
-        "fonts/LatinModernRoman/lmromanslant10-regular.otf",
-        "fonts/LatinModernRoman/lmromancaps10-regular.otf",
-        "fonts/LatinModernRoman/lmromancaps10-oblique.otf",
-        "fonts/LatinModernMono/lmmono10-regular.otf",
-        "fonts/LatinModernMono/lmmonolt10-bold.otf",
-        "fonts/LatinModernMono/lmmono10-italic.otf",
-        "fonts/LatinModernMono/lmmonolt10-boldoblique.otf",
-        "fonts/LatinModernSans/lmsans10-regular.otf",
-        "fonts/LatinModernSans/lmsans10-bold.otf",
-        "fonts/LatinModernSans/lmsans10-oblique.otf",
-        "fonts/LatinModernSans/lmsans10-boldoblique.otf",
-        "fonts/LatinModernMath/LatinModernMath-SMaFL.otf",
-      )
-      val enc = java.util.Base64.getEncoder
-      val sb  = new StringBuilder
-      sb.append("package io.github.edadma.texish\n\n")
-      sb.append("// Generated at build time from the bundled font files — do not edit.\n")
-      sb.append("// Base64 of each embedded font, split into chunks small enough for the compiler.\n")
-      sb.append("private[texish] object EmbeddedFontData:\n")
-      sb.append("  val chunks: Map[String, Array[String]] = Map(\n")
-      for (p <- fontPaths) {
-        val b64   = enc.encodeToString(IO.readBytes(root / p))
-        val parts = b64.grouped(32000).toSeq // 32000 is a multiple of 4 — chunks split on base64 boundaries
-        sb.append("    \"").append(p).append("\" -> Array(\n")
-        for (part <- parts) sb.append("      \"").append(part).append("\",\n")
-        sb.append("    ),\n")
-      }
-      sb.append("  )\n")
-      IO.write(out, sb.toString)
-      Seq(out)
-    }.taskValue,
   )
 
 // The command-line tool is a native-only application, kept out of the published `texish` library so a library

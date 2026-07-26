@@ -33,6 +33,8 @@ class HeadlessTypesetter extends Typesetter:
 
   def loadFont(path: String): FontFace = path
 
+  def loadFontBytes(bytes: Array[Byte], name: String): FontFace = name
+
   def getTextExtents(text: String, font: RenderFont): TextExtents =
     TextExtents(0, -8, text.length * 6, 10, text.length * 6, 0)
 

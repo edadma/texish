@@ -137,21 +137,43 @@ class CairoImageTests extends AnyFreeSpec with Matchers:
     (data(3) & 0xff) shouldBe 128 +- 3
   }
 
-  "the font base directory is where bundled fonts are read from" in {
-    // Each bundled face is named `fonts/…`; CairoTypesetter.fontsDir is the directory *containing* that
-    // `fonts/` folder and is prepended before the file is opened, so an embedding application can keep
-    // the fonts anywhere. The default "." finds ./fonts from the source tree (every other test here
-    // relies on it); this confirms the directory is actually consulted — the fonts' parent given as an
-    // absolute path still resolves, and a directory with no fonts fails loudly rather than drawing tofu.
-    val original = CairoTypesetter.fontsDir
+  "the font base directory is one of the roots a bundled font is looked for under" in {
+    // Each bundled face is named `fonts/…`; Typesetter.fontsDir is the directory *containing* that `fonts/`
+    // folder, so an embedding application can keep the tree anywhere and point the engine at its parent. The
+    // other tests here rely on the current directory finding ./fonts from the source tree; this confirms the
+    // configured root is consulted too, and that a root with nothing under it is harmless rather than fatal —
+    // the engine falls back to the core compiled into the artifact.
+    val original = Typesetter.fontsDir
     try
-      CairoTypesetter.fontsDir = new java.io.File("fonts").getAbsoluteFile.getParent
-      val t = new CairoImageTypesetter(100)
-      t.destroy() // constructed and tore down without a font-load error
+      Typesetter.fontsDir = new java.io.File("fonts").getAbsoluteFile.getParent
+      new CairoImageTypesetter(100).destroy() // constructed and tore down without a font-load error
 
-      CairoTypesetter.fontsDir = "/no/such/fonts/dir"
-      a[RuntimeException] should be thrownBy new CairoImageTypesetter(100)
-    finally CairoTypesetter.fontsDir = original
+      Typesetter.fontsDir = "/no/such/fonts/dir"
+      new CairoImageTypesetter(100).destroy()
+    finally Typesetter.fontsDir = original
+  }
+
+  // The engine must work as a plain library dependency, with no font tree anywhere: FreeType opens the Latin
+  // Modern core straight from the base64 the artifact carries. FreeType never copies a memory face's bytes and
+  // reads them for the life of the face, so the backend keeps them in a malloc'd block — the collection below
+  // is what would expose a face left pointing at a Scala array instead.
+  "a face opened from the embedded core measures identically to the same face from disk" in {
+    val path = "fonts/LatinModernRoman/lmroman10-regular.otf"
+    val t    = new CairoImageTypesetter(100)
+
+    try
+      val fromDisk  = t.makeFont(t.loadFont(path), 10)
+      val fromBytes = t.makeFont(t.loadFontBytes(EmbeddedFonts.get(path).get, path), 10)
+
+      System.gc() // anything the memory face still needed had better not be on the Scala heap
+
+      for c <- "Hamburgefonstiv 3.14" do
+        t.glyphIndex(fromBytes, c.toInt) shouldBe t.glyphIndex(fromDisk, c.toInt)
+        t.charWidth(fromBytes, c) shouldBe t.charWidth(fromDisk, c)
+
+      t.getTextExtents("Hamburgefonstiv", fromBytes) shouldBe t.getTextExtents("Hamburgefonstiv", fromDisk)
+      t.glyphIndex(fromBytes, 'H'.toInt) should not be 0 // a real face, not a bad-parse stub of all .notdef
+    finally t.destroy()
   }
 
   "a multi-page document ships one surface per page, each with content" in {

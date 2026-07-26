@@ -22,13 +22,21 @@ import io.github.edadma.turbojpeg
 import java.io.{File, FileInputStream}
 
 import scala.compiletime.uninitialized
+import scala.scalanative.libc.stdlib.malloc
+import scala.scalanative.libc.string.memcpy
+import scala.scalanative.unsafe.{Ptr, UnsafeRichArray}
+import scala.scalanative.unsigned.UnsignedRichInt
 
 /** A loaded typeface: the Cairo font face used to draw and measure, paired with the FreeType face it was
   * built from. The FreeType face is retained because the glyph seam needs it — `getCharIndex` maps a
   * codepoint to a glyph index, and (since the Cairo face was created from this FreeType face) that index
   * is exactly what `cairo_show_glyphs` / `cairo_glyph_extents` consume.
+  *
+  * `buffer` is non-null only for a face opened from memory: FreeType reads a memory face's bytes lazily and
+  * never copies them, so the block must outlive the face. It is malloc'd rather than a Scala array precisely so
+  * the garbage collector cannot move or reclaim it while FreeType still holds the pointer.
   */
-case class CairoFace(cairo: CairoFontFace, ft: FTFace)
+case class CairoFace(cairo: CairoFontFace, ft: FTFace, buffer: Ptr[Byte] = null)
 
 /** A Cairo font handle, applied to a context as a face + size rather than via `cairo_set_scaled_font`: a
   * `cairo_scaled_font_t` binds the transform of the context it was created on and faults when set on a different
@@ -36,17 +44,6 @@ case class CairoFace(cairo: CairoFontFace, ft: FTFace)
   * face rides along for the glyph seam (see [[CairoFace]]).
   */
 case class CairoRenderFont(face: CairoFontFace, size: Double, ft: FTFace)
-
-object CairoTypesetter:
-
-  /** The directory that contains the bundled `fonts/` folder. The engine names each bundled face by a
-    * path that begins at that folder (`fonts/LatinModernRoman/lmroman10-regular.otf`), and this
-    * directory is prepended before the file is opened — so an application embedding the engine can ship
-    * the `fonts/` folder wherever it likes and point the loader at its parent. An absolute font path is
-    * used unchanged. It defaults to the current directory — where the command-line tool, run from the
-    * source tree, finds `fonts/` — or to the value of `TEXISH_FONTS_DIR` when that environment variable
-    * is set. Set it before constructing a typesetter: the bundled faces are loaded in the constructor. */
-  var fontsDir: String = sys.env.getOrElse("TEXISH_FONTS_DIR", ".")
 
 /** The drawing shared by the native Cairo backends. Everything that operates on a Cairo context — text, lines,
   * fills, fonts, images — lives here and is identical whatever the page is drawn onto. Subclasses decide only
@@ -101,13 +98,26 @@ abstract class CairoTypesetter extends Typesetter:
     ctx.fill()
 
   def loadFont(path: String): FontFace =
-    // A relative name is resolved against the configured fonts directory; an absolute path is opened as
-    // given, so a document's own \loadfont with a full path still works.
-    val file     = new File(path)
-    val resolved = if file.isAbsolute then path else new File(CairoTypesetter.fontsDir, path).getPath
-    val ft       = freetype.newFace(resolved, 0).getOrElse(sys.error(s"error loading face: $resolved"))
+    val ft = freetype.newFace(path, 0).getOrElse(sys.error(s"error loading face: $path"))
 
     CairoFace(fontFaceCreateForFTFace(ft.faceptr, 0), ft)
+
+  // FreeType does not copy a memory face's bytes — it reads them lazily for the whole life of the face — so the
+  // bytes are copied into a malloc'd block the collector neither moves nor reclaims, and the block is kept on
+  // the face. It is deliberately never freed: faces live as long as the typesetter and are not freed either, and
+  // freeing the block while Cairo still held the face would be a use-after-free rather than a saving.
+  def loadFontBytes(bytes: Array[Byte], name: String): FontFace =
+    val buffer = malloc(bytes.length)
+
+    if buffer == null then sys.error(s"out of memory loading embedded face: $name")
+
+    memcpy(buffer, bytes.at(0), bytes.length.toUSize)
+
+    val ft = freetype
+      .newMemoryFace(buffer, bytes.length.toLong, 0)
+      .getOrElse(sys.error(s"error loading embedded face: $name"))
+
+    CairoFace(fontFaceCreateForFTFace(ft.faceptr, 0), ft, buffer)
 
   def getTextExtents(text: String, font: RenderFont): TextExtents =
     setFont(font)

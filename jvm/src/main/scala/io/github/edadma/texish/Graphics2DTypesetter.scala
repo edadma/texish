@@ -103,6 +103,12 @@ class Graphics2DTypesetter(dpi: Double = 72) extends Typesetter:
   def loadFont(path: String): FontFace =
     AwtFace(java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new java.io.File(path)), path)
 
+  // AWT copies the stream's contents into the font it builds, so the array needs no keeping alive afterward.
+  def loadFontBytes(bytes: Array[Byte], name: String): FontFace =
+    val in = new java.io.ByteArrayInputStream(bytes)
+    try AwtFace(java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, in), name)
+    finally in.close()
+
   def getTextExtents(text: String, font: RenderFont): TextExtents =
     // TextLayout rejects an empty string; an empty run simply has no extent (as the other backends report)
     if text.isEmpty then return TextExtents(0, 0, 0, 0, 0, 0)

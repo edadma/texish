@@ -22,8 +22,8 @@ class GlyphFallbackTests extends AnyFreeSpec with Matchers:
 
   private def setup(): (T, Font) =
     val t = new T
-    t.loadFont("primary", "primaryface", Set.empty[String], Set.empty[String])
-    t.loadFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
+    t.registerFont("primary", "primaryface", Set.empty[String], Set.empty[String])
+    t.registerFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
     t.fallbackTypeface = Some("fallback")
     (t, t.makeFont("primary", 10, Set.empty))
 
@@ -59,11 +59,11 @@ class GlyphFallbackTests extends AnyFreeSpec with Matchers:
 
   private def styled(): T =
     val t = new T
-    t.loadFont("primary", "primaryface", Set.empty[String], Set.empty[String])
-    t.loadFont("primary", "primaryface-bold", Set.empty[String], Set("bold"))
-    t.loadFont("primary", "primaryface-mono", Set.empty[String], Set("mono"))
-    t.loadFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
-    t.loadFont("fallback", "fallbackface-bold", Set.empty[String], Set("bold"))
+    t.registerFont("primary", "primaryface", Set.empty[String], Set.empty[String])
+    t.registerFont("primary", "primaryface-bold", Set.empty[String], Set("bold"))
+    t.registerFont("primary", "primaryface-mono", Set.empty[String], Set("mono"))
+    t.registerFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
+    t.registerFont("fallback", "fallbackface-bold", Set.empty[String], Set("bold"))
     t.fallbackTypeface = Some("fallback")
     t
 
@@ -97,8 +97,8 @@ class GlyphFallbackTests extends AnyFreeSpec with Matchers:
     val t = new HeadlessTypesetter:
       override def glyphIndex(font: RenderFont, c: Int): Int =
         if c == 0xE000 then 0 else if font == "primaryface" && c >= 0x100 then 0 else c
-    t.loadFont("primary", "primaryface", Set.empty[String], Set.empty[String])
-    t.loadFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
+    t.registerFont("primary", "primaryface", Set.empty[String], Set.empty[String])
+    t.registerFont("fallback", "fallbackface", Set.empty[String], Set.empty[String])
     t.fallbackTypeface = Some("fallback")
     val primary = t.makeFont("primary", 10, Set.empty)
     val segs    = t.coverageSegments(pua + alpha, primary).toSeq

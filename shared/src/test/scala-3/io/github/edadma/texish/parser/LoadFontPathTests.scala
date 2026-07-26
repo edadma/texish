@@ -1,7 +1,7 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.path.Path
-import io.github.edadma.texish.HeadlessTypesetter
+import io.github.edadma.texish.{HeadlessTypesetter, TexishException}
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -78,10 +78,11 @@ class LoadFontPathTests extends AnyFreeSpec with Matchers:
     }
   }
 
-  // The engine's own bundled loads pass no directory, so they must keep resolving relative to the current
-  // directory exactly as before this root was added.
-  "a path that resolves nowhere is passed through unchanged" in {
+  // A font the document named but that no root has is a mistake in the document, and saying so at the \loadfont
+  // beats registering a face that fails later — or, on a backend that tolerates a bad path, drawing tofu.
+  "a path that resolves nowhere is an error naming the path" in {
     withFiles("MyFace.ttf") { dir =>
-      resolveIn(dir.toPlatformString, "\\loadfont{mine}{NoSuchFace.ttf}") shouldBe "NoSuchFace.ttf"
+      val thrown = the[TexishException] thrownBy resolveIn(dir.toPlatformString, "\\loadfont{mine}{NoSuchFace.ttf}")
+      thrown.getMessage should include("NoSuchFace.ttf")
     }
   }

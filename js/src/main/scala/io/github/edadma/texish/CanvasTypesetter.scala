@@ -29,7 +29,7 @@ final class CanvasPage(val canvas: dom.html.Canvas, val ctx: dom.CanvasRendering
   * seam maps straight onto the canvas's own transform and path API. Layout is identical to the SVG and PDF
   * backends: metrics still come from the pure-Scala font engine. The output is raster (drawn at the device
   * pixel ratio), so it is the in-browser companion to the vector SVG backend used for build-time output. */
-class CanvasTypesetter extends Typesetter with EmbeddedFontSet:
+class CanvasTypesetter extends Typesetter:
 
   type ImageHandle = AnyRef
   type FontFace    = CanvasFace
@@ -79,11 +79,14 @@ class CanvasTypesetter extends Typesetter with EmbeddedFontSet:
     fontFaceSet.add(face)
     face.load()
 
-  def loadFont(path: String): FontFace =
-    val bytes  = EmbeddedFonts.bytes(path)
-    val family = "tx-" + path.map(c => if c.isLetterOrDigit then c else '-')
+  def loadFontBytes(bytes: Array[Byte], name: String): FontFace =
+    val family = "tx-" + name.map(c => if c.isLetterOrDigit then c else '-')
     registerBrowserFont(family, bytes)
     CanvasFace(new OtfFont(bytes), family)
+
+  // A browser has no filesystem, so no font path ever resolves and every face arrives through loadFontBytes
+  // from the core compiled into the build. Reaching here means a host contrived a path that claimed to exist.
+  def loadFont(path: String): FontFace = sys.error(s"the browser build cannot read a font file ('$path')")
 
   def makeFont(font: FontFace, size: Double): RenderFont = CanvasRenderFont(font.font, size, font.family)
 
