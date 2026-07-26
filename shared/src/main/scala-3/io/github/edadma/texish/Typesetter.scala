@@ -2,8 +2,9 @@ package io.github.edadma.texish
 
 //import pprint.pprintln
 
+import io.github.edadma.path.Path
 import io.github.edadma.texish.opentype.{ByteCursor, Gpos, Gsub, IndicShaper, MathTable}
-import io.github.edadma.texish.parser.Value
+import io.github.edadma.texish.parser.{PlatformEnv, Value}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -867,8 +868,32 @@ abstract class Typesetter:
 
   def removeStyle(style: String*): Font = setStyle(currentFont.style -- style)
 
+  /** Where a font file named by a relative path is looked for: as given (relative to the current directory)
+    * first, then under `$TEXISHHOME`. The current directory wins, so a document's own font files keep
+    * shadowing the bundled ones and the historical behaviour is unchanged; the fallback is what lets a host
+    * that embeds the engine — an editor, a preview app — find the fonts that ship with texish no matter which
+    * directory it was launched from, the way `\use` already finds `$TEXISHHOME/packages`.
+    *
+    * An absolute path is returned untouched. Probing is guarded because a filesystem-less host (the browser
+    * build) reaches for Node APIs that are absent; there, resolution falls back to the path as written.
+    */
+  private def resolveFontPath(path: String): String =
+    try
+      val p = Path(path)
+
+      if p.isAbsolute || p.exists then path
+      else
+        PlatformEnv
+          .get("TEXISHHOME")
+          .filter(_.nonEmpty)
+          .map(Path(_) / path)
+          .filter(_.exists)
+          .map(_.toPlatformString)
+          .getOrElse(path)
+    catch case _: Throwable => path
+
   def loadFont(typeface: String, path: String, ligatures: Set[String], styleSet: Set[String]): Unit =
-    val font = loadFont(path)
+    val font = loadFont(resolveFontPath(path))
 
     typefaces get typeface match
       case None => typefaces(typeface) = Typeface(mutable.HashMap(styleSet -> (font, ligatures)), None)
