@@ -821,6 +821,21 @@ abstract class Typesetter:
       case Some(Value.Native(color: Color)) => currentColor = color
       case _                                =>
 
+  /** The pen at document level: the colour in force outside every open group. Material that is set apart from
+    * the text that called for it — a footnote, whose marker may fall inside a coloured span but whose note is
+    * set at the foot in body colour — resets to this, so it follows whatever ink the document (or a previewer
+    * inverting the page) actually chose rather than a fixed black.
+    *
+    * Each [[enter]] records the pen it opened with, so the outermost group's record is the pen outside every
+    * group; with no group open the current pen already is it. A document that brackets its whole body in one
+    * group and colours it there has put its ink inside that group, and its notes follow the pen outside it. */
+  def documentColor: Color =
+    if scopes.length < 2 then currentColor
+    else
+      scopes(scopes.length - 2).get("saved_color") match
+        case Some(Value.Native(color: Color)) => color
+        case _                                => currentColor
+
   // A font's style is one open set of tags, but the tags fall on a few independent axes — series (the weight),
   // slope (upright / italic / slanted), caps (small-capitals), and role (the typewriter / sans member of a
   // super-family). Within an axis the values are mutually exclusive: a face is bold *or* light, italic *or*
