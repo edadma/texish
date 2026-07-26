@@ -88,16 +88,28 @@ family whose plain cut is the typewriter (`\ttdefault{jetbrains}`).
 
 ### Bundled text faces
 
-Latin Modern (`\font lmroman`) is the default body face. Three more Latin faces are bundled on the
-JVM and Native builds (the browser build ships only Latin Modern):
+Four faces are **core** — compiled into the artifact, so they are there whatever a host has installed:
+
+- `\font lmroman` — Latin Modern, the default body face, with its sans and typewriter roles and its
+  small-caps and slanted cuts.
+- `\font lmmath` — Latin Modern Math, the default math font.
+- `\font newcm` — New Computer Modern, also the glyph-fallback face (see below).
+- `\font jetbrains` — JetBrains Mono, the face `\code` sets a listing in, in regular and bold.
+
+Every other bundled face is **catalogue**: it comes from a font tree on disk, and a host asks for the
+set with `loadBundledCatalogue()` (the command-line tool does this for you). Among the Latin text
+faces there:
 
 - `\font cinzel` — an all-capitals inscriptional titling serif in the Trajan tradition, for titles
   and chapter openings, in six weights (`regular`, `medium`, `semibold`, `bold`, `extrabold`,
   `black`).
 - `\font ebgaramond` — a Garamond revival for running text, with italic, the medium/semibold/
   extrabold weights and their italics, a real bold, and true small caps through the `smcp` feature.
+- `\font alegreya`, `\font gentium`, `\font gentiumbook`, `\font noto`, `\font pt`, and the rest of
+  JetBrains Mono's weight range.
 
-Any other face is brought in with `\loadfont{name}{path}`.
+Naming a catalogue face on an installation that has no font tree is an error that says so, naming the
+file it went looking for. Any face texish does not bundle is brought in with `\loadfont{name}{path}`.
 
 ### Glyph fallback (Cyrillic, Greek)
 
@@ -217,7 +229,7 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\binom{n}{k}` `\dbinom` `\tbinom` | binomial coefficients |
 | `\sqrt{x}` `\sqrt[3]{x}` | roots |
 | `\sum` `\int` `\prod` `\limits` `\nolimits` | big operators (`\nolimits` forces scripts to the side) |
-| `\sin` `\cos` `\arctan` `\log` `\exp` `\lim` `\max` `\det` `\Pr` … | the standard upright operator names |
+| `\sin` `\cos` `\arcsin` `\arctan` `\log` `\exp` `\lim` `\max` `\det` `\Pr` … | the standard upright operator names |
 | `\operatorname{…}` | an upright custom operator (like `\sin`, with operator spacing) |
 | `\bmod` `\pmod{m}` `\mod{m}` `\pod{m}` | modular-arithmetic forms |
 | `\implies` `\impliedby` `\iff` | spaced implication arrows |

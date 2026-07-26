@@ -12,7 +12,7 @@ are not currently built or published — see [Rendering in the Browser](/guide/b
 Add texish with the `%%%` operator so sbt selects the right platform artifact:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.25.0"
 ```
 
 Nothing else is needed: the Latin Modern core and the standard packages are compiled into the
@@ -153,7 +153,7 @@ It searches from the path the executable was *reached* by as well as the symlink
 covers two different installations:
 
 - **A program finding its own files.** The resolved path lands in the versioned directory holding both
-  the binary and its data (`…/Cellar/texish/0.24.0/{bin,share}`), so nothing depends on a prefix's links
+  the binary and its data (`…/Cellar/texish/0.25.0/{bin,share}`), so nothing depends on a prefix's links
   being intact.
 - **A program finding a dependency's.** A package manager links each program into a shared prefix and
   links each package's data alongside — so an application whose package depends on texish's finds

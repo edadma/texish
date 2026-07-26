@@ -103,7 +103,7 @@ class InstallTests extends AnyFreeSpec with Matchers:
       "bin/",                                            // the shared prefix's bin, holding links
       "Cellar/app/1.0/bin/app",                          // the dependent program, in its own keg
       "share/texish/packages/diagram.texish",            // texish's data, linked into the prefix
-      "Cellar/texish/0.24.0/share/texish/packages/diagram.texish",
+      "Cellar/texish/0.25.0/share/texish/packages/diagram.texish",
     )
 
     try

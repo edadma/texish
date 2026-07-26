@@ -12,7 +12,7 @@ import scala.scalanative.posix.unistd.isatty
   * through the parser over a Cairo backend, and writes the result as a PDF or one PNG per page.
   */
 
-private val Version = "0.24.2"
+private val Version = "0.25.0"
 
 private case class Config(
     input: Option[String] = None,
@@ -149,7 +149,6 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
     val (w, h) = paperDimensions(paper, t)
 
     t.loadBundledCatalogue() // as in renderPdf: the tool offers every family the installation has
-
 
     t.set("paperwidth", w)
     t.set("paperheight", h)

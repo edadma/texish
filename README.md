@@ -34,8 +34,8 @@ more). Pages render through pluggable backends — a Graphics2D raster (image) b
 a Cairo image-and-PDF backend on Native (there are also SVG and HTML-canvas backends for the browser,
 kept in the tree but not currently built — see [In the browser](#in-the-browser)).
 
-The core faces and the standard packages are compiled into the artifact, so texish works as a plain
-library dependency: nothing to install, no font tree, no environment variable.
+The core faces and the `base`/`document` packages are compiled into the artifact, so texish works as a
+plain library dependency: nothing to install, no font tree, no environment variable.
 
 It also has a vector-graphics mode (see below) for figures drawn inline in the document — shapes,
 freeform paths, transforms, and placed type — built on the same rendering pipeline as the text.
@@ -192,7 +192,7 @@ texish is cross-published for the JVM and Scala Native. Add it to an sbt build w
 operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.25.0"
 ```
 
 That is the whole setup. There is no font tree to install and no environment variable to set. Compiled
