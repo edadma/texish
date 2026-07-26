@@ -68,17 +68,22 @@ The core ships inside the artifact and needs no configuration on any platform:
 - **New Computer Modern** — the glyph-fallback face, in all four cuts. A codepoint the body face has
   no glyph for (a Greek word, a Cyrillic name) is set from this instead of a missing-glyph box, and
   keeps the weight and slope of the text around it.
-- **Bravura** — the SMuFL music face, so `\use{music}` can draw with nothing installed.
 
-That is the guaranteed baseline. A program that adds texish as a dependency and configures nothing
-gets all of it.
+That is the guaranteed baseline: running text, mathematics, and the scripts Latin Modern does not
+cover. A program that adds texish as a dependency and configures nothing gets all of it.
+
+The standard packages are compiled in on the same terms — every package that can work from the core
+alone. `music` is the exception: it sets notation from a SMuFL face, and those are catalogue fonts, so
+embedding it would ship a module that resolves and then cannot draw a note. It comes from a
+`packages/` folder on disk, alongside the fonts it needs.
 
 ### The catalogue — opt in
 
 Everything else texish bundles — the complex-script faces (Hebrew, Arabic, Devanagari, Bengali,
-Gurmukhi, Telugu), the CJK cuts, and the alternative text families (Gentium, Charis, EB Garamond,
-Noto, …) — comes to about 151MB, far too much to compile in. It lives in the source tree's `fonts/`
-folder, and a host asks for it in two steps: say where the tree is, then load it.
+Gurmukhi, Telugu), the CJK cuts, the alternative text families (Gentium, Charis, EB Garamond, Noto,
+…) and the SMuFL music faces (Bravura, Petaluma) — comes to about 151MB, far too much to compile in.
+It lives in the source tree's `fonts/` folder, and a host asks for it in two steps: say where the
+tree is, then load it.
 
 ```scala
 Typesetter.fontsDir = "/opt/texish"   // set before constructing a typesetter

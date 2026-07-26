@@ -16,8 +16,8 @@ import org.scalatest.matchers.should.Matchers
 class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
 
   /** The families the engine guarantees on every host — the body super-family with its mono and sans roles, the
-    * math face, the glyph-fallback face, and the music face the embedded music package needs. */
-  private val CoreFamilies = Seq("lmroman", "lmmath", "newcm", "bravura")
+    * math face, and the glyph-fallback face. */
+  private val CoreFamilies = Seq("lmroman", "lmmath", "newcm")
 
 
   /** A typesetter that opens the paths the way any host does, and lets a test read back what got registered. */
@@ -91,10 +91,19 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
   // Glyph fallback in particular is easy to lose by accident: it is configured from a face that was for a long
   // time loaded from disk only, so an embed that dropped it would leave every zero-configuration install setting
   // missing-glyph boxes for the first Greek or Cyrillic word, with nothing to point at the cause.
-  "the guaranteed baseline includes a fallback face and the music face" in {
+  "the guaranteed baseline includes a fallback face" in {
     val t = new Reader
 
     t.fallbackTypeface shouldBe Some("newcm")
-    t.facesOf("newcm") should have size 4      // regular, bold, italic, bold-italic — a substitution keeps its weight
-    t.facesOf("bravura") should have size 1
+    t.facesOf("newcm") should have size 4 // regular, bold, italic, bold-italic — a substitution keeps its weight
+  }
+
+  // A package that is embedded has to work from the embed alone. `music` sets notation from a SMuFL face, and
+  // those are catalogue fonts, so embedding it would ship a module that resolves and then cannot draw a note.
+  // It resolves from a packages/ folder on disk instead, alongside the fonts it needs.
+  "a package whose fonts are not embedded is not embedded either" in {
+    EmbeddedPackages.sources.keySet should not contain "music"
+    EmbeddedPackages.sources.keySet should contain("document") // the ones that do work from the embed still are
+    EmbeddedFontData.chunks.keys.filter(_.contains("Bravura")) shouldBe empty
+    EmbeddedFontData.chunks.keys.filter(_.contains("Petaluma")) shouldBe empty
   }

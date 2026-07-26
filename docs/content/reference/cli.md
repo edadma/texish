@@ -37,12 +37,13 @@ writes `name_1.png`, `name_2.png`, and so on.
 ## Fonts
 
 The core faces are compiled into the binary: Latin Modern (roman body with its bold, italic, slanted
-and small-caps cuts, plus the sans and typewriter roles), Latin Modern Math, New Computer Modern as
-the glyph-fallback face, and Bravura for `\use{music}`. So texish renders Latin, Greek, Cyrillic, math
-and music notation from any directory with nothing installed and nothing configured.
+and small-caps cuts, plus the sans and typewriter roles), Latin Modern Math, and New Computer Modern
+as the glyph-fallback face. So texish renders Latin, Greek, Cyrillic and mathematics from any
+directory with nothing installed and nothing configured.
 
-The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families — is
-too large for that and lives in a `fonts/` directory. **An installed texish finds its own**: on
+The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
+SMuFL music faces — is too large for that and lives in a `fonts/` directory. **An installed texish
+finds its own**: on
 startup it locates its executable and looks upward for `share/texish/fonts` or a `fonts/` beside it,
 so a package that installs the binary and the tree needs no wrapper script and no environment
 variable. Symlinks are resolved, so invoking it through `$PATH` or through a package manager's link

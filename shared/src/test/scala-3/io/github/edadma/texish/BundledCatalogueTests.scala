@@ -25,7 +25,7 @@ class BundledCatalogueTests extends AnyFreeSpec with Matchers:
   "the core families are there with no font tree and no catalogue" in {
     val t = bare()
 
-    for family <- Seq("lmroman", "lmmath", "newcm", "bravura") do
+    for family <- Seq("lmroman", "lmmath", "newcm") do
       withClue(s"$family: ") { noException should be thrownBy t.makeFont(family, 10, Set.empty) }
 
     // The roles of the body family come out of the embed too, not just its roman.
@@ -92,7 +92,7 @@ class BundledCatalogueTests extends AnyFreeSpec with Matchers:
   }
 
   "no core family is listed as bundled, since a core family can never be missing" in {
-    Typesetter.BundledFamilies.intersect(Set("lmroman", "lmmath", "newcm", "bravura")) shouldBe empty
+    Typesetter.BundledFamilies.intersect(Set("lmroman", "lmmath", "newcm")) shouldBe empty
   }
 
   // --- sources -------------------------------------------------------------

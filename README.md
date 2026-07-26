@@ -197,14 +197,13 @@ libraryDependencies += "io.github.edadma" %%% "texish" % "0.24.2"
 
 That is the whole setup. The core faces and the standard packages ship inside the artifact, so there
 is no font tree to install and no environment variable to set: Latin Modern with its sans and
-typewriter roles, Latin Modern Math, New Computer Modern for glyph fallback (Greek, Cyrillic), and
-Bravura for music notation.
+typewriter roles, Latin Modern Math, and New Computer Modern for glyph fallback (Greek, Cyrillic).
 
-The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families — is
-151MB and lives in this repository's `fonts/` folder. Point `Typesetter.fontsDir` at its parent and
-call `loadBundledCatalogue()` to make it available; the command-line tool finds a tree installed
-beside itself and does this for you. See
-[Installation](https://texish.edadma.dev/getting-started/installation/).
+The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
+SMuFL music faces — is 151MB and lives in this repository's `fonts/` folder, along with the `music`
+package that needs it. Point `Typesetter.fontsDir` at its parent and call `loadBundledCatalogue()` to
+make it available; the command-line tool finds a tree installed beside itself and does this for you.
+See [Installation](https://texish.edadma.dev/getting-started/installation/).
 
 ## License
 

@@ -59,5 +59,5 @@ coherent family across prose, equations, and code.
   `\use{er}` add program-flowchart, state-machine and entity-relationship vocabularies on top.
 - **Two platforms** — the JVM (Graphics2D raster) and Scala Native (Cairo PDF + image).
 - **Nothing to install** — the core faces and the standard packages are compiled into the artifact,
-  so the dependency alone renders Latin, Greek, Cyrillic, math and music: no font tree, no
+  so the dependency alone renders Latin, Greek, Cyrillic and mathematics: no font tree, no
   environment variable.

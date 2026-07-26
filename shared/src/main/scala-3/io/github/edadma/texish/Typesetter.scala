@@ -49,7 +49,7 @@ object Typesetter:
     "cjksc", "cjktc", "cjkjp", "japanese", "cjkkr", "korean",
     "hebrew", "ezra", "arabic", "amiri",
     "devanagari", "hindi", "bengali", "assamese", "gurmukhi", "punjabi", "telugu",
-    "jetbrains", "alegreya", "ebgaramond", "petaluma",
+    "jetbrains", "alegreya", "ebgaramond", "bravura", "petaluma",
   )
 
 abstract class Typesetter:
@@ -744,15 +744,21 @@ abstract class Typesetter:
     ("ExtraBold", "Italic"),
   )
 
-  // Petaluma, a handwritten-style SMuFL music face and the alternative to Bravura, which is core. A document
-  // choosing it is choosing something outside the guaranteed baseline, so it lives here rather than there.
+  // SMuFL (Standard Music Font Layout) music fonts. SMuFL fixes the codepoint of every notation glyph (clefs,
+  // noteheads, flags, rests, accidentals, time-signature figures, and more) in the Unicode Private Use Area and
+  // the convention that one staff space is a quarter of the em, so the music package can set glyphs with
+  // \fontglyph at a size of four staff spaces and have the font's own coordinates map straight onto the staff —
+  // and can swap one face for another. Bravura is the reference font, Petaluma a handwritten-style alternative;
+  // both are SIL OFL. Drawn by glyph index through the same seam math mode uses. The music package is not
+  // embedded either, so the two travel together: a host with the font tree has both, a host without has neither.
+  loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
   loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
   }
 
   /** Register the faces compiled into the artifact — the engine's guaranteed baseline, present on every host
     * whatever its filesystem holds. That is the Latin Modern super-family (the roman body with its mono and sans
-    * roles, its small-caps and slanted cuts), Latin Modern Math, New Computer Modern as the glyph-fallback face,
-    * and Bravura for the music package.
+    * roles, its small-caps and slanted cuts), Latin Modern Math, and New Computer Modern as the glyph-fallback
+    * face: what it takes to set running text, mathematics, and the scripts Latin Modern does not cover.
     *
     * Strict, unlike [[loadBundledCatalogue]]: these bytes ship inside the artifact, so a face that will not open
     * is a broken build rather than an installation without it, and saying so at once beats rendering a document
@@ -814,14 +820,6 @@ abstract class Typesetter:
   // through the browser's hinted text path. The extra cmap entries are inert on the outline-filling backends.
   loadFont("lmmath", "fonts/LatinModernMath/LatinModernMath-SMaFL.otf", Set(), Set())
 
-  // SMuFL (Standard Music Font Layout) music fonts. SMuFL fixes the codepoint of every notation glyph (clefs,
-  // noteheads, flags, rests, accidentals, time-signature figures, and more) in the Unicode Private Use Area and
-  // the convention that one staff space is a quarter of the em, so the music package can set glyphs with
-  // \fontglyph at a size of four staff spaces and have the font's own coordinates map straight onto the staff —
-  // and can swap one face for another. Both the faces texish bundles are SIL OFL. Bravura is the reference font,
-  // and is core so that \use{music} — an embedded package — can always draw; the handwritten-style Petaluma is
-  // an alternative the catalogue carries. Drawn by glyph index through the same seam math mode uses.
-  loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
   }
 
   init(1, 1)
