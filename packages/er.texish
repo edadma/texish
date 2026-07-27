@@ -43,7 +43,7 @@
   \set cx {\mapget dgX {\name}}\set cy {\mapget dgY {\name}}
   \set hw {\mapget dgHw {\name}}\set hh {\mapget dgHh {\name}}
   \set g {\erweakgap}
-  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \dgresolve\nofill\stroke{\dgink}\linewidth{\dglinewidth}
   \rect{\calc{cx - hw + g} \calc{cy - hh + g} \calc{2 * (hw - g)} \calc{2 * (hh - g)}}
 }}
 
@@ -59,7 +59,7 @@
   \set cx {\mapget dgX {\name}}\set cy {\mapget dgY {\name}}
   \set hw {\mapget dgHw {\name}}\set hh {\mapget dgHh {\name}}
   \set s {\calc{1 - erweakgap * hypot(hw, hh) / (hw * hh)}}
-  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \dgresolve\nofill\stroke{\dgink}\linewidth{\dglinewidth}
   \polygon{\cx \calc{cy + s * hh}  \calc{cx + s * hw} \cy  \cx \calc{cy - s * hh}  \calc{cx - s * hw} \cy}
 }}
 
@@ -77,7 +77,7 @@
   \set cx {\mapget dgX {\name}}\set cy {\mapget dgY {\name}}
   \set hw {\mapget dgHw {\name}}\set hh {\mapget dgHh {\name}}
   \set g {\erweakgap}
-  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \dgresolve\nofill\stroke{\dgink}\linewidth{\dglinewidth}
   \ellipse{\cx \cy \calc{hw - g} \calc{hh - g}}
 }}
 

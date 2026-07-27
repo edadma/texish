@@ -61,22 +61,29 @@ Two common grammar shapes are recognised and drawn the intuitive way rather than
 ## Customising the look
 
 Set any of these with `\set` before calling `\railroad`. Colours are the most useful: the
-whole palette is derived from one base colour, with terminals and character classes drawn at
-a lower [Oklch](/reference/commands/#macros-and-programming) lightness so they read as shades
-of the same hue.
+whole palette is derived from one base colour, with terminals and character classes shaded from
+it in [Oklch](/reference/commands/#macros-and-programming) lightness so they read as shades of
+the same hue.
+
+The base and the ink default to `auto`, so a railroad diagram takes its colours from the document
+around it: the rails are drawn in the pen, and the boxes in a tint of the page. The shading of
+terminals and character classes is *toward the ink*, which is darker on white paper and lighter
+on a dark page — always-darker would push a terminal past the page and out of sight exactly where
+it is meant to stand out.
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `rrbase` | `#dde8fb` | base fill colour for the boxes |
-| `rrtermdark` | `0.08` | how far to darken (lower Oklch L) a terminal box |
-| `rrccdark` | `0.17` | how far to darken a character-class box |
-| `rrlinecolor` | `black` | ink for the rails and box outlines |
+| `rrbase` | `auto` | base fill colour for the boxes; `auto` derives a tint of the page |
+| `rrtintl` / `rrtintc` / `rrtinth` | `0.0716` / `0.0284` / `261.5` | the `auto` base: how far its lightness moves from the page toward the ink, and the tint's Oklch chroma and hue |
+| `rrtermdark` | `0.08` | how far to shade a terminal box from the base toward the ink |
+| `rrccdark` | `0.17` | how far to shade a character-class box toward the ink |
+| `rrlinecolor` | `auto` | ink for the rails and box outlines; `auto` follows the document's pen |
 | `rrface` | `jetbrains` | typeface for the labels |
 | `rrfont` / `rrtitlefont` | `9` / `10` | label and rule-title point sizes |
 | `rrboxh` / `rrpadx` | `20` / `11` | box height and horizontal padding |
 | `rrhgap` / `rrvgap` | `15` / `11` | gaps between boxes in a row / stacked alternatives |
 
 ```texish
-\set rrbase {#ffe6cc}      % a warm palette instead of the default blue
+\set rrbase {#ffe6cc}      // a warm palette instead of the default blue
 \railroad{ digit ::= [0-9] }
 ```

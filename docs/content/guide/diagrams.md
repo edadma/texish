@@ -77,7 +77,7 @@ neighbours sit a true gap apart whatever their sizes.
 
 ```texish
 \node{a}{at 1in 4in}{First}
-\node{b}{below a}{Second}        % default gap below a
+\node{b}{below a}{Second}        // default gap below a
 \node{c}{right b 50}{Beside}     % 50pt to the right of b
 ```
 
@@ -118,10 +118,19 @@ one arrow over another.
 
 Set any of these with `\set` before drawing. Sizes are in points unless they carry a unit.
 
+The two colours default to `auto`, meaning the diagram takes them from the document it sits in
+rather than naming its own: the ink is whatever the pen is, and the fill is a tint of the page —
+its lightness moved a little of the way toward the ink, which is the familiar cool grey-blue on
+white paper and a matching slight lift on a dark one. That is what keeps a diagram legible when
+the document is rendered in a dark scheme, where a named dark ink would disappear into the page
+and a named pale fill would swallow the labels drawn over it in the document's own pen. Naming a
+colour explicitly overrides the derivation, for a figure with a palette of its own.
+
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `dgfill` | `#eef3fb` | node fill colour |
-| `dglinecolor` | `#1f2933` | ink for outlines and edges |
+| `dgfill` | `auto` | node fill colour; `auto` derives a tint of the page |
+| `dglinecolor` | `auto` | ink for outlines and edges; `auto` follows the document's pen |
+| `dgtintl` / `dgtintc` / `dgtinth` | `0.0373` / `0.012` / `259.8` | the `auto` fill: how far its lightness moves from the page toward the ink, and the tint's Oklch chroma and hue |
 | `dglinewidth` / `dgedgewidth` | `1pt` / `1.1pt` | outline and edge widths |
 | `dgface` / `dgfont` | `lmroman` / `11` | label typeface and size |
 | `dgpadx` / `dgpady` | `13` / `9` | padding between a label and its box edge |

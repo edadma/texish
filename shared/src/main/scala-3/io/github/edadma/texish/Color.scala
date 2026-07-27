@@ -15,6 +15,14 @@ case class Color(red: Double, green: Double, blue: Double, alpha: Double):
   def blueInt: Int = toInt(blue)
   def alphaInt: Int = toInt(alpha)
 
+  /** The colour written the way the colour primitives read one: `#rrggbb`, or `#rrggbbaa` when it is translucent, so
+    * that `Color(c.hex)` is `c` again to the byte. This is how a colour held in the graphics state is handed back to
+    * the document language, where it is a string like any other. */
+  def hex: String =
+    val base = f"#$redInt%02x$greenInt%02x$blueInt%02x"
+
+    if alphaInt == 255 then base else base + f"$alphaInt%02x"
+
 object Color:
   def hsl(hue: Double, saturation: Double, lightness: Double, alpha: Double): Color =
     /* https://www.w3.org/TR/css-color-3/#hsl-color

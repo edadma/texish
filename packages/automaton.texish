@@ -39,7 +39,7 @@
   \set acx {\mapget dgX {\name}}
   \set acy {\mapget dgY {\name}}
   \set ahw {\mapget dgHw {\name}}
-  \nofill\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \dgresolve\nofill\stroke{\dgink}\linewidth{\dglinewidth}
   \circle{\acx \acy \calc{ahw - autoring}}
 }}
 

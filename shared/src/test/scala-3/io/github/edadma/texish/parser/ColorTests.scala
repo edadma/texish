@@ -50,6 +50,9 @@ class ColorTests extends AnyFreeSpec with Matchers:
   private def colorOf(boxes: Seq[Box], mark: String): Color =
     boxes.toList.flatMap(chars).collectFirst { case (s, c) if s.contains(mark) => c }.get
 
+  /** Everything the run typeset, as one string — how a primitive that prints its value is read back. */
+  private def textOf(boxes: Seq[Box]): String = boxes.toList.flatMap(chars).map(_._1).mkString
+
   private val blue  = Color("blue")
   private val red   = Color("red")
   private val black = Color("black")
@@ -113,6 +116,46 @@ class ColorTests extends AnyFreeSpec with Matchers:
   "\\colorbox fills translucently from an [alpha] or an 8-digit code" in {
     fillOf(render("\\colorbox[0.4]{black}{x}")).alpha shouldBe (0.4 +- 1e-9)
     fillOf(render("\\colorbox{#00000066}{x}")).alpha shouldBe (0x66 / 255.0 +- 1e-9)
+  }
+
+  // \thecolor and \thepagecolor hand the graphics state back to the document language, which is what lets a
+  // package draw in the document's ink instead of a colour of its own. A package that names a literal opts out
+  // of the document's scheme: a dark ink vanishes into a dark page, and a light fill swallows the labels drawn
+  // over it in the document's pen. Both happened in the diagram package before these existed.
+
+  "\\thecolor reports the pen in force" in {
+    textOf(render("\\color{#123456}\\thecolor")) shouldBe "#123456"
+  }
+
+  "\\thecolor is the default pen where none was set" in {
+    textOf(render("\\thecolor")) shouldBe "#000000"
+  }
+
+  "\\thecolor follows the pen back out of a group" in {
+    textOf(render("{\\color{#123456}\\thecolor}\\thecolor")) shouldBe "#123456#000000"
+  }
+
+  "\\thecolor gives a translucent pen as an eight-digit code" in {
+    textOf(render("\\color[0.5]{#112233}\\thecolor")) shouldBe "#11223380"
+  }
+
+  "\\thepagecolor reports the page colour, which \\thecolor does not" in {
+    textOf(render("\\pagecolor{#1e2229}\\color{#e8eaed}\\thepagecolor \\thecolor")) shouldBe "#1e2229#e8eaed"
+  }
+
+  // The page is white until something says otherwise. Read back through the typesetter the six f's come out as two
+  // ff ligatures, because this is ordinary typeset text and the body face ligates it like any other — the value
+  // is "#ffffff". A document that wants the code itself rather than a set version of it should use \mono.
+  "\\thepagecolor is white before any \\pagecolor" in {
+    val (t, boxes) = renderT("\\thepagecolor")
+
+    t.backgroundColor shouldBe Color("white")
+    textOf(boxes) shouldBe "#ﬀﬀﬀ"
+  }
+
+  "a colour written by hex and read back is the same colour" in {
+    for name <- Seq("#123456", "#ffffff", "#000000", "#1e2229", "#11223380") do
+      Color(Color(name).hex) shouldBe Color(name)
   }
 
   "\\pagecolor sets the page background colour, with alpha and transparent" in {

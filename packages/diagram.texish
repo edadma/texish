@@ -38,8 +38,11 @@
 \set dgminw {52}             // minimum node width
 \set dgminh {30}             // minimum node height
 \set dggap {28}              // default boundary-to-boundary gap for relative placement
-\set dgfill {#eef3fb}        // default node fill colour
-\set dglinecolor {#1f2933}   // ink for node outlines and edges
+\set dgfill {auto}           // node fill colour; auto derives a tint of the page (see dgtint*)
+\set dglinecolor {auto}      // ink for node outlines and edges; auto follows the document pen
+\set dgtintl {0.0373}        // auto fill: how far its lightness moves from the page toward the ink
+\set dgtintc {0.012}         // auto fill: chroma of the tint
+\set dgtinth {259.8}         // auto fill: hue of the tint, in degrees
 \set dglinewidth {1pt}       // node outline width
 \set dgedgewidth {1.1pt}     // edge (arrow) width
 \set dgcorner {7}            // corner radius of a round (rounded-rectangle) node
@@ -197,6 +200,36 @@
 }}
 
 // ================================================================================
+// Colour — dgresolve settles the two colours a diagram draws with, into dgink and
+// dgpaint, and must run immediately before any drawing that uses them. It cannot be
+// done once at load time: the page colour and the pen are properties of the document
+// where the diagram sits, and \set evaluates its value there and then, so a default
+// captured when the package loaded would freeze whatever was in force at that moment.
+//
+// A literal colour suits one background only. Naming a dark ink means a diagram
+// disappears into a dark page, and a light fill means the labels drawn over it in the
+// document's own pen disappear in turn — so the defaults follow the document instead.
+// The ink is simply the pen. The fill is a tint of the page: its lightness moved a
+// little of the way from the page toward the ink, keeping the tint's own chroma and
+// hue, which lands on the familiar cool grey-blue over white and on a correspondingly
+// slight lift over a dark page. Set dgfill or dglinecolor to any colour to override.
+
+\def dgresolve {
+  \if {\= {\dglinecolor}{auto}}
+    \global\set dgink {\thecolor}
+  \else
+    \global\set dgink {\dglinecolor}
+  \fi
+  \if {\= {\dgfill}{auto}}
+    \global\set dgpagel {\head{\oklchof{\thepagecolor}}}
+    \global\set dginkl {\head{\oklchof{\thecolor}}}
+    \global\set dgpaint {\oklch{\calc{dgpagel + dgtintl * (dginkl - dgpagel)}}{\dgtintc}{\dgtinth}}
+  \else
+    \global\set dgpaint {\dgfill}
+  \fi
+}
+
+// ================================================================================
 // Shapes — dgshape draws the outline of a node, filled and stroked, centred at (cx, cy)
 // with half-extents hw, hh. Each shape is one picture path or polygon. The recognised
 // shapes are box, round, stadium, diamond, parallelogram, ellipse, circle and hexagon;
@@ -207,7 +240,8 @@
   \set bcx {\cx}\set bcy {\cy}\set bhw {\hw}\set bhh {\hh}
   \set l {\calc{bcx - bhw}}\set r {\calc{bcx + bhw}}
   \set b {\calc{bcy - bhh}}\set t {\calc{bcy + bhh}}
-  \fill{\dgfill}\stroke{\dglinecolor}\linewidth{\dglinewidth}
+  \dgresolve
+  \fill{\dgpaint}\stroke{\dgink}\linewidth{\dglinewidth}
   \if {\= {\s}{diamond}}
     \polygon{\bcx \t  \r \bcy  \bcx \b  \l \bcy}
   \else\if {\= {\s}{ellipse}}
@@ -285,7 +319,7 @@
 // arrowhead. dgedge is the shared pen setup; dglabel drops an edge label beside the
 // segment between (ax,ay) and (bx,by), nudged to the side the label gap allows.
 
-\def dgedge {\nofill\stroke{\dglinecolor}\linewidth{\dgedgewidth}}
+\def dgedge {\dgresolve\nofill\stroke{\dgink}\linewidth{\dgedgewidth}}
 
 \def dglabel ax ay bx by label {{
   \set mx {\calc{(\ax + \bx) / 2}}\set my {\calc{(\ay + \by) / 2}}

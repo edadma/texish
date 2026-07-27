@@ -308,6 +308,36 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
     },
   )
 
+  // thecolor - the pen colour in force right here, as a #rrggbb string (#rrggbbaa when translucent). The counterpart
+  // to \color, and what lets a package draw in the document's ink rather than a colour of its own: \stroke{\thecolor}
+  // follows the pen into a dark scheme, where a literal would not. Read it at the moment of drawing — \set evaluates
+  // its value immediately, so \set myink {\thecolor} freezes the pen as it was when the line ran.
+  proc.registerPrimitive(
+    "thecolor",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val result = t.currentColor.hex
+
+        proc.setResult(Value.Text(result))
+        proc.handler.text(result)
+    },
+  )
+
+  // thepagecolor - the colour the page is painted, as a #rrggbb string (#rrggbbaa when translucent). The counterpart
+  // to \pagecolor. With \thecolor it gives a package both ends of the document's scheme, so a fill can be derived
+  // from the paper — \oklchof{\thepagecolor} for its coordinates, \oklch to rebuild a tint of it — instead of being
+  // a literal that only suits one background.
+  proc.registerPrimitive(
+    "thepagecolor",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val result = t.backgroundColor.hex
+
+        proc.setResult(Value.Text(result))
+        proc.handler.text(result)
+    },
+  )
+
   // pagecolor [alpha] name - set the colour painted across the whole page, under all content: a CSS colour word, a
   // #RRGGBB or #RRGGBBAA hex code, or `transparent`. An optional [alpha] (0–1) tints the page translucently, so
   // \pagecolor[0.6]{black} (or \pagecolor{#000000aa}) lets a compositor show video through it, and

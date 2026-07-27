@@ -48,10 +48,13 @@
 \set rrah {7}               // length of the entry / exit arrowheads
 \set rrahw {3.5}            // half-width of the arrowheads
 \set rrmargin {7}           // blank margin around the whole diagram
-\set rrlinecolor {black}    // ink for the rails and the box outlines
-\set rrbase {#dde8fb}       // base fill colour; terminals and classes are darker shades of it
-\set rrtermdark {0.08}      // how far to lower the Oklch lightness for a terminal box
-\set rrccdark {0.17}        // how far to lower the Oklch lightness for a character-class box
+\set rrlinecolor {auto}     // ink for the rails and the box outlines; auto follows the document pen
+\set rrbase {auto}          // base fill colour; auto derives a tint of the page (see rrtint*)
+\set rrtintl {0.0716}       // auto base: how far its lightness moves from the page toward the ink
+\set rrtintc {0.0284}       // auto base: chroma of the tint
+\set rrtinth {261.5}        // auto base: hue of the tint, in degrees
+\set rrtermdark {0.08}      // how far to shade a terminal box from the base toward the ink
+\set rrccdark {0.17}        // how far to shade a character-class box from the base toward the ink
 \set rrccpt {6}             // depth of a character class's pointed ends
 
 // ================================================================================
@@ -549,7 +552,7 @@
 // leaving at (x + width, y) on the right; children get their own (x, y) computed from the
 // measured sizes. All coordinates are absolute within the \picture.
 
-\def rrRail ax ay bx by {\nofill\stroke{\rrlinecolor}\linewidth{1pt}\line{\ax \ay \bx \by}}
+\def rrRail ax ay bx by {\nofill\stroke{\rrink}\linewidth{1pt}\line{\ax \ay \bx \by}}
 
 // Every draw routine captures its node id and coordinates into fresh locals (nid, bx, by,
 // and bw for a width) on its first lines, before computing any others. A macro argument is
@@ -599,7 +602,7 @@
 // along the top to the separator's edge. Right half: cx on the right, B's right edge (xbr).
 \def rrSepRight cx ox y yt xbr {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \nofill\stroke{\rrink}\linewidth{1pt}
   \path{
     \moveto{\cx \y}
     \lineto{\calc{\ox - \r} \y}
@@ -612,7 +615,7 @@
 // Left half: cx on the left, ox the left outer edge, down to B's left edge (xbl).
 \def rrSepLeft cx ox y yt xbl {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \nofill\stroke{\rrink}\linewidth{1pt}
   \path{
     \moveto{\xbl \yt}
     \lineto{\calc{\ox + \r} \yt}
@@ -637,7 +640,7 @@
     // left cap — filled and stroked in a single paint, so there are no seams between sections.
     \set r {\calc{rrboxh / 2}}\set kr {\calc{0.5523 * \r}}
     \set xl {\calc{\bx + \r}}\set xr {\calc{\bx + \bw - \r}}
-    \fill{\rrtermfill}\stroke{\rrlinecolor}\linewidth{1pt}
+    \fill{\rrtermfill}\stroke{\rrink}\linewidth{1pt}
     \path{
       \moveto{\xl \top}
       \lineto{\xr \top}
@@ -651,10 +654,10 @@
   \else\if {\= {\shape}{2}}
     // a character class: a hexagon with pointed left/right ends, where the rail meets it.
     \set d {\rrccpt}
-    \fill{\rrccfill}\stroke{\rrlinecolor}\linewidth{1pt}
+    \fill{\rrccfill}\stroke{\rrink}\linewidth{1pt}
     \polygon{\bx \by  \calc{\bx + \d} \top  \calc{\bx + \bw - \d} \top  \calc{\bx + \bw} \by  \calc{\bx + \bw - \d} \bot  \calc{\bx + \d} \bot}
   \else
-    \fill{\rrnontermfill}\stroke{\rrlinecolor}\linewidth{1pt}
+    \fill{\rrnontermfill}\stroke{\rrink}\linewidth{1pt}
     \rect{\bx \bot \bw \rrboxh}
   \fi\fi
   \at anchor:center {\calc{\bx + \bw / 2} \by}{{\font {\rrface} {\rrfont} {\rrwt}\lbl}}
@@ -771,7 +774,7 @@
 // forward rather than reversing.
 \def rrBypass ax bx y yt {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \nofill\stroke{\rrink}\linewidth{1pt}
   \path{
     \moveto{\ax \y}
     \curveto{\calc{\ax + \kr} \y  \calc{\ax + \r} \calc{\y + \r - \kr}  \calc{\ax + \r} \calc{\y + \r}}
@@ -789,7 +792,7 @@
 // then dropping to yb and back — the repeat loop.
 \def rrReturn ax bx y yb {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}\set g {\rrloopx}
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \nofill\stroke{\rrink}\linewidth{1pt}
   \path{
     \moveto{\ax \y}
     \lineto{\calc{\ax - \g + \r} \y}
@@ -808,7 +811,7 @@
 // (tx,ty): out along the line, a rounded drop, then in to the alternative.
 \def rrForkDown ex ey tx ty {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \nofill\stroke{\rrink}\linewidth{1pt}
   \path{
     \moveto{\ex \ey}
     \curveto{\calc{\ex + \kr} \ey  \calc{\ex + \r} \calc{\ey - \r + \kr}  \calc{\ex + \r} \calc{\ey - \r}}
@@ -822,7 +825,7 @@
 // the main line at (ex,ey).
 \def rrForkUp sx sy ex ey {{
   \set r {\rrcr}\set kr {\calc{0.5523 * \r}}
-  \nofill\stroke{\rrlinecolor}\linewidth{1pt}
+  \nofill\stroke{\rrink}\linewidth{1pt}
   \path{
     \moveto{\sx \sy}
     \lineto{\calc{\ex - 2 * \r} \sy}
@@ -833,18 +836,37 @@
 }}
 
 // A rightward arrowhead (a filled triangle) with its tip at (x,y) — the entry / exit marker.
-\def rrArrow x y {\fill{\rrlinecolor}\nostroke\polygon{\calc{\x - rrah} \calc{\y - rrahw}  \calc{\x - rrah} \calc{\y + rrahw}  \x \y}}
+\def rrArrow x y {\fill{\rrink}\nostroke\polygon{\calc{\x - rrah} \calc{\y - rrahw}  \calc{\x - rrah} \calc{\y + rrahw}  \x \y}}
 
-// Derive the box fills from the base colour: a terminal and a character class are the base at a
-// lower Oklch lightness, keeping its hue and chroma, so the three shades read as one palette.
+// Settle the palette against the document this diagram sits in, then derive the box fills from the
+// base colour: a terminal and a character class are the base shaded toward the ink, keeping its hue
+// and chroma, so the three read as one palette.
+//
+// The shading is toward the ink rather than simply darker, which is the same thing on a white page
+// and the opposite of it on a dark one. Shading always-darker would push a terminal past the page
+// and out of sight exactly where it is meant to stand out. For why the ink and base are settled here
+// rather than at load time, see dgresolve in the diagram package.
 \def rrColors {{
-  \set lch {\oklchof{\rrbase}}
+  \if {\= {\rrlinecolor}{auto}}
+    \global\set rrink {\thecolor}
+  \else
+    \global\set rrink {\rrlinecolor}
+  \fi
+  \set pl {\head{\oklchof{\thepagecolor}}}
+  \set il {\head{\oklchof{\rrink}}}
+  \if {\= {\rrbase}{auto}}
+    \set base {\oklch{\calc{pl + rrtintl * (il - pl)}}{\rrtintc}{\rrtinth}}
+  \else
+    \set base {\rrbase}
+  \fi
+  \if {\> {\il}{\pl}} \set dir {1} \else \set dir {-1} \fi
+  \set lch {\oklchof{\base}}
   \set bL {\head{\lch}}
   \set bC {\head{\tail{\lch}}}
   \set bH {\head{\tail{\tail{\lch}}}}
-  \global\set rrnontermfill {\rrbase}
-  \global\set rrtermfill {\oklch{\calc{\bL - rrtermdark}}{\bC}{\bH}}
-  \global\set rrccfill {\oklch{\calc{\bL - rrccdark}}{\bC}{\bH}}
+  \global\set rrnontermfill {\base}
+  \global\set rrtermfill {\oklch{\calc{bL + dir * rrtermdark}}{\bC}{\bH}}
+  \global\set rrccfill {\oklch{\calc{bL + dir * rrccdark}}{\bC}{\bH}}
 }}
 
 // ================================================================================

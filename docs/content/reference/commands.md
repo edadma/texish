@@ -47,6 +47,7 @@ The document is typeset twice over a shared label table, so forward references r
 | `\textsub{…}` `\textsup{…}` | text subscript / superscript |
 | `\color[alpha]{name}` `\textcolor[alpha]{name}{…}` | pen colour (CSS name, `#RRGGBB`, `#RRGGBBAA`, or `transparent`; optional `[alpha]` 0–1) |
 | `\pagecolor[alpha]{name}` | colour painted across the whole page under all content (translucent or `transparent` for overlays); set in the preamble |
+| `\thecolor` `\thepagecolor` | the pen and the page colour in force, as a `#RRGGBB` string (`#RRGGBBAA` when translucent) — read them where you draw, so a figure can follow the document's scheme rather than name a colour of its own |
 | `\href{url}{text}` `\url{url}` | clickable links (real PDF annotations) |
 | `\TeX` `\LaTeX` `\TeXish` | the logos *(`\use{document}`)* |
 | `\dropcap[lines][gap]{X}{rest}` | drop cap spanning `lines` lines (default 2), sized by measurement; `rest` continues the word through the redefinable `\dropcaptext` (small caps by default) *(`\use{document}`)* |
