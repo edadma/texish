@@ -11,7 +11,7 @@ each by SHA256, and GitHub does not publish those, so they come from the downloa
 share tarball ships its own `.sha256`, which saves fetching 92MB just to hash it.
 
 ```sh
-V=0.26.0
+V=0.26.0   # whichever release you are packaging — this file does not track it
 B=https://github.com/edadma/texish/releases/download/v$V
 
 curl -sL "$B/texish-$V-share.tar.gz.sha256"          # the share resource's sha256
@@ -24,11 +24,11 @@ The binaries are ~28MB each, so that loop moves about 84MB. Then substitute:
 
 | marker | value |
 |---|---|
-| `REPLACE_VERSION` | `0.26.0` |
-| `REPLACE_MACOS_ARM64` | sha256 of `texish-0.26.0-macos-arm64` |
-| `REPLACE_LINUX_X86_64` | sha256 of `texish-0.26.0-linux-x86_64` |
-| `REPLACE_LINUX_ARM64` | sha256 of `texish-0.26.0-linux-arm64` |
-| `REPLACE_SHARE` | sha256 of `texish-0.26.0-share.tar.gz` |
+| `REPLACE_VERSION` | `$V` |
+| `REPLACE_MACOS_ARM64` | sha256 of `texish-$V-macos-arm64` |
+| `REPLACE_LINUX_X86_64` | sha256 of `texish-$V-linux-x86_64` |
+| `REPLACE_LINUX_ARM64` | sha256 of `texish-$V-linux-arm64` |
+| `REPLACE_SHARE` | sha256 of `texish-$V-share.tar.gz` |
 
 ## The tap
 
