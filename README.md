@@ -201,7 +201,7 @@ texish is cross-published for the JVM and Scala Native. Add it to an sbt build w
 operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.25.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.26.0"
 ```
 
 That is the whole setup. There is no font tree to install and no environment variable to set. Compiled

@@ -40,7 +40,7 @@ object Install:
     *     finds that shared prefix — which is the only way a program finds files belonging to a *different*
     *     package it depends on, since those are nowhere inside its own.
     *   - **Resolved.** The link points into a versioned directory holding both the binary and its own data
-    *     (`…/Cellar/texish/0.25.0/{bin,share}`). Searching from there finds a program's own files without
+    *     (`…/Cellar/texish/<version>/{bin,share}`). Searching from there finds a program's own files without
     *     depending on the prefix's links being intact.
     *
     * Empty on a platform with no way to ask, in which case nothing is located and `$TEXISHHOME` is all there is.
