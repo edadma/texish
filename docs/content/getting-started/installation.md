@@ -3,9 +3,23 @@ title: "Installation"
 weight: 1
 ---
 
-texish is cross-published for the JVM and Scala Native. Use it as the standalone command-line
-renderer or as a library in an sbt build. (The browser backends are still in the source tree but
-are not currently built or published — see [Rendering in the Browser](/guide/browser-rendering/).)
+texish is two things, and which one you want decides how you install it.
+
+**The command-line tool** turns a source document into a PDF, and is what most people mean by
+installing texish. On macOS (Apple silicon) and Linux it is one command:
+
+```sh
+brew tap edadma/tap
+brew trust edadma/tap
+brew install edadma/tap/texish
+```
+
+That brings the fonts and packages with it — see [As a command-line
+tool](#as-a-command-line-tool) for the other ways to get it, and for what is in the box.
+
+**The library** embeds the engine in a program of your own; it is cross-published for the JVM and
+Scala Native, and is described next. (The browser backends are still in the source tree but are not
+currently built or published — see [Rendering in the Browser](/guide/browser-rendering/).)
 
 ## As a library
 
