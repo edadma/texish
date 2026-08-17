@@ -82,6 +82,15 @@ class CliTests extends AnyFreeSpec with Matchers:
       dir.delete()
   }
 
+  // The 0.27.0 release shipped a binary whose `--version` said 0.26.0: the version was a literal in
+  // Main.scala, and nothing in the release flow reads the banner. It now comes from
+  // `ThisBuild / version` through the generated `BuildVersion` — put a literal back in either place
+  // and this fails at the next bump.
+  "the version the CLI reports is the version the build was cut at" in {
+    Version shouldBe BuildVersion
+    Version should fullyMatch regex """\d+\.\d+\.\d+([-+].*)?"""
+  }
+
   "ensureExtension only appends when the extension is missing" in {
     ensureExtension("doc", "pdf") shouldBe "doc.pdf"
     ensureExtension("doc.pdf", "pdf") shouldBe "doc.pdf"

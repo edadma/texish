@@ -263,6 +263,22 @@ lazy val texishCli = project
     libraryDependencies += "com.github.scopt" %%% "scopt"   % "4.1.0",
     publish / skip      := true,
     publishLocal / skip := true,
+    // The version `texish --version` prints comes from `ThisBuild / version`, not from a literal in
+    // Main.scala. It was a literal, and by 0.27.0 it still read 0.26.0: nothing in the release flow
+    // looks at the banner, so a stale one survives the warning sweep, the suites, the tag, the
+    // release and the formula, and is found by whoever installs the binary. Generating it leaves the
+    // version in one place.
+    Compile / sourceGenerators += Def.task {
+      val out = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "BuildVersion.scala"
+
+      IO.write(
+        out,
+        "package io.github.edadma.texish\n\n" +
+          "// Generated at build time from `ThisBuild / version` in build.sbt — do not edit.\n" +
+          "private[texish] val BuildVersion: String = \"" + version.value + "\"\n",
+      )
+      Seq(out)
+    }.taskValue,
   )
 
 lazy val root = project

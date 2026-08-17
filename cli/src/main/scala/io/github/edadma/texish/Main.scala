@@ -12,7 +12,11 @@ import scala.scalanative.posix.unistd.isatty
   * through the parser over a Cairo backend, and writes the result as a PDF or one PNG per page.
   */
 
-private val Version = "0.26.0"
+/** What `texish --version` prints. `BuildVersion` is generated from `ThisBuild / version` (build.sbt),
+  * so the binary cannot report a version the build did not set — as a literal here, this still read
+  * 0.26.0 in the 0.27.0 release.
+  */
+private val Version = BuildVersion
 
 private case class Config(
     input: Option[String] = None,
