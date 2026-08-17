@@ -1,8 +1,9 @@
 # Homebrew formula for the texish command-line tool.
 #
-# This is a template: the four SHA256 fields are filled in per release from the assets the
-# "Release binaries" workflow attaches. See README.md in this directory for how, and for how to
-# publish the result to the edadma/homebrew-texish tap.
+# This is a template: `tools/brew-formula.sh <version>` fills in the version and the four SHA256
+# fields from the assets the "Release binaries" workflow attaches, and the release workflow runs it
+# and pushes the result to Formula/texish.rb in the edadma/homebrew-tap repository. See README.md in
+# this directory.
 #
 # The formula installs a prebuilt binary rather than building from source, because building means
 # a JDK, sbt, Scala Native's LLVM toolchain and a full compile — a lot to ask of a package that
@@ -40,8 +41,12 @@ class Texish < Formula
   # The font catalogue and the packages, identical on every platform. Without it texish still
   # renders an ordinary document from its compiled-in core; with it, the complex scripts, the CJK
   # cuts and every package beyond base and document work too.
+  #
+  # The version is written out rather than interpolated: inside a resource block `version` is the
+  # *resource's* own version (Resource#version), not the formula's, and it is nil while the block is
+  # being evaluated — so `#{version}` here would silently produce `.../download/v/texish--share.tar.gz`.
   resource "share" do
-    url "https://github.com/edadma/texish/releases/download/v#{version}/texish-#{version}-share.tar.gz"
+    url "https://github.com/edadma/texish/releases/download/vREPLACE_VERSION/texish-REPLACE_VERSION-share.tar.gz"
     sha256 "REPLACE_SHARE"
   end
 

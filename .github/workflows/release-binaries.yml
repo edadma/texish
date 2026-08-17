@@ -158,3 +158,63 @@ jobs:
         run: |
           gh release upload "${{ steps.ver.outputs.tag }}" \
             "${{ steps.tar.outputs.name }}" "${{ steps.tar.outputs.name }}.sha256" --clobber
+
+  # A release is not finished until `brew install` gives you the new version: the jobs above are how
+  # texish is downloaded, but the formula is how it is installed. This renders the formula from the
+  # assets they just attached — it needs all four, so it waits for both — and pushes it to the tap.
+  # Without the tap token it still renders and prints the formula, so a release never fails for want
+  # of a secret and the result can always be copied in by hand.
+  formula:
+    name: homebrew formula
+    needs: [build, share]
+    runs-on: ubuntu-latest
+    env:
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+    steps:
+      - name: Checkout texish
+        uses: actions/checkout@v7
+
+      - name: Resolve version
+        id: ver
+        run: |
+          TAG='${{ github.event.release.tag_name || inputs.tag }}'
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Render the formula
+        run: tools/brew-formula.sh "${{ steps.ver.outputs.version }}" -o texish.rb
+
+      - name: Report
+        run: |
+          {
+            echo '### Homebrew formula'
+            echo
+            echo '```ruby'
+            cat texish.rb
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # A tap is an ordinary repository, so this is a clone, a copy and a push — no Homebrew involved,
+      # and none of the ownership trouble that comes with running brew itself. TAP_TOKEN is a token
+      # with contents:write on edadma/homebrew-tap; the default GITHUB_TOKEN cannot reach another
+      # repository.
+      - name: Push to the tap
+        if: env.TAP_TOKEN != ''
+        run: |
+          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/edadma/homebrew-tap.git" tap
+          mkdir -p tap/Formula
+          cp texish.rb tap/Formula/texish.rb
+          cd tap
+          if git diff --quiet -- Formula/texish.rb; then
+            echo "the tap already carries this formula — nothing to push"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add Formula/texish.rb
+          git commit -m "texish ${{ steps.ver.outputs.version }}"
+          git push
+
+      - name: Note a missing token
+        if: env.TAP_TOKEN == ''
+        run: |
+          echo "::warning::TAP_TOKEN is not set, so the formula was rendered but not pushed to edadma/homebrew-tap. It is in this run's summary; copy it to Formula/texish.rb there."

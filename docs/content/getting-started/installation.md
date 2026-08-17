@@ -47,6 +47,22 @@ The Scala Native build links a standalone `texish` executable that turns a sourc
 into a PDF (or one PNG per page) using the Cairo backend. See the
 [command-line tool](/reference/cli/) reference for its options.
 
+### With Homebrew
+
+```sh
+brew tap edadma/tap
+brew trust edadma/tap
+brew install edadma/tap/texish
+```
+
+macOS on Apple silicon, and Linux on x86_64 and arm64. This is the shortest path: it installs the
+binary, pulls in `cairo`, `freetype` and `jpeg-turbo`, and puts the font catalogue and the packages
+where texish looks for them, so `\use{usfm}` and a line of Hebrew work immediately with nothing to
+configure. `brew upgrade texish` moves you to the next release.
+
+`brew trust` is a recent Homebrew requirement: it refuses to load anything from a third-party tap
+until told the tap is trusted.
+
 ### From a release
 
 Every [release](https://github.com/edadma/texish/releases) attaches a binary per platform —

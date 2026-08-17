@@ -197,8 +197,17 @@ browser, where there is no filesystem — full details, the API table, and runna
 
 ## Installation
 
-texish is cross-published for the JVM and Scala Native. Add it to an sbt build with the `%%%`
-operator so the right platform artifact is selected:
+The command-line tool installs from Homebrew, with the font catalogue and the packages:
+
+```sh
+brew tap edadma/tap
+brew trust edadma/tap
+brew install edadma/tap/texish
+```
+
+macOS on Apple silicon and Linux on x86_64 or arm64; every release also attaches a plain binary per
+platform. As a library, texish is cross-published for the JVM and Scala Native — add it to an sbt
+build with the `%%%` operator so the right platform artifact is selected:
 
 ```scala
 libraryDependencies += "io.github.edadma" %%% "texish" % "0.26.0"
