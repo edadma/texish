@@ -31,6 +31,26 @@ The same notation reads both ways: the inline limit $\lim_{n \to \infty} a_n = L
 keeps its subscript tucked beside the operator to save vertical space, while the
 display form lets it drop underneath.
 
+\section {Style}
+
+A formula is set in one of four styles — display, text, script and scriptscript —
+and the style decides both the type size and how scripts are placed. That is why
+the same sum reads differently in the two contexts above. The four style
+declarations ask for one directly, for the rest of the enclosing sub-formula, so a
+formula in running text can be given the room of a display:
+
+The sum $\displaystyle \sum_{i=1}^{n} x_i$ stacks its bounds even here, in the
+middle of a paragraph, because the formula opens with a \mono{\\displaystyle}.
+Without it the same sum sets as $\sum_{i=1}^{n} x_i$, bounds tucked beside it.
+
+Braces bound the switch, since a group in math is a sub-formula of its own. The
+reverse works too — one part of a display can be held back to text size while
+everything around it stays large:
+
+$$\sum_{i=1}^{n} {\textstyle \frac{1}{2}} x_i
+  \qquad
+  {\scriptstyle \text{small}} \; {\scriptscriptstyle \text{smaller}}.$$
+
 \section {Fractions and binomials}
 
 The plain \mono{\\frac} chooses its size from context — full size in a display,
@@ -48,6 +68,19 @@ continued fraction, while \mono{\\tfrac} keeps a one-line fraction compact:
 $$\dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{1 + \dfrac{1}{x}}}}
   \qquad
   \tfrac{1}{2} + \tfrac{1}{3} = \tfrac{5}{6}.$$
+
+Those are the combinations common enough to have names. Underneath them is one
+general form: \mono{\\frac} takes the bar thickness, a pair of fences and the
+style as parameters, which between them cover every fraction-like stack — a bare
+stack at \mono{rule:0}, a binomial by adding fences, a heavier bar for emphasis:
+
+$$\frac rule:0 {n}{k}
+  \qquad
+  \frac left:( right:) rule:0 {n}{k}
+  \qquad
+  \frac rule:1.2pt {a}{b}
+  \qquad
+  \frac style:display {1}{2}.$$
 
 \section {Roots}
 
@@ -200,6 +233,63 @@ $$\overline{a + b} = \overline{a} + \overline{b}
   \underline{x + y}
   \qquad
   \boxed{\, E = mc^2 \,}.$$
+
+\section {Delimiters and fences}
+
+\mono{\\left} and \mono{\\right} grow a pair of delimiters to cover whatever sits
+between them, which is the right rule whenever something does:
+
+$$\left( \frac{a}{b} \right)
+  \qquad
+  \left[ \sum_{i=1}^{n} x_i \right]
+  \qquad
+  \left\{ \frac{1}{1 + \frac{1}{x}} \right\}.$$
+
+A fence that stands on its own has nothing to be sized from — the bar of a
+set-builder, a divider between alternatives, an opening bracket whose partner is a
+line away. \mono{\\fence} sets one at a size you choose: \mono{size:0} is the plain
+glyph and each step climbs to the font's next larger form.
+
+$$\{\, x \fence{|} x > 0 \,\}
+  \qquad
+  \fence size:1 {(} a \fence size:1 {)}
+  \qquad
+  \fence size:2 {(} b \fence size:2 {)}
+  \qquad
+  \fence size:3 {(} c \fence size:3 {)}.$$
+
+The space around a lone fence follows from the delimiter itself — an opener keeps
+none from what follows it, while a symmetric fence like the bar above keeps a
+relation's space on both sides.
+
+\section {Braces over and under}
+
+A horizontal brace grows to span whatever it covers, and a script attached to it
+rides centred over or under the brace rather than beside it — which is how the
+brace gets its label:
+
+$$\overbrace{a_1 + a_2 + \dots + a_n}^{n \text{ terms}}
+  \qquad
+  \underbrace{x \cdot x \cdots x}_{k \text{ factors}} = x^k.$$
+
+\section {Boxes on the math axis}
+
+The math axis is the invisible line a fraction bar sits on and a fence centres
+about. \mono{\\vcenter} sets a box there instead of on the baseline, so material
+built out of ordinary boxes reads level with the formula beside it:
+
+$$T = \vcenter{\hbox{first line}\hbox{second line}} \ne \hbox{on the baseline}.$$
+
+\section {Numbered displays}
+
+\mono{\\eqno} flushes an equation number to the right margin of a display line and
+\mono{\\leqno} to the left; the formula stays centred on the measure either way.
+Which side a document numbers on is a house style, set once by the macro that
+wraps the display:
+
+$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \eqno(1)$$
+
+$$e^{i\pi} + 1 = 0 \leqno(2)$$
 
 \section {Math alphabets}
 

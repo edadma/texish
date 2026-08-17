@@ -137,6 +137,24 @@ class MathFont(val t: Typesetter, val font: Font, val math: Option[MathTable]):
               case None      => new GlyphBox(t, sized.last._1, font, t.currentColor)
       case _ => new GlyphBox(t, baseIdx, font, t.currentColor)
 
+  /** A delimiter at a chosen size rather than a chosen height: `size` 0 is the base glyph and each step up takes
+    * the next precomposed variant, stopping at the largest the font supplies. This is what a fence sized by the
+    * author needs (`\fence [size:2] {(}`), as against [[verticalVariant]], which is driven by the height of what
+    * the fence must cover. Without a MATH table there are no variants, so every size gives the base glyph. */
+  def variantAt(codepoint: Int, size: Int): Box =
+    val baseIdx = glyphIndex(codepoint)
+
+    if size <= 0 then new GlyphBox(t, baseIdx, font, t.currentColor)
+    else
+      math.flatMap(_.variants.vertical.get(baseIdx)) match
+        case Some(gc) if gc.variants.nonEmpty =>
+          // the variant list runs smallest-first from the base glyph, so step `size` places along it and clamp
+          // (`math` names this font's MATH table in here, so the clamp is written out rather than min'd)
+          val step = if size < gc.variants.length then size else gc.variants.length - 1
+
+          new GlyphBox(t, gc.variants(step).glyph, font, t.currentColor)
+        case _ => new GlyphBox(t, baseIdx, font, t.currentColor)
+
   /** A stretchy delimiter at least `targetHeight` points tall, centred on the math axis so it brackets a
     * formula symmetrically — the box `\left`/`\right` set the fence with. */
   def delimiter(codepoint: Int, targetHeight: Double): Box =

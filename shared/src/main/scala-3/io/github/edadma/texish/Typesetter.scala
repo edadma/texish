@@ -1387,19 +1387,22 @@ abstract class Typesetter:
       case m: MathMode if m.style.isDisplay =>
         val box = m.exit // pop the math mode and lay its list out
 
-        if box ne null then placeDisplay(box, m.eqno)
+        if box ne null then placeDisplay(box, m.eqno, m.eqnoLeft)
       case _ => mode.done()
 
-  /** Place a finished display formula on the vertical list: glue above, a line holding the centred formula
-    * (and its equation number, if any, flush right) at the page width, then glue below. */
-  private def placeDisplay(box: Box, eqno: Option[Box]): Unit =
+  /** Place a finished display formula on the vertical list: glue above, a line holding the centred formula (and
+    * its equation number, if any, flush to one margin) at the page width, then glue below. The number goes to
+    * the right for `\eqno` and to the left for `\leqno`, which is the only difference between them: it is set
+    * outside the two fils, so the formula stays centred on the measure either way. */
+  private def placeDisplay(box: Box, eqno: Option[Box], eqnoLeft: Boolean): Unit =
     add(getGlue("abovedisplayskip"))
 
     hbox(getNumber("hsize"))
+    if eqnoLeft then eqno.foreach(add)
     fil
     add(box)
     fil
-    eqno.foreach(add)
+    if !eqnoLeft then eqno.foreach(add)
     done()
 
     add(getGlue("belowdisplayskip"))

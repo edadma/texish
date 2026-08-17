@@ -16,10 +16,18 @@ import scala.collection.mutable.ArrayBuffer
 class MathMode(
     val t: Typesetter,
     val baseMathFont: MathFont,
-    val style: MathStyle = MathStyle.Text,
+    initialStyle: MathStyle = MathStyle.Text,
     val grouped: Boolean = false,
 ) extends Mode:
   private val nodes = ArrayBuffer[MathNode]()
+
+  /** The style this list is being set in. It opens at the style the list was entered in and is changed by a
+    * `\displaystyle`/`\textstyle`/`\scriptstyle`/`\scriptscriptstyle` declaration, which — like TeX's style
+    * nodes — governs the symbols added after it and leaves those before it as they were set. A `{…}` in math
+    * is its own sub-formula, so a declaration inside braces is scoped to them, and `{\displaystyle …}` is the
+    * idiom for enlarging one part of a formula. The list's own inter-atom spacing is computed once at exit,
+    * from the style in force then. */
+  var style: MathStyle = initialStyle
 
   /** Set by an infix `\over` or `\atop`: the kind of fraction to build from this list at exit (`true` = a
     * barred fraction, `false` = the bar-less `\atop`), and the nodes gathered before the operator, which
@@ -27,16 +35,30 @@ class MathMode(
   private var fractionBar:    Option[Boolean]  = None
   private var numeratorNodes: Vector[MathNode] = Vector.empty
 
-  /** The equation number set by `\eqno` on a display, laid out in this mode's font; placed flush right on the
+  /** The equation number set by `\eqno` or `\leqno` on a display, laid out in this mode's font; placed on the
     * display line when the math is shipped. `None` for an unnumbered display or any inline formula. */
   var eqno: Option[Box] = None
+
+  /** Which margin the equation number is flushed to: the right for `\eqno`, the left for `\leqno`. */
+  var eqnoLeft: Boolean = false
 
   /** The base math font scaled to a given style's size level — the font a sub-list set in that style uses. */
   private def fontForStyle(s: MathStyle): MathFont =
     baseMathFont.atScale(s.scale(baseMathFont.scriptPercentScaleDown, baseMathFont.scriptScriptPercentScaleDown))
 
-  /** The font this list's symbols are set in: the base math font scaled to this style's size level. */
-  val mathFont: MathFont = fontForStyle(style)
+  /** The base math font scaled to the style currently in force — the font this list's symbols are set in.
+    * Rebuilt by [[setStyle]] rather than recomputed per symbol, since scaling a font is not free. */
+  private var styleFont: MathFont = fontForStyle(initialStyle)
+
+  /** The font this list's symbols are set in: the base math font scaled to the current style's size level. */
+  def mathFont: MathFont = styleFont
+
+  /** Switch the style for the rest of this list — the `\displaystyle` family. Atoms already collected keep the
+    * boxes they were built with; everything added after is set in the new style's font, and the constructs that
+    * read the style (fractions, radicals, script placement) see the new one. */
+  def setStyle(newStyle: MathStyle): Unit =
+    style = newStyle
+    styleFont = fontForStyle(newStyle)
 
   def init(): Unit = ()
 
@@ -212,6 +234,38 @@ class MathMode(
     right.foreach(cp => pieces += mathFont.delimiter(cp, target))
 
     HBox(pieces.result())
+
+  /** Build a fixed-size fence: the delimiter at the `size`th step up the font's variant list, centred on the
+    * math axis. Size 0 is the base glyph and each step climbs to the next precomposed variant, stopping at the
+    * largest the font supplies. Unlike a `\left`/`\right` fence — which is sized to whatever it encloses — this
+    * one is chosen by the author, which is what a fence standing on its own (an opening bracket whose partner is
+    * far away, a divider bar in a set-builder) needs. */
+  def makeFenceAt(codepoint: Int, size: Int): Box =
+    new AxisCenteredBox(mathFont.variantAt(codepoint, size), mathFont.axisHeight)
+
+  /** Build a fraction with each parameter chosen explicitly rather than inherited — the general form behind
+    * `\frac`'s options, and what `\binom`-like stacks and rule-less or thick-ruled fractions are built from.
+    * The operands are expected to have been set at `fracStyle`'s `num`/`denom` styles; the bar thickness, axis
+    * and shifts come from the font at `fracStyle`'s size, and an explicit `rule` overrides the font's default
+    * thickness (`0` for a bar-less stack). */
+  def makeFractionOf(numerator: Box, denominator: Box, fracStyle: MathStyle, rule: Option[Double]): Box =
+    val params = fontForStyle(fracStyle).fractionParams(fracStyle.isDisplay)
+
+    new FractionBox(t, numerator, denominator, rule.fold(params)(r => params.copy(ruleThickness = r)))
+
+  /** Build a horizontal brace over (`over` = true) or under an already-laid-out sub-formula: the brace glyph
+    * grown to span the formula's width along the font's horizontal variants — the same machinery a wide accent
+    * (`\widehat`) grows along — and set off from it by a gap. */
+  def makeBrace(inner: Box, over: Boolean): Box =
+    val brace = mathFont.horizontalVariant(if over then 0x23DE else 0x23DF, inner.width)
+    val gap   = mathFont.fractionParams(style.isDisplay).ruleThickness
+
+    new MathBraceBox(inner, brace, gap, over)
+
+  /** Centre an already-built box on the math axis — `\vcenter`, which is how a vertical box (a stack of lines,
+    * a rule diagram) is set beside a formula so that it straddles the axis the way a fraction or a fence does,
+    * rather than sitting on the baseline. */
+  def makeVcentered(inner: Box): Box = new AxisCenteredBox(inner, mathFont.axisHeight)
 
   /** Re-set a list's single-glyph atoms in a different font — what a `\over`/`\atop` operand needs when it
     * moves from the list's own style down to fraction style (a size step smaller, except in display). Only an

@@ -239,7 +239,9 @@ Arabic harakat are all applied automatically from the text in logical order — 
 |---------|--------|
 | `$…$` `$$…$$` | inline and display math |
 | `^` `_` | super/subscript |
+| `\displaystyle` `\textstyle` `\scriptstyle` `\scriptscriptstyle` | set the style for the rest of the enclosing sub-formula; `{\displaystyle …}` enlarges one part of a formula |
 | `\frac{a}{b}` `a \over b` `a \atop b` | fractions (`\atop` stacks with no rule) |
+| `\frac rule:<dim> left:<delim> right:<delim> style:<style> {a}{b}` | a fraction with the bar thickness (`0` for none), fences around the stack, and the style all chosen — the general form the others are presets of |
 | `\dfrac{a}{b}` `\tfrac{a}{b}` | forced display-style / text-style fractions |
 | `\binom{n}{k}` `\dbinom` `\tbinom` | binomial coefficients |
 | `\sqrt{x}` `\sqrt[3]{x}` | roots |
@@ -249,8 +251,11 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\bmod` `\pmod{m}` `\mod{m}` `\pod{m}` | modular-arithmetic forms |
 | `\implies` `\impliedby` `\iff` | spaced implication arrows |
 | `\ldots` `\cdots` `\vdots` `\ddots` `\dots` | ellipses (`\dots` is the low one, as `\ldots`) |
-| `\left( … \right)` | stretchy delimiters |
+| `\left( … \right)` | stretchy delimiters, sized to the formula between them |
+| `\fence size:<n> class:<open\|close\|rel\|ord> {(}` | a delimiter at a size you choose, for a fence that stands on its own; `size:0` is the plain glyph and each step climbs the font's variants (default `size:1`). The class follows the delimiter unless `class:` overrides it |
 | `\hat` `\vec` `\widehat` | accents |
+| `\overbrace{…}` `\underbrace{…}` | a horizontal brace spanning the content, above or below it; a script on it rides over the brace (`\overbrace{a+b}^{n}`) |
+| `\vcenter{…}` | set a box centred on the math axis rather than on the baseline |
 | `\overset{a}{b}` `\underset{a}{b}` `\substack{a \\ b}` | stack material above / below / in a script pile |
 | `\boxed{…}` | a framed formula |
 | `\overline{…}` `\underline{…}` | a rule over / under the content (`\underline` also works in text) |
@@ -260,9 +265,10 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\smash{…}` | draw a box but report zero height and depth |
 | `\longrightarrow` `\rightleftharpoons` | long / equilibrium arrows |
 | `\,` `\:` `\;` `\!` `\quad` `\qquad` | thin / medium / thick / negative-thin / 1em / 2em space |
+| `<n>mu` | a math unit, 1/18 em — the unit those spaces are measured in, usable wherever a dimension is (`\hskip 3mu`, `\set g {0mu plus 6mu}`) |
 | `\matrix` `\pmatrix` `\bmatrix` `\vmatrix` `\Vmatrix` `\Bmatrix` `\smallmatrix` `\cases` | matrices |
 | `\begin{aligned}…\end{aligned}` | equations aligned on their `&` relations (`\\` between rows) |
-| `\eqno(…)` | display equation number |
+| `\eqno(…)` `\leqno(…)` | display equation number, flushed to the right margin / the left |
 
 ## Boxes, spacing, and pages
 

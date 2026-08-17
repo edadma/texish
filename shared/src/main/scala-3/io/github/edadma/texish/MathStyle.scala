@@ -35,6 +35,13 @@ case class MathStyle(size: MathSize, cramped: Boolean):
     * cramped, regardless of the current style — a cube root's 3 is tiny even in display. */
   def rootDegree: MathStyle = MathStyle(ScriptScript, cramped = true)
 
+  /** This style at another size level, keeping the current cramping — the transition a `\displaystyle`,
+    * `\textstyle`, `\scriptstyle` or `\scriptscriptstyle` declaration makes. TeX's style switches also clear
+    * crampedness, because its eight styles encode the two axes in a single number and the switches name the
+    * uncramped four; carrying it through instead means a switch under a radical, or in a denominator, still
+    * sets its superscripts at the cramped height, which is what the surrounding construct asked for. */
+  def atSize(newSize: MathSize): MathStyle = MathStyle(newSize, cramped)
+
   /** Whether this is display style — display fractions/radicals use the wider gaps and shifts. */
   def isDisplay: Boolean = size == Display
 
@@ -66,3 +73,9 @@ object MathStyle:
 
   /** Display math: the style `$$…$$` opens in. */
   val Display: MathStyle = MathStyle(MathSize.Display, cramped = false)
+
+  /** Script style: the size a first-level super- or subscript is set in, and what `\scriptstyle` selects. */
+  val Script: MathStyle = MathStyle(MathSize.Script, cramped = false)
+
+  /** Scriptscript style: the smallest of the four, and what `\scriptscriptstyle` selects. */
+  val ScriptScript: MathStyle = MathStyle(MathSize.ScriptScript, cramped = false)

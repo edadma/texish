@@ -6,22 +6,43 @@ import io.github.edadma.texish.*
 private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterHandler): Unit =
   val t = handler.typesetter
 
-  // frac - 2 body args: a fraction numerator over denominator. Math-mode only; the numerator and denominator
-  // are each typeset by a nested math mode one style smaller (so an inline fraction sets its parts at script
-  // size), then stacked over a rule centered on the math axis. The result enters the list as an Inner atom.
+  // frac - optional parameters then 2 body args: a fraction numerator over denominator. Math-mode only; the
+  // numerator and denominator are each typeset by a nested math mode one style smaller (so an inline fraction
+  // sets its parts at script size), then stacked over a rule centred on the math axis. The result enters the
+  // list as an Inner atom.
+  //
+  // The parameters generalise it to every fraction-like stack TeX can build, so that one command covers what
+  // plain TeX spreads over \over, \atop, \above and their three \withdelims variants:
+  //
+  //   rule:<dim>        the bar thickness, 0 for a bar-less stack (\atop); the default is the font's own
+  //   left:<delim>      a fence around the stack, sized to it — \binom is left:( right:)
+  //   right:<delim>
+  //   style:display|text|script|scriptscript    set the fraction at a chosen style rather than inheriting one
+  //
+  // as in \frac left:( right:) rule:0 {n}{k}, which is \binom.
+  //
+  // \dfrac, \tfrac, \binom and their d/t forms are the presets of this that come up often enough to deserve
+  // names of their own.
   proc.registerPrimitive(
     "frac",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         t.mode match
           case parent: MathMode =>
-            val numTokens   = proc.readArgument(pos)
-            val denomTokens = proc.readArgument(pos)
-            val numBox      = handler.mathSubFormula(proc, parent.style.num, numTokens)
-            val denomBox    = handler.mathSubFormula(proc, parent.style.denom, denomTokens)
+            val opts  = proc.readOptionalParams(pos)
+            val style = opts.get("style").flatMap(v => fracStyle(Value.display(v))).getOrElse(parent.style)
+            val rule  = opts.get("rule").flatMap(points)
+            val left  = opts.get("left").flatMap(v => delimiterNamed(Value.display(v)))
+            val right = opts.get("right").flatMap(v => delimiterNamed(Value.display(v)))
+
+            val numBox   = handler.mathSubFormula(proc, style.num, proc.readArgument(pos))
+            val denomBox = handler.mathSubFormula(proc, style.denom, proc.readArgument(pos))
 
             if (numBox ne null) && (denomBox ne null) then
-              parent.addNode(MathAtom(MathClass.Inner, parent.makeFraction(numBox, denomBox)))
+              val frac = parent.makeFractionOf(numBox, denomBox, style, rule)
+              val box  = if left.isEmpty && right.isEmpty then frac else parent.makeDelimited(left, frac, right)
+
+              parent.addNode(MathAtom(MathClass.Inner, box))
           case _ => handler.error("\\frac is only allowed in math mode", pos)
     },
   )
@@ -163,21 +184,27 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
-  // eqno - 1 body arg: an equation number for the surrounding display. Display-math only; the number is
-  // typeset by a nested math mode at text size and flushed to the right margin on the display line. As in
-  // plain TeX, the material is set in math (so "(3.1)" sets its parens and digits as math symbols).
-  proc.registerPrimitive(
-    "eqno",
-    new Primitive {
-      def execute(proc: Processor, pos: CharReader): Unit =
-        t.mode match
-          case parent: MathMode if parent.style.isDisplay =>
-            val box = handler.mathSubFormula(proc, MathStyle.Text, proc.readArgument(pos))
+  // eqno / leqno - 1 body arg: an equation number for the surrounding display, flushed to the right margin of
+  // the display line by \eqno and to the left by \leqno. Display-math only; the number is typeset by a nested
+  // math mode at text size. As in plain TeX, the material is set in math (so "(3.1)" sets its parentheses and
+  // digits as math symbols). Which side a document numbers on is a house style, and it is the reason \leqno
+  // exists as its own command rather than an option: it is set once for a whole document, by the macro that
+  // wraps the display, not chosen equation by equation.
+  for (name, left) <- Seq("eqno" -> false, "leqno" -> true) do
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode if parent.style.isDisplay =>
+              val box = handler.mathSubFormula(proc, MathStyle.Text, proc.readArgument(pos))
 
-            if box ne null then parent.eqno = Some(box)
-          case _ => handler.error("\\eqno is only allowed in display math", pos)
-    },
-  )
+              if box ne null then
+                parent.eqno = Some(box)
+                parent.eqnoLeft = left
+            case _ => handler.error(s"\\$name is only allowed in display math", pos)
+      },
+    )
 
   // Math accents: each sets an accent glyph over its single argument's nucleus. Math-mode only; the nucleus
   // is typeset by a nested math mode in the cramped current style, then the accent is centred over it. The
@@ -222,6 +249,94 @@ private[parser] def registerMathPrimitives(proc: Processor, handler: TypesetterH
 
             if inner ne null then parent.addNode(MathAtom(MathClass.Ord, parent.makeBar(inner, over = true)))
           case _ => handler.error("\\overline is only allowed in math mode", pos)
+    },
+  )
+
+  // The four style declarations - no argument and no group of their own: each switches the style for the rest of
+  // the enclosing sub-formula, the way \bfseries switches weight for the rest of its group. Math-mode only. A {…}
+  // in math is its own sub-formula, so the braces are what bound the switch — {\displaystyle …} is the idiom for
+  // enlarging one part of a formula, and it is how an inline \sum is made to stack its bounds above and below
+  // instead of setting them beside it. Style governs the type size symbols are set at and how scripts are placed;
+  // a switch leaves the atoms already collected as they were set and governs everything after it.
+  val mathStyles: Map[String, MathSize] = Map(
+    "displaystyle"      -> MathSize.Display,
+    "textstyle"         -> MathSize.Text,
+    "scriptstyle"       -> MathSize.Script,
+    "scriptscriptstyle" -> MathSize.ScriptScript,
+  )
+
+  for (name, size) <- mathStyles do
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode => parent.setStyle(parent.style.atSize(size))
+            case _                => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  // fence - optional size: and class: parameters, then 1 delimiter arg: a fence at a size the author chooses
+  // rather than one sized to what it encloses, as in \fence size:2 {(}. Math-mode only. \left/\right grow their
+  // fences to cover the formula between them, which is the right rule when there is a formula between them; a
+  // fence standing on its own — an opening bracket whose partner is a line away, the bar of a set-builder, a
+  // divider in a piecewise definition — has nothing to take its size from, so it is asked for instead. size:0 is
+  // the plain glyph and each step climbs to the font's next precomposed variant, stopping at the largest it
+  // supplies; the default is size:1. The atom class follows the delimiter (an opener, a closer, or a relation for
+  // a symmetric one like |), which class: overrides for the rare fence used against its usual sense.
+  proc.registerPrimitive(
+    "fence",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            val opts  = proc.readOptionalParams(pos)
+            val size  = opts.get("size").flatMap(Value.number).map(_.toInt).getOrElse(1)
+            val delim = readBracedDelimiter(proc, handler, pos)
+
+            delim.foreach { cp =>
+              val cls = opts.get("class").flatMap(v => fenceClass(Value.display(v))).getOrElse(MathDelimiters.classOf(cp))
+
+              parent.addNode(MathAtom(cls, parent.makeFenceAt(cp, size)))
+            }
+          case _ => handler.error("\\fence is only allowed in math mode", pos)
+    },
+  )
+
+  // overbrace / underbrace - 1 body arg: a horizontal brace spanning the whole argument, above it or below it.
+  // Math-mode only; the content is typeset by a nested math mode in the current style and the brace is grown
+  // along the font's horizontal variants until it spans the content. The result is an Op atom with its limits
+  // set, so a script attached to it rides centred above the brace rather than beside it — \overbrace{a+b}^{n}
+  // labels the brace with n, which is the whole point of the construct.
+  for (name, over) <- Seq("overbrace" -> true, "underbrace" -> false) do
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          t.mode match
+            case parent: MathMode =>
+              val inner = handler.mathSubFormula(proc, parent.style, proc.readArgument(pos))
+
+              if inner ne null then
+                parent.addNode(MathAtom(MathClass.Op, parent.makeBrace(inner, over), limits = Some(true)))
+            case _ => handler.error(s"\\$name is only allowed in math mode", pos)
+      },
+    )
+
+  // vcenter - 1 body arg: the argument set as a vertical box and centred on the math axis, rather than sitting on
+  // the baseline. Math-mode only. The axis is the line a fraction bar and a fence centre on, so a stack of lines
+  // set beside a formula — a brace-and-cases layout built by hand, a small table of conditions — reads level with
+  // the formula only if it is centred there too. Enters as an Ord atom.
+  proc.registerPrimitive(
+    "vcenter",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.mode match
+          case parent: MathMode =>
+            buildBox(proc, t, vertical = true, top = false, pos) match
+              case b: Box => parent.addNode(MathAtom(MathClass.Ord, parent.makeVcentered(b)))
+              case null   =>
+          case _ => handler.error("\\vcenter is only allowed in math mode", pos)
     },
   )
 
@@ -700,6 +815,45 @@ private[parser] def tryMathArrayEnv(proc: Processor, name: String, pos: CharRead
           true
         case _ => handler.error(s"the $name environment is only allowed in math mode", pos)
     case _ => false
+
+// The style named by \frac's [style:] option, or None for a name that is not one of the four.
+private[parser] def fracStyle(name: String): Option[MathStyle] = name.trim.toLowerCase match
+  case "display"      => Some(MathStyle.Display)
+  case "text"         => Some(MathStyle.Text)
+  case "script"       => Some(MathStyle.Script)
+  case "scriptscript" => Some(MathStyle.ScriptScript)
+  case _              => None
+
+// A delimiter named in an option value: a bare character — [left:(] — or a command name, written with or
+// without its backslash, so both [left:\langle] and [left:langle] read.
+private[parser] def delimiterNamed(s: String): Option[Int] =
+  val name = s.trim
+
+  if name.length == 1 then MathDelimiters.forChar(name.charAt(0))
+  else MathDelimiters.forCommand(name.stripPrefix("\\"))
+
+// The atom class named by \fence's [class:] option, or None for a name that is not one of the four.
+private[parser] def fenceClass(name: String): Option[MathClass] = name.trim.toLowerCase match
+  case "open"           => Some(MathClass.Open)
+  case "close"          => Some(MathClass.Close)
+  case "rel" | "relation" => Some(MathClass.Rel)
+  case "ord" | "ordinary" => Some(MathClass.Ord)
+  case _                => None
+
+// Read \fence's delimiter argument: a braced single character (\fence{(}) or control sequence (\fence{\langle}),
+// resolved through MathDelimiters. Braced, unlike \left's bare delimiter, because \fence takes optional
+// parameters before it and a braced argument keeps the two apart on the page as well as in the parser. A `.`
+// yields None, as it does after \left — a fence with nothing drawn, which is occasionally what a template wants.
+private[parser] def readBracedDelimiter(proc: Processor, handler: TypesetterHandler, pos: CharReader): Option[Int] =
+  // a braced argument arrives with its braces, and a delimiter written with spaces around it with blank runs
+  proc.readArgument(pos).filter {
+    case Token.Text(s, _)  => s.trim.nonEmpty
+    case Token.BeginGroup(_) | Token.EndGroup(_) => false
+    case _                 => true
+  } match
+    case Vector(Token.Text(s, _)) if s.trim.length == 1 => MathDelimiters.forChar(s.trim.charAt(0))
+    case Vector(Token.ControlSeq(name, _))              => MathDelimiters.forCommand(name)
+    case _ => handler.error("\\fence expects one delimiter, as in \\fence{(} or \\fence{\\langle}", pos)
 
 // Read the delimiter that follows \left or \right: a single character (the first of the next text run, with
 // the rest pushed back) or a control sequence, resolved through MathDelimiters. `.` and any unrecognized

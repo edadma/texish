@@ -1,16 +1,16 @@
 package io.github.edadma.texish.parser
 
-/** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm, 1.5em, 2ex */
-private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)""".r
+/** Match a unit-suffixed dimension like 12pt, 0.5in, 3mm, 2pc, 1.5cm, 1.5em, 2ex, 18mu */
+private val DimensionPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|mu)""".r
 
 /** Match a flex (stretch or shrink) amount: a dimension or an infinite amount like 1fil / 2fill */
-private val FlexPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)""".r
+private val FlexPattern = """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|mu|fil|fill)""".r
 
 /** Match a full glue spec: a dimension with optional `plus <flex>` and `minus <flex>` parts */
 // A unit is optional on each numeric component: an omitted unit means points, matching texish's point-space
 // model where a bare number is already a length (so `\set leftskip {0 plus 1fil}` works, not only `0pt plus 1fil`).
 private val GluePattern =
-  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex)?(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)?)?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|fil|fill)?)?""".r
+  """([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|mu)?(?:\s+plus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|mu|fil|fill)?)?(?:\s+minus\s+([+-]?(?:\d+\.?\d*|\.\d+))(pt|pc|in|cm|mm|em|ex|mu|fil|fill)?)?""".r
 
 /** Points per unit. Context-free units have fixed factors; em and ex come from the host's current font via the
   * resolver, and fail to resolve when the host has none (or has no font yet).
@@ -22,6 +22,8 @@ private def unitPoints(unit: String, fontUnit: String => Option[Double]): Option
   case "cm"        => Some(72 / 2.54)
   case "mm"        => Some(72 / 25.4)
   case "em" | "ex" => fontUnit(unit)
+  // a math unit is 1/18 em, the unit TeX measures math spacing in: \, is 3mu, \; is 5mu, \quad is 18mu
+  case "mu" => fontUnit("em").map(_ / 18)
 
 /** Parse a unit-suffixed dimension into Dimen (big points). Font-relative units (em, ex) resolve against the current
   * font through the resolver; without one they don't parse, leaving the input as text.

@@ -1,159 +1,162 @@
 # LaTeX-in-texish — Scope
 
-Purpose of the `latex` worktree: port useful **LaTeX definitions** into texish — as
-engine primitives where macros can't fake it, otherwise as `\use`-able packages written
-in the document language.
+What it would take to give texish LaTeX's **authoring surface** — the commands a document
+author types — as engine primitives where macros can't fake it, and otherwise as `\use`-able
+packages written in the document language.
 
-## Framing (carried from the roadmap)
+Statuses below were checked against the tree, command by command: the registered primitive
+names in `shared/src/main/scala-3/io/github/edadma/texish/parser/Primitives*.scala`, the
+`\def`s in `packages/*.texish`, and `docs/content/reference/commands.md`.
+
+## Framing
 
 texish is an **evaluated tree-walker** with typed values and **fixed catcodes**, not a
 two-stage expansion machine. So LaTeX's expansion plumbing is *unnecessary, not missing* —
 do NOT port `\expandafter`, `\noexpand`, `\edef`, `\protect`/robust-command machinery,
-runtime catcode changes, `\makeatletter`. The goal is LaTeX's **authoring surface** (the
-commands a document author types), not its internal `.ltx` implementation.
+runtime catcode changes, `\makeatletter`. The goal is the authoring surface, not LaTeX's
+internal `.ltx` implementation.
+
+A second line, learned since: **a LaTeX command that is only a different name for something
+texish already does is not worth adding.** Two ways to say one thing is a cost paid by every
+reader forever. What earns its place is a capability that is missing, not a spelling that is
+unfamiliar.
 
 Each candidate below is tagged:
-- **[have]** — already implemented (listed for completeness / compatibility-alias only)
+
+- **[done]** — implemented; the command exists today
 - **[pkg]** — pure document-language package macros; no engine change
 - **[prim]** — needs a small new engine primitive/helper
 - **[ENGINE]** — needs a substantial engine feature (the real blockers)
+- **[skip]** — deliberately not doing it; the reason is given
 
 ---
 
-## A. LaTeX command-name compatibility layer  [pkg, cheap, high value]
+## A. LaTeX command-name compatibility layer  [mostly skip]
 
-texish already has the capabilities; LaTeX authors just type different names. A thin
-`latex` compat package gives muscle-memory commands.
+texish already has these capabilities under its own names. A compat package would buy muscle
+memory and cost a second vocabulary; by the rule above, most of it is not worth it.
 
-- `\newcommand`/`\renewcommand`/`\providecommand`(`*`) → wrap `\def`/`\gdef`. **[pkg]**
-  (optional-arg + `[n]` arg-count form maps onto existing macro param + xparse optional args)
-- `\newcommand`'s `\ensuremath{…}` → run body in math if not already. **[pkg]** (small)
-- `\vspace{d}` / `\hspace{d}` → `\vskip` / `\hskip`; `\vspace*` (non-discardable). **[pkg]**
-- `\rule[lift]{w}{h}` → `\hrule`/`\vrule` box with explicit dims. **[pkg/prim]**
-- `\smallskip`/`\medskip`/`\bigskip` **[have]**, `\newline`/`\\` **[have]** (`\cr`)
-- `\linebreak`/`\nolinebreak`/`\pagebreak`/`\nopagebreak` → `\penalty`. **[pkg]**
-- `\phantom`/`\hphantom`/`\vphantom`/`\smash` → zero-ink boxes of measured size. **[prim]**
-  (needs box measure, which exists via `\setbox`/`\wd`/`\ht`/`\dp`)
-- `\stretch{n}`, `\hfill`**[have]**/`\dotfill`**[have]**/`\hrulefill`**[have]**
-- `\xspace` (smart trailing space). **[pkg]**
+- `\newcommand`/`\renewcommand`/`\providecommand` → `\def` handles this, with optional and
+  defaulted parameters already. **[skip]**
+- `\vspace{d}`/`\hspace{d}` → `\vskip`/`\hskip`. **[skip]**
+- `\smallskip`/`\medskip`/`\bigskip` **[done]**, `\newline`/`\\` **[done]** (`\cr`)
+- `\hfill`/`\dotfill`/`\hrulefill` **[done]**; `\stretch{n}` → glue with a `fil` component. **[skip]**
+- `\phantom`/`\hphantom`/`\vphantom`/`\smash` **[done]**
+- `\linebreak`/`\nolinebreak`/`\pagebreak`/`\nopagebreak` → `\penalty`, and `\nobreak`/`\eject`
+  are there. **[skip]**
+- `\rule[lift]{w}{h}` — a rule of explicit dimensions in running text; `\hrule`/`\vrule` are
+  vertical/horizontal-list items, so this one is a real gap rather than a renaming. **[prim]**
+- `\ensuremath{…}` — run the body in math if not already there. Genuinely useful in a macro
+  body that may be called from either mode. **[prim]**
+- `\xspace` — a smart trailing space, which needs lookahead at the call site. **[prim]**
 
-## B. Math enrichment — an `amsmath`-style package  [mostly pkg, some prim]
+## B. Math enrichment — an `amsmath`-style package  [largely done]
 
-Highest author-visible payoff after refs. Core math mode is already TeX-class.
-
-- Math alphabets `\mathbb`, `\mathbf`, `\mathrm`, `\mathsf`, `\mathtt`, `\mathfrak`
-  (`\mathcal` **[have]**). **[prim]** — each is a font-axis restyle of the formula run;
-  `\mathbb`/`\mathfrak` need blackboard/fraktur glyphs (Latin Modern Math has some).
-- Operators `\lim \sup \inf \max \min \det \gcd \deg \exp \ln \log \sin \cos \tan …`
-  and `\DeclareMathOperator`. **[pkg]** over `\text` + `\limits` + spacing.
-- `\binom`/`\dbinom`/`\tbinom`, `\dfrac`/`\tfrac` → `\over`/`\atop` + delimiter sizing. **[pkg]**
-- `\overbrace`/`\underbrace` (with scripts), `\overline`/`\underline` in math,
-  `\overrightarrow`. **[prim]** (stretchy horizontal brace/line over a sub-box)
-- `\stackrel`, `\substack`, `\boxed`, `\pmod`/`\bmod`, `\bigl…\Biggr` delimiter sizes. **[pkg]**
+- Math alphabets `\mathbb` `\mathbf` `\mathrm` `\mathsf` `\mathtt` `\mathfrak` `\mathcal` **[done]**
+- Operators `\lim \sup \inf \max \min \det \gcd \deg \exp \ln \log \sin \cos \tan …` **[done]**,
+  and `\operatorname` **[done]**. `\DeclareMathOperator` is `\def name {\operatorname{name}}`. **[skip]**
+- `\binom`/`\dbinom`/`\tbinom`, `\dfrac`/`\tfrac` **[done]**, and `\frac` now takes
+  `rule:`/`left:`/`right:`/`style:`, which covers every other fraction-like stack **[done]**
+- `\overline`/`\underline` **[done]**; `\overbrace`/`\underbrace` **[done]**
+- `\overrightarrow` and the extensible arrows (`\xrightarrow`) — the horizontal-variant path
+  the braces use would carry these; an arrow that stretches over a label is the remaining
+  case of it. **[prim]**
+- `\substack`, `\boxed`, `\pmod`/`\bmod` **[done]**; `\stackrel` is
+  `\mathrel{\mathop{…}\limits^{…}}` over primitives that all exist. **[skip]**
+- `\bigl…\Biggr` — superseded by `\fence size:n`, one command in place of twelve. **[done]**
 - Numbered display environments `equation`/`equation*`, `align`/`align*`, `gather`,
-  `multline`, `cases`**[have]**, `matrix`/`array` math envs. **[ENGINE-ish]** — `align`
-  needs `\halign`-in-math + equation numbering hooked to a counter; build on existing
-  `\halign` + `\eqno`.
-- `\eqref`, `\tag` — depend on cross-ref system (section E).
+  `multline` — `cases` **[done]**, the matrix and `aligned` environments **[done]**, `\eqno`
+  and `\leqno` **[done]**, `\halign` with `\tabskip` **[done]**. What is left is the numbering:
+  an equation counter wired to `\eqno`, `\tag`, and `\eqref`. **[pkg]**, plus `\displaywidth`/
+  `\displayindent` if the alignment is to reach the full measure. **[prim]**
 
-## C. Tables — `booktabs` / `array` / spanning  [pkg + one engine gap]
+## C. Tables — `booktabs` / `array` / spanning  [one engine gap, the rest packages]
 
-`\tabular` and `\halign` exist; LaTeX table idioms layer on top.
+`\tabular` (an l/c/r/`|` column spec with `\hline`, over `\halign`) exists **[done]**.
 
-- `booktabs`: `\toprule`/`\midrule`/`\bottomrule`/`\cmidrule` → ruled `\noalign{\hrule}`
-  with proper rule weights & spacing. **[pkg]**
+- `booktabs`: `\toprule`/`\midrule`/`\bottomrule`/`\cmidrule` → ruled `\noalign{\hrule}` at
+  proper weights and spacing. **[pkg]** — the cheapest visible win left in the whole document.
 - `\multicolumn{n}{spec}{text}` and `\multirow`. **[ENGINE]** — needs `\span`/`\multispan`
-  column spanning in `HAlignMode` (roadmap lists this as not-yet-done).
-- `array` math environment, `tabularx` (auto-width columns via `\halign to:`). **[prim]**
-  (`\halign to:`/`spread` infra exists per roadmap, just unwired)
+  column spanning in `HAlignMode`, which is still the one unbuilt alignment feature.
+- `tabularx` (auto-width columns) — `\halign to:`/`spread` is not wired. **[prim]**
 - `\arraystretch`, `p{width}` paragraph columns. **[prim]**
 
-## D. Floats, captions, lists  [pkg, except cross-listing]
+## D. Floats, captions, lists  [packages]
 
-- `\listoffigures`/`\listoftables` → needs section E (two-pass). **[ENGINE]**
-- `subcaption`/`subfigure`, `wrapfigure` (text wrap around float). **[pkg/prim]**
-- Float placement `[H]` (hard-here, `float` package). **[pkg]** (over existing `h` spec)
-- `enumitem`-style list tuning (`\begin{enumerate}[label=…,leftmargin=…]`),
-  `\setlist`. **[pkg]** (lists + counters already exist)
-- `\caption*`, caption styling, `\captionof`. **[pkg]**
+- `\listoffigures`/`\listoftables` **[done]**, `\caption` **[done]**, `figure`/`table` with
+  placement **[done]**, `\wrapfigure`/`\wraptable` **[done]** — with shaped cutouts, which is
+  past what `wrapfig` does.
+- Float placement `[H]` (hard-here). **[pkg]** (over the existing placement spec)
+- `subcaption`/`subfigure`. **[pkg]**
+- `enumitem`-style list tuning (`\begin{enumerate}[label=…,leftmargin=…]`), `\setlist`. **[pkg]**
+- `\caption*`, `\captionof`. **[pkg]**
 
-## E. Cross-references & TOC — `\label`/`\ref`/`\tableofcontents`  [DONE]
+## E. Cross-references & TOC  [done]
 
-The aux store + two-pass driver (`ReferenceTable` + `Passes.untilStable`) and
-`\label`/`\ref`/`\pageref`/`\tableofcontents` landed earlier (carried in from `dev`). The
-remaining commands were added in this worktree:
+The aux store and two-pass driver (`ReferenceTable` + `Passes.untilStable`), with `\label`,
+`\ref`, `\pageref`, `\eqref`, `\autoref`, `\nameref`, `\tableofcontents`, `\addcontentsline`,
+`\listoffigures` and `\listoftables`. A label or contents entry buried in a float learns the
+page its float ships on.
 
-- `\eqref{k}` (parenthesised number), `\autoref{k}` (kind word + number), `\nameref{k}`
-  (title) — over a `RefEntry` that now carries the label's kind and name, captured at
-  `\label` from `currentlabeltype` / `currentlabelname`.
-- `\listoffigures` / `\listoftables` — over named contents lists ("toc"/"lof"/"lot") in
-  `ReferenceTable`; `\addcontentsline{list}{lvl}{num}{title}` files an entry, `\caption`
-  files into lof/lot. PageMode's shipout walk recurses into floats so a caption's `\label`
-  / `\addcontentsline` learns the page its float ships on.
+## F. Page layout & headers  [one engine gap]
 
-## F. Page layout & headers  [pkg, one engine gap]
-
-- `geometry`-style margins → set `hsize`/`vsize`/`hoffset`/`voffset`/`paperwidth/height`. **[pkg]**
-- `fancyhdr` (`\fancyhead`/`\fancyfoot`/`\pagestyle`) → over `headline`/`footline`/`\mark`. **[pkg]**
+- `geometry`-style margins → `\geometry`. **[done]**
+- `fancyhdr` → `headline`/`footline` and `\mark` are there and `book.texish` uses them; a
+  package that wraps them as `\fancyhead`/`\fancyfoot`/`\pagestyle` is optional. **[pkg]**
 - `setspace` (`\onehalfspacing`/`\doublespacing`) → `baselineskip`. **[pkg]**
-- `titlesec` section-format hooks. **[pkg]** (sectioning macros already exist to restyle)
-- `multicol` / `\twocolumn`. **[ENGINE]** — page-builder/output-routine hook (roadmap Tier-1 #3).
-- `\marginpar`. **[ENGINE]** (same page-builder hook)
+- `titlesec` section-format hooks. **[pkg]** (the sectioning macros are already redefinable)
+- `multicol` / `\twocolumn`. **[ENGINE]** — `\columns{n}{…}` balances columns **[done]**, but as
+  a single box within a page: a balanced block taller than a page is not yet split across
+  pages, and that needs the page-builder/output-routine hook.
+- `\marginpar`. **[ENGINE]** (the same hook)
 
-## G. Graphics transforms & framing — `graphicx`/`xcolor`  [prim]
+## G. Graphics transforms & framing  [done bar one]
 
-- `\fbox`/`\framebox`/`\colorbox`/`\fcolorbox`/`\boxed`. **[prim]** (box measure exists;
-  needs a frame/background-fill box) — roadmap flags `\fbox` as an unblocked next step.
-- `\rotatebox`/`\scalebox`/`\reflectbox`/`\resizebox`. **[prim]** — apply a CTM to a typeset
-  box; `\picture` already has translate/scale/rotate, generalize the transform seam to boxes.
-- `\raisebox`. **[pkg]** (`\raise`/`\lower` + measure).
-- `xcolor` `\definecolor`/named-model colors. **[pkg/prim]** (`\color` exists).
+`\fbox`/`\framebox`/`\colorbox`/`\fcolorbox`/`\boxed`, `\rotatebox`/`\scalebox`/
+`\reflectbox`/`\resizebox`, `\raisebox`, `\color` — all **[done]**.
 
-## H. Verbatim & code listings  [prim, separate track]
+- `xcolor` `\definecolor` and its named colour models. **[prim]**
 
-Already designed in its own roadmap (`verbatim_code` memo): engine `verbatim`/`\verb`
-(raw-capture seam) then `\code` highlighting via the `highlighter` dep. **[prim]** —
-not duplicated here; pull from that plan.
+## H. Verbatim & code listings  [done]
 
-## I. Misc box/layout commands  [mostly DONE]
+`\verb` and the `verbatim`/`code` raw environments, with highlighting.
 
-- `\parbox[pos]{w}{…}`, `\begin{minipage}[pos]{w}` — **DONE** (engine primitives `\parbox`
-  and `\beginminipage`/`\endminipage`; set hsize → build vbox at the width → align on the
-  baseline, `c` via a metric-adjusting RaiseBox). `\minipage` env wired in `document.texish`.
-- `\mbox`/`\makebox[w][pos]` — **DONE** (engine primitives; `\makebox` pads the content with
-  fil glue inside an hbox set to the width, l/c/r/s alignment).
-- `\newlength`/`\setlength`/`\addtolength` — **DONE** (engine primitives over the `\set`
-  variable store; the length is a plain Dimen variable, read back as `\name` / in `\calc`).
-- `\ifthenelse{test}{then}{else}` + `\equal` — **DONE** (`document.texish` macros over `\if`
-  and `\=`; compound tests use the expression operators). `\ifdefined` not done.
-- `siunitx` (`\SI`/`\num`/`\si`) — **NOT DONE.** A faithful siunitx needs a number formatter
-  (grouping/rounding/exponents — no grouping primitive exists yet) plus a unit-macro algebra
-  (`\kilo\gram\per\second`); it is a substantial standalone package, deferred to its own pass.
+## I. Misc box/layout commands  [done bar two]
+
+`\parbox`/`minipage`, `\mbox`/`\makebox`, `\newlength`/`\setlength`/`\addtolength`,
+`\ifthenelse`/`\equal` — all **[done]**.
+
+- `\ifdefined`. **[prim]**
+- `siunitx` (`\SI`/`\num`/`\si`) — **[ENGINE-ish]**, and deferred: it needs a number formatter
+  (grouping, rounding, exponents — no grouping primitive exists) plus a unit-macro algebra
+  (`\kilo\gram\per\second`). A substantial standalone package, on its own pass.
 
 ---
+
+## What this document cannot see
+
+It audits LaTeX's surface, so a **TeX** primitive that texish lacks never appears in it — and
+for a long time four of the most-typed ones did not. The math-mode gaps found by auditing
+against TeX rather than LaTeX are now closed: `\displaystyle` and its three companions,
+`\fence` (which covers TeX's `\big` family), `\overbrace`/`\underbrace`, `\vcenter`, `\leqno`,
+the `mu` unit, and `\frac`'s general parameters.
+
+Two smaller ones remain unbuilt, both narrow: `\mathchoice`, which picks one of four
+renderings by the style in force, and `\nonscript`, which cancels a following space in script
+styles. Neither has come up in a real document.
 
 ## Recommended sequencing
 
-Two independent spines (can run in parallel):
+**Package spine (cheap, no engine risk):**
 
-**Author-surface spine (fast, high coverage, low risk):**
-1. **A — LaTeX compat package** (`\newcommand`, `\vspace`/`\hspace`, `\rule`, `\xspace`, …) —
-   cheapest win, makes pasted LaTeX "mostly work."
-2. **B — amsmath package** (operators, alphabets, `\binom`/`\dfrac`, `\overbrace`) — biggest
-   visible payoff; mostly macros + a few math prims.
-3. **F — geometry/fancyhdr/setspace** packages — pure macros over existing registers.
-4. **C/D — booktabs + list/caption tuning** — pure macros; defer `\multicolumn` (needs `\span`).
+1. **booktabs** (C) — rules at proper weights; the most visible table improvement per line of code.
+2. **Equation numbering** (B) — an equation counter over `\eqno`/`\leqno`, with `\tag` and `\eqref`.
+3. **setspace, titlesec, enumitem, caption tuning** (F, D) — macros over registers that exist.
 
-**Engine spine (deep, unlocks the rest):**
-5. **G — `\fbox` + box-transform seam** (`\rotatebox`/`\scalebox`/`\fbox`/`\parbox`) — self-contained.
-6. **E — cross-references + TOC** (aux store + two-pass) — the flagship; design the aux/two-pass
-   driver first, ship `\label`/`\ref` for eval-time numbers, then `\pageref`/TOC.
-7. **C `\span`/`\multicolumn`** and **F `multicol`/`\marginpar`** (page-builder hook) — last,
-   they share the alignment-spanning and output-routine machinery.
+**Engine spine:**
 
-**Start here:** A (compat package) + B (amsmath) give the most "renders real LaTeX" per unit
-effort with little engine risk. E (cross-refs) is the one feature that genuinely changes the
-engine and is worth a dedicated design pass.
-
-> Note: prior firm decision (document-features handoff) deferred `\ref`/`\label`/`\cite`.
-> This worktree exists to revisit that — confirm before starting section E.
+4. **`\rule`, `\ensuremath`, `\ifdefined`, `\definecolor`** (A, G, I) — small, self-contained prims.
+5. **`\halign to:`/`spread`, `p{width}`, `\arraystretch`** (C) — finish the alignment surface.
+6. **`\span`/`\multispan` → `\multicolumn`/`\multirow`** (C) — the alignment engine gap.
+7. **The page-builder hook** (F) — page-spanning `multicol`/`\twocolumn` and `\marginpar`; the
+   deepest of these, and the one that unlocks the rest of the page-layout column.
