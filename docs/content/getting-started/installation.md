@@ -12,7 +12,7 @@ are not currently built or published — see [Rendering in the Browser](/guide/b
 Add texish with the `%%%` operator so sbt selects the right platform artifact:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.26.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.27.0"
 ```
 
 Nothing else is needed: the Latin Modern core and the standard packages are compiled into the
