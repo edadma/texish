@@ -61,7 +61,8 @@ syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diag
 node-and-edge diagrams (`\use{diagram}`, with `flowchart`, `automaton` and `er` presets —
 block diagrams, flowcharts, state machines and entity-relationship diagrams), month
 calendars (`\use{calendar}` — a month grid with leap-year arithmetic, a configurable week
-start, and a today highlight), and geographic maps (`\use{map}` — real longitude/latitude
+start, and a today highlight), chess (`\use{chess}` — algebraic notation read and *played*, so a
+diagram is the position the moves above it reached), and geographic maps (`\use{map}` — real longitude/latitude
 linework, place labels, routes and regions in the Web Mercator projection).
 
 The everyday conveniences `\use{document}` builds on — a font-size ladder, vertical skips,

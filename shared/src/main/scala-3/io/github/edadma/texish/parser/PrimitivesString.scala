@@ -59,24 +59,26 @@ object AccentPrimitive extends Primitive:
         proc.handler.text(c)
       case None => proc.handler.error(s"accented character not found: $accent $base", pos)
 
+// The three case-and-whitespace operations set a result as well as writing their text, like every other string
+// function here: without the result they are text-only, and a `\set x {\upcase{ab}}` falls back to the argument's
+// own text — which looks like the operation ran and did nothing, since the fallback keeps the case it started in.
+private def stringOp(proc: Processor, pos: CharReader, f: String => String): Unit =
+  val out = f(Value.display(proc.evalStringArgument(pos)))
+  proc.setResult(Value.Text(out))
+  proc.handler.text(out)
+
 object UpcasePrimitive extends Primitive:
-  def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = proc.evalArgumentExpr(pos)
-    proc.handler.text(Value.display(arg).toUpperCase)
+  def execute(proc: Processor, pos: CharReader): Unit = stringOp(proc, pos, _.toUpperCase)
 
 object DowncasePrimitive extends Primitive:
-  def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = proc.evalArgumentExpr(pos)
-    proc.handler.text(Value.display(arg).toLowerCase)
+  def execute(proc: Processor, pos: CharReader): Unit = stringOp(proc, pos, _.toLowerCase)
 
 object TrimPrimitive extends Primitive:
-  def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = proc.evalArgumentExpr(pos)
-    proc.handler.text(Value.display(arg).trim)
+  def execute(proc: Processor, pos: CharReader): Unit = stringOp(proc, pos, _.trim)
 
 object SizePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val arg = proc.evalArgumentExpr(pos)
+    val arg = proc.evalStringArgument(pos)
     val size = arg match
       case Value.Text(s) => s.length
       case Value.Seq(items) => items.size
@@ -93,7 +95,7 @@ object SizePrimitive extends Primitive:
   * text value rather than between tokens. An empty or all-whitespace string yields the empty sequence. */
 object WordsPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val s     = Value.display(proc.evalArgumentExpr(pos))
+    val s     = Value.display(proc.evalStringArgument(pos))
     val words = s.split("\\s+").iterator.filter(_.nonEmpty).map(w => Value.Text(w)).toVector
     proc.setResult(Value.Seq(words))
 
@@ -101,6 +103,6 @@ object WordsPrimitive extends Primitive:
   * language (e.g. accumulating an element run while parsing a formula). A general string operation. */
 object CatPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val a = Value.display(proc.evalArgumentExpr(pos))
-    val b = Value.display(proc.evalArgumentExpr(pos))
+    val a = Value.display(proc.evalStringArgument(pos))
+    val b = Value.display(proc.evalStringArgument(pos))
     proc.setResult(Value.Text(a + b))

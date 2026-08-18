@@ -1,0 +1,123 @@
+// chess-demo — a demonstration of the chess package. Render with:
+//   texish scripts/chess-demo.script
+//
+// The package keeps a position, plays algebraic notation into it, and draws it, so
+// the diagrams in this demo are not drawn by hand: every one of them is whatever
+// position the moves above it reached. That is the point of the package — a diagram
+// cannot disagree with the moves that produced it.
+\use{document}
+\use{chess}
+
+\title{Playing Chess with \mono{chess}}
+\author{Diagrams and game scores, drawn from the document language}
+\maketitle
+
+\section{A position and a diagram}
+
+\mono{\\newgame} sets the board up and \mono{\\showboard} draws it. The diagram is
+one picture box, so it flows in the text like any other box — here centred on its own
+line.
+
+\newgame
+\bigskip
+\centerline{\showboard}
+\bigskip
+
+\section{Moves are played, not just printed}
+
+\mono{\\mainline} prints a line of moves and plays it. The moves below are the first
+nine of the Ruy Lopez, written exactly as a book prints them; the diagram after them
+is the position they reach.
+
+\bigskip
+\noindent\mainline{1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6 5.O-O Be7 6.Re1 b5 7.Bb3 d6 8.c3 O-O 9.h3}
+
+\bigskip
+\centerline{\showboard}
+\bigskip
+
+The move numbers are counted from the position rather than copied from the input, and
+the piece letters are set as figurines: White's moves take the outline pieces and
+Black's the solid ones, so a move read on its own says whose it is.
+
+\section{What the notation leaves out}
+
+Algebraic notation names the square a piece arrives at and leaves the square it came
+from to be worked out. \mono{Nf3} is whichever knight can reach f3; \mono{Rad1} is the
+rook on the a-file when both rooks could reach d1; and when even that is not said, it
+is because only one of the two may legally move.
+
+\newgame
+\hidemoves{1.d4 d5 2.c4 c6 3.Nf3 Nf6 4.Nc3 dxc4 5.a4 Bf5 6.e3 e6 7.Bxc4 Bb4 8.O-O Nbd7}
+\showmoves{9.Qe2 Bg6 10.e4 O-O}
+
+\bigskip
+\centerline{\showboard}
+\bigskip
+
+\noindent Above, \mono{\\hidemoves} played the first eight moves without printing
+them and \mono{\\showmoves} printed two more without playing them, so the diagram
+shows the position after Black's eighth — a sideline set in the text beside a
+position it must not disturb.
+
+\section{Castling, promotion and en passant}
+
+The three moves that change more than the two squares they name. Castling moves the
+rook as well; a promotion arrives as a different piece; and a pawn taking in passing
+removes a pawn that is on neither of the named squares.
+
+\newgame
+\hidemoves{1.e4 Nf6 2.e5 d5 3.exd6 exd6 4.Nf3 Be7 5.d4 O-O}
+
+\bigskip
+\centerline{\showboard}
+\bigskip
+
+\noindent White's third move was \mono{exd6}, an en-passant capture: the pawn it took
+stood on d5, not on d6. Black has castled, and the position was reached without a
+single square being named by hand.
+
+\section{A position of its own}
+
+\mono{\\fenboard} sets a position from a FEN string, for one that no line of moves
+reached. This is the finish of Anderssen–Kieseritzky, London 1851 — the Immortal Game
+— with the mating move about to be played.
+
+\set chesshighlight {e7 d8}
+\fenboard{r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 b}
+
+\bigskip
+\centerline{\showboard}
+\bigskip
+
+\noindent The two tinted squares are named in \mono{chesshighlight}, which takes a
+list of squares.
+
+\section{Size, orientation and colour}
+
+Every part of the diagram is configurable. A board can be small enough to sit in a
+line of text, drawn from Black's side, or set in different colours.
+
+\set chesshighlight {}
+\set chesssquare {11}
+\set chesscoords {0}
+\newgame
+\hidemoves{1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6}
+
+\bigskip
+\centerline{\showboard \hskip 24 \set chessflip {1}\showboard}
+\bigskip
+
+\noindent The same position twice: from White's side, and from Black's. Below, the
+same board again at its ordinary size in a different colour scheme.
+
+\set chessflip {0}
+\set chesssquare {17}
+\set chesscoords {1}
+\set chesslight {#eeeed2}
+\set chessdark {#769656}
+\set chessborder {#3c4a2f}
+
+\bigskip
+\centerline{\showboard}
+\bigskip

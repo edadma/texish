@@ -16,6 +16,13 @@ trait Handler:
 
   /** Run `thunk` with output diverted into a buffer and return the text it produced, restoring any previous sink so
     * captures nest. The variable scope is untouched, so the captured text reflects the live document state. */
+  /** Whether output written now goes into the capture buffer. Suppression wins over a capture: a capture collects
+    * the text a body writes, and an expression evaluated inside that body — a condition, a `\set` argument —
+    * writes none. It matters because the comparison and lookup primitives set a result *and* write it, so a
+    * capture that ignored suppression would collect "true" and "false" for every test the body ran on its way to
+    * the text it meant to produce. */
+  protected def capturing: Boolean = captureSink != null && !outputSuppressed
+
   def capture(thunk: => Unit): String =
     val prev = captureSink
     val sb   = new StringBuilder
@@ -105,15 +112,15 @@ class StringHandler extends Handler:
   def result: String = output.toString
 
   def text(s: String): Unit =
-    if captureSink != null then captureSink.nn.append(s)
+    if capturing then captureSink.nn.append(s)
     else if !suppressed then output.append(s)
 
   def space(): Unit =
-    if captureSink != null then captureSink.nn.append(" ")
+    if capturing then captureSink.nn.append(" ")
     else if !suppressed then output.append(" ")
 
   def newline(): Unit =
-    if captureSink != null then captureSink.nn.append("\n")
+    if capturing then captureSink.nn.append("\n")
     else if !suppressed then output.append("\n")
 
   def suppressOutput(suppress: Boolean): Unit = suppressed = suppress

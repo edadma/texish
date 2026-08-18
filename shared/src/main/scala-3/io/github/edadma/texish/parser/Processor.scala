@@ -762,6 +762,18 @@ class Processor(val handler: Handler):
   def evalArgumentExpr(pos: CharReader): Value =
     evalTokensExpr(stripOuterBraces(readArgument(pos)), pos)
 
+  /** Evaluate an argument for the string functions, where a lone run of literal characters is those characters and
+    * not the number they would parse as. `\words{1.e4}` is a move of chess notation, not 10000 — which is what
+    * "1.e4" means read as a double — and `\upcase{007}` is "007". Everything else evaluates as usual, so a variable,
+    * a nested call and a sequence all still arrive as values; only the one case where a string function was handed
+    * the characters themselves is kept as written. This is what makes a verbatim `<name>` argument survive being
+    * split, which is the use its own documentation names.
+    */
+  def evalStringArgument(pos: CharReader): Value =
+    stripOuterBraces(readArgument(pos)) match
+      case Vector(Token.Text(s, _)) => Value.Text(s)
+      case ts                       => evalTokensExpr(ts, pos)
+
   /** Evaluate an already-extracted token run as an expression — including a primitive applied to its braced
     * arguments (`\*{a}{b}`) and dotted access (`\forloop.index`), which the plain [[evalTokens]] does not. For
     * callers that have split a compound argument into pieces themselves, such as the space-separated coordinates

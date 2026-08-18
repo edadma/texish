@@ -63,7 +63,7 @@ object Typesetter:
     "hebrew", "ezra", "arabic", "amiri",
     "devanagari", "hindi", "bengali", "assamese", "gujarati", "gurmukhi", "punjabi", "kannada", "telugu", "tamil",
     "ethiopic", "amharic", "tigrinya",
-    "alegreya", "ebgaramond", "bravura", "petaluma",
+    "alegreya", "ebgaramond", "bravura", "petaluma", "chess",
   )
 
 abstract class Typesetter:
@@ -812,6 +812,15 @@ abstract class Typesetter:
   // embedded either, so the two travel together: a host with the font tree has both, a host without has neither.
   loadFont("bravura", "fonts/Bravura/Bravura.otf", Set(), Set())
   loadFont("petaluma", "fonts/Petaluma/Petaluma.otf", Set(), Set())
+
+  // Noto Sans Symbols 2, under the name `chess` — the face the chess package stamps its pieces from. No bundled
+  // text face covers the Miscellaneous Symbols chess block (U+2654-265F), and none is likely to: they are pictorial
+  // symbols rather than letters, so a body face that omits them is not defective. The name says what the face is
+  // for here rather than what it is called upstream, exactly as `hindi` and `punjabi` name Noto's Devanagari and
+  // Gurmukhi: a document asking for `chess` wants the pieces, and where they come from is the engine's business.
+  // The face carries far more than the pieces (draughts, dice, dominoes, playing cards, arrows), which is why it
+  // is registered whole rather than subsetted to the twelve glyphs one package happens to need.
+  loadFont("chess", "fonts/NotoSansSymbols2/NotoSansSymbols2-Regular.ttf", Set(), Set())
   }
 
   /** Register the faces compiled into the artifact — the engine's guaranteed baseline, present on every host

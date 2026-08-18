@@ -108,6 +108,8 @@ faces there:
   extrabold weights and their italics, a real bold, and true small caps through the `smcp` feature.
 - `\font alegreya`, `\font gentium`, `\font gentiumbook`, `\font noto`, `\font pt`, and the rest of
   JetBrains Mono's weight range.
+- `\font chess` — Noto Sans Symbols 2, named for what the `chess` package stamps its pieces from. No
+  text face covers the Miscellaneous Symbols chess block (U+2654–265F).
 
 Naming a catalogue face on an installation that has no font tree is an error that says so, naming the
 file it went looking for. Any face texish does not bundle is brought in with `\loadfont{name}{path}`.
@@ -517,6 +519,27 @@ print, resolved on the second typesetting pass.
 | `\dn{n}` `\up{n}` | formula subscript / superscript |
 | `\atom{name}{x y}{label}` | place and label an atom |
 | `\bond` `\dbond` `\tbond` | single / double / triple bond |
+
+## Chess *(`\use{chess}`)*
+
+The package keeps a position and plays algebraic notation into it, so a diagram is what the moves
+before it reached. See the [chess guide](/guide/chess/).
+
+| Command | Effect |
+|---------|--------|
+| `\newgame` | the initial array, White to move |
+| `\fenboard{fen}` | set a position from a FEN string (placement field, and side to move if given) |
+| `\mainline{moves}` | print a line of algebraic notation **and** play it |
+| `\hidemoves{moves}` | play a line without printing it |
+| `\showmoves{moves}` | print a line without playing it (a sideline) |
+| `\showboard` | draw the current position as one picture box |
+| `\fendiagram{fen}` | `\fenboard` and `\showboard` together |
+| `\chessfen` | the current position written back as FEN |
+| `\pieceat{sq}` | the piece letter on a square, FEN-cased, or `.` |
+
+Configured with `\set` after `\use{chess}`: `chesssquare`, `chesscoords`, `chessflip`,
+`chesshighlight`, `chesslight`, `chessdark`, `chessborder`, `chesshighlightink`, `chesspieceink`,
+`chesspiecescale`, `chessfigurines`, `chessmovesize`.
 
 ## Plotting *(`\use{plot}`)*
 

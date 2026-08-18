@@ -1,0 +1,382 @@
+// chess — chess diagrams and game scores, written entirely in the document language.
+// Import this module with:
+//
+//     \use{chess}
+//
+// The package keeps a position, plays algebraic notation into it, and draws it, so a
+// document writes the moves of a game the way a book prints them —
+//
+//     \newgame
+//     \mainline{1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6}
+//     \showboard
+//
+// — and the diagram shows the position those moves reach, because the moves were
+// played and not merely typeset. \hidemoves advances the position without printing
+// anything, \showmoves prints a line without playing it (a sideline), and \fenboard
+// sets an arbitrary position from a FEN string.
+//
+// Reading a move is the interesting half. Algebraic notation names the square a piece
+// arrives at and leaves the square it came from to be worked out from the position —
+// "Nf3" is whichever knight can reach f3 — so the package scans outward from the
+// destination along the moving piece's own geometry, adds the disambiguating file or
+// rank the notation supplies when two pieces could arrive, and, when even that leaves
+// two, discards the one whose departure would expose its own king. Castling,
+// promotion and en passant are handled; the last needs no remembered state, since a
+// pawn moving diagonally onto an empty square can only be capturing in passing.
+//
+// The pieces are glyphs from the Miscellaneous Symbols block (U+2654–265F), stamped
+// with \fontglyph from the bundled `chess` face; the squares, border and coordinates
+// are \picture rectangles, rules and labels. Everything else is \map, \calc and \for
+// over the document language — there is no chess-specific engine primitive.
+//
+// A move the position cannot account for is reported with \message on the diagnostic
+// channel, naming the move and the position it was read in, and then skipped: the
+// rest of the line still plays, and the diagram that follows is visibly wrong rather
+// than quietly so.
+//
+// EVERY MACRO BELOW THAT CAN RUN INSIDE A PARAGRAPH IS WRITTEN ON ONE LINE. That is
+// not a style preference: a newline in a macro body is an interword space and the
+// indentation of a continuation line is another, so a move played from a multi-line
+// macro drags a dozen spaces into the paragraph with it and the game score comes out
+// one move to a line. Long routines are split into named one-line macros rather than
+// indented; only \showboard is laid out, because its body is inside \picture, where
+// text between drawing commands is insignificant.
+
+// ---- Configuration (override with \set after \use) -----------------------------
+// Sizes are in points (72 per inch).
+\set chesssquare {17}        // the side of one square; the board is eight of them
+\set chessfont {chess}       // the typeface the piece glyphs are stamped from
+\set chesspiecescale {1.1}   // piece size as a multiple of the square
+\set chesspieceink {black}   // ink for the pieces
+
+\set chesslight {#f0d9b5}    // light-square fill
+\set chessdark {#b58863}     // dark-square fill
+\set chessborder {#5d4037}   // the rule around the board, and the coordinate labels
+\set chesshighlightink {#7fa650}  // fill for the squares named in \chesshighlight
+
+\set chesscoords {1}         // 1 = label the files and ranks around the board
+\set chessflip {0}           // 1 = draw from Black's side, with h1 at the top left
+\set chesshighlight {}       // squares to tint, e.g. \set chesshighlight {e4 d5}
+
+\set chesscoordsize {7}      // type size of the file and rank labels
+\set chesscoordfont {lmroman}
+\set chessfigurines {1}      // 1 = set the piece letter of a printed move as its glyph
+\set chessmovesize {9.5}     // size of a figurine in a printed move
+
+// ---- Tables --------------------------------------------------------------------
+// A square is named as it is written — "e4" — and the position is a map from that
+// name to a piece letter in FEN's convention: uppercase for White, lowercase for
+// Black, "." for an empty square. That makes the side owning a piece a matter of case
+// and its kind an \upcase, and it makes the FEN reader below a transcription rather
+// than a translation.
+\set ckFileNum {\map{a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8}}
+\set ckFileChr {\map{1 a 2 b 3 c 4 d 5 e 6 f 7 g 8 h}}
+\set ckDigit {\map{0 1 1 1 2 1 3 1 4 1 5 1 6 1 7 1 8 1 9 1}}
+\set ckPieceLetter {\map{K K Q Q R R B B N N}}
+\set ckResult {\map{1-0 1 0-1 1 1/2-1/2 1 * 1}}
+\set ckSpace { }
+
+// \ckFileChr is keyed 1–8, so \maphas over it is also the test for "on the board":
+// every off-board file or rank number is a key it does not have, and a rank digit in
+// a move or a FEN field is exactly the same set.
+
+// Codepoints of the twelve pieces, U+2654 (white king) through U+265F (black pawn).
+\set ckGlyph {\map{K 9812 Q 9813 R 9814 B 9815 N 9816 P 9817 k 9818 q 9819 r 9820 b 9821 n 9822 p 9823}}
+
+// Figurines for a printed move, in the Informant convention: White's moves take the
+// outline pieces and Black's the solid ones, so a move read on its own says whose it is.
+\set ckFigW {\map{K ♔ Q ♕ R ♖ B ♗ N ♘}}
+\set ckFigB {\map{K ♚ Q ♛ R ♜ B ♝ N ♞}}
+
+// The eight knight leaps and the eight king steps, each a file step and a rank step.
+// The king's eight are also the queen's ray directions; the first four alone are the
+// rook's and the last four the bishop's.
+\set ckLeaps {\seq{{1 2} {2 1} {2 -1} {1 -2} {-1 -2} {-2 -1} {-2 1} {-1 2}}}
+\set ckOrtho {\seq{{1 0} {-1 0} {0 1} {0 -1}}}
+\set ckDiag {\seq{{1 1} {1 -1} {-1 1} {-1 -1}}}
+\set ckSteps {\seq{{1 0} {-1 0} {0 1} {0 -1} {1 1} {1 -1} {-1 1} {-1 -1}}}
+
+\set ckStartFen {rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w}
+
+// ---- Squares -------------------------------------------------------------------
+// \cksq builds a square's name from a file and rank number and \pieceat reads the
+// letter standing on a named square. Both are expressions — they yield a value for
+// \set and \if rather than printing.
+\def cksq f r {\cat{\mapget ckFileChr {\f}}{\r}}
+\def pieceat sq {\mapget chessboard {\sq}}
+
+// The side to move, and what follows from it: which way its pawns go and which rank
+// they start on.
+\def ckturn side {\global\set chessturn {\side}\if {\= {\side} {w}}\ckturnwhite\else\ckturnblack\fi}
+\def ckturnwhite {\global\set ckDir {1}\global\set ckHome {2}}
+\def ckturnblack {\global\set ckDir {-1}\global\set ckHome {7}}
+
+// ---- Setting up a position -----------------------------------------------------
+// \fenboard reads a position in Forsyth–Edwards notation: the ranks from the eighth
+// down, separated by "/", each a run of piece letters and digits counting empty
+// squares, optionally followed by the side to move. The fields FEN carries after that
+// — castling rights, the en-passant square, the clocks — are read and dropped:
+// nothing here needs them, since castling is named explicitly in the notation and an
+// en-passant capture identifies itself.
+\def fenboard fen {\ckclear\set fbWords {\words{\fen}}\global\set ckFile {1}\global\set ckRank {8}\for\fbC{\head{\fbWords}}{\ckfenchar{\fbC}}\ckfenside{\fbWords}\global\set chessply {0}}
+\def ckclear {\for\ceF{\range{1}{8}}{\for\ceR{\range{1}{8}}{\global\mapset chessboard {\cksq{\ceF}{\ceR}} {.}}}}
+\def ckfenchar c {\if {\= {\c} {/}}\global\set ckRank {\calc{ckRank - 1}}\global\set ckFile {1}\else\ckfensquare{\c}\fi}
+\def ckfensquare c {\set fqC {\c}\if {\maphas ckFileChr {\fqC}}\global\set ckFile {\calc{ckFile + fqC}}\else\ckfenpiece{\fqC}\fi}
+\def ckfenpiece c {\global\mapset chessboard {\cksq{\ckFile}{\ckRank}} {\c}\global\set ckFile {\calc{ckFile + 1}}}
+\def ckfenside ws {\set fsSide {w}\if {\> {\size{\ws}} {1}}\set fsSide {\head{\tail{\ws}}}\fi\ckturn{\fsSide}}
+
+// The initial array, White to move — the position every game starts from.
+\def newgame {\fenboard{\ckStartFen}}
+
+// \chessfen — the position back as a FEN placement field and side to move, the
+// inverse of \fenboard. It prints where it stands and leaves the string in
+// \chessfenvalue; \ckfen computes without printing, which is what a diagnostic wants.
+\def ckfen {\global\set ckFenOut {}\for\cfR{\seq{8 7 6 5 4 3 2 1}}{\ckfenrank{\cfR}}\global\set chessfenvalue {\cat{\ckFenOut}{\cat{\ckSpace}{\chessturn}}}}
+\def ckfenrank r {\set frR {\r}\if {\< {\frR} {8}}\global\set ckFenOut {\cat{\ckFenOut}{/}}\fi\global\set ckFenRun {0}\for\frF{\range{1}{8}}{\ckfencell{\frF}{\frR}}\ckfenflush}
+\def ckfencell f r {\set fcP {\pieceat{\cksq{\f}{\r}}}\if {\= {\fcP} {.}}\global\set ckFenRun {\calc{ckFenRun + 1}}\else\ckfenflush\global\set ckFenOut {\cat{\ckFenOut}{\fcP}}\fi}
+\def ckfenflush {\if {\> {\ckFenRun} {0}}\global\set ckFenOut {\cat{\ckFenOut}{\ckFenRun}}\global\set ckFenRun {0}\fi}
+\def chessfen {\ckfen\chessfenvalue}
+
+// ---- Scanning the board --------------------------------------------------------
+// \ckray walks outward from a square in one direction and stops at the first piece it
+// meets, leaving that square's name in \ckRayHit ("-" if the ray runs off the board
+// unobstructed). It is the whole of sliding-piece movement: a rook reaches the first
+// piece along a rank or file and no further, which is what "the first occupied
+// square" means read from the destination backwards.
+\def ckray f r df dr {\set ryF {\f}\set ryR {\r}\set ryDf {\df}\set ryDr {\dr}\global\set ckRayHit {-}\global\set ckRayEnd {0}\for\ryI{\range{1}{7}}{\ckraystep{\ryI}}}
+\def ckraystep i {\if {\= {\ckRayEnd} {0}}\ckrayat{\i}\fi}
+\def ckrayat i {\set raI {\i}\set ryNf {\calc{ryF + raI * ryDf}}\set ryNr {\calc{ryR + raI * ryDr}}\if {\maphas ckFileChr {\ryNf}}\ckrayrank\else\global\set ckRayEnd {1}\fi}
+\def ckrayrank {\if {\maphas ckFileChr {\ryNr}}\ckraysquare\else\global\set ckRayEnd {1}\fi}
+\def ckraysquare {\set rySq {\cksq{\ryNf}{\ryNr}}\if {\!= {\pieceat{\rySq}} {.}}\global\set ckRayHit {\rySq}\global\set ckRayEnd {1}\fi}
+
+// ---- Finding the piece that moved ----------------------------------------------
+// Candidates are collected in \ckCands, a map used as a set of square names. Both
+// collectors read the destination out of \ckTfn / \ckTrn: \ckaddleaps for the pieces
+// that jump to a fixed set of squares (knight, king) and \ckaddrays for the sliding
+// pieces, whose reach is the first piece along each direction.
+\def ckcand f r want {\set cdF {\f}\set cdR {\r}\if {\maphas ckFileChr {\cdF}}\ckcandrank{\cdR}{\want}\fi}
+\def ckcandrank r want {\if {\maphas ckFileChr {\r}}\ckcandat{\r}{\want}\fi}
+\def ckcandat r want {\set caSq {\cksq{\cdF}{\r}}\if {\= {\pieceat{\caSq}} {\want}}\global\mapset ckCands {\caSq} {1}\fi}
+
+\def ckaddleaps dirs want {\global\set ckLeapWant {\want}\for\alD{\dirs}{\ckleap{\alD}}}
+\def ckleap d {\set lpW {\words{\d}}\set lpDf {\head{\lpW}}\set lpDr {\last{\lpW}}\set lpF {\calc{ckTfn + lpDf}}\set lpR {\calc{ckTrn + lpDr}}\ckcand{\lpF}{\lpR}{\ckLeapWant}}
+
+\def ckaddrays dirs want {\global\set ckRayWant {\want}\for\arD{\dirs}{\ckrayfrom{\arD}}}
+\def ckrayfrom d {\set rfW {\words{\d}}\ckray{\ckTfn}{\ckTrn}{\head{\rfW}}{\last{\rfW}}\if {\!= {\ckRayHit} {-}}\ckrayhit\fi}
+\def ckrayhit {\if {\= {\pieceat{\ckRayHit}} {\ckRayWant}}\global\mapset ckCands {\ckRayHit} {1}\fi}
+
+// A pawn is the one piece whose move and capture differ, so where it came from
+// depends on which of the two the notation describes. A capture came from one of the
+// two squares diagonally behind; a quiet move came from directly behind, or two
+// behind when the square between is empty and the pawn is still on its home rank.
+\def ckaddpawns {\set pwBack {\calc{ckTrn - ckDir}}\if {\maphas ckFileChr {\pwBack}}\ckpawnfrom\fi}
+\def ckpawnfrom {\if {\= {\ckCap} {1}}\for\pfD{\seq{-1 1}}{\ckpawntake{\pfD}}\else\ckpawnpush\fi}
+\def ckpawntake d {\set ptD {\d}\set ptF {\calc{ckTfn + ptD}}\ckcand{\ptF}{\pwBack}{\ckWant}}
+\def ckpawnpush {\set ppSq {\cksq{\ckTfn}{\pwBack}}\if {\= {\pieceat{\ppSq}} {\ckWant}}\global\mapset ckCands {\ppSq} {1}\else\ckpawndouble\fi}
+\def ckpawndouble {\if {\= {\pieceat{\ppSq}} {.}}\ckpawnhome\fi}
+\def ckpawnhome {\set phR {\calc{ckTrn - 2 * ckDir}}\if {\= {\phR} {\ckHome}}\ckcand{\ckTfn}{\phR}{\ckWant}\fi}
+
+// ---- Is a square attacked ------------------------------------------------------
+// \ckattacked answers whether the side *not* to move attacks a square, leaving the
+// answer in \ckAtkFlag. It is asked only about the moving side's king, and only to
+// settle a move two pieces could otherwise have made: notation omits the
+// disambiguating letter when just one of them may legally move, so the other is
+// pinned, and this is what notices.
+\def ckattacked sq {\set atSq {\sq}\global\set ckAtkF {\mapget ckFileNum {\head{\atSq}}}\global\set ckAtkR {\last{\atSq}}\global\set ckAtkFlag {0}\ckatkletters\ckatkleaps\ckatkking\ckatkpawns\ckatkortho\ckatkdiag}
+\def ckatkletters {\global\set atN {n}\global\set atK {k}\global\set atP {p}\global\set atRk {r}\global\set atB {b}\global\set atQ {q}\if {\= {\chessturn} {b}}\ckatkupper\fi}
+\def ckatkupper {\global\set atN {N}\global\set atK {K}\global\set atP {P}\global\set atRk {R}\global\set atB {B}\global\set atQ {Q}}
+\def ckatkleaps {\for\akL{\ckLeaps}{\ckatkstep{\akL}{\atN}}}
+\def ckatkking {\for\akS{\ckSteps}{\ckatkstep{\akS}{\atK}}}
+\def ckatkstep d want {\set asW {\words{\d}}\set asDf {\head{\asW}}\set asDr {\last{\asW}}\set asF {\calc{ckAtkF + asDf}}\set asR {\calc{ckAtkR + asDr}}\ckatkat{\asF}{\asR}{\want}}
+\def ckatkat f r want {\set aaF {\f}\set aaR {\r}\if {\maphas ckFileChr {\aaF}}\ckatkrank{\aaR}{\want}\fi}
+\def ckatkrank r want {\if {\maphas ckFileChr {\r}}\ckatkpiece{\r}{\want}\fi}
+\def ckatkpiece r want {\if {\= {\pieceat{\cksq{\aaF}{\r}}} {\want}}\global\set ckAtkFlag {1}\fi}
+
+// An enemy pawn attacks against our pawns' direction, so the two squares one could
+// stand on are a rank further along ours.
+\def ckatkpawns {\global\set ckAtkPr {\calc{ckAtkR + ckDir}}\if {\maphas ckFileChr {\ckAtkPr}}\for\apD{\seq{-1 1}}{\ckatkpawn{\apD}}\fi}
+\def ckatkpawn d {\set awD {\d}\set awF {\calc{ckAtkF + awD}}\ckatkat{\awF}{\ckAtkPr}{\atP}}
+
+\def ckatkortho {\for\aoD{\ckOrtho}{\ckatkray{\aoD}{\atRk}}}
+\def ckatkdiag {\for\agD{\ckDiag}{\ckatkray{\agD}{\atB}}}
+\def ckatkray d want {\set arW {\words{\d}}\ckray{\ckAtkF}{\ckAtkR}{\head{\arW}}{\last{\arW}}\if {\!= {\ckRayHit} {-}}\ckatkslider{\want}\fi}
+\def ckatkslider want {\set alP {\pieceat{\ckRayHit}}\if {\= {\alP} {\want}}\global\set ckAtkFlag {1}\fi\if {\= {\alP} {\atQ}}\global\set ckAtkFlag {1}\fi}
+
+// The square the moving side's king stands on.
+\def ckkingsq {\global\set ckKingWant {K}\if {\= {\chessturn} {b}}\global\set ckKingWant {k}\fi\global\set ckKingSq {-}\for\kqF{\range{1}{8}}{\for\kqR{\range{1}{8}}{\ckkingat{\kqF}{\kqR}}}}
+\def ckkingat f r {\set kaSq {\cksq{\f}{\r}}\if {\= {\pieceat{\kaSq}} {\ckKingWant}}\global\set ckKingSq {\kaSq}\fi}
+
+// Whether the move from a candidate square would leave its own king attacked. The
+// move is made, the king looked for and the question asked, and the position put
+// back — the position is an ordinary map value, so saving it is an assignment.
+\def cklegal from {\set lgFrom {\from}\set lgSave {\chessboard}\global\mapset chessboard {\ckTo} {\pieceat{\lgFrom}}\global\mapset chessboard {\lgFrom} {.}\ckkingsq\global\set ckLegalFlag {1}\if {\!= {\ckKingSq} {-}}\cklegalcheck\fi\global\set chessboard {\lgSave}}
+\def cklegalcheck {\ckattacked{\ckKingSq}\if {\= {\ckAtkFlag} {1}}\global\set ckLegalFlag {0}\fi}
+
+// ---- Reading one move ----------------------------------------------------------
+// A move in algebraic notation is a piece letter (absent for a pawn), an optional
+// disambiguating file or rank, an optional "x", the destination square, an optional
+// "=" and promotion piece, and check or annotation marks that say nothing about the
+// move itself. Reading it needs no grammar: walk the characters and let each file
+// letter and rank digit push the one before it into the hint, so what is left at the
+// end is the destination and what was pushed out is the disambiguator. "Rad1" leaves
+// hint a and destination d1; "R1d2" leaves hint 1 and destination d2; "e4" leaves no
+// hint at all. A hint that was never given is "-", because an unset value compares
+// equal to nothing, not even to another unset one.
+\def ckread san {\set rdS {\san}\ckreadpiece\global\set ckHf {-}\global\set ckHr {-}\global\set ckTf {-}\global\set ckTr {-}\global\set ckCap {0}\global\set ckPromo {-}\global\set ckInPromo {0}\for\rdC{\ckRest}{\ckreadchar{\rdC}}\global\set ckTo {\cat{\ckTf}{\ckTr}}}
+\def ckreadpiece {\global\set ckPiece {P}\global\set ckRest {\rdS}\set rpFirst {\head{\rdS}}\if {\maphas ckPieceLetter {\rpFirst}}\global\set ckPiece {\rpFirst}\global\set ckRest {\tail{\rdS}}\fi}
+\def ckreadchar c {\set rcC {\c}\ckreadfile{\rcC}\ckreadrank{\rcC}\ckreadmark{\rcC}}
+\def ckreadfile c {\if {\maphas ckFileNum {\c}}\global\set ckHf {\ckTf}\global\set ckTf {\c}\fi}
+\def ckreadrank c {\if {\maphas ckFileChr {\c}}\global\set ckHr {\ckTr}\global\set ckTr {\c}\fi}
+\def ckreadmark c {\if {\= {\c} {x}}\global\set ckCap {1}\fi\if {\= {\c} {=}}\global\set ckInPromo {1}\fi\if {\= {\ckInPromo} {1}}\ckreadpromo{\c}\fi}
+\def ckreadpromo c {\if {\maphas ckPieceLetter {\c}}\global\set ckPromo {\c}\fi}
+
+// ---- Playing one move ----------------------------------------------------------
+// Castling moves two pieces at once and names neither, so it is applied from the side
+// to move and the length of the notation: three characters for the king's side, five
+// for the queen's.
+\def ckcastle san {\set csLong {0}\if {\>= {\size{\san}} {5}}\set csLong {1}\fi\ckcastlemen\global\mapset chessboard {\cksq{5}{\csRank}} {.}\if {\= {\csLong} {1}}\ckcastlelong\else\ckcastleshort\fi}
+\def ckcastlemen {\set csRank {1}\set csK {K}\set csR {R}\if {\= {\chessturn} {b}}\ckcastleblack\fi}
+\def ckcastleblack {\set csRank {8}\set csK {k}\set csR {r}}
+\def ckcastlelong {\global\mapset chessboard {\cksq{1}{\csRank}} {.}\global\mapset chessboard {\cksq{3}{\csRank}} {\csK}\global\mapset chessboard {\cksq{4}{\csRank}} {\csR}}
+\def ckcastleshort {\global\mapset chessboard {\cksq{8}{\csRank}} {.}\global\mapset chessboard {\cksq{7}{\csRank}} {\csK}\global\mapset chessboard {\cksq{6}{\csRank}} {\csR}}
+
+// Move the piece, and settle the two moves that change more than the two named
+// squares. A pawn arriving on an empty square from another file can only be capturing
+// in passing, so the pawn it takes is the one beside it — which is why en passant
+// needs no remembered state. A promotion replaces the pawn with the piece after "=".
+\def ckapply from {\set apFrom {\from}\set apP {\pieceat{\apFrom}}\if {\= {\ckPiece} {P}}\ckapplyep{\apFrom}\fi\if {\!= {\ckPromo} {-}}\ckapplypromo\fi\global\mapset chessboard {\apFrom} {.}\global\mapset chessboard {\ckTo} {\apP}}
+\def ckapplyep from {\if {\!= {\head{\from}} {\ckTf}}\ckapplyepcap\fi}
+\def ckapplyepcap {\if {\= {\pieceat{\ckTo}} {.}}\ckepremove\fi}
+\def ckepremove {\set erF {\mapget ckFileNum {\ckTf}}\set erR {\calc{ckTr - ckDir}}\global\mapset chessboard {\cksq{\erF}{\erR}} {.}}
+\def ckapplypromo {\set aqP {\upcase{\ckPromo}}\if {\= {\chessturn} {b}}\set aqP {\downcase{\ckPromo}}\fi\set apP {\aqP}}
+
+// The whole of playing a move: read it, work out where the piece came from, apply it,
+// and hand the move to the other side. Candidates are narrowed by the notation's own
+// disambiguator first and only then, if two survive, by which of them may legally
+// move; that order matters, because the expensive test is the one almost never needed.
+\def ckplay san {\set plS {\trim{\san}}\ckiscastle{\head{\plS}}\if {\= {\ckCastleFlag} {1}}\ckcastle{\plS}\else\ckplaymove{\plS}\fi\ckflip}
+\def ckiscastle c {\global\set ckCastleFlag {0}\if {\= {\c} {O}}\global\set ckCastleFlag {1}\fi\if {\= {\c} {0}}\global\set ckCastleFlag {1}\fi}
+\def ckflip {\if {\= {\chessturn} {w}}\ckturn{b}\else\ckturn{w}\fi\global\set chessply {\calc{chessply + 1}}}
+\def ckplaymove san {\ckread{\san}\ckcandidates\ckdisambiguate\if {\> {\size{\ckPick}} {1}}\ckpinfilter\fi\if {\= {\size{\ckPick}} {1}}\ckapplypick\else\ckcomplain{\san}\fi}
+\def ckapplypick {\for\apK{\ckPick}{\ckapply{\apK.key}}}
+\def ckcandidates {\global\set ckCands {\map{}}\global\set ckTfn {\mapget ckFileNum {\ckTf}}\global\set ckTrn {\ckTr}\ckwant\ckscan}
+\def ckwant {\set cwP {\upcase{\ckPiece}}\if {\= {\chessturn} {b}}\set cwP {\downcase{\ckPiece}}\fi\global\set ckWant {\cwP}}
+\def ckscan {\if {\= {\ckPiece} {N}}\ckaddleaps{\ckLeaps}{\ckWant}\fi\if {\= {\ckPiece} {K}}\ckaddleaps{\ckSteps}{\ckWant}\fi\if {\= {\ckPiece} {R}}\ckaddrays{\ckOrtho}{\ckWant}\fi\if {\= {\ckPiece} {B}}\ckaddrays{\ckDiag}{\ckWant}\fi\if {\= {\ckPiece} {Q}}\ckaddrays{\ckSteps}{\ckWant}\fi\if {\= {\ckPiece} {P}}\ckaddpawns\fi}
+\def ckdisambiguate {\global\set ckPick {\map{}}\for\dsK{\ckCands}{\ckhint{\dsK.key}}}
+\def ckhint sq {\set hnSq {\sq}\set hnKeep {1}\if {\!= {\ckHf} {-}}\ckhintfile\fi\if {\!= {\ckHr} {-}}\ckhintrank\fi\if {\= {\hnKeep} {1}}\global\mapset ckPick {\hnSq} {1}\fi}
+\def ckhintfile {\if {\!= {\head{\hnSq}} {\ckHf}}\set hnKeep {0}\fi}
+\def ckhintrank {\if {\!= {\last{\hnSq}} {\ckHr}}\set hnKeep {0}\fi}
+\def ckpinfilter {\global\set ckLegalPick {\map{}}\for\pfK{\ckPick}{\ckpintest{\pfK.key}}\if {\> {\size{\ckLegalPick}} {0}}\global\set ckPick {\ckLegalPick}\fi}
+\def ckpintest sq {\cklegal{\sq}\if {\= {\ckLegalFlag} {1}}\global\mapset ckLegalPick {\sq} {1}\fi}
+\def ckcomplain san {\ckfen\message{chess: cannot read the move '\san' in the position \chessfenvalue}}
+
+// ---- Printing a move -----------------------------------------------------------
+// A printed move takes its piece letter as a figurine. Pawn moves have no letter and
+// are set as written.
+\def ckfigure p {\set fgG {\mapget ckFigW {\p}}\if {\= {\chessturn} {b}}\set fgG {\mapget ckFigB {\p}}\fi{\font {\chessfont} {\chessmovesize} {regular}\fgG}}
+\def ckshowmove san {\set smS {\san}\set smFirst {\head{\smS}}\set smRest {\tail{\smS}}\if {\maphas ckPieceLetter {\smFirst}}\ckshowfig\else\smS\fi}
+\def ckshowfig {\if {\= {\chessfigurines} {1}}\ckfigure{\smFirst}\smRest\else\smS\fi}
+
+// Strip a leading move number, so "1.e4", "1. e4" and "e4" are the same move and a
+// bare "12." is nothing at all. What a document writes is not trusted for the number
+// that gets printed — that comes from the position, which is what lets a line
+// beginning in the middle of a game number itself correctly.
+\def ckstripnum s {\global\set ckBare {}\global\set ckStripping {1}\for\snC{\s}{\cksnchar{\snC}}}
+\def cksnchar c {\if {\= {\ckStripping} {1}}\cksnstart{\c}\fi\if {\= {\ckStripping} {0}}\global\set ckBare {\cat{\ckBare}{\c}}\fi}
+\def cksnstart c {\set snKeep {1}\if {\maphas ckDigit {\c}}\set snKeep {0}\fi\if {\= {\c} {.}}\set snKeep {0}\fi\if {\= {\snKeep} {1}}\global\set ckStripping {0}\fi}
+
+// ---- The public move commands --------------------------------------------------
+// \mainline prints a line of moves and plays it; \hidemoves plays without printing;
+// \showmoves prints without playing, for a sideline the main position must not
+// follow. All three take the moves as a book prints them — "1.e4 e5 2.Nf3" or
+// "1. e4 e5 2. Nf3", with or without the numbers.
+//
+// The move list is a <verbatim> parameter, read as literal characters, which keeps the
+// notation clear of expansion. It is split into words before anything else looks at
+// it, so every move is its own value from the start.
+\def mainline <moves> {\global\set ckWords {\words{\moves}}\global\set ckLoud {1}\ckrunline}
+\def hidemoves <moves> {\global\set ckWords {\words{\moves}}\global\set ckLoud {0}\ckrunline}
+
+// A sideline: the moves are set, with the figurines alternating from whoever is to
+// move, but the position is left where it was.
+\def showmoves <moves> {\set svBoard {\chessboard}\set svPly {\chessply}\set svTurn {\chessturn}\global\set ckWords {\words{\moves}}\global\set ckLoud {1}\ckrunline\global\set chessboard {\svBoard}\global\set chessply {\svPly}\ckturn{\svTurn}}
+
+// The line itself. A word naming a result is set as written; anything else is a move
+// once its move number is stripped, and a word that was nothing but a move number is
+// skipped. \mainline numbers what it prints from the position rather than from the
+// input, so a line beginning at Black's twelfth move prints "12...".
+//
+// The number runs into its move — "1.e4", not "1. e4" — which is how a chess book
+// prints it, and which also keeps the sentence space a period would otherwise earn
+// out of the middle of the score.
+\def ckrunline {\global\set ckLineOpen {1}\for\rlW{\ckWords}{\ckword{\rlW}}}
+\def ckword w {\if {\maphas ckResult {\w}}\ckloud{\w}\else\ckmoveword{\w}\fi}
+\def ckmoveword w {\ckstripnum{\w}\if {\> {\size{\ckBare}} {0}}\ckmove\fi}
+\def ckloud t {\if {\= {\ckLoud} {1}}\t\ckSpace\fi}
+\def ckmove {\if {\= {\ckLoud} {1}}\ckmoveno\ckshowmove{\ckBare}\ckSpace\fi\ckplay{\ckBare}\global\set ckLineOpen {0}}
+\def ckmoveno {\set mnN {\calc{floor(chessply / 2) + 1}}\if {\= {\chessturn} {w}}\mnN.\else\ckmovecont\fi}
+\def ckmovecont {\if {\= {\ckLineOpen} {1}}\mnN...\fi}
+
+// ---- The diagram ---------------------------------------------------------------
+// \showboard draws the position as one \picture box, which flows in the text like any
+// other box — in a paragraph, in a \centerline, or in a cell of a larger layout. The
+// squares are rectangles, the pieces glyphs stamped at the centre of theirs, and the
+// border and coordinate labels are drawn last so nothing overlaps them.
+//
+// \cksqxy converts a square's name to the picture coordinates of its bottom-left
+// corner, reading the board's size and margin from the drawing around it, so every
+// part of the diagram places a square the same way and \chessflip is honoured in one
+// place rather than five.
+\def cksqxy sq {\set xyF {\mapget ckFileNum {\head{\sq}}}\set xyR {\last{\sq}}\set xyC {\calc{xyF - 1}}\set xyW {\calc{xyR - 1}}\if {\= {\chessflip} {1}}\ckflipxy\fi\global\set ckSqX {\calc{sbMargin + xyC * sbSide}}\global\set ckSqY {\calc{sbMargin + xyW * sbSide}}}
+\def ckflipxy {\set xyC {\calc{8 - xyF}}\set xyW {\calc{8 - xyR}}}
+
+// The board's geometry: the square, the margin the coordinates need, and the size of
+// a piece glyph. The whole diagram is derived from \chesssquare.
+\def ckboardsize {\set sbSide {\chesssquare}\set sbEdge {\calc{0.2 * sbSide}}\set sbMargin {\calc{0.2 * sbSide}}\if {\= {\chesscoords} {1}}\set sbMargin {\calc{0.85 * sbSide}}\fi\set sbInner {\calc{8 * sbSide}}\set sbW {\calc{sbMargin + sbInner + sbEdge}}\set sbGlyph {\calc{chesspiecescale * sbSide}}}
+
+\def showboard {\ckboardsize\picture width:{\sbW} height:{\sbW} {
+  \nostroke
+  \for\sbF{\range{1}{8}}{
+    \for\sbR{\range{1}{8}}{
+      \cksqxy{\cksq{\sbF}{\sbR}}
+      \set sbInk {\chessdark}
+      \if {\= {\calc{(sbF + sbR) % 2}} {1}} \set sbInk {\chesslight} \fi
+      \fill{\sbInk}
+      \rect{\ckSqX \ckSqY \sbSide \sbSide}
+    }
+  }
+  \for\sbHl{\words{\chesshighlight}}{
+    \cksqxy{\sbHl}
+    \fill{\chesshighlightink}
+    \rect{\ckSqX \ckSqY \sbSide \sbSide}
+  }
+  \for\sbPf{\range{1}{8}}{
+    \for\sbPr{\range{1}{8}}{
+      \set sbPsq {\cksq{\sbPf}{\sbPr}}
+      \set sbPc {\pieceat{\sbPsq}}
+      \if {\!= {\sbPc} {.}}
+        \cksqxy{\sbPsq}
+        \fill{\chesspieceink}
+        \set sbCp {\mapget ckGlyph {\sbPc}}
+        \fontglyph anchor:center {\calc{ckSqX + sbSide / 2} \calc{ckSqY + sbSide / 2}}{\chessfont}{\sbGlyph}{\sbCp}
+      \fi
+    }
+  }
+  \nofill \stroke{\chessborder} \linewidth{0.8pt} \linejoin{miter}
+  \rect{\sbMargin \sbMargin \sbInner \sbInner}
+  \if {\= {\chesscoords} {1}}
+    \for\sbCi{\range{1}{8}}{
+      \set sbCc {\calc{sbCi - 1}}
+      \if {\= {\chessflip} {1}} \set sbCc {\calc{8 - sbCi}} \fi
+      \set sbCf {\mapget ckFileChr {\sbCi}}
+      \at anchor:center {\calc{sbMargin + sbCc * sbSide + sbSide / 2} \calc{sbMargin / 2}}{{\textcolor{\chessborder}{\font {\chesscoordfont} {\chesscoordsize} {regular}\sbCf}}}
+      \at anchor:center {\calc{sbMargin / 2} \calc{sbMargin + sbCc * sbSide + sbSide / 2}}{{\textcolor{\chessborder}{\font {\chesscoordfont} {\chesscoordsize} {regular}\the\sbCi}}}
+    }
+  \fi
+}}
+
+// \fenboard sets a position without drawing it, so the two together show one that no
+// line of moves reached.
+\def fendiagram fen {\fenboard{\fen}\showboard}
+
+\newgame

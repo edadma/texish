@@ -154,14 +154,15 @@ Everything else — `diagram`, `plot`, `book`, `usfm`, `railroad`, `music`, … 
 `packages/` folder on disk. A package earns a place in the artifact only if it is basic enough to be
 worth the weight in every build *and* can work from the core alone. `music` fails the second test as
 well as the first: it sets notation from a SMuFL face, and those are catalogue fonts, so embedding it
-would ship a module that resolves and then cannot draw a note.
+would ship a module that resolves and then cannot draw a note. `chess` fails it the same way, for the
+same reason — its pieces are glyphs of a catalogue face.
 
 ### The catalogue — opt in
 
 Everything else texish bundles — the complex-script faces (Hebrew, Arabic, Devanagari, Bengali,
 Gujarati, Gurmukhi, Kannada, Telugu, Tamil, Ethiopic), the CJK cuts, the alternative text families (Gentium, Charis, EB Garamond, Noto,
-…), the SMuFL music faces (Bravura, Petaluma) and the rest of JetBrains Mono's weight range — comes
-to about 152MB, far too much to compile in. It lives in the source tree's `fonts/` folder, and a host
+…), the SMuFL music faces (Bravura, Petaluma), the chess-piece face (Noto Sans Symbols 2, under the
+name `chess`) and the rest of JetBrains Mono's weight range — comes to about 153MB, far too much to compile in. It lives in the source tree's `fonts/` folder, and a host
 asks for it in two steps: say where the tree is, then load it.
 
 ```scala

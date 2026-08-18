@@ -33,7 +33,7 @@ coherent family across prose, equations, and code.
 
 - **[Getting Started](/getting-started/)** — install texish and render your first document.
 - **[Guide](/guide/)** — the document format, text and markup, mathematics, figures and
-  images, the inline vector-graphics mode, chemistry, and data plotting.
+  images, the inline vector-graphics mode, chemistry, chess, and data plotting.
 - **[Reference](/reference/)** — the command-line tool and a command cheat sheet.
 
 ## What it does
@@ -55,6 +55,8 @@ coherent family across prose, equations, and code.
   `\use{plot}` draws line, scatter, bar, and function plots with labelled axes.
 - **Railroad diagrams** — `\use{railroad}` turns a W3C-style EBNF grammar into a railroad
   (syntax) diagram, one picture per rule.
+- **Chess** — `\use{chess}` reads algebraic notation, plays it into a position, and draws
+  that position, so a diagram is what the moves above it reached rather than a board set by hand.
 - **Node-and-edge diagrams** — `\use{diagram}` places named, measured nodes in nine shapes
   and routes labelled arrows between them; `\use{flowchart}`, `\use{automaton}` and
   `\use{er}` add program-flowchart, state-machine and entity-relationship vocabularies on top.
