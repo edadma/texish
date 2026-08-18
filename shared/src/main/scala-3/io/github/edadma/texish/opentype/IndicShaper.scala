@@ -34,7 +34,7 @@ object IndicShaper:
   // The Indic scripts texish can shape, tried in turn against a font's GSUB to see which script table it
   // carries. A font is built for one script (Noto Serif Devanagari carries the Devanagari tables, Noto Serif
   // Bengali the Bengali ones), so at most one matches.
-  private val scripts: Seq[IndicScript] = Seq(Devanagari, Bengali, Gujarati, Gurmukhi, Telugu, Tamil)
+  private val scripts: Seq[IndicScript] = Seq(Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Telugu, Tamil)
 
   /** Build an Indic shaper from a font's raw `GSUB` (and `GDEF`) bytes by finding which Indic script the font
     * shapes, or None when the font carries no Indic script table — the caller then leaves the text on the
@@ -75,9 +75,7 @@ final class IndicShaper(val script: IndicScript, gsub: Gsub):
   private def shapeCluster(clusterCps: Array[Int], cmap: Int => Int): Array[Int] =
     val reph    = script.startsWithReph(clusterCps)
     val body    = if reph then clusterCps.drop(2) else clusterCps
-    val coreCps = body.flatMap(cp => script.decompose(cp) match
-      case Some((pre, post)) => Array(pre, post)
-      case None              => Array(cp))
+    val coreCps = decomposed(body)
     var glyphs = coreCps.map(cmap)
     for tag <- script.basicFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
     val preBaseGlyph = coreCps.find(script.preBaseMatras.contains).map(cmap).getOrElse(-1)
@@ -95,6 +93,24 @@ final class IndicShaper(val script: IndicScript, gsub: Gsub):
       glyphs = if at >= 0 then glyphs.patch(at, rg, 0) else glyphs ++ rg
     for tag <- script.presFeatures do glyphs = gsub.applyFeatureByTag(glyphs, tag)
     glyphs
+
+  // Split every two-part vowel sign in a cluster into the parts the font draws, repeatedly — because a part can
+  // itself be a two-part sign. Kannada's oo sign is written as its o sign plus a length mark, and that o sign is
+  // in turn an e sign plus a uu sign, so one pass would leave the o unsplit and the font would find no glyph for
+  // it. Unicode's own canonical decompositions nest in exactly the same way. The bound is a guard against a
+  // script that declared a cycle rather than a depth any real script reaches: Bengali and Telugu settle after
+  // one pass, Kannada after two.
+  private def decomposed(cps: Array[Int]): Array[Int] =
+    var out   = cps
+    var depth = 0
+    while depth < 4 && out.exists(cp => script.decompose(cp).isDefined) do
+      out = out.flatMap(cp =>
+        script.decompose(cp) match
+          case Some((pre, post)) => Array(pre, post)
+          case None              => Array(cp),
+      )
+      depth += 1
+    out
 
   // The reph mark for a cluster-initial ra + virama: the `rphf` feature ligates the two into the single reph
   // glyph. A font without `rphf` leaves the two glyphs unchanged, which the caller appends as a graceful

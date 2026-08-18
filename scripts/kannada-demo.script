@@ -1,0 +1,101 @@
+// kannada-demo — Kannada script typesetting in texish.
+//
+// Render with:  texish-cli scripts/kannada-demo.script
+//
+// Kannada is written left to right, so it needs none of the bidirectional
+// reordering Hebrew and Arabic do. What it needs instead is work inside each
+// syllable, and Kannada asks for more of it than any other script texish sets.
+//
+// It builds downward, as Telugu does: a consonant joined to the next by the
+// virama (U+0CCD) is drawn as the ottakshara, a subscript beneath and to the
+// right of the base, so the base of a conjunct is the consonant that OPENS it
+// rather than the one that closes it. A consonant and its vowel sign commonly
+// fuse into a single drawn form as well.
+//
+// Two things set it apart from Telugu. It forms a reph: a syllable-opening ra
+// joined by the virama is lifted out and set after the syllable as the
+// arkavattu. And it writes five of its twelve vowel signs as combinations of
+// others — the oo sign is the o sign plus a length mark, and the o sign is
+// itself an e sign plus a uu sign, so one character in memory reaches the font
+// as three glyphs. The engine splits them, moves each part that belongs to the
+// base back across whatever is subjoined beneath, and lets the font fuse and
+// position the rest.
+//
+// \font kannada selects the bundled face, in a regular and a bold cut. No \rtl
+// is needed — the script is left to right.
+
+\use{document}
+
+\title{The Kannada Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Kannada paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the consonants fuse with their vowel signs and the joined ones hang below the
+base; between syllables the line breaker finds its breaks at the interword spaces exactly
+as for Latin text.
+
+\medskip
+
+{\font kannada 14 regular
+ಕನ್ನಡ ಒಂದು ಸುಂದರವಾದ ಭಾಷೆ. ಇದು ಎಡದಿಂದ ಬಲಕ್ಕೆ ಬರೆಯಲಾಗುತ್ತದೆ. ಪ್ರತಿ ಅಕ್ಷರ ಒಂದು
+ವ್ಯಂಜನ ಮತ್ತು ಅದರ ಸ್ವರವನ್ನು ಒಟ್ಟಿಗೆ ಹೊಂದಿರುತ್ತದೆ.
+}
+
+\section{A consonant and its vowel fuse}
+
+Where Devanagari sets a letter and hangs a sign beside it, Kannada usually draws the pair
+as a single form. This is the consonant \italic{ka} through its vowel signs, and most of
+them are one glyph rather than two:
+
+\medskip
+
+{\font kannada 16 regular
+ಕ ಕಾ ಕಿ ಕೀ ಕು ಕೂ ಕೆ ಕೇ ಕೈ ಕೊ ಕೋ ಕೌ
+}
+
+\section{Subjoined consonants}
+
+A consonant joined to the next by the virama is drawn as the ottakshara beneath the base,
+which is the consonant that opens the conjunct. A vowel sign belongs to that base, so it
+is moved back across the subscript to reach it --- book, sign, and letter:
+
+\medskip
+
+{\font kannada 16 regular
+ಪುಸ್ತಕ   ಚಿಹ್ನೆ   ಅಕ್ಷರ
+}
+
+\section{The arkavattu}
+
+A ra that opens a syllable and is joined by the virama is not drawn in place: it is lifted
+out and set after the syllable, taking its own room on the line. These are duty, action,
+sun, and meaning:
+
+\medskip
+
+{\font kannada 16 regular
+ಧರ್ಮ   ಕರ್ಮ   ಸೂರ್ಯ   ಅರ್ಥ
+}
+
+\section{Independent vowels}
+
+A vowel that opens a syllable is written with its own independent letter, not a sign:
+
+\medskip
+
+{\font kannada 16 regular
+ಅ ಆ ಇ ಈ ಉ ಊ ಎ ಏ ಐ ಒ ಓ ಔ
+}
+
+\section{A closing line}
+
+A greeting and the city of Bengaluru, set in the bold cut:
+
+\medskip
+
+{\font kannada 18 bold
+ನಮಸ್ಕಾರ! ಇದು ಬೆಂಗಳೂರಿನ ಕನ್ನಡ ಲಿಪಿಯಲ್ಲಿ ಬರೆಯಲಾಗಿದೆ.
+}

@@ -30,6 +30,10 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
     noException should be thrownBy process("scripts/gujarati-demo.script")
   }
 
+  "the Kannada demo processes without error" in {
+    noException should be thrownBy process("scripts/kannada-demo.script")
+  }
+
   "the Ethiopic demo processes without error" in {
     noException should be thrownBy process("scripts/ethiopic-demo.script")
   }

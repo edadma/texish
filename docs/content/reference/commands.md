@@ -183,6 +183,19 @@ in Unicode order. Unlike Devanagari and Bengali, Gurmukhi has no reph. Noto Seri
 bundled: `\font gurmukhi 12 regular` (or the alias `\font punjabi`), with a bold cut
 (`\font gurmukhi 12 bold`). See [Gurmukhi (Punjabi)](/guide/gurmukhi/) for the full treatment.
 
+## Kannada
+
+Kannada builds downward like Telugu: a consonant joined by the virama is drawn as the *ottakshara*
+beneath the base, so the base of a conjunct is its *first* consonant rather than its last, and a
+consonant and its vowel sign commonly fuse into a single drawn glyph. A vowel sign belongs to the
+base and is moved back across the subscripts to reach it. Where it differs from Telugu is that it
+forms a reph — a syllable-opening *ra* is lifted out as the *arkavattu* and set after the syllable,
+taking its own room on the line rather than floating above it as Devanagari's does — and that five of
+its vowel signs are written as combinations of others, one of them nesting two deep (`ೋ` is `ೊ` plus
+a length mark, and `ೊ` is an e sign plus a uu sign). All of it happens automatically from text typed
+in Unicode order. Noto Serif Kannada is bundled: `\font kannada 12 regular`, with a bold cut
+(`\font kannada 12 bold`). See [Kannada](/guide/kannada/) for the full treatment.
+
 ## Telugu
 
 Telugu builds downward: a consonant joined by the virama is drawn as a subscript beneath the base, so

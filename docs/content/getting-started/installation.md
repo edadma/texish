@@ -156,7 +156,7 @@ would ship a module that resolves and then cannot draw a note.
 ### The catalogue — opt in
 
 Everything else texish bundles — the complex-script faces (Hebrew, Arabic, Devanagari, Bengali,
-Gujarati, Gurmukhi, Telugu, Tamil, Ethiopic), the CJK cuts, the alternative text families (Gentium, Charis, EB Garamond, Noto,
+Gujarati, Gurmukhi, Kannada, Telugu, Tamil, Ethiopic), the CJK cuts, the alternative text families (Gentium, Charis, EB Garamond, Noto,
 …), the SMuFL music faces (Bravura, Petaluma) and the rest of JetBrains Mono's weight range — comes
 to about 152MB, far too much to compile in. It lives in the source tree's `fonts/` folder, and a host
 asks for it in two steps: say where the tree is, then load it.

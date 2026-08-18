@@ -25,7 +25,9 @@ reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), Gujarat
 (`\font gujarati` — conjuncts and half-forms, pre-base i reordering, and a reph that closes the
 cluster), Gurmukhi (Punjabi)
 syllable shaping (`\font gurmukhi` — subjoined pairin forms, pre-base sihari reordering, and
-GPOS-positioned addak, tippi and vowel signs), Telugu syllable shaping (`\font telugu` — fused
+GPOS-positioned addak, tippi and vowel signs), Kannada syllable shaping (`\font kannada` — fused
+consonant-vowel glyphs, subjoined ottakshara conjuncts, vowel signs moved back to a leading base,
+nested decomposition of the composed vowel signs, and the arkavattu reph), Telugu syllable shaping (`\font telugu` — fused
 consonant-vowel glyphs, subscript conjuncts built beneath a leading base, vowel signs moved back to
 that base, two-part ai decomposition, and GPOS-positioned subscripts), Tamil syllable shaping
 (`\font tamil` — pre-base signs placed before their own consonant rather than the whole syllable,

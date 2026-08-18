@@ -65,7 +65,12 @@ trait IndicScript:
     * two-part vowel sign is one codepoint in memory that the font draws as two signs: Bengali o and au as a
     * sign before the base and one after it, Telugu ai as an e sign and a length mark, both on the base. It is
     * split into its parts before the cluster is shaped, so each part can be placed and substituted on its own.
-    * Scripts with no two-part matras (Devanagari) leave this at its default. */
+    * Scripts with no two-part matras (Devanagari, Gujarati) leave this at its default.
+    *
+    * **A part may itself decompose**, and [[IndicShaper]] applies the split until nothing does: Kannada's oo
+    * sign is its o sign plus a length mark, and that o sign is an e sign plus a uu sign, so oo reaches the font
+    * as three glyphs. A script therefore declares each sign in terms of the parts *it* is written as, exactly
+    * as Unicode's canonical decompositions nest, rather than flattening the chain by hand. */
   def decompose(cp: Int): Option[(Int, Int)] = None
 
   /** The GSUB feature that selects a word-initial form of the pre-base vowel sign, or None when the script has

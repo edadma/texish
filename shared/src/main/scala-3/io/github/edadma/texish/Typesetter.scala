@@ -58,7 +58,7 @@ object Typesetter:
     "noto", "gentium", "charm", "thai", "nosifer", "rubik-wet-paint", "cinzel", "gentiumbook", "pt",
     "cjksc", "cjktc", "cjkjp", "japanese", "cjkkr", "korean",
     "hebrew", "ezra", "arabic", "amiri",
-    "devanagari", "hindi", "bengali", "assamese", "gujarati", "gurmukhi", "punjabi", "telugu", "tamil",
+    "devanagari", "hindi", "bengali", "assamese", "gujarati", "gurmukhi", "punjabi", "kannada", "telugu", "tamil",
     "ethiopic", "amharic", "tigrinya",
     "alegreya", "ebgaramond", "bravura", "petaluma",
   )
@@ -671,6 +671,17 @@ abstract class Typesetter:
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("gurmukhi", "fonts/NotoSerifGurmukhi/NotoSerifGurmukhi-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
   aliasTypeface("punjabi", "gurmukhi")
+
+  // Noto Serif Kannada, the bundled face for Kannada: \font kannada 12 sets it, with a bold cut. Static
+  // Regular and Bold instances drawn from the variable upstream (wght 400 and 700). Kannada builds downward
+  // like Telugu — a virama-joined consonant is drawn as the ottakshara beneath the base, so the base is the
+  // consonant that opens the cluster — but unlike Telugu it forms a reph: a syllable-opening ra rises as the
+  // arkavattu, set after the syllable. The engine does the cluster segmentation, the vowel-sign moves and the
+  // reph lift (see Kannada and IndicShaper), and the font fuses each consonant with its vowel, builds the
+  // subjoined forms and positions the marks. Loaded by file like the other complex-script cuts. Like the other
+  // Indic faces it sets its punctuation as a Latin text face.
+  loadFont("kannada", "fonts/NotoSerifKannada/NotoSerifKannada-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("kannada", "fonts/NotoSerifKannada/NotoSerifKannada-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
 
   // Noto Serif Telugu, the bundled face for Telugu: \font telugu 12 sets it, with a bold cut. Telugu is left
   // to right; the engine does the cluster segmentation (see Telugu and IndicShaper) and the font does the
