@@ -1,6 +1,6 @@
 ---
 title: "Calendars"
-weight: 10
+weight: 11
 ---
 
 The `calendar` package draws month-grid calendars over the

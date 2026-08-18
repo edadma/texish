@@ -75,16 +75,24 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
     // doc tool does not accept ("Setting -Xplugin is currently not supported"). The plugin is only needed to
     // compile, not to build docs from TASTy, so drop it from the doc invocation to keep the doc build clean.
     Compile / doc / scalacOptions ~= { _.filterNot(_.startsWith("-Xplugin")) },
-    // Embed every TeX hyphenation pattern file (shared/src/main/resources/hyph-*.tex) as a Scala
-    // constant at build time, keyed by language tag (hyph-en-us.tex -> "en-us"), so they ship compiled
-    // into every target — a native binary has no pattern file to read at runtime. Hyphenation reaches
-    // them through EmbeddedHyphenationPatterns.byTag. Each string is escaped so any content is safe.
+    // The hyphenation patterns texish ships are files — hyphenation/ at the repo root, one per language tag,
+    // verbatim from hyph-utf8, and installed as a tree beside fonts/ and packages/. Two things are generated
+    // from that folder, and neither of them is the tree: the *contents* of a short core whitelist, compiled in
+    // so those languages hyphenate on a host with no tree at all, and the *names* of every tag in the tree, so
+    // that a document naming one texish ships can be told the folder is missing rather than that the language
+    // is unknown. Hyphenation reaches both through EmbeddedHyphenationPatterns.
+    //
+    // The core is a whitelist and not everything in the folder, for the same reason the package whitelist below
+    // is: the whole set is 3.5MB against the core's 118KB. It is also a promise — a document that hyphenates
+    // French today must still do so on a bare installation tomorrow — so tags come off it only deliberately.
     Compile / sourceGenerators += Def.task {
       val root  = (LocalRootProject / baseDirectory).value
-      val resir = root / "shared" / "src" / "main" / "resources"
-      val files = (resir * "hyph-*.tex").get.sortBy(_.getName)
-      val out   = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedHyphenationPatterns.scala"
-      val entries = files.map { f =>
+      val dir   = root / "hyphenation"
+      val core  = Set("en-us", "es", "fr", "it", "pt")
+      val files = (dir * "hyph-*.tex").get.sortBy(_.getName)
+      val tags  = files.map(_.getName.stripPrefix("hyph-").stripSuffix(".tex"))
+      val out = (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedHyphenationPatterns.scala"
+      val entries = files.filter(f => core(f.getName.stripPrefix("hyph-").stripSuffix(".tex"))).map { f =>
         val tag     = f.getName.stripPrefix("hyph-").stripSuffix(".tex")
         val escaped = IO.read(f).replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
         "    \"" + tag + "\" -> \"" + escaped + "\""
@@ -92,9 +100,11 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
       IO.write(
         out,
         "package io.github.edadma.texish\n\n" +
-          "// Generated at build time from shared/src/main/resources/hyph-*.tex — do not edit.\n" +
+          "// Generated at build time from hyphenation/hyph-*.tex — do not edit.\n" +
           "private[texish] object EmbeddedHyphenationPatterns:\n" +
-          "  val byTag: Map[String, String] = Map(\n" + entries.mkString(",\n") + "\n  )\n",
+          "  val byTag: Map[String, String] = Map(\n" + entries.mkString(",\n") + "\n  )\n\n" +
+          "  val bundledTags: Set[String] = Set(\n" +
+          tags.map("    \"" + _ + "\"").mkString(",\n") + "\n  )\n",
       )
       Seq(out)
     }.taskValue,

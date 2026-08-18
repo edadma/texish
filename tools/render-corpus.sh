@@ -7,6 +7,8 @@
 # directory instead, which is what a user who downloaded a binary actually has, and is how three
 # defects that ~1500 unit tests could not see were caught: a fallback face that was not embedded
 # after all, \code unable to find its face, and a package that resolved only from the source tree.
+# The same reasoning covers the hyphenation patterns: all but five languages are files an
+# installation ships, and only a real binary in an empty directory can show whether they are found.
 #
 #   tools/render-corpus.sh <texish-binary>              # core only: no font tree, no packages
 #   tools/render-corpus.sh <texish-binary> --all        # every demo must render, however the
@@ -87,13 +89,14 @@ for script in "$REPO"/scripts/*.script; do
     reason=${reason#*TexishException: }
     printf '  FAIL  %s — %s\n' "$name" "$reason"
 
-    # Failing is only acceptable for the reason we are testing for. A demo that needs a face or a
-    # package it has not got must say exactly that; anything else — a crash, an internal error, a
-    # parse failure — is a defect wearing the same exit code, and would otherwise sit here unnoticed
-    # for as long as the demo stayed off the expected list.
+    # Failing is only acceptable for the reason we are testing for. A demo that needs a face, a
+    # package or a pattern set it has not got must say exactly that; anything else — a crash, an
+    # internal error, a parse failure — is a defect wearing the same exit code, and would otherwise
+    # sit here unnoticed for as long as the demo stayed off the expected list.
     case $reason in
       *"is one texish bundles, but its font files were not found"*) ;;
       *"not found on the filesystem or among the embedded modules"*) ;;
+      *"but no hyphenation folder was found"*) ;;
       *) printf '%s: %s\n' "$name" "$reason" >> "$BADLY" ;;
     esac
   fi
@@ -116,7 +119,7 @@ if [ -n "$ALL" ]; then
 fi
 
 if [ -s "$BADLY" ]; then
-  echo "these demos failed for a reason other than a missing face or package:" >&2
+  echo "these demos failed for a reason other than a missing face, package or pattern set:" >&2
   cat "$BADLY" >&2
   exit 1
 fi

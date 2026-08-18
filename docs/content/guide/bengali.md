@@ -1,6 +1,6 @@
 ---
 title: "Bengali–Assamese"
-weight: 13
+weight: 14
 ---
 
 texish sets the Bengali–Assamese script — used for Bengali, Assamese and several other languages —

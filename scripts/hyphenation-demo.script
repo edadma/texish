@@ -1,0 +1,108 @@
+// hyphenation-demo — the bundled hyphenation patterns, language by language.
+//
+// Render with:  texish-cli scripts/hyphenation-demo.script
+//
+// Hyphenation is what lets a justified paragraph keep even spacing at a narrow
+// measure: without it the breaker can only stretch the spaces between whole
+// words, and a long word arriving at the wrong moment leaves a line full of
+// gaps. texish breaks words with Liang's algorithm, the one TeX uses, from the
+// same pattern files a TeX installation loads.
+//
+// Every language here is one file, taken verbatim from hyph-utf8. Five of them
+// — en-us, es, fr, it and pt — are compiled into the binary, so they work on an
+// installation with nothing on disk. The rest are files in the hyphenation/
+// folder an installation ships, and \usehyphenation reaches both the same way:
+// a document names a language and does not care which tier it is in.
+//
+// A pattern file says more than which letters may be split. It carries an
+// exception list for the words its patterns get wrong, and the two minima its
+// language is set with — English asks for three letters after a break, which is
+// why "comput-er" appears in no English book.
+
+\use{document}
+
+\title{Hyphenation in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Why a narrow measure needs it}
+
+Both columns below set the same paragraph at the same measure. The left one has no
+language selected, so the breaker may only stretch the spaces between whole words; the
+right one hyphenates.
+
+\medskip
+
+\set hsize {200}
+\setbox plain \vtop{\noindent Extraordinarily complicated typographical arrangements demonstrate the difficulty
+immediately: unbreakable words accumulate and the interword spaces stretch to
+accommodate them.}
+\usehyphenation{en-us}
+\setbox broken \vtop{\noindent Extraordinarily complicated typographical arrangements demonstrate the difficulty
+immediately: unbreakable words accumulate and the interword spaces stretch to
+accommodate them.}
+\set hsize {460}
+
+\noindent\hbox{\box plain \hskip 30 \box broken}
+
+\section{Languages compiled into the binary}
+
+These five need no files on disk, which is what makes them work on a binary somebody
+downloaded and put in a folder of its own.
+
+\medskip
+
+\set hsize {136}
+\usehyphenation{fr}
+\setbox french \vtop{\noindent La miséricorde et la résurrection sont des mots que la bibliothèque française coupe
+volontiers, même dans une colonne étroite.}
+\usehyphenation{es}
+\setbox spanish \vtop{\noindent La misericordia y la resurrección son palabras que la biblioteca española divide sin
+dificultad, incluso en una columna estrecha.}
+\usehyphenation{pt}
+\setbox portuguese \vtop{\noindent A misericórdia e a ressurreição são palavras que a biblioteca portuguesa divide
+naturalmente, mesmo numa coluna estreita.}
+\set hsize {460}
+
+\noindent\hbox{\box french \hskip 20 \box spanish \hskip 20 \box portuguese}
+
+\section{Languages that come from the pattern tree}
+
+These are files in the installation's \mono{hyphenation} folder. On an installation
+without one this page does not render at all, which is the point: the engine says the
+folder is missing rather than quietly setting the paragraph unhyphenated.
+
+\medskip
+
+\set hsize {136}
+\usehyphenation{de-1996}
+\setbox german \vtop{\noindent Die Silbentrennung deutscher Wörter verlangt Trennmuster, und Zusammensetzungen
+verlangen sie ganz besonders.}
+\usehyphenation{nl}
+\setbox dutch \vtop{\noindent De Nederlandse woordafbreking gebruikt patronen die verschillen van de Duitse en de
+Engelse woordafbreking.}
+\usehyphenation{pl}
+\setbox polish \vtop{\noindent Polskie dzielenie wyrazów wykorzystuje wzorce przygotowane specjalnie dla języka
+polskiego.}
+\set hsize {460}
+
+\noindent\hbox{\box german \hskip 20 \box dutch \hskip 20 \box polish}
+
+\section{What a pattern file settles besides the patterns}
+
+English is set with two letters before a break and three after --- both stated in the
+file's own header --- so \mono{comput-er} is offered by the patterns and refused by the
+language. The file also carries an exception list, which settles the handful of words
+the patterns get wrong: \mono{as-so-ciate}, and \mono{project}, which is never broken
+at all.
+
+\medskip
+
+\usehyphenation{en-us}
+\set hsize {300}
+\setbox english \vtop{\noindent The association projected a reciprocity that the declination of the manuscript could
+not reasonably accommodate, however extraordinarily the philanthropic reformation was
+presented.}
+\set hsize {460}
+
+\noindent\hbox{\box english}

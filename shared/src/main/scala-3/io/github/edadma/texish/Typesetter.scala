@@ -19,19 +19,22 @@ final case class FragmentMetrics(width: Double, height: Double, baseline: Double
 
 object Typesetter:
 
-  /** The texish home: a directory holding the `fonts/` and `packages/` folders that an installation ships. This
+  /** The texish home: a directory holding the `fonts/`, `packages/` and `hyphenation/` folders that an
+    * installation ships. This
     * is `$TEXISHHOME` set programmatically, and the two are searched alike — a host that can work out where its
     * own files are (a packaged command-line tool locating its executable, an application that manages its own
     * folder) sets this and never touches the environment.
     *
-    * Both halves of the tree are found through it. A bundled face is named by a path beginning at `fonts/`
+    * Every part of the tree is found through it. A bundled face is named by a path beginning at `fonts/`
     * (`fonts/LatinModernRoman/lmroman10-regular.otf`), resolved against this directory among others; a module
-    * `\use` names is looked for under `packages/` beneath it. Setting it does not by itself *load* the wider
+    * `\use` names is looked for under `packages/` beneath it, and the patterns of a language
+    * `\usehyphenation` names under `hyphenation/`. Setting it does not by itself *load* the wider
     * bundled font families — that is [[Typesetter.loadBundledCatalogue]], which a host calls when it wants them.
     *
-    * It is empty by default and *nothing requires it to be set*: the core faces and the `base` and `document`
-    * packages are compiled into the artifact (see [[EmbeddedFonts]], `EmbeddedPackages`), so the engine sets an
-    * ordinary document with no tree at all. For fonts it is the one-liner form of
+    * It is empty by default and *nothing requires it to be set*: the core faces, the `base` and `document`
+    * packages and five languages' hyphenation patterns are compiled into the artifact (see [[EmbeddedFonts]],
+    * `EmbeddedPackages`, `EmbeddedHyphenationPatterns`), so the engine sets an ordinary document with no tree at
+    * all. For fonts it is the one-liner form of
     * `registerFontSource(DirectoryFontSource(dir))`; a host with more to say (several folders, fonts that are not
     * files at all) registers sources instead. Read when a typesetter is constructed, so set it before then. */
   var home: String = ""

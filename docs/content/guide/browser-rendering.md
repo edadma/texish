@@ -1,6 +1,6 @@
 ---
 title: "Rendering in the Browser"
-weight: 21
+weight: 22
 ---
 
 > **The Scala.js target is not currently built or published.** The browser backends remain in

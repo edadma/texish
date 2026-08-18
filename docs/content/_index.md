@@ -38,8 +38,9 @@ coherent family across prose, equations, and code.
 
 ## What it does
 
-- **Knuth-Plass line breaking** with Liang hyphenation, cost-based page breaks with
-  widow/orphan control, and balanced multi-column layout, all in a point-space coordinate system.
+- **Knuth-Plass line breaking** with Liang hyphenation in [78 languages](/guide/hyphenation/),
+  cost-based page breaks with widow/orphan control, and balanced multi-column layout, all in a
+  point-space coordinate system.
 - **TeX math mode** — inline `$…$` and centered display `$$…$$`: fractions, radicals,
   scripts, stretchy delimiters, accents, big operators, matrices, the math alphabets
   (`\mathbf`, `\mathbb`, `\mathfrak`, …), and phantom/`\smash` spacing.

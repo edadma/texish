@@ -8,7 +8,8 @@ import scala.scalanative.posix.unistd.readlink
 import scala.scalanative.unsafe.*
 import scala.scalanative.unsigned.*
 
-/** Finding the `fonts/` and `packages/` an installation shipped, by finding the executable that is asking.
+/** Finding the `fonts/`, `packages/` and `hyphenation/` an installation shipped, by finding the executable that
+  * is asking.
   *
   * The engine deliberately knows nothing about installation layouts — it looks under [[Typesetter.home]] and in
   * the font sources it is given. Somebody has to tell it where those are, and for a packaged program the only
@@ -75,9 +76,10 @@ object Install:
     reached.toSeq.flatMap(path => Seq(path) ++ resolved(path)).distinct
   }
 
-  /** The texish home found by walking up from an executable: a directory holding a `fonts/` or a `packages/`
-    * folder, which is what [[Typesetter.home]] wants. Either folder is enough — an installation may ship the
-    * packages and leave the 151MB font tree out, and the engine copes with whichever half it is given.
+  /** The texish home found by walking up from an executable: a directory holding a `fonts/`, `packages/` or
+    * `hyphenation/` folder, which is what [[Typesetter.home]] wants. Any one of them is enough — an installation
+    * may ship the packages and the patterns and leave the 152MB font tree out, and the engine copes with
+    * whichever part it is given.
     *
     * At each level two layouts are tried: `share/texish/`, where a Unix package installs the data belonging to a
     * program, and the directory itself, which is what an unpacked archive or a build tree looks like. Four levels
@@ -87,7 +89,8 @@ object Install:
   def homeNear(executable: String): Option[String] =
     val start = new File(executable).getAbsoluteFile.getParentFile
 
-    def hasTree(dir: File): Boolean = new File(dir, "fonts").isDirectory || new File(dir, "packages").isDirectory
+    def hasTree(dir: File): Boolean =
+      Seq("fonts", "packages", "hyphenation").exists(name => new File(dir, name).isDirectory)
 
     Iterator
       .iterate(start)(_.getParentFile)

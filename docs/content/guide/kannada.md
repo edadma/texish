@@ -1,6 +1,6 @@
 ---
 title: "Kannada"
-weight: 16
+weight: 17
 ---
 
 texish sets the Kannada script with the syllable shaping it needs. Like the other Indic scripts it is

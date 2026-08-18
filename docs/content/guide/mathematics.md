@@ -1,6 +1,6 @@
 ---
 title: "Mathematics"
-weight: 3
+weight: 4
 ---
 
 texish has a TeX math mode set in Latin Modern Math through an OpenType `MATH` table. Math

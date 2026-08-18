@@ -74,9 +74,16 @@ class HyphenationPatternFileTests extends AnyFreeSpec with Matchers:
     marked(embedded("it"), "misericordia") shouldBe "mi-se-ri-cor-dia"
   }
 
-  "English, which was always right, is unchanged" in {
+  "English, which was always right about which patterns match" in {
     marked(embedded("en-us"), "hyphenation") shouldBe "hy-phen-ation"
     marked(embedded("en-us"), "constitution") shouldBe "con-sti-tu-tion"
-    marked(embedded("en-us"), "computer") shouldBe "com-put-er"
     marked(embedded("en-us"), "beautiful") shouldBe "beau-ti-ful"
+  }
+
+  "English asks for three letters after a break, and the file says so" in {
+    // The patterns offer `comput-er`, and English typography does not take it: two letters on the next line
+    // is not enough. Every `hyph-utf8` file states the minima its language is set with, and until they were
+    // read texish used two-and-two for every language, which is TeX's default for no language in particular.
+    marked(embedded("en-us"), "computer") shouldBe "com-puter"
+    marked(embedded("en-us"), "flourishes") shouldBe "flour-ishes"
   }

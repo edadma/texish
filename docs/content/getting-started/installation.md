@@ -81,9 +81,10 @@ until told the tap is trusted.
 
 Every [release](https://github.com/edadma/texish/releases) attaches a binary per platform —
 `linux-x86_64`, `linux-arm64`, `macos-arm64` — and one platform-independent
-`texish-<version>-share.tar.gz` holding the font catalogue and the packages. The binary alone is a
-working renderer; the tarball is what adds the complex-script faces, the CJK cuts and the packages
-beyond `base` and `document`.
+`texish-<version>-share.tar.gz` holding the font catalogue, the packages and the hyphenation
+patterns. The binary alone is a working renderer; the tarball is what adds the complex-script faces,
+the CJK cuts, the packages beyond `base` and `document`, and every language's hyphenation but the
+five compiled in.
 
 ```sh
 V=<version>                      # the release to install, without the leading v
@@ -97,7 +98,8 @@ curl -L "https://github.com/edadma/texish/releases/download/v$V/texish-$V-share.
   | tar -xz -C "$P"
 ```
 
-The tarball unpacks to `share/texish/fonts` and `share/texish/packages`, which is one of the layouts
+The tarball unpacks to `share/texish/fonts`, `share/texish/packages` and
+`share/texish/hyphenation`, which is one of the layouts
 [the binary looks for](#finding-an-installation) — so it belongs at the same prefix as `bin/`, and
 there is nothing further to configure. The archive is about 92MB compressed, most of it the CJK
 faces; a `.sha256` accompanies it on the release.
@@ -112,8 +114,9 @@ PNG and SVG output.
 sbt texishCli/nativeLink
 ```
 
-The binary is produced at `cli/target/scala-3.8.4/texish-cli`. A checkout already has `fonts/` and
-`packages/` in it, so a binary run from the source tree finds the whole catalogue with no tarball.
+The binary is produced at `cli/target/scala-3.8.4/texish-cli`. A checkout already has `fonts/`,
+`packages/` and `hyphenation/` in it, so a binary run from the source tree finds the whole catalogue
+with no tarball.
 
 ## Fonts
 
@@ -169,10 +172,10 @@ val t = new CairoPDFTypesetter("out.pdf")
 t.loadBundledCatalogue()          // then ask for the families
 ```
 
-`Typesetter.home` is the **texish home**: a directory holding the `fonts/` and `packages/` an
-installation ships, and the programmatic equivalent of `$TEXISHHOME`. Both halves are found through
-it — fonts as a search root, and modules under its `packages/` folder — so one setting covers a whole
-installation. A program that can work out where its own files live never needs the environment
+`Typesetter.home` is the **texish home**: a directory holding the `fonts/`, `packages/` and
+`hyphenation/` an installation ships, and the programmatic equivalent of `$TEXISHHOME`. Every part is
+found through it — fonts as a search root, modules under its `packages/` folder, hyphenation patterns
+under `hyphenation/` — so one setting covers a whole installation. A program that can work out where its own files live never needs the environment
 variable at all; see [Finding an installation](#finding-an-installation) below.
 
 For fonts it is shorthand for one font source; a host with more to say registers them directly, and
@@ -201,11 +204,27 @@ host was launched from, and a font tree carrying a core path shadows the compile
 
 The command-line tool does all of this for you — see [Fonts](/reference/cli/#fonts) there.
 
+## Hyphenation patterns
+
+Hyphenation is split the same way, and for the same reason. **Five languages are compiled into the
+artifact** — `en-us`, `es`, `fr`, `it` and `pt` — so a binary with nothing beside it still
+hyphenates them. **The other 73 are files** in a `hyphenation/` folder, one per language tag,
+verbatim from `hyph-utf8`.
+
+Unlike the font catalogue, they need no opt-in call: patterns are small, they are resolved one
+language at a time by name, and there is nothing to register in advance. `\usehyphenation{de-1996}`
+searches the same places `\use` searches for a module — beside the document, the current directory,
+then `hyphenation/` under the texish home and `$TEXISHHOME` — and falls back to the compiled-in copy.
+A language whose file is missing says which thing is wrong, exactly as a missing font family does.
+
+See [Hyphenation](/guide/hyphenation/) for the language list, what a pattern file carries besides
+its patterns, and the ten upstream files texish does not ship.
+
 ## Finding an installation
 
 A packaged program should not have to be told where its own files are. On Native, `Install.configure()`
-locates the running executable and looks upward from it for a `share/texish/` or a `fonts/`/`packages/`
-directory, setting `Typesetter.home` if it finds one:
+locates the running executable and looks upward from it for a `share/texish/`, or for a `fonts/`,
+`packages/` or `hyphenation/` directory, setting `Typesetter.home` if it finds one:
 
 ```scala
 Install.configure()               // before constructing a typesetter

@@ -1,6 +1,6 @@
 ---
 title: "Devanagari (Hindi)"
-weight: 12
+weight: 13
 ---
 
 texish sets Devanagari — the script of Hindi, Marathi and Sanskrit — with the syllable shaping

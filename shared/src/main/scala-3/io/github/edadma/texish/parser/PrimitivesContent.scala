@@ -50,23 +50,19 @@ private[parser] def registerContentPrimitives(proc: Processor, handler: Typesett
     },
   )
 
-  // usehyphenation - 1 braced arg: enable the hyphenation patterns compiled into the binary for a
-  // language tag (en-us, es, fr, ...) and make that language active. This is how a document switches on
-  // hyphenation without shipping a pattern file -- the TeX-format equivalent of loading hyphen.tex. For
-  // a language whose patterns are not bundled, load them from a file with \loadhyphenation instead.
+  // usehyphenation - 1 braced arg: load the patterns texish bundles for a language tag (en-us, de-1996, hi,
+  // ...) and make that language active. This is how a document switches on hyphenation without shipping a
+  // pattern file -- the TeX-format equivalent of loading hyphen.tex. Five languages are compiled into the
+  // binary and the rest are files in the installation's hyphenation/ folder; the two are one command here,
+  // because which tier a language is in is a packaging detail and not something a document should know.
   proc.registerPrimitive(
     "usehyphenation",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
         evalArg(proc, pos) match
           case Value.Text(lang) =>
-            if Hyphenation.enableEmbedded(lang) then handler.typesetter.language = Some(lang)
-            else
-              val have = Hyphenation.embeddedLanguages.toSeq.sorted.mkString(", ")
-              handler.error(
-                s"\\usehyphenation: no patterns are bundled for '$lang' (available: $have); use \\loadhyphenation{$lang}{path} for an external pattern file",
-                pos,
-              )
+            if Hyphenation.enable(lang, proc.currentDir) then handler.typesetter.language = Some(lang)
+            else handler.error(s"\\usehyphenation: ${Hyphenation.unavailableNote(lang)}", pos)
           case _ => handler.error("\\usehyphenation expects a language tag, e.g. \\usehyphenation{en-us}", pos)
     },
   )

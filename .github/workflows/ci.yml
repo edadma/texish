@@ -89,7 +89,8 @@ jobs:
         run: sbt texishCli/nativeLink
 
       # Two installations, built the way a user's would be. The bare one has nothing above it to
-      # find — /tmp holds no fonts/ or packages/ — so it exercises the compiled-in core alone. The
+      # find — /tmp holds no fonts/, packages/ or hyphenation/ — so it exercises the compiled-in core
+      # alone. The
       # prefix one is laid out exactly as the share tarball unpacks, and is reached without
       # $TEXISHHOME, so it exercises self-location too.
       - name: Install two ways
@@ -97,7 +98,7 @@ jobs:
           mkdir -p /tmp/bare/bin /tmp/prefix/bin /tmp/prefix/share/texish
           cp cli/target/scala-*/texish-cli /tmp/bare/bin/texish
           cp cli/target/scala-*/texish-cli /tmp/prefix/bin/texish
-          cp -R fonts packages /tmp/prefix/share/texish/
+          cp -R fonts packages hyphenation /tmp/prefix/share/texish/
 
       - name: Render with no installation
         run: tools/render-corpus.sh /tmp/bare/bin/texish

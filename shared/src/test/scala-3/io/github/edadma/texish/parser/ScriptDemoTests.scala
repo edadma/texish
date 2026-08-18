@@ -37,3 +37,9 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
   "the Ethiopic demo processes without error" in {
     noException should be thrownBy process("scripts/ethiopic-demo.script")
   }
+
+  "the hyphenation demo processes without error" in {
+    // Not a script demo, but the same kind of file for the same reason: it names languages from the pattern
+    // tree, and a tag that has been renamed or a file that has been dropped breaks it.
+    noException should be thrownBy process("scripts/hyphenation-demo.script")
+  }

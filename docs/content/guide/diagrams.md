@@ -1,6 +1,6 @@
 ---
 title: "Node-and-edge diagrams"
-weight: 9
+weight: 10
 ---
 
 The `diagram` package draws node-and-edge diagrams — block diagrams, state machines,

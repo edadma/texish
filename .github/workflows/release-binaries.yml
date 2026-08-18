@@ -102,9 +102,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ steps.ver.outputs.tag }}" "texish-${{ steps.ver.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}" --clobber
 
-  # The binaries carry only the compiled-in core, so on their own they cannot set Hebrew or
-  # resolve \use{diagram}. This job attaches the rest: the font catalogue and the packages, as
-  # one platform-independent archive. No matrix, no toolchain — a checkout and a tar.
+  # The binaries carry only the compiled-in core, so on their own they cannot set Hebrew, resolve
+  # \use{diagram}, or hyphenate anything but the five languages compiled in. This job attaches the
+  # rest: the font catalogue, the packages and the hyphenation patterns, as one platform-independent
+  # archive. No matrix, no toolchain — a checkout and a tar.
   share:
     name: share tarball
     runs-on: ubuntu-latest
@@ -125,7 +126,7 @@ jobs:
       - name: Stage the tree
         run: |
           mkdir -p stage/share/texish
-          cp -R fonts packages stage/share/texish/
+          cp -R fonts packages hyphenation stage/share/texish/
 
       # Built deterministically — fixed member order, zeroed timestamps and ownership, and a gzip
       # header with no embedded mtime — so re-running this workflow against an existing tag produces

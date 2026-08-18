@@ -1,6 +1,6 @@
 ---
 title: "Chinese, Japanese & Korean"
-weight: 20
+weight: 21
 ---
 
 texish sets the CJK scripts — Chinese, Japanese and Korean — with the line breaking each needs and a

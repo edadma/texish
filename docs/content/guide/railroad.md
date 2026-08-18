@@ -1,6 +1,6 @@
 ---
 title: "Railroad diagrams"
-weight: 8
+weight: 9
 ---
 
 The `railroad` package turns a grammar written in W3C-style EBNF into railroad (syntax)

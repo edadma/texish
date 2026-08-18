@@ -5,10 +5,10 @@ import org.scalatest.matchers.should.Matchers
 
 class LiangHyphenationTest extends AnyFlatSpec with Matchers:
 
-  // Load English patterns for real-word tests
-  // Use file path for cross-platform compatibility (getResourceAsStream doesn't work on Native)
+  // Load English patterns for real-word tests, from the bundled pattern tree — a file path rather than a
+  // resource, since getResourceAsStream does not work on Native.
   lazy val englishHyphenator: LiangHyphenation =
-    LiangHyphenation.fromFile("shared/src/main/resources/hyph-en-us.tex")
+    LiangHyphenation.fromFile("hyphenation/hyph-en-us.tex")
 
   "parsePattern" should "parse simple patterns" in {
     LiangHyphenation.parsePattern("hy3ph") shouldBe ("hyph", IndexedSeq(0, 0, 3, 0, 0))
@@ -179,22 +179,26 @@ class LiangHyphenationTest extends AnyFlatSpec with Matchers:
 
   // Real English word hyphenation tests
   // Format: word -> expected syllables (hyphenation points are between syllables)
-  // Values verified against hyph-en-us.tex patterns
+  //
+  // Values verified against hyph-en-us.tex — its patterns *and* the minima its header states, which for
+  // English are two letters before a break and three after. Several of these words have a pattern break the
+  // language does not allow: "comput-er" and "universi-ty" would strand two letters, so English does not set
+  // them, and neither does TeX.
   val expectedHyphenations: List[(String, List[String])] = List(
     "algorithm"      -> List("al", "go", "rithm"),
-    "computer"       -> List("com", "put", "er"),
+    "computer"       -> List("com", "puter"),
     "programming"    -> List("pro", "gram", "ming"),
     "extraordinary"  -> List("ex", "tra", "or", "di", "nary"),
     "information"    -> List("in", "for", "ma", "tion"),
     "development"    -> List("de", "vel", "op", "ment"),
-    "international"  -> List("in", "ter", "na", "tion", "al"),
+    "international"  -> List("in", "ter", "na", "tional"),
     "organization"   -> List("or", "ga", "ni", "za", "tion"),
-    "university"     -> List("uni", "ver", "si", "ty"),
+    "university"     -> List("uni", "ver", "sity"),
     "communication"  -> List("com", "mu", "ni", "ca", "tion"),
     "understanding"  -> List("un", "der", "stand", "ing"),
     "representative" -> List("rep", "re", "sen", "ta", "tive"),
-    "possibility"    -> List("pos", "si", "bil", "i", "ty"),
-    "responsibility" -> List("re", "spon", "si", "bil", "i", "ty"),
+    "possibility"    -> List("pos", "si", "bil", "ity"),
+    "responsibility" -> List("re", "spon", "si", "bil", "ity"),
     "mathematics"    -> List("math", "e", "mat", "ics"),
     "bibliography"   -> List("bib", "li", "og", "ra", "phy"),
   )

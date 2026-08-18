@@ -387,9 +387,14 @@ and the typography the language sets its punctuation by.
 
 | Command | Effect |
 |---------|--------|
-| `\usehyphenation{tag}` | enable the bundled patterns for a language tag (`en-us`, `es`, `fr`, …) and make it the document language |
+| `\usehyphenation{tag}` | load the patterns texish bundles for a language tag (`en-us`, `de-1996`, `hi`, …) and make it the document language |
 | `\loadhyphenation{lang}{path}` | load Liang patterns from a `.tex` file and make `lang` the document language |
 | `\language{lang}` | switch to an already-loaded language |
+
+texish bundles 78 languages. Five — `en-us`, `es`, `fr`, `it`, `pt` — are compiled into the binary
+and the rest are files in the installation's `hyphenation/` folder; `\usehyphenation` reaches both
+alike, so a document names a language without knowing which tier it is in. The full list, and what a
+pattern file carries besides its patterns, is in the [Hyphenation guide](/guide/hyphenation/).
 
 Declaring French — `\usehyphenation{fr}`, or any regional tag built on it — also switches on French
 spacing of high punctuation. French sets a space before the colon, semicolon, exclamation and question
