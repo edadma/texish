@@ -1,6 +1,6 @@
 ---
 title: "Telugu"
-weight: 15
+weight: 16
 ---
 
 texish sets the Telugu script with the syllable shaping it needs. Like Devanagari, Bengali and

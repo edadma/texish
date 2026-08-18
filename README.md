@@ -21,14 +21,17 @@ cursive Arabic joining and ligatures via GSUB, and GPOS positioning of niqqud an
 marks), Devanagari (Hindi) syllable shaping (`\font devanagari` — conjuncts and half-forms, short-i
 and reph reordering, nukta composition, and GPOS-positioned vowel signs), Bengali–Assamese syllable
 shaping (`\font bengali` — conjuncts, pre-base i/e/ai reordering, two-part o/au decomposition,
-reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), Gurmukhi (Punjabi)
+reph and ya-phalaa, nukta composition, and GPOS-positioned vowel signs), Gujarati syllable shaping
+(`\font gujarati` — conjuncts and half-forms, pre-base i reordering, and a reph that closes the
+cluster), Gurmukhi (Punjabi)
 syllable shaping (`\font gurmukhi` — subjoined pairin forms, pre-base sihari reordering, and
 GPOS-positioned addak, tippi and vowel signs), Telugu syllable shaping (`\font telugu` — fused
 consonant-vowel glyphs, subscript conjuncts built beneath a leading base, vowel signs moved back to
 that base, two-part ai decomposition, and GPOS-positioned subscripts), Tamil syllable shaping
 (`\font tamil` — pre-base signs placed before their own consonant rather than the whole syllable,
 two-part o/oo/au decomposition, fused u signs and width-matched i signs, the ksha and shrii
-ligatures, and GPOS-positioned pulli), automatic glyph fallback (Cyrillic and Greek set in
+ligatures, and GPOS-positioned pulli), the Ethiopic syllabary (`\font ethiopic`/`amharic`/`tigrinya`
+— Amharic, Tigrinya and Ge'ez, which need no shaping at all), automatic glyph fallback (Cyrillic and Greek set in
 ordinary text with no setup, matching the surrounding weight and slope), author break control
 (`\discretionary` and leaders for dotted contents lines),
 and cost-based page breaks with widow/orphan control, footnotes, balanced multi-column layout
@@ -220,7 +223,7 @@ listings — and the two packages a document needs to be an ordinary document: `
 Mathematics needs no package at all; it is part of the engine.
 
 The wider bundled set — the complex-script faces, the CJK cuts, the alternative text families, the
-SMuFL music faces — is 151MB and lives in this repository's `fonts/` folder, alongside the remaining
+SMuFL music faces — is 152MB and lives in this repository's `fonts/` folder, alongside the remaining
 packages (`diagram`, `plot`, `book`, `usfm`, `music`, …); each release ships it as a
 `texish-<version>-share.tar.gz`. Point `Typesetter.home` at the directory
 holding both and call `loadBundledCatalogue()` to make the fonts available. On Native,

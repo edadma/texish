@@ -1,6 +1,6 @@
 ---
 title: "Gurmukhi (Punjabi)"
-weight: 14
+weight: 15
 ---
 
 texish sets the Gurmukhi script — used for Punjabi as written in India — with the syllable shaping

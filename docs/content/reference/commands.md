@@ -164,6 +164,16 @@ vowel signs are positioned by the font — all automatically from text typed in 
 Serif Bengali is bundled: `\font bengali 12 regular` (or the alias `\font assamese`), with a bold cut
 (`\font bengali 12 bold`). See [Bengali–Assamese](/guide/bengali/) for the full treatment.
 
+## Gujarati
+
+Gujarati is Devanagari's closest relative here, written without the shirorekha, and is shaped the
+same way: consonants fuse into conjuncts and half-forms, the pre-base i sign is reordered ahead of
+its syllable, and a syllable-initial *ra* with a virama rises as a reph above the base — closing the
+cluster after any post-base vowel sign, as Devanagari's does rather than as Bengali's does. Every
+vowel sign is a single codepoint, so nothing is split. All of it happens automatically from text
+typed in Unicode order. Noto Serif Gujarati is bundled: `\font gujarati 12 regular`, with a bold cut
+(`\font gujarati 12 bold`). See [Gujarati](/guide/gujarati/) for the full treatment.
+
 ## Gurmukhi (Punjabi)
 
 Gurmukhi text is shaped a syllable at a time: a consonant joined by the virama takes a subjoined
@@ -196,6 +206,17 @@ the short-i and long-i signs take width-matched forms, and the two surviving con
 ligature has swallowed the pulli. A word-initial *ra* with a virama forms no reph. All of it happens
 automatically from text typed in Unicode order. Noto Serif Tamil is bundled:
 `\font tamil 12 regular`, with a bold cut (`\font tamil 12 bold`). See [Tamil](/guide/tamil/) for the
+full treatment.
+
+## Ethiopic (Amharic, Tigrinya, Ge'ez)
+
+Ethiopic needs no shaping: it is a syllabary, so the vowel is written into the letterform rather than
+hung on it as a sign, and one codepoint is one glyph. Nothing reorders, nothing joins, there is no
+bidirectional work — the text takes the plain path through the engine and breaks at its spaces like a
+roman paragraph. Noto Serif Ethiopic is bundled: `\font ethiopic 12 regular` (or the aliases
+`\font amharic` and `\font tigrinya`), with a bold cut (`\font ethiopic 12 bold`). It covers the
+Ethiopic block along with the Supplement and both Extended blocks. Ethiopic's own punctuation (`፡`
+`።` `፣` `፤`) and numerals (`፩ ፪ ፫`) are typed literally. See [Ethiopic](/guide/ethiopic/) for the
 full treatment.
 
 ## Thai

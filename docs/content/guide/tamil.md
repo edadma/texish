@@ -1,6 +1,6 @@
 ---
 title: "Tamil"
-weight: 16
+weight: 17
 ---
 
 texish sets the Tamil script with the syllable shaping it needs. Like Devanagari, Bengali, Gurmukhi

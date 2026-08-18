@@ -1,0 +1,109 @@
+// ethiopic-demo — Ethiopic (Amharic, Tigrinya, Ge'ez) typesetting in texish.
+//
+// Render with:  texish-cli scripts/ethiopic-demo.script
+//
+// Ethiopic is the one non-Latin script texish sets that needs no shaping at all.
+// It is written left to right, so there is no bidirectional reordering; it is not
+// cursive, so there are no joined forms; and — unlike every Indic script here —
+// it has no dependent vowel signs to reorder or position, because the vowel is
+// written into the letterform itself.
+//
+// That is what a syllabary means. Where Devanagari writes a consonant and hangs a
+// matra on it, Ethiopic has a separate letter for each consonant-and-vowel pair:
+// the base consonant and its six vowel orders are seven distinct glyphs, drawn as
+// variations on one shape. The cost is a large character set — some 350 glyphs in
+// daily use, spilling out of the main block into three more — and the saving is
+// that one codepoint is one glyph and nothing has to be rearranged. Ethiopic text
+// takes the plain path through the engine and breaks at its spaces, exactly as a
+// roman paragraph does.
+//
+// \font ethiopic selects the bundled Noto Serif Ethiopic face, in a regular and a
+// bold cut; \font amharic and \font tigrinya are aliases for the same family.
+
+\use{document}
+
+\title{The Ethiopic Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting an Ethiopic paragraph}
+
+Each character is one glyph and the glyphs are set left to right, so a paragraph needs
+nothing from the engine beyond the ordinary line breaker --- the breaks fall at the
+interword spaces just as they do for Latin text.
+
+\medskip
+
+{\font ethiopic 14 regular
+አማርኛ በኢትዮጵያ የሚነገር ቋንቋ ነው። ከግራ ወደ ቀኝ ይጻፋል። እያንዳንዱ ፊደል አንድ ተነባቢና አንድ አናባቢ
+አንድ ላይ ይዞ ይጻፋል። ስለዚህ የፊደሉ ቅርጽ ራሱ አናባቢውን ያሳያል።
+}
+
+\section{The seven orders}
+
+A letter's vowel is written into its shape. Each row below is one consonant through its
+seven orders --- \italic{hä}, \italic{hu}, \italic{hi}, \italic{ha}, \italic{he},
+\italic{hə}, \italic{ho} --- and the family resemblance down each row is the whole design
+of the script:
+
+\medskip
+
+{\font ethiopic 16 regular
+ሀ ሁ ሂ ሃ ሄ ህ ሆ
+}
+
+\medskip
+
+{\font ethiopic 16 regular
+ለ ሉ ሊ ላ ሌ ል ሎ
+}
+
+\medskip
+
+{\font ethiopic 16 regular
+መ ሙ ሚ ማ ሜ ም ሞ
+}
+
+\medskip
+
+{\font ethiopic 16 regular
+ሰ ሱ ሲ ሳ ሴ ስ ሶ
+}
+
+\section{Punctuation and numerals}
+
+Ethiopic has its own marks and its own numerals. The wordspace, the full stop, the comma
+and the semicolon are typed literally --- no ASCII shorthand produces them:
+
+\medskip
+
+{\font ethiopic 16 regular
+፡ ። ፣ ፤ ፥ ፦
+}
+
+\medskip
+
+{\font ethiopic 16 regular
+፩ ፪ ፫ ፬ ፭ ፮ ፯ ፰ ፱ ፲
+}
+
+\section{The languages the script carries}
+
+Amharic is the largest, but the script is shared. Tigrinya draws on letters Amharic does
+not use, and Ge'ez, the liturgical language, is where the writing system began:
+
+\medskip
+
+{\font ethiopic 16 regular
+አማርኛ   ትግርኛ   ግዕዝ
+}
+
+\section{A closing line}
+
+A greeting, set in the bold cut:
+
+\medskip
+
+{\font ethiopic 18 bold
+ሰላም! ይህ በኢትዮጵያ ፊደል ተጽፏል።
+}

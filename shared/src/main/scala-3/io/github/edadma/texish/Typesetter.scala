@@ -58,7 +58,8 @@ object Typesetter:
     "noto", "gentium", "charm", "thai", "nosifer", "rubik-wet-paint", "cinzel", "gentiumbook", "pt",
     "cjksc", "cjktc", "cjkjp", "japanese", "cjkkr", "korean",
     "hebrew", "ezra", "arabic", "amiri",
-    "devanagari", "hindi", "bengali", "assamese", "gurmukhi", "punjabi", "telugu", "tamil",
+    "devanagari", "hindi", "bengali", "assamese", "gujarati", "gurmukhi", "punjabi", "telugu", "tamil",
+    "ethiopic", "amharic", "tigrinya",
     "alegreya", "ebgaramond", "bravura", "petaluma",
   )
 
@@ -633,6 +634,32 @@ abstract class Typesetter:
   loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
   loadFont("bengali", "fonts/NotoSerifBengali/NotoSerifBengali-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
   aliasTypeface("assamese", "bengali")
+
+  // Noto Serif Gujarati, the bundled face for Gujarati: \font gujarati 12 sets it, with a bold cut. Static
+  // Regular and Bold instances drawn from the variable upstream (wght 400 and 700). Gujarati is left to right,
+  // and of the scripts here it is the closest to Devanagari — the same half-forms, conjuncts and reph, written
+  // without the headline — so the engine does the same work: cluster segmentation, the pre-base i reordering
+  // and the reph lift (see Gujarati and IndicShaper), while the font supplies the conjunct and vowel-sign
+  // glyphs through its GSUB and positions the marks through its GPOS. Loaded by file like the other
+  // complex-script cuts. Like the other Indic faces it sets its punctuation as a Latin text face, so the
+  // curly-quote and dash shorthands come out typographic.
+  loadFont("gujarati", "fonts/NotoSerifGujarati/NotoSerifGujarati-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("gujarati", "fonts/NotoSerifGujarati/NotoSerifGujarati-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+
+  // Noto Serif Ethiopic, the bundled face for the Ethiopic syllabary: \font ethiopic 12 sets it, or the
+  // aliases \font amharic 12 and \font tigrinya 12, each with a bold cut. Static Regular and Bold instances
+  // drawn from the variable upstream (wght 400 and 700, width 100). Ethiopic is the one non-Latin script here
+  // that needs no shaper at all: it is written left to right, one codepoint is one glyph, nothing reorders,
+  // there are no dependent signs to position and words are separated by spaces — so it takes the plain path
+  // and breaks at its spaces like a roman text. Its vowels are written into the letterform itself rather than
+  // as marks, which is why a syllabary of some 350 glyphs replaces the shaping every other script here needs.
+  // The face covers the Ethiopic block along with the Supplement and the two Extended blocks, so it reaches
+  // past Amharic to Tigrinya and Ge'ez. Like the Indic faces it sets its punctuation as a Latin text face;
+  // Ethiopic's own word separator and full stop are typed literally.
+  loadFont("ethiopic", "fonts/NotoSerifEthiopic/NotoSerifEthiopic-Regular.ttf", Ligatures.TEXT_REPRESENTATIONS, Set.empty)
+  loadFont("ethiopic", "fonts/NotoSerifEthiopic/NotoSerifEthiopic-Bold.ttf", Ligatures.TEXT_REPRESENTATIONS, Set("bold"))
+  aliasTypeface("amharic", "ethiopic")
+  aliasTypeface("tigrinya", "ethiopic")
 
   // Noto Serif Gurmukhi, the bundled face for Gurmukhi (Punjabi as written in India): \font gurmukhi 12 sets
   // it, or the alias \font punjabi 12, each with a bold cut. Gurmukhi is left to right; the engine does the

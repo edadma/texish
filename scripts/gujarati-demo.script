@@ -1,0 +1,106 @@
+// gujarati-demo — Gujarati script typesetting in texish.
+//
+// Render with:  texish-cli scripts/gujarati-demo.script
+//
+// Gujarati is written left to right, so it needs none of the bidirectional
+// reordering Hebrew and Arabic do. What it needs instead is work inside each
+// syllable. A consonant carries an inherent vowel; a following vowel sign (a
+// matra) attaches above, below, before or after it; and a consonant joined to
+// the next by the virama (U+0ACD) gives up its own vowel, taking a half-form
+// or fusing with the next into a conjunct ligature.
+//
+// Of the scripts texish sets, Gujarati is the closest relative of Devanagari:
+// the same consonant-and-virama model, the same half-forms and conjuncts, and
+// the same reph — a syllable-initial ra drawn as a mark above the syllable —
+// written without the shirorekha, the headline that joins Devanagari's letters.
+// So the engine does the same work here: it segments the run into orthographic
+// syllables, asks the bundled Noto Serif Gujarati font's GSUB table to build the
+// half-forms and conjuncts, reorders the i-sign — typed after its consonant but
+// drawn before the whole syllable — and lifts a syllable-initial ra out as the
+// reph, which GPOS then places above the base along with the other marks.
+//
+// \font gujarati selects the bundled face, in a regular and a bold cut. No \rtl
+// is needed — the script is left to right.
+
+\use{document}
+
+\title{The Gujarati Script in \TeXish}
+\author{The texish engine}
+\maketitle
+
+\section{Setting a Gujarati paragraph}
+
+Each syllable is shaped on its own and the syllables are set left to right. Within a
+syllable the consonants may fuse into conjuncts and the vowel signs attach around the
+base; between syllables the line breaker finds its breaks at the interword spaces exactly
+as for Latin text.
+
+\medskip
+
+{\font gujarati 14 regular
+ગુજરાતી એક સમૃદ્ધ ભાષા છે. તે ડાબેથી જમણે લખાય છે. દરેક અક્ષર એક વ્યંજન અને તેની
+સાથેના સ્વરથી બને છે, અને બે વ્યંજન વિરામથી જોડાઈને સંયુક્ત રૂપ બનાવે છે.
+}
+
+\section{The pre-base i-sign}
+
+The i-sign is typed after its consonant but drawn before it. In each word below the sign
+appears at the left of its syllable even though it follows the consonant in memory ---
+day, father, and knowledge:
+
+\medskip
+
+{\font gujarati 16 regular
+દિન   પિતા   વિદ્યા
+}
+
+\section{Conjuncts and half-forms}
+
+A consonant joined to the next by the virama gives up its vowel. Some pairs draw the first
+as a half-form beside the base; others fuse into a single ligature glyph, as in love, holy,
+and the akhand ligature ksha:
+
+\medskip
+
+{\font gujarati 16 regular
+પ્રેમ   શ્રી   ક્ષ
+}
+
+\section{The reph}
+
+A ra that opens a syllable and is joined by the virama is not drawn in place: it rises as a
+mark above the syllable's base, after any vowel sign the base carries. These are duty,
+action, sun, and meaning:
+
+\medskip
+
+{\font gujarati 16 regular
+ધર્મ   કર્મ   સૂર્ય   અર્થ
+}
+
+\section{Independent vowels and signs}
+
+A vowel that opens a syllable is written with its own independent letter, not a matra. The
+vowel signs then stack around their base:
+
+\medskip
+
+{\font gujarati 16 regular
+અ આ ઇ ઈ ઉ ઊ એ ઐ ઓ ઔ
+}
+
+\medskip
+
+{\font gujarati 16 regular
+કા કિ કી કુ કૂ કે કૈ કો કૌ
+}
+
+\section{A closing line}
+
+A greeting and the city of Ahmedabad, set in the bold cut:
+
+\medskip
+
+{\font gujarati 18 bold
+નમસ્તે! આ અમદાવાદમાં ગુજરાતી લિપિમાં લખેલું છે.
+}
