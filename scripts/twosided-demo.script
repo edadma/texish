@@ -1,0 +1,169 @@
+// twosided-demo — a book set for printing on both sides of the sheet.
+//
+// A two-sided document is read as openings rather than as a stack of pages, and the two halves of
+// an opening are mirror images of each other: the binding margin is on the right of a verso and on
+// the left of a recto. `\geometry twoside:on` says so, and everything else here follows from it —
+// the margins mirror, the folio moves to the outer corner, the running head names the chapter on
+// one side of the opening and the section on the other, and each chapter opens on a recto, taking
+// a blank leaf when it has to.
+//
+// Print it double-sided, short-edge off, and hold it as a book: the wide margin stays against the
+// spine on every leaf, and no folio ever falls into the gutter.
+\use{book}
+
+// inner and outer name the margins the way the reader sees them, not the way the sheet does. The
+// inner margin is deliberately the wider of the two — it is the one the binding eats into — and
+// naming either of them makes the document two-sided without a separate twoside:on.
+\geometry paper:a5 inner:24mm outer:15mm top:18mm bottom:22mm
+
+\title{Two Sides of the Sheet}
+\author{A Demonstration}
+\date{Set with texish}
+
+// ===== Front matter =============================================================
+// Roman folios, unnumbered chapters. The parity that mirrors the margins is the folio's, so the
+// front matter's i, ii, iii mirror exactly as the main matter's 1, 2, 3 do.
+\frontmatter
+\maketitle
+
+\chapter{About this booklet}
+
+Hold an opening of a printed book and the two pages are not the same shape. The margin against
+the spine is narrower to the eye than it measures, because the binding curves part of it away,
+and the margin at the outer edge carries the reader's thumb. A page laid out once and printed on
+both sides gets this wrong on every second leaf: the gutter margin lands at the outer edge and
+the book reads as though it were falling off its own pages.
+
+The remedy is as old as printing. Lay out one side and reflect it for the other, so that the
+frame is described by its relation to the binding — inner and outer — rather than by left and
+right, which change places every time the leaf is turned.
+
+// ===== Main matter ==============================================================
+// Arabic folios restarting at 1. \mainmatter's \eject settles the folio; the chapter that follows
+// opens on a recto, inserting a blank leaf first if the next page would have been a verso.
+\mainmatter
+
+\chapter{The frame}
+
+\section{Inner and outer}
+
+The frame given to \mono{\\geometry} is the recto's, and every verso reflects it about the page's
+vertical centre. The reflection carries the running head and the running foot with the body, so a
+folio set against the outer edge stays outer on both sides of the opening rather than swapping to
+the gutter on every second page.
+
+Because it is the resolved frame that reflects, and not a named pair of margins, any geometry is
+two-sided the moment it is asked to be: a text block positioned by one edge and a width mirrors
+exactly as a pair of margins does.
+
+The measurements are worth stating plainly, because they are the whole of the feature. These pages
+are A5, and the text block is 24 millimetres from the binding and 15 from the outer edge — on a
+recto, 24 on the left and 15 on the right, and on a verso the reverse. Lay two facing pages
+side by side and the pair is symmetrical about the fold: 15, then text, then 24 and 24 with the
+fold between them, then text, then 15. That symmetry is what the eye reads as a well-set opening,
+and it is invisible until the sheet is printed on both sides and folded.
+
+The alternative — one frame for every page — is what a word processor gives, and it is why a
+double-sided print from one so often has to be re-run with a wider left margin, then re-run again
+because the right-hand pages now look wrong. There is no margin that is correct for both sides,
+which is exactly why the frame has to know which side it is on.
+
+\section{Which side a page is on}
+
+A page is a recto when its folio is odd. That is the same parity the margins mirror on, and the
+same one \mono{\\cleardoublepage} tests, so a front matter renumbered to restart the body at one
+keeps the margins, the blank leaves and the printed folios all agreeing with each other.
+
+The \mono{document} format exposes the test as \mono{\\ifrecto}, which takes its first branch on a
+recto and its second on a verso. Every folio in this booklet is placed with it: one
+definition, two placements, chosen as each page ships rather than written out twice.
+
+Reading the parity from the folio rather than from a count of sheets matters more than it sounds.
+A book's front matter is numbered separately — i, ii, iii — and restarts at 1 where the body
+begins, so the two counts part company early and never meet again. A frame mirrored on the sheet
+count would drift out of step with the folios the reader can actually see, and the drift would
+show up as a gutter margin on the wrong side halfway through the front matter, which is a hard
+defect to explain and an easy one to ship.
+
+The same parity drives the blank leaves, so the three mechanisms — the mirrored frame, the folio,
+and the leaf a chapter opens on — are answers from one source and cannot disagree.
+
+\section{What the reflection carries}
+
+The head and the foot are reflected along with the body, and this is the part that is easy to get
+half right. A folio pushed to one end of the running foot is not at a fixed distance from the left
+edge of the sheet; it is at the end of the text block, and the text block has moved. Reflecting the
+block without the material around it leaves a folio marching down the outer edge of the rectos and
+the inner edge of the versos, which is worse than leaving it centred.
+
+So the whole frame moves as one, and a foot written once — the folio at the far end on a recto and
+at the near end on a verso — comes out at the outer corner of every page in the book. The head is
+placed the same way, which is why the chapter and section names in this booklet sit centred over a
+text block that is itself in two different places depending on the leaf.
+
+Turn to any opening in the middle of a chapter and the effect is there to read: the verso carries
+the chapter's title and the recto the title of whichever section is running through it. Neither
+page knows anything about the other. Each simply reports the marks that reached it, and the pair
+reads as an opening because the two streams were written to say different things to begin with.
+
+None of this is a special case bolted onto the page builder. A mark is an ordinary item in the
+vertical list, invisible and unbreakable, and the page builder records which marks a page carried
+as it ships. Adding a second stream adds a second set of those records and nothing else: no new
+page-breaking rule, no ordering constraint between the streams, and no way for one to interfere
+with the other. That is worth more than the feature itself, because a running head that reads
+correctly on ordinary pages and then goes wrong on a page with a float, a footnote or a page break
+in an awkward place is not a running head anyone can trust.
+
+The engine's own contribution is equally small. It mirrors one number — the offset of the text
+block from the left edge of the sheet — and the header and footer follow because they are placed
+relative to that block rather than to the sheet. Everything the reader sees as two-sided design
+comes out of one reflection and two mark streams.
+
+\chapter{The opening}
+
+\section{A head read across two pages}
+
+A running head in a two-sided book is not a per-page caption but a pair. The verso names the
+chapter and the recto the section within it, so a reader glancing at an opening is told both where
+they are and how far into it they have come. Two independent mark streams carry the two: a chapter
+writes the first with \mono{\\mark} and a section the second with \mono{\\submark}.
+
+A chapter clears the section stream as it opens, so the recto of an opening that has not reached
+its first section yet carries no head at all — better than naming the last section of the chapter
+before, which is what a single stream would leave behind.
+
+Which of the two a head shows depends only on which side of the fold its page falls. A single
+stream cannot do this: it would have to choose between naming the chapter on both sides, which
+wastes half the head, or naming the section on both, which loses the reader's place the moment a
+chapter runs past its first section.
+
+The streams are ordinary marks in the vertical list, so they travel with the text rather than
+with the page. A section that begins two thirds of the way down a page is the section that page's
+head names, and the section running over onto the next page is the one that page names, because
+each page reports the marks that actually landed on it.
+
+\section{Opening on the right}
+
+A chapter belongs on a recto: the reader turns the leaf and the new chapter is there, whole, on
+the right-hand page. When the previous chapter happens to end on a recto, that means a blank leaf
+in between — and a genuinely blank one, carrying neither running head nor folio, which is what
+the blank verso of a printed book looks like.
+
+A page that is blank except for a running head and a page number is not blank; it is a page that
+looks like a mistake. Printers have suppressed both on inserted leaves for as long as books have
+been made in signatures, and a document that does not is announcing an accident it did not have.
+
+One-sided, none of this applies, and the format does not pretend otherwise: a chapter takes the
+next page, no leaf is inserted, the head names the chapter on every page and the folio sits in the
+middle of the foot. The same document set both ways gives two correct books, not one correct book
+and one with the two-sided machinery showing through.
+
+\chapter{A short chapter}
+
+This chapter is short enough to end where it began, which is the case that costs a leaf: the next
+chapter cannot start on the very next page without landing on a verso.
+
+\chapter{And the next}
+
+Turn back one leaf from this page in the printed copy and the blank verso is there — an intended
+blank, not a mistake, and the reason a printed book's page count is so often a multiple of four.

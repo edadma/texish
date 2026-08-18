@@ -45,11 +45,14 @@ class DocumentMode(val t: Typesetter) extends Mode:
     * decorator is installed — the running header above the text block and the footer below it. Positions match what
     * the page builder computes from `hoffset`/`voffset`/`headsep`/`vsize`/`footskip`, so a composed simple page ships
     * to exactly the coordinates a directly drawn one would.
+    *
+    * In a two-sided document the whole frame — body, header and footer alike — is mirrored on verso pages, so a
+    * wide binding margin stays against the spine on both sides of the sheet. See [[versoHoffset]].
     */
   private def composePage(body: Box): SheetBox =
     val pw      = t.getNumber("paperwidth")
     val ph      = t.getNumber("paperheight")
-    val hoffset = t.getNumber("hoffset")
+    val hoffset = pageHoffset(pw)
     val voffset = t.getNumber("voffset")
     val placed  = ArrayBuffer[(Box, Double, Double)]((body, hoffset, voffset))
 
@@ -62,6 +65,25 @@ class DocumentMode(val t: Typesetter) extends Mode:
       if footer ne null then placed += ((footer, hoffset, voffset + t.getNumber("vsize") + t.getNumber("footskip")))
 
     new SheetBox(pw, ph, placed.toSeq)
+
+  /** The horizontal offset of this page's text block on a sheet `pw` wide.
+    *
+    * One-sided, that is simply `hoffset`. Two-sided (`\geometry twoside:on`), the resolved frame describes the
+    * *recto*, and a verso reflects it about the page's vertical centre: its offset is the recto's right margin,
+    * `pw - hoffset - hsize`. Reflecting the resolved frame rather than swapping a named pair of margins keeps any
+    * asymmetric geometry two-sided, however it was specified — `inner`/`outer`, `left`/`right` or a `textwidth`
+    * with one edge pinned all mirror alike.
+    *
+    * Recto is an odd folio, as in LaTeX's `\ifodd\c@page`: parity is read from `pageno`, the number the page
+    * prints, not from the physical sheet count. So a document that renumbers — roman front matter, then `\set
+    * pageno {1}` for the body — keeps the binding margin agreeing with the folios the reader sees, and a book
+    * that opens its chapters on a recto with `\cleardoublepage` gets the same answer from both mechanisms.
+    */
+  private def pageHoffset(pw: Double): Double =
+    val hoffset = t.getNumber("hoffset")
+
+    if t.getNumber("twoside") != 0 && t.getNumber("pageno").toInt % 2 == 0 then pw - hoffset - t.getNumber("hsize")
+    else hoffset
 
   /** Ship one box as one physical sheet: open a page target, paint the box at its origin, and close the target,
     * collecting it into [[printedPages]]. This is texish's `\shipout` — the sole primitive that commits ink to a

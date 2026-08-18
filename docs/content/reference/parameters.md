@@ -23,6 +23,7 @@ points. Glue is a natural size with optional `plus`/`minus` stretch and shrink
 | `hoffset` | `1in` | left margin — the text block's x offset from the sheet corner |
 | `voffset` | `1in` | top margin — the text block's y offset from the sheet corner |
 | `pageno` | `1` | the current page number (folio), advanced as pages ship |
+| `twoside` | `0` | nonzero: printed both sides, so the text block is mirrored on verso (even-folio) pages |
 | `topskip` | `10pt` | glue from the page top to the first baseline |
 | `raggedbottom` | `0` | nonzero: pad short page bottoms with fil instead of stretching their glue |
 
@@ -38,10 +39,17 @@ The `\geometry` primitive sets these as a group from margin/size options.
 | `topmark` | `""` | the last `\mark` of the previous page |
 | `firstmark` | `""` | the first `\mark` on the page being shipped |
 | `botmark` | `""` | the last `\mark` on the page being shipped |
+| `topsubmark` | `""` | the last `\submark` of the previous page |
+| `firstsubmark` | `""` | the first `\submark` on the page being shipped |
+| `botsubmark` | `""` | the last `\submark` on the page being shipped |
 
 A document supplies the header/footer content by defining `headline` / `footline` macros; `\the\pageno`
 inside them is always the shipping page's number. The mark variables drive running heads that track
 the section a page covers.
+
+There are two independent mark streams. `\mark` writes the first and `\submark` the second, and a
+two-sided head reads one on each side of an opening — the chapter on the verso, the section on the
+recto, which is what LaTeX's `\leftmark` and `\rightmark` are for.
 
 ## Paragraph shape
 

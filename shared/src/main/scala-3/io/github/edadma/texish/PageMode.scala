@@ -229,15 +229,20 @@ class PageMode(t: Typesetter) extends VBoxBuilder(t):
     cutouts.filterInPlace(c => !boxes.exists(_ eq c.anchor))
 
     // record this page's marks before shipping, so shipout-time material (running headers) reads them: topmark
-    // is the previous page's botmark, and a markless page inherits it for firstmark and botmark too, as in TeX
-    val marks = boxes.collect { case m: MarkBox => m.text }
-    val top = t.get("botmark") match
-      case Some(Value.Text(s)) => s
-      case _                   => ""
+    // is the previous page's botmark, and a markless page inherits it for firstmark and botmark too, as in TeX.
+    // The two mark streams (\mark and \submark) are recorded the same way into their own three variables, so a
+    // two-sided head can read the division from one and the subdivision from the other — see MarkBox.
+    def record(prefix: String, marks: Seq[String]): Unit =
+      val top = t.get(s"bot${prefix}mark") match
+        case Some(Value.Text(s)) => s
+        case _                   => ""
 
-    t.set("topmark", top)
-    t.set("firstmark", marks.headOption.getOrElse(top))
-    t.set("botmark", marks.lastOption.getOrElse(top))
+      t.set(s"top${prefix}mark", top)
+      t.set(s"first${prefix}mark", marks.headOption.getOrElse(top))
+      t.set(s"bot${prefix}mark", marks.lastOption.getOrElse(top))
+
+    record("", boxes.collect { case m: MarkBox if !m.sub => m.text }.toSeq)
+    record("sub", boxes.collect { case m: MarkBox if m.sub => m.text }.toSeq)
 
     // cross-references resolve here too: a label or a contents entry learns its folio from the page it ships on.
     // pageno is still the shipping page's number at this point (DocumentMode advances it after the add). The walk

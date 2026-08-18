@@ -31,6 +31,36 @@
 // footer in its place.
 \def footline {\hss\font lmroman 10 regular \the\pageno\hss}
 
+// ---- Two-sided documents -------------------------------------------------------
+// \geometry twoside:on mirrors the text block on verso pages, so the wider binding
+// margin stays against the spine on both sides of the sheet. Two things a document
+// needs once it is printed that way are which side a page falls on and a way to open
+// material on a recto.
+//
+// \ifrecto{...}{...} takes its first branch on a recto (an odd folio) and its second
+// on a verso, so a running head can push a title to the outer edge or name a different
+// thing on each side of the opening. \cleardoublepage ends the page and, if that would
+// leave the next one on a verso, ships an empty one so what follows opens on a recto —
+// LaTeX's macro of the same name, and what a book's chapters open with. The page it
+// inserts carries neither head nor foot, so it comes out a genuinely blank leaf rather
+// than a numbered page with nothing on it.
+//
+// Both read \pageno, the folio the page prints rather than a count of sheets, which is
+// the same parity the engine mirrors the margins on — so a document that renumbers its
+// front matter keeps the two agreeing. \pageno is settled by the time \eject returns,
+// so a test written after one reads the folio of the page it just started.
+//
+// Neither test carries a space of its own — not even between a branch and the \else —
+// because a running head or foot is an hbox, and there a stray space is ink-free but
+// not free: it would push a folio set against the outer edge in off it by a word space.
+\def ifrecto r v {\if {\= {\calc{pageno % 2}} {1}}\r\else\v\fi}
+\def iftwoside y n {\if {\= {\calc{twoside}} {1}}\y\else\n\fi}
+
+\def cleardoublepage {
+  \eject
+  \ifrecto {} {{\def headline {}\def footline {}\hbox{}\eject}}
+}
+
 // ---- Drop caps -------------------------------------------------------------------
 // \dropcap[lines][gap]{L}{orem} opens a paragraph with an oversized initial: the
 // letter is enlarged until it spans the given number of lines — its top on the first
@@ -157,9 +187,18 @@
   \tocentry{\lvl}{\num}{\t}
 }
 
+// A section also records its title in the second mark stream, so a two-sided running
+// head can name the section on the recto while the first stream names the enclosing
+// division on the verso. Nothing prints it unless a \headline asks for it, so this
+// costs an article nothing; the book package's head is what reads it.
+//
+// A starred section marks too, as a starred chapter already does here — LaTeX leaves
+// its marks alone, but an unnumbered heading still tells a reader where they are, and
+// the alternative is a head that goes on naming the section before it.
 \def section * t {
   \clearwrap
   \vskip 14pt plus 3pt minus 1pt
+  \submark{\t}
   \if {\star}
     \leftline{\font lmroman 14 bold \t}
   \else

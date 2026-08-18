@@ -34,6 +34,15 @@
 \counterwithin{figure}{chapter}
 \counterwithin{table}{chapter}
 
+// ---- Opening a division --------------------------------------------------------
+// Chapters and parts start a fresh page. In a two-sided book they start a fresh
+// *recto*: the reader turns the leaf and the division begins on the right-hand page,
+// which is what \cleardoublepage gives — an extra blank leaf inserted when the page
+// would otherwise fall on a verso. One-sided there is no such thing as a wrong side,
+// so a plain \eject is right and no blank is ever wasted. The `twoside` register is
+// set by \geometry twoside:on (or by naming an inner/outer margin).
+\def openpage {\iftwoside{\cleardoublepage}{\eject}}
+
 // ---- Matter divisions ----------------------------------------------------------
 // chapnumbered says whether \chapter prints a number: only the main matter does.
 // foliostyle is the macro that renders the page number in the footer; front matter
@@ -42,7 +51,12 @@
 \set chapnumbered {1}
 \def foliostyle n {\arabic{\n}}
 
-\def footline {\hss\font lmroman 10 regular \foliostyle{\calc{pageno}}\hss}
+// The folio sits centred at the foot of a one-sided book. Two-sided it moves to the
+// outer corner — the edge the reader's thumb turns — which is the left of a verso and
+// the right of a recto, so the two folios of an opening sit at its outer edges.
+\def folio {\foliostyle{\calc{pageno}}}
+
+\def footline {\font lmroman 10 regular \iftwoside{\ifrecto{\hss\folio}{\folio\hss}}{\hss\folio\hss}}
 
 // Each division begins on a fresh page. \frontmatter restarts the folio at i and
 // leaves chapters unnumbered; \mainmatter restarts arabic folios at 1 and turns
@@ -86,9 +100,10 @@
 // vertically centred between fills. It steps the part counter but resets nothing
 // below it — parts group chapters without renumbering them.
 \def part t {
-  \eject
+  \openpage
   \stepcounter{part}
   \mark{}
+  \submark{}
   \vfil
   \centerline{\font lmroman 18 bold Part \Roman{\value{part}}}
   \vskip 24pt
@@ -107,7 +122,7 @@
 \def thechapter {\arabic{\value{chapter}}}
 
 \def chapter * t {
-  \eject
+  \openpage
   \vskip 36pt
   \if {\= {\calc{chapnumbered}} {1}}
     \if {\star}
@@ -120,15 +135,23 @@
   \fi
   \leftline{\font lmroman 24 bold \t}
   \mark{\t}
+  \submark{}
   \vskip 20pt plus 4pt minus 2pt
   \noindent\par
 }
 
 // ---- Running head --------------------------------------------------------------
-// The current chapter's title, set in italics and centred at the top of every page.
-// firstmark is the first mark reaching a page (or the previous page's last mark on a
-// page that sets none), so the head names whichever chapter the page belongs to.
-\def headline {\font lmroman 9 italic \hfil\the\firstmark\hfil}
+// One-sided, the head names the current chapter, set in italics and centred at the top
+// of every page. firstmark is the first mark reaching a page (or the previous page's
+// last mark on a page that sets none), so it names whichever chapter the page belongs
+// to whether or not the chapter opened there.
+//
+// Two-sided, the head is read across the opening rather than page by page, as a printed
+// book's is: the verso names the chapter and the recto the section within it, from the
+// two mark streams (\chapter marks the first, \section the second). A chapter clears
+// the second stream as it opens, so the recto of an opening before the first section
+// carries no head rather than the last section of the chapter before.
+\def headline {\font lmroman 9 italic \iftwoside{\ifrecto{\hfil\the\firstsubmark\hfil}{\hfil\the\firstmark\hfil}}{\hfil\the\firstmark\hfil}}
 
 // ---- Sectioning within a chapter -----------------------------------------------
 // A book numbers sections within the chapter, so a section reads 1.1 and a subsection

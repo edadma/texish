@@ -1524,10 +1524,14 @@ abstract class Typesetter:
       "floatsep"     -> Glue(currentFont.size * 0.85 * pt),
       "textfloatsep" -> Glue(currentFont.size * 1.4 * pt),
 
-      // mark state, maintained by the page builder as pages ship (see MarkBox)
-      "topmark"   -> "", // the last mark of the previous page
-      "firstmark" -> "", // the first mark on the page being shipped
-      "botmark"   -> "", // the last mark on the page being shipped
+      // mark state, maintained by the page builder as pages ship (see MarkBox). The two streams are tracked
+      // separately, so a two-sided running head can name a division from one and a subdivision from the other.
+      "topmark"      -> "", // the last mark of the previous page
+      "firstmark"    -> "", // the first mark on the page being shipped
+      "botmark"      -> "", // the last mark on the page being shipped
+      "topsubmark"   -> "", // the same three, for the second stream \submark writes
+      "firstsubmark" -> "",
+      "botsubmark"   -> "",
 
       // Knuth-Plass line breaking parameters
       "tolerance"       -> 200.0,  // max acceptable badness
@@ -1560,6 +1564,11 @@ abstract class Typesetter:
       // \hoffset/\voffset from the corner, so the margins are paperwidth − hoffset − hsize and likewise vertically.
       "paperwidth"   -> 8.5 * in,
       "paperheight"  -> 11 * in,
+
+      // Nonzero: the document is printed on both sides of the sheet, so the text block is mirrored on verso
+      // pages and the margin nearest the binding stays on the spine side throughout (see DocumentMode). Set by
+      // `\geometry twoside:on`, or by naming a margin `inner`/`outer`, which only means anything two-sided.
+      "twoside" -> 0.0,
     )
 
 end Typesetter

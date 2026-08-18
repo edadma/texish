@@ -374,6 +374,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
   //   \geometry left:1.5in right:1in top:1in bottom:1in
   //   \geometry textwidth:6in centering:on
   //   \geometry paper:a4 landscape:on
+  //   \geometry twoside:on inner:1in outer:0.6in   % printed both sides; the wide margin stays on the spine
   proc.registerPrimitive(
     "geometry",
     new Primitive {
@@ -400,9 +401,19 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
         if flag("landscape") && pw < ph then { val s = pw; pw = ph; ph = s }
         if flag("portrait") && pw > ph then { val s = pw; pw = ph; ph = s }
 
+        // Two-sided printing. `inner` and `outer` name the horizontal margins by their relation to the binding
+        // instead of by hand, and resolve the *recto* frame; the verso mirrors it when the page is composed, so
+        // the wide margin stays against the spine on both sides of the sheet (see DocumentMode.pageHoffset).
+        // Naming either one means nothing in a one-sided document, so either turns two-sided printing on unless
+        // `twoside` says otherwise explicitly. A \geometry that mentions none of the three leaves the current
+        // setting alone, so a later call adjusting the margins does not quietly make the document one-sided.
+        val sided   = opts.contains("inner") || opts.contains("outer")
+        val twoside = if opts.contains("twoside") then flag("twoside") else sided
+
         val centerAll = flag("centering")
         val (hoff, hs) = resolveGeometryAxis(pw, dim("margin").orElse(dim("hmargin")),
-          dim("left"), dim("right"), dim("textwidth").orElse(dim("width")),
+          dim("left").orElse(dim("inner")), dim("right").orElse(dim("outer")),
+          dim("textwidth").orElse(dim("width")),
           centerAll || flag("hcentering"), t.getNumber("hoffset"), t.getNumber("hsize"))
         val (voff, vs) = resolveGeometryAxis(ph, dim("margin").orElse(dim("vmargin")),
           dim("top"), dim("bottom"), dim("textheight").orElse(dim("height")),
@@ -417,6 +428,7 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
           t.setGlobal("hsize", hs)
           t.setGlobal("voffset", voff)
           t.setGlobal("vsize", vs)
+          if sided || opts.contains("twoside") then t.setGlobal("twoside", if twoside then 1.0 else 0.0)
           dim("headsep").foreach(t.setGlobal("headsep", _))
           dim("footskip").foreach(t.setGlobal("footskip", _))
     },

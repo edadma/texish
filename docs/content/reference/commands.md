@@ -306,6 +306,7 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\penalty` `\nobreak` `\eject` | page-break control (breaks are chosen by cost) |
 | `\topinsert` `\midinsert` `\botinsert` | plain-TeX edge floats (the `float` package builds `\figure`/`\table` on these) |
 | `\mark{…}` | drop a mark for running heads (`topmark`/`firstmark`/`botmark`) |
+| `\submark{…}` | the same in a second, independent stream (`topsubmark`/`firstsubmark`/`botsubmark`), so a two-sided head can name a division on one side of an opening and a subdivision on the other |
 
 The framing primitives read `fboxsep` / `fboxrule`; box and page behaviour is tuned through the
 [parameters](../parameters/) (`hsize`, `parindent`, `baselineskip`, `tolerance`, the page-break
@@ -390,8 +391,19 @@ the remainder, so the frame closes by construction.
 | `textwidth:` `textheight:<dim>` (or `width:`/`height:`) | the text-block size directly |
 | `centering:on` | centre the text block (`hcentering`/`vcentering` for one axis) |
 | `headsep:` `footskip:<dim>` | the running-head and running-foot gaps |
+| `twoside:on` | print both sides: the text block is mirrored on verso (even-folio) pages |
+| `inner:` `outer:<dim>` | the horizontal margins named by their relation to the binding; either one turns `twoside` on |
 
 Example: `\geometry paper:a4 margin:2cm` or `\geometry left:2in right:1in top:1.5in bottom:1in`.
+
+Two-sided, the frame given is the *recto*, and every verso reflects it about the page's vertical
+centre — the recto's outer margin becomes the verso's inner one, carrying the running head and foot
+with the body. So `\geometry paper:a5 inner:22mm outer:14mm` leaves 22mm against the spine on every
+page of the book, not on every odd one. The reflection is of the resolved frame, so it holds however
+the margins were specified, and it follows `pageno`, the folio a page prints, rather than a count of
+sheets. The `document` format's `\ifrecto{…}{…}` and `\cleardoublepage` build on the same parity:
+the first chooses a branch by side, the second opens the next material on a recto, inserting a blank
+leaf when it would otherwise fall on a verso.
 
 ## Page arrangement
 

@@ -217,6 +217,44 @@ The format ships a page number in the footer. Override `\footline`, or define a
 \def headline {\hfil\italic{Draft}\hfil}
 ```
 
+## Two-sided documents
+
+A document printed on both sides of the sheet is read as openings, not as a stack of pages,
+and the two halves of an opening are mirror images: the binding margin is on the right of a
+verso and the left of a recto. `\geometry twoside:on` says so, and the engine reflects the
+text block — body, running head and running foot together — on every even folio. Name the
+horizontal margins `inner` and `outer` and they read the way the reader sees them:
+
+```texish
+\geometry paper:a5 inner:22mm outer:14mm top:18mm bottom:20mm
+```
+
+That gives every page 22mm against the spine and 14mm at the outer edge, whichever side it
+falls on. Naming either margin turns two-sided printing on by itself, since neither means
+anything otherwise; `twoside:off` alongside them switches it off again.
+
+Two macros go with it. `\ifrecto{…}{…}` takes its first branch on a recto (an odd folio) and
+its second on a verso, so a head or foot can put a folio at the outer corner of each page:
+
+```texish
+\def footline {\ifrecto{\hss\the\pageno}{\the\pageno\hss}}
+```
+
+`\cleardoublepage` ends the page and, if the next one would be a verso, ships a blank leaf so
+what follows opens on a recto — the page a new chapter belongs on. The leaf it inserts carries
+neither head nor folio, so it comes out genuinely blank. The `book` format opens every chapter
+and part with it when the book is two-sided, and takes the next page when it is not.
+
+Both read `pageno`, the folio a page prints rather than a count of sheets, which is the parity
+the margins are mirrored on too — so a front matter renumbered to restart at 1 keeps the
+margins, the blank leaves and the printed folios all agreeing.
+
+A running head can also name a different thing on each side of the opening, which is what the
+second mark stream is for: `\mark` records the division and `\submark` the subdivision, read
+back as `firstmark` and `firstsubmark`. The `book` format marks chapters with the one and
+sections with the other, so a two-sided book names the chapter on the verso and the current
+section on the recto.
+
 See [figures and images](/guide/figures-and-images/) for `\figure`, `\caption`, and
 centering, and [text and markup](/guide/text-and-markup/) for emphasis, code, colour, and
 links.

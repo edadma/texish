@@ -128,6 +128,19 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // submark - 1 arg: the same, in a second, independent stream, read back as topsubmark/firstsubmark/botsubmark.
+  // Two streams are what a two-sided running head needs: a book marks the chapter with \mark and the section with
+  // \submark, and its head then names the chapter on the verso and the section on the recto, as LaTeX's
+  // \leftmark and \rightmark do. Neither stream disturbs the other, so a chapter clears the section showing under
+  // it by issuing an empty \submark itself.
+  proc.registerPrimitive(
+    "submark",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        t.add(MarkBox(Value.display(evalArg(proc, pos)), sub = true))
+    },
+  )
+
   // \label - 1 arg: bind a name to the current reference point so a later \ref/\pageref/\autoref/\nameref can name
   // its number, page, kind and title. The reference text is whatever `currentlabel` holds right now — a sectioning
   // command sets it to the section number, just as LaTeX's \refstepcounter sets \@currentlabel — captured here so a
