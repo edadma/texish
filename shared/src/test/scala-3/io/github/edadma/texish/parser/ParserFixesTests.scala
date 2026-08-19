@@ -77,8 +77,10 @@ class ParserFixesTests extends AnyFreeSpec with Matchers:
   }
 
   "\\ifx skips the interword spaces around its operands" in {
-    process("\\ifx \\a \\a{T}\\fi") shouldBe "T"
-    process("\\ifx \\a \\b{T}\\fi") shouldBe ""
+    // two names that mean different things, so the test turns on the spacing rather than on \ifx agreeing
+    // with itself (two undefined names now compare equal, as they do in TeX)
+    process("\\def a {x}\\def b {y}\\ifx \\a \\a{T}\\fi") shouldBe "T"
+    process("\\def a {x}\\def b {y}\\ifx \\a \\b{T}\\fi") shouldBe ""
   }
 
   "\\range accepts computed bounds" in {

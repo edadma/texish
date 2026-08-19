@@ -460,8 +460,8 @@
   \path{\plotAreaPath{\seq{\data}}}
 }}
 \def plotAreaPath items {
-  \set areaX0 {\head{\items}}
-  \moveto{\px{areaX0} \py{plotBaseY}}
+  \set areaXZero {\head{\items}}
+  \moveto{\px{areaXZero} \py{plotBaseY}}
   \plotAreaWalk{\items}
   \lineto{\px{plotAreaLastX} \py{plotBaseY}}
   \close}
@@ -647,10 +647,10 @@
   \plotTrendSums{\seq{\data}}
   \set tlSlope {\calc{(tlN * tlSxy - tlSx * tlSy) / (tlN * tlSxx - tlSx * tlSx)}}
   \set tlInt {\calc{(tlSy - tlSlope * tlSx) / tlN}}
-  \set tlY0 {\calc{tlSlope * plotXmin + tlInt}}
-  \set tlY1 {\calc{tlSlope * plotXmax + tlInt}}
+  \set tlYZero {\calc{tlSlope * plotXmin + tlInt}}
+  \set tlYOne {\calc{tlSlope * plotXmax + tlInt}}
   \nofill \stroke{\plotCurColor} \linewidth{1.4pt} \linetype{dashed}
-  \line{\px{plotXmin} \py{tlY0}  \px{plotXmax} \py{tlY1}}
+  \line{\px{plotXmin} \py{tlYZero}  \px{plotXmax} \py{tlYOne}}
   \linetype{solid}
 }}
 // The five sums a least-squares fit needs, each a \total of one \transform over the points

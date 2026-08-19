@@ -53,7 +53,7 @@ object AddToCounterPrimitive extends Primitive:
 object ValuePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val n = Counters.name(proc, pos)
-    proc.setResult(Value.Num(proc.counterValues.getOrElse(n, 0)))
+    valueResult(proc, Value.Num(proc.counterValues.getOrElse(n, 0)))
 
 /** `\counterwithin{child}{parent}` — make `child` reset to zero whenever `parent` steps (LaTeX's reset lists). */
 object CounterWithinPrimitive extends Primitive:

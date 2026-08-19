@@ -88,7 +88,7 @@ private[parser] def readMacroParams(proc: Processor, pos: CharReader): Vector[Ma
 
 object DefPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val name = proc.readIdentifier(pos)
+    val name = proc.readBindingName("def", pos)
     // capture and clear the \global flag up front, so evaluating params/body can't be confused by it
     val global = proc.handler.globalAssign
     proc.handler.globalAssign = false
@@ -120,7 +120,7 @@ object GlobalPrimitive extends Primitive:
   * the meaning *now*: a later redefinition of `oldname` does not change `newname`, as in TeX. */
 object LetPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val name   = proc.readIdentifier(pos)
+    val name   = proc.readBindingName("let", pos)
     val source = proc.readIdentifier(pos)
     val global = proc.handler.globalAssign
     proc.handler.globalAssign = false
@@ -135,7 +135,7 @@ object LetPrimitive extends Primitive:
 
 object SetPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    val name = proc.readIdentifier(pos)
+    val name = proc.readBindingName("set", pos)
     // capture and clear the \global flag before evaluating the value, so a nested assignment in the value
     // expression can't steal it
     val global = proc.handler.globalAssign
@@ -161,16 +161,61 @@ object IfPrimitive extends Primitive:
       val hasElse = proc.skipToElseOrFi()
       // If there's no else, we're done
 
+/** Two tokens are the same token where it matters for a comparison of meanings: their content, ignoring the source
+  * position each carries for error reporting. Two macros written identically in two places must compare equal, and
+  * their bodies never share positions. */
+private def sameToken(a: Token, b: Token): Boolean = (a, b) match
+  case (Token.Text(x, _), Token.Text(y, _))       => x == y
+  case (Token.ControlSeq(x, _), Token.ControlSeq(y, _)) => x == y
+  case (Token.Active(x, _), Token.Active(y, _))   => x == y
+  case (Token.Space(x, _), Token.Space(y, _))     => x == y
+  case (Token.BeginGroup(_), Token.BeginGroup(_)) => true
+  case (Token.EndGroup(_), Token.EndGroup(_))     => true
+  case (Token.Newline(_), Token.Newline(_))       => true
+  case (Token.EOF(_), Token.EOF(_))               => true
+  case _                                          => false
+
+private def sameTokens(a: Vector[Token], b: Vector[Token]): Boolean =
+  a.length == b.length && a.lazyZip(b).forall(sameToken)
+
+private def sameParams(a: Vector[MacroParam], b: Vector[MacroParam]): Boolean =
+  a.length == b.length && a.lazyZip(b).forall { (x, y) =>
+    x.name == y.name && ((x.kind, y.kind) match
+      case (ParamKind.Optional(d1), ParamKind.Optional(d2)) => sameTokens(d1, d2)
+      case (k1, k2)                                         => k1 == k2)
+  }
+
+/** Whether two control sequences *mean* the same thing, which is what TeX's `\ifx` asks.
+  *
+  * Two macros are alike when they take the same parameters and have the same body — so a `\let` copy compares equal
+  * to its original, and one macro compares equal to another written the same way. Two names with no meaning at all
+  * are alike, which is the test a package uses to ask whether an option was ever defined. A primitive is itself.
+  * Anything else is a value, and values compare as `\=` compares them.
+  *
+  * This used to compare the two *names* instead — `\ifx \a \b` was false however `\a` and `\b` were defined, and
+  * `\ifx \a \a` was true even for a name that meant nothing, so the one question `\ifx` exists to answer could not
+  * be asked. */
+private def sameMeaning(proc: Processor, n1: String, n2: String): Boolean =
+  (proc.handler.get(n1), proc.handler.get(n2)) match
+    case (Value.Macro(p1, b1, _), Value.Macro(p2, b2, _)) => sameParams(p1, p2) && sameTokens(b1, b2)
+    case (Value.Macro(_, _, _), _) | (_, Value.Macro(_, _, _)) => false
+    case (Value.Undefined, Value.Undefined) =>
+      (proc.lookupPrimitive(n1), proc.lookupPrimitive(n2)) match
+        case (Some(a), Some(b)) => a eq b
+        case (None, None)       => true
+        case _                  => false
+    case (a, b) => valuesEqual(a, b)
+
 object IfxPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    // \ifx compares the next two tokens for equality; interword spaces are separators, not operands, so
-    // `\ifx \a \a` compares the two control sequences rather than a space against the first of them
+    // \ifx compares the next two tokens; interword spaces are separators, not operands, so `\ifx \a \a`
+    // compares the two control sequences rather than a space against the first of them
     proc.skipSpaces()
     val tok1 = proc.nextToken()
     proc.skipSpaces()
     val tok2 = proc.nextToken()
     val equal = (tok1, tok2) match
-      case (Token.ControlSeq(n1, _), Token.ControlSeq(n2, _)) => n1 == n2
+      case (Token.ControlSeq(n1, _), Token.ControlSeq(n2, _)) => sameMeaning(proc, n1, n2)
       case (Token.Text(s1, _), Token.Text(s2, _))             => s1 == s2
       case _                                                   => false
 

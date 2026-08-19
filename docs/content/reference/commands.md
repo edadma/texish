@@ -631,10 +631,11 @@ linework and the run-time overlay cannot drift out of register.
 | `\def name args {body}` | define a macro (`[name:default]` optional args, `<name>` a verbatim argument) |
 | `\newenvironment name {begin}{end}` | define a `\begin`/`\end` environment |
 | `\let` `\global` `\gdef` | aliasing and global definitions |
-| `\if` `\ifx` `\else` `\fi` | conditionals |
+| `\if` `\else` `\fi` | conditionals |
+| `\ifx \a \b` | whether two names *mean* the same thing — alike macros, a `\let` copy and its original, two names that mean nothing at all |
 | `\calc{…}` `\+ \- \* \/` | arithmetic |
 | `\round{value}{places}` | round a number to a fixed number of decimals |
-| `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |
+| `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean); `\=` compares sequences and maps by contents, and counts an unset name and an empty value as alike |
 | `\for … \done` | iteration over a known sequence |
 | `\while {condition} {body}` | iteration until a condition goes false, re-read each time |
 | `\the\name` | output a variable's value (`\the\pageno`, `\the\hsize`, …) |

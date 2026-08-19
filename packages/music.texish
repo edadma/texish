@@ -358,9 +358,9 @@
 
     // A tie: this note's right edge opens a tie if it carries the mark (msTie is 0 or 1, used as a mask).
     \set gTie {\msTie}
-    \set gTieX0 {\msTieXop}
+    \set gTieXZero {\msTieXop}
     \set gTieY {\msTieY}
-    \set tieXcap {\calc{gTieX0 + gTie * (msX + msHeadW - gTieX0)}}
+    \set tieXcap {\calc{gTieXZero + gTie * (msX + msHeadW - gTieXZero)}}
     \set tieYn {\calc{gTieY + gTie * (ny - gTieY)}}
     \global\set msTieXop {\tieXcap}
     \global\set msTieY {\tieYn}
@@ -369,16 +369,16 @@
     // A slur: the first note in the run fixes the start point, every note in the run pushes out the end point.
     \set gSlur {\msSlur}
     \set gSlurStarted {\msSlurStarted}
-    \set gSlurX0 {\msSlurXst}
-    \set gSlurY0 {\msSlurYst}
-    \set gSlurX1 {\msSlurXen}
-    \set gSlurY1 {\msSlurYen}
+    \set gSlurXZero {\msSlurXst}
+    \set gSlurYZero {\msSlurYst}
+    \set gSlurXOne {\msSlurXen}
+    \set gSlurYOne {\msSlurYen}
     \set wantStart {\calc{gSlur * (1 - gSlurStarted)}}
-    \set slXstC {\calc{gSlurX0 + wantStart * (msX + msHeadW / 2 - gSlurX0)}}
-    \set slYstC {\calc{gSlurY0 + wantStart * (ny - gSlurY0)}}
+    \set slXstC {\calc{gSlurXZero + wantStart * (msX + msHeadW / 2 - gSlurXZero)}}
+    \set slYstC {\calc{gSlurYZero + wantStart * (ny - gSlurYZero)}}
     \set slStartedn {\calc{gSlurStarted + wantStart}}
-    \set slXenC {\calc{gSlurX1 + gSlur * (msX + msHeadW / 2 - gSlurX1)}}
-    \set slYenC {\calc{gSlurY1 + gSlur * (ny - gSlurY1)}}
+    \set slXenC {\calc{gSlurXOne + gSlur * (msX + msHeadW / 2 - gSlurXOne)}}
+    \set slYenC {\calc{gSlurYOne + gSlur * (ny - gSlurYOne)}}
     \global\set msSlurXst {\slXstC}
     \global\set msSlurYst {\slYstC}
     \global\set msSlurStarted {\slStartedn}
@@ -387,8 +387,8 @@
 
     // A hairpin: the first armed note fixes the left end; msNoteX above already tracks the last note, the right end.
     \set gHairArmed {\msHairArmed}
-    \set gHairX0 {\msHairXst}
-    \set hairXcap {\calc{gHairX0 + gHairArmed * (msX + msHeadW / 2 - gHairX0)}}
+    \set gHairXZero {\msHairXst}
+    \set hairXcap {\calc{gHairXZero + gHairArmed * (msX + msHeadW / 2 - gHairXZero)}}
     \global\set msHairXst {\hairXcap}
     \global\set msHairArmed {0}
 
@@ -446,22 +446,22 @@
   \fi}
 
 // Measure the beam line for the run that starts at the head of `items` and ends at the next `]`. The beam is an
-// up-stem beam above the staff; its line is recorded as a start height (msBeamY0, at the first note) and a slope
+// up-stem beam above the staff; its line is recorded as a start height (msBeamYZero, at the first note) and a slope
 // (msBeamDy, the rise from one note to the next), so each note finds the beam at its own position. The slope
 // follows the run's first-to-last pitch but is clamped so a wide leap does not tilt the beam wildly, and the
 // whole line is then shifted up so even the highest interior note keeps a stem of at least msBeamMin.
 \def musicBeamLine items {
   \global\set bmCount {0}
   \global\set bmFirst {0}
-  \global\set bmS0 {0}
+  \global\set bmSZero {0}
   \global\set bmSN {0}
   \musicBeamMeasure{\items}
-  \set bmNy0 {\calc{msBottom + bmS0 * g / 2}}
-  \set bmRise {\calc{(bmSN - bmS0) * g / 2}}
+  \set bmNyZero {\calc{msBottom + bmSZero * g / 2}}
+  \set bmRise {\calc{(bmSN - bmSZero) * g / 2}}
   \set bmCap {\calc{1.5 * g}}
   \if {\> {\bmRise} {\bmCap}} \set bmRise {\bmCap} \fi
   \if {\< {\bmRise} {\calc{0 - bmCap}}} \set bmRise {\calc{0 - bmCap}} \fi
-  \global\set msBeamY0 {\calc{bmNy0 + 3.3 * g}}
+  \global\set msBeamYZero {\calc{bmNyZero + 3.3 * g}}
   \global\set msBeamDy {0}
   \if {\> {\bmCount} {1}} \global\set msBeamDy {\calc{bmRise / (bmCount - 1)}} \fi
   // Raise the line until every note clears it by at least msBeamMin staff spaces, so an interior peak (an arch
@@ -469,7 +469,7 @@
   \global\set bmJ {0}
   \global\set bmShift {0}
   \musicBeamClear{\items}
-  \global\set msBeamY0 {\calc{msBeamY0 + bmShift}}
+  \global\set msBeamYZero {\calc{msBeamYZero + bmShift}}
   \global\set msBeamJ {0}}
 
 // First pass: count the notes in the run and record the diatonic step of its first and last note.
@@ -480,7 +480,7 @@
       \musicParse{\tok}
       \set li {\mapget musicLetters {\msLetter}}
       \set bs {\calc{msOct * 7 + li - msBase}}
-      \if {\= {\bmFirst} {0}} \global\set bmS0 {\bs} \global\set bmFirst {1} \fi
+      \if {\= {\bmFirst} {0}} \global\set bmSZero {\bs} \global\set bmFirst {1} \fi
       \global\set bmSN {\bs}
       \global\set bmCount {\calc{bmCount + 1}}
       \musicBeamMeasure{\tail{\items}}
@@ -497,7 +497,7 @@
       \set li {\mapget musicLetters {\msLetter}}
       \set bs {\calc{msOct * 7 + li - msBase}}
       \set bny {\calc{msBottom + bs * g / 2}}
-      \set bby {\calc{msBeamY0 + bmJ * msBeamDy}}
+      \set bby {\calc{msBeamYZero + bmJ * msBeamDy}}
       \set bneed {\calc{bny + 2.5 * g - bby}}
       \if {\> {\bneed} {\bmShift}} \global\set bmShift {\bneed} \fi
       \global\set bmJ {\calc{bmJ + 1}}
@@ -511,7 +511,7 @@
 \def musicBeamedStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemX {\calc{msX + msHeadW - msStemHalf}}
-  \set msBeamYcur {\calc{msBeamY0 + msBeamJ * msBeamDy}}
+  \set msBeamYcur {\calc{msBeamYZero + msBeamJ * msBeamDy}}
   \line{\msStemX \calc{ny + msStemAttach}  \msStemX \msBeamYcur}
   \if {\= {\msBeamPrev} {1}}
     \linewidth{\calc{0.5 * g}}
@@ -621,11 +621,11 @@
     \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
     \set slxLo {\msSlurXst}
     \set slxHi {\msSlurXen}
-    \set sly0g {\msSlurYst}
-    \set sly1g {\msSlurYen}
+    \set slyZerog {\msSlurYst}
+    \set slyOneg {\msSlurYen}
     \set slDx {\calc{slxHi - slxLo}}
-    \set slYlo {\calc{sly0g - 1.1 * g}}
-    \set slYhi {\calc{sly1g - 1.1 * g}}
+    \set slYlo {\calc{slyZerog - 1.1 * g}}
+    \set slYhi {\calc{slyOneg - 1.1 * g}}
     \set slPeak {\calc{(slYlo + slYhi) / 2 - 1.4 * g}}
     \path{ \moveto{\slxLo \slYlo} \curveto{\calc{slxLo + slDx * 0.25} \slPeak  \calc{slxLo + slDx * 0.75} \slPeak  \slxHi \slYhi} }
   \fi}
@@ -750,14 +750,14 @@
   \set ds {\cat{\digits}{}}
   \set n {\size{\ds}}
   \set cell {\calc{1.4 * g}}
-  \set x0 {\calc{tsCenterX - n * cell / 2}}
+  \set xZero {\calc{tsCenterX - n * cell / 2}}
   \set i {0}
   \musicTimeDigits{\ds}{\y}}
 
 \def musicTimeDigits s y {
   \if {\size{\s}}
     \set d {\head{\s}}
-    \set cx {\calc{x0 + i * cell + cell / 2}}
+    \set cx {\calc{xZero + i * cell + cell / 2}}
     \fontglyph anchor:center {\cx \y}{\musicfont}{\fs}{\calc{cpTimeDigitBase + \d}}
     \set i {\calc{i + 1}}
     \musicTimeDigits{\tail{\s}}{\y}

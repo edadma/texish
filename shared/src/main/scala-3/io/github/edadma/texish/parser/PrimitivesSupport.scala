@@ -12,6 +12,24 @@ class SimplePrimitive(action: () => Any) extends Primitive:
 private[parser] def evalArg(proc: Processor, pos: CharReader): Value =
   proc.evalArgumentExpr(pos)
 
+/** Hand back a value from a primitive: make it the result, and in document position typeset it — unless it is a
+  * container, whose display is debug output rather than content.
+  *
+  * This is the one rule for where a value goes, and it exists because the primitives disagreed. Most both set and
+  * printed, so they worked written on their own as well as inside `\set` and `\if`; but `\mapget`, `\value`,
+  * `\cat`, `\contains` and `\maphas` set a result and printed nothing, so `\cat{a}{b}` in a paragraph typeset
+  * nothing at all and gave no error — while `\reverse` and `\slice` printed `[b, a]` when handed a sequence,
+  * which is the debug form `\sort` and `\filter` were careful not to write.
+  *
+  * A sequence or a map is therefore silent whatever produced it, and everything else — a number, a string, a
+  * boolean, a dimension, an absence — is written. `\the` is how a container is deliberately shown.
+  */
+private[parser] def valueResult(proc: Processor, v: Value): Unit =
+  proc.setResult(v)
+  v match
+    case Value.Seq(_) | Value.Map(_) => ()
+    case _                           => proc.handler.text(Value.display(v))
+
 // An inline bitmap built by \defbitmap: the backend image handle (opaque) plus its pixel size, stored as a
 // Value.Native so \usebitmap can place it.
 private[parser] case class InlineBitmap(handle: Any, width: Int, height: Int)

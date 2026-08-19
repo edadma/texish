@@ -58,8 +58,7 @@ object OklchPrimitive extends Primitive:
     val hr        = math.toRadians(h)
     val (r, g, b) = Oklab.toRgb(l, c * math.cos(hr), c * math.sin(hr))
     val result    = Oklab.hex(r, g, b)
-    proc.setResult(Value.Text(result))
-    proc.handler.text(result)
+    valueResult(proc, Value.Text(result))
 
 /** \oklchof{color} — the Oklch coordinates of a colour, as the three-element sequence `L C h` (lightness, chroma,
   * hue in degrees). Take its `\head` for the lightness, adjust it, and rebuild with `\oklch` to derive a lighter or
@@ -70,4 +69,4 @@ object OklchOfPrimitive extends Primitive:
     val (l, a, b) = Oklab.toOklab(col.red, col.green, col.blue)
     val c         = math.sqrt(a * a + b * b)
     val h         = { val d = math.toDegrees(math.atan2(b, a)); if d < 0 then d + 360 else d }
-    proc.setResult(Value.Seq(Vector(Value.Num(l), Value.Num(c), Value.Num(h))))
+    valueResult(proc, Value.Seq(Vector(Value.Num(l), Value.Num(c), Value.Num(h))))

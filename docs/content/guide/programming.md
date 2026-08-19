@@ -17,8 +17,7 @@ and it stays what it is.
 
 ## Variables
 
-`\set` binds a name; `\the` prints one. A name is **letters only** — see [the naming
-trap](#names-are-letters-only) below.
+`\set` binds a name; `\the` prints one. A name is [**letters only**](#names-are-letters-only).
 
 ```texish
 \set author {Ada Lovelace}
@@ -60,10 +59,10 @@ degrees (`sind`, `cosd`, `atan2d`), `sqrt cbrt exp ln log log2 logb pow hypot`, 
 becomes `0.3`); `\fixed{value}{places}` gives exactly that many decimals, zeros kept, for a column of
 prices. The simple `\+ \- \* \/` also exist, but `\calc` is almost always clearer.
 
-> **`\calc` reads its argument as an expression *string*.** A variable works in it, spelled either
-> way — `\calc{n * 2}` and `\calc{\n * 2}` both resolve the variable `n`. **A primitive call does
-> not**: `\calc{\nth{\p}{1} * 2}` flattens to the identifier `nthp1` and fails with *unknown name*.
-> Bind what you need to a name first.
+`\calc` reads its argument as an expression *string*, so a variable works in it spelled either way —
+`\calc{n * 2}` and `\calc{\n * 2}` both resolve the variable `n`. A call works too, as long as its
+arguments are braced: `\calc{\nth{\p}{1} * 2}` and `\calc{\total{\xs} / \size{\xs}}` evaluate the
+call and use what it produced. A call that gives something other than a number is an error.
 
 ## Conditionals
 
@@ -239,30 +238,54 @@ brackets compiles, runs, and silently takes the default.
 `\let` aliases a name to whatever another means right now, `\gdef` defines globally, and
 `\newenvironment` pairs begin and end code for `\begin`/`\end`.
 
-> **A macro returns a value only when its body is a single value-producing expression.** `\def
-> double n {\calc{\n * 2}}` composes inside `\set` and `\calc`; a body that has to bind something
-> first does not, and a package that needs one writes its result to a `\global` variable instead.
-> This is the language's sharpest remaining edge.
+**A macro used as a value is worth what its body computes**, however many statements that takes:
+
+```texish
+\def area w h {\set inner {\calc{\w - 2 * margin}}\calc{\inner * \h}}
+\set a {\area{60}{40}}
+```
+
+The body runs as it would in the document, and its value is the last value anything in it produced —
+so a body that has to bind something before it can compute is fine, and a branch that yields a
+sequence yields the sequence rather than the text of it. Where the body writes more than that one
+value, the whole of what it wrote is its value: `\def label {Item \the\n}` is worth `Item 3`, not
+`3`.
+
+## Where a value goes
+
+A primitive that produces a value both hands it back — so it composes inside `\set`, `\if` and
+`\calc` — and typesets it, so writing it on its own puts it in the document. The exception is a
+**sequence or a map**, which is silent: its `[a, b]` form is for reading while debugging, not for
+setting. `\the` shows one deliberately.
+
+```texish
+\cat{Chapter }{Nine}        // sets "Chapter Nine"
+\sort{\seq{b a}}            // sets nothing; the sequence is still the value
+\the\sorted                 // shows [a, b]
+```
+
+## Names are letters only
+
+A control-sequence name is letters, and `\set`, `\def` and `\let` refuse anything else: `\set count2
+{5}` is an error, because `\count2` would tokenize as `\count` followed by the text `2` and the
+value could never be read back. A name that is *spelled out* rather than written as a control
+sequence — a counter, a map key, a bare identifier inside `\calc` — may carry a digit, since it is
+read back by the same spelling that made it.
+
+## Testing for "no value"
+
+`\= {\x} {}` is **true** when `\x` has never been set, and stays true when it is set to `{}`: an
+unset name and an empty value are both absence, and no document can tell them apart. A lookup that
+finds nothing — `\mapget` of a missing key, `\nth` past the end, `\minimum` of an empty sequence —
+answers undefined, which is absence too, and is falsy so `\if` tests it directly.
+
+`\ifx` asks a different question: whether two *names* mean the same thing. Two macros defined alike
+are equal, a `\let` copy equals its original, and two names that mean nothing at all are equal —
+which is how a package asks whether something was ever defined.
 
 ## Traps worth knowing
 
-These are the four that have actually cost time.
-
-### Names are letters only
-
-A control-sequence name is letters — but `\set` and `\def` will happily accept a digit and then the
-name can never be read back. `\set count2 {5}` succeeds, and `\count2` tokenizes as `\count`
-followed by the text `2`. It shows up as a *wrong value*, not an error. **Never put a digit in a
-name.**
-
-### An empty value is not "no value"
-
-`\= {\x} {}` is **false** even when `\x` is unset, because `{}` is nil and two nils fall through to a
-numeric comparison that fails. Use an explicit sentinel for "no value", or test with
-`\> {\size{\x}} {0}`.
-
-Relatedly, a lookup that finds nothing — `\mapget` of a missing key, `\nth` past the end, `\minimum`
-of an empty sequence — answers **undefined**, which is falsy and tests cleanly with `\if`.
+These two have actually cost time, and both are about typesetting rather than about values.
 
 ### A macro that runs inside a paragraph must be one line
 

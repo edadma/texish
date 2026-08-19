@@ -274,8 +274,8 @@
       \if {\= {\mapget rrKind {\ws}}{S}}
         \if {\= {\mapget rrCount {\ws}}{2}}
           \set b {\mapget rrChild {\calc{\ws * 1000}}}
-          \set a2 {\mapget rrChild {\calc{\ws * 1000 + 1}}}
-          \rrLeafEq{\a}{\a2}
+          \set aTwo {\mapget rrChild {\calc{\ws * 1000 + 1}}}
+          \rrLeafEq{\a}{\aTwo}
           \if {\= {\rrEq}{1}}
             \global\mapset rrKind {\sid}{L}
             \global\mapset rrSepItem {\sid}{\a}

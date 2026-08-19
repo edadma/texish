@@ -64,22 +64,22 @@
   \set calLeapShift {\calc{floor((14 - calM) / 12)}}
   \set calCongYear {\calc{calY - calLeapShift}}
   \set calCongMonth {\calc{calM + 12 * calLeapShift - 2}}
-  \set calDow1 {\calc{(1 + calCongYear + floor(calCongYear / 4) - floor(calCongYear / 100) + floor(calCongYear / 400) + floor(31 * calCongMonth / 12)) % 7}}
+  \set calDowOne {\calc{(1 + calCongYear + floor(calCongYear / 4) - floor(calCongYear / 100) + floor(calCongYear / 400) + floor(31 * calCongMonth / 12)) % 7}}
 
   // Leap year by the Gregorian rule, expressed without booleans: a divisor test gives 1
   // when the remainder is zero and 0 otherwise, and the rule is divisible-by-4, except
   // centuries, except every fourth century.
-  \set calDiv4 {\calc{1 - min(1, calY % 4)}}
-  \set calDiv100 {\calc{1 - min(1, calY % 100)}}
-  \set calDiv400 {\calc{1 - min(1, calY % 400)}}
-  \set calLeap {\calc{calDiv4 * (1 - calDiv100) + calDiv400}}
+  \set calDivFour {\calc{1 - min(1, calY % 4)}}
+  \set calDivHundred {\calc{1 - min(1, calY % 100)}}
+  \set calDivFourHundred {\calc{1 - min(1, calY % 400)}}
+  \set calLeap {\calc{calDivFour * (1 - calDivHundred) + calDivFourHundred}}
 
   \set calDays {\mapget calmonthdays {\calM}}
   \if {\= {\calM} {2}} \set calDays {\calc{28 + calLeap}} \fi
 
   // The column the 1st falls in (0-based from the configured week start), and the number
   // of week-rows the month spans once the leading blanks are taken into account.
-  \set calOffset {\calc{(calDow1 - calweekstart + 7) % 7}}
+  \set calOffset {\calc{(calDowOne - calweekstart + 7) % 7}}
   \set calRows {\calc{floor((calOffset + calDays - 1) / 7) + 1}}
 
   \set calMonthName {\mapget calmonthnames {\calM}}

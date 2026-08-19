@@ -111,4 +111,4 @@ object CatPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val a = Value.display(proc.evalStringArgument(pos))
     val b = Value.display(proc.evalStringArgument(pos))
-    proc.setResult(Value.Text(a + b))
+    valueResult(proc, Value.Text(a + b))

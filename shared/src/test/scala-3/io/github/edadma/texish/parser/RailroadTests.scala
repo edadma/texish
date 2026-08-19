@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, PictureBox, HeadlessTypesetter, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, HBox, PictureBox, PictureOp, HeadlessTypesetter, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -28,6 +28,29 @@ class RailroadTests extends AnyFreeSpec with Matchers:
     registerTypesettingPrimitives(proc, handler)
     proc.process(src)
     t
+
+  /** The text of every box the picture places, so a test can say which labels the diagram drew and how often. */
+  private def labels(p: PictureBox): Vector[String] =
+    def text(b: Box): String = b match
+      case c: CharBox => c.text
+      case h: HBox    => h.boxes.map(text).mkString
+      case _          => ""
+    p.displayList.collect { case PictureOp.Place(b, _, _, _) => text(b) }.filter(_.nonEmpty)
+
+  "a separated list folds into one item on the line with its separator on a return loop" in {
+    // A ("," A)* is drawn the bottlecaps way — the item once, with the comma looping back — rather than as the
+    // literal "A then zero-or-more of (comma A)". The fold is decided by comparing the two leaves, and that
+    // comparison read one of them through a name carrying a digit, which tokenizes as the name without the
+    // digit followed by text: the two leaves never matched, and the whole idiom was dead.
+    val folded = labels(run("\\use{railroad}\\railroad{ list ::= item (\",\" item)* }").pictures.head)
+    folded.count(_ == "item") shouldBe 1
+    folded should contain(",")
+
+    // the same grammar written out with two distinct items has nothing to fold, and draws both
+    val literal = labels(run("\\use{railroad}\\railroad{ pair ::= item (\",\" other)* }").pictures.head)
+    literal.count(_ == "item") shouldBe 1
+    literal.count(_ == "other") shouldBe 1
+  }
 
   "a single-rule grammar produces one diagram" in {
     val t = run("\\use{railroad}\\railroad{greeting ::= \"hello\" name}")

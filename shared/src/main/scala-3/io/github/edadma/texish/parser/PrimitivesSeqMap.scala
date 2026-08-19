@@ -32,7 +32,7 @@ private def splitItems(groupTokens: Vector[Token], handler: Handler): Vector[Val
 object SeqPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val groupTokens = stripWrappingGroups(proc.readArgument(pos))
-    proc.setResult(Value.Seq(splitItems(groupTokens, proc.handler)))
+    valueResult(proc, Value.Seq(splitItems(groupTokens, proc.handler)))
 
 /** \message{text} — expand the argument and write the resulting text to standard error at once, as TeX's \message
   * does, for tracing what a document or a macro-heavy package is doing while it runs. The argument is processed like
@@ -54,7 +54,7 @@ object RangePrimitive extends Primitive:
     val start = bound("start")
     val end   = bound("end")
     val items = (start to end).map(n => Value.Num(n)).toVector
-    proc.setResult(Value.Seq(items))
+    valueResult(proc, Value.Seq(items))
 
 // The Text cases below work in code points, not chars, so a string starting or ending in an astral symbol
 // (an emoji, a math alphanumeric) yields the whole symbol rather than half a surrogate pair.
@@ -66,8 +66,7 @@ object HeadPrimitive extends Primitive:
       case Value.Seq(items) if items.nonEmpty => items.head
       case Value.Text(s) if s.nonEmpty => Value.Text(codePointStrings(s).head)
       case _ => Value.Nil
-    proc.setResult(result)
-    proc.handler.text(Value.display(result))
+    valueResult(proc, result)
 
 object TailPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
@@ -77,7 +76,7 @@ object TailPrimitive extends Primitive:
       case Value.Text(s) if s.nonEmpty => Value.Text(s.substring(codePointStrings(s).head.length))
       case _ => Value.Nil
     // value (usable as \tail in an expression) and the legacy `seq` variable it has always set
-    proc.setResult(result)
+    valueResult(proc, result)
     proc.handler.set("seq", result)
 
 object LastPrimitive extends Primitive:
@@ -87,8 +86,7 @@ object LastPrimitive extends Primitive:
       case Value.Seq(items) if items.nonEmpty => items.last
       case Value.Text(s) if s.nonEmpty => Value.Text(codePointStrings(s).last)
       case _ => Value.Nil
-    proc.setResult(result)
-    proc.handler.text(Value.display(result))
+    valueResult(proc, result)
 
 // ============ MAP/OBJECT CREATION ============
 
@@ -112,7 +110,7 @@ object MapPrimitive extends Primitive:
         key -> v
     }.to(scala.collection.immutable.VectorMap)
 
-    proc.setResult(Value.Map(map))
+    valueResult(proc, Value.Map(map))
 
 /** `\mapset name {key} {value}` — store `value` under a computed `key` in the map variable `name` (creating the
   * map if absent). The key is any expression, so it can be built with `\calc`/string ops — this is texish's answer
@@ -140,7 +138,7 @@ object MapGetPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = proc.readIdentifier(pos)
     val key  = Value.display(proc.evalArgumentExpr(pos))
-    proc.setResult(proc.handler.get(name) match
+    valueResult(proc, proc.handler.get(name) match
       case Value.Map(m) => m.getOrElse(key, Value.Undefined)
       case _            => Value.Undefined)
 
@@ -149,6 +147,6 @@ object MapHasPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val name = proc.readIdentifier(pos)
     val key  = Value.display(proc.evalArgumentExpr(pos))
-    proc.setResult(Value.Bool(proc.handler.get(name) match
+    valueResult(proc, Value.Bool(proc.handler.get(name) match
       case Value.Map(m) => m.contains(key)
       case _            => false))

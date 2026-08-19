@@ -22,8 +22,8 @@
 // two one-argument macros, \mapx and \mapy, exactly parallel to plot's \px / \py. The
 // formula is
 //
-//     mx = radians(lon)                       X = (mx - mapMx0) * mapScale
-//     my = ln(tan(pi/4 + radians(lat)/2))     Y = (my - mapMy0) * mapScale
+//     mx = radians(lon)                       X = (mx - mapMxZero) * mapScale
+//     my = ln(tan(pi/4 + radians(lat)/2))     Y = (my - mapMyZero) * mapScale
 //
 // evaluated by \calc (which has rad, ln, tan and pi). North is up and page y grows up,
 // so no flip is needed. Because the projection is a plain macro, an author writes real
@@ -80,23 +80,23 @@
 // \mapbounds{lon0}{lat0}{lon1}{lat1} — declare the geographic window (south-west corner
 // lon0/lat0, north-east corner lon1/lat1) and derive the projection. Everything is stored
 // \global so it survives the \for scopes inside \map. mapW / mapH are the picture size;
-// mapScale, mapMx0, mapMy0 are the projection constants \mapx / \mapy read; mapClat is the
+// mapScale, mapMxZero, mapMyZero are the projection constants \mapx / \mapy read; mapClat is the
 // centre latitude, used by \scalebar; mapPtPerLon is page points per degree of longitude,
 // constant across the map because x is linear in longitude.
 \def mapbounds lonw lats lone latn {
-  \global\set mapLon0 {\calc{\lonw}}
-  \global\set mapLat0 {\calc{\lats}}
-  \global\set mapLon1 {\calc{\lone}}
-  \global\set mapLat1 {\calc{\latn}}
-  \global\set mapClat {\calc{(mapLat0 + mapLat1) / 2}}
+  \global\set mapLonZero {\calc{\lonw}}
+  \global\set mapLatZero {\calc{\lats}}
+  \global\set mapLonOne {\calc{\lone}}
+  \global\set mapLatOne {\calc{\latn}}
+  \global\set mapClat {\calc{(mapLatZero + mapLatOne) / 2}}
 
-  \global\set mapMx0 {\calc{rad(mapLon0)}}
-  \global\set mapMy0 {\calc{ln(tan(pi/4 + rad(mapLat0)/2))}}
-  \global\set mapMx1 {\calc{rad(mapLon1)}}
-  \global\set mapMy1 {\calc{ln(tan(pi/4 + rad(mapLat1)/2))}}
+  \global\set mapMxZero {\calc{rad(mapLonZero)}}
+  \global\set mapMyZero {\calc{ln(tan(pi/4 + rad(mapLatZero)/2))}}
+  \global\set mapMxOne {\calc{rad(mapLonOne)}}
+  \global\set mapMyOne {\calc{ln(tan(pi/4 + rad(mapLatOne)/2))}}
 
-  \set mapMW {\calc{mapMx1 - mapMx0}}
-  \set mapMH {\calc{mapMy1 - mapMy0}}
+  \set mapMW {\calc{mapMxOne - mapMxZero}}
+  \set mapMH {\calc{mapMyOne - mapMyZero}}
   \set mapScaleW {\calc{mapMaxW / mapMW}}
   \set mapScaleH {\calc{mapMaxH / mapMH}}
   \global\set mapScale {\mapScaleW}
@@ -110,8 +110,8 @@
 // \mapx{lon} / \mapy{lat} — project a coordinate to a page point. Each takes one number
 // (or a variable name, resolved by \calc). Separable Web Mercator: x is linear in radians
 // of longitude, y is the log-tangent of latitude, both shifted to the window's SW corner.
-\def mapx lon {\calc{(rad(\lon) - mapMx0) * mapScale}}
-\def mapy lat {\calc{(ln(tan(pi/4 + rad(\lat)/2)) - mapMy0) * mapScale}}
+\def mapx lon {\calc{(rad(\lon) - mapMxZero) * mapScale}}
+\def mapy lat {\calc{(ln(tan(pi/4 + rad(\lat)/2)) - mapMyZero) * mapScale}}
 
 // ================================================================================
 // The map frame
@@ -217,17 +217,17 @@
 // the window; the count is computed so the \for covers them without overshooting the frame.
 \def graticule [step:1] {
   \nofill \stroke{\mapborder} \linewidth{0.3pt} \linetype{dotted}
-  \set grLo0 {\calc{ceil(mapLon0 / (\step)) * (\step)}}
-  \set grNLon {\calc{floor((mapLon1 - grLo0) / (\step) + 0.0001)}}
+  \set grLoZero {\calc{ceil(mapLonZero / (\step)) * (\step)}}
+  \set grNLon {\calc{floor((mapLonOne - grLoZero) / (\step) + 0.0001)}}
   \for\i{\range{0}{\grNLon}}{
-    \set grLon {\calc{grLo0 + \i * (\step)}}
+    \set grLon {\calc{grLoZero + \i * (\step)}}
     \set grX {\mapx{\grLon}}
     \line{\grX 0  \grX \mapH}
   }
-  \set grLa0 {\calc{ceil(mapLat0 / (\step)) * (\step)}}
-  \set grNLat {\calc{floor((mapLat1 - grLa0) / (\step) + 0.0001)}}
+  \set grLaZero {\calc{ceil(mapLatZero / (\step)) * (\step)}}
+  \set grNLat {\calc{floor((mapLatOne - grLaZero) / (\step) + 0.0001)}}
   \for\j{\range{0}{\grNLat}}{
-    \set grLat {\calc{grLa0 + \j * (\step)}}
+    \set grLat {\calc{grLaZero + \j * (\step)}}
     \set grY {\mapy{\grLat}}
     \line{0 \grY  \mapW \grY}
   }

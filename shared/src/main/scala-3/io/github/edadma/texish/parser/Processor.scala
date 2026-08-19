@@ -16,8 +16,10 @@ class Processor(val handler: Handler):
   // Token sources form a stack - macro expansions push new sources
   private val tokenSources = mutable.Stack[TokenSource]()
 
-  // Result from last expression evaluation (used by \for, etc.)
-  private var lastResult: Value = Value.Nil
+  // The value the most recent value-producing primitive set, if any. None means "nothing produced a value", which
+  // is a different fact from "produced Nil" — the expression evaluator falls back to the source text on the first
+  // and must not on the second, or a primitive could never legitimately answer nothing.
+  private var lastResult: Option[Value] = None
 
   // Built-in primitives
   private val primitives = mutable.Map[String, Primitive]()
@@ -570,7 +572,13 @@ class Processor(val handler: Handler):
       case t => Vector(t)
     }
 
+  /** Write a value in document position and make it the current result. Both halves matter: the text is what the
+    * document sees, and the result is what an enclosing expression composes with — so `\def total {\subtotal}`
+    * yields the number, not the characters it printed. Every value-producing primitive already does exactly this;
+    * a bare variable reference is the simplest one of them and follows the same contract.
+    */
   private def outputValue(v: Value): Unit =
+    setResult(v)
     val s = Value.display(v)
     if s.nonEmpty then handler.text(s)
 
@@ -778,12 +786,21 @@ class Processor(val handler: Handler):
     tokenSources.size > minDepth && !tokenSources.top.atEnd
 
   /** Set the result value (used by expression-producing primitives) */
-  def setResult(v: Value): Unit = lastResult = v
+  def setResult(v: Value): Unit = lastResult = Some(v)
 
-  /** Get and clear the last result */
+  /** Forget any result, so what [[takeResult]] answers next is what the code run in between produced. */
+  def clearResult(): Unit = lastResult = None
+
+  /** Get and clear the last result, reading "nothing was produced" as Nil. */
   def getResult: Value =
     val r = lastResult
-    lastResult = Value.Nil
+    lastResult = None
+    r.getOrElse(Value.Nil)
+
+  /** Get and clear the last result, distinguishing "produced Nil" (`Some(Nil)`) from "produced nothing" (`None`). */
+  def takeResult: Option[Value] =
+    val r = lastResult
+    lastResult = None
     r
 
   /** Evaluate an argument as an expression and return the result value.
@@ -846,13 +863,12 @@ class Processor(val handler: Handler):
             // Try executing as primitive that sets a result
             primitives.get(name) match
               case Some(prim) =>
-                lastResult = Value.Nil
+                lastResult = None
                 val savedSuppress = handler.outputSuppressed
                 handler.suppressOutput(true)
                 try prim.execute(this, csPos)
                 finally handler.suppressOutput(savedSuppress)
-                val r = getResult
-                if r == Value.Nil then Value.Undefined else r
+                takeResult.getOrElse(Value.Undefined)
               case None => Value.Undefined
           case v => v
 
@@ -882,14 +898,13 @@ class Processor(val handler: Handler):
                 val rest       = tokens.tail
                 val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
                 restSource.foreach(tokenSources.push)
-                lastResult = Value.Nil
+                lastResult = None
                 val savedSuppress = handler.outputSuppressed
                 handler.suppressOutput(true)
                 try prim.execute(this, csPos)
                 finally handler.suppressOutput(savedSuppress)
                 restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
-                val r = getResult
-                if r == Value.Nil then evalTokens(tokens, handler) else r
+                takeResult.getOrElse(evalTokens(tokens, handler))
               case None =>
                 // A variable followed by more tokens is a text interpolation: concatenate the value's display
                 // with the rest (`\set y {\x tail}` keeps " tail") instead of silently dropping the tail. A tail
@@ -912,7 +927,34 @@ class Processor(val handler: Handler):
     restSource.foreach(tokenSources.push)
     val args = readMacroArgs(params, pos)
     restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
-    evalTokensExpr(substituteNamedParams(body, args), pos)
+    evalBodyExpr(substituteNamedParams(body, args), pos)
+
+  /** Evaluate a body for its value, where the body may be more than one statement.
+    *
+    * [[evalTokensExpr]] cannot do this: it runs the *first* statement, discards the tokens after it, and — finding
+    * no result — falls back to the body's own source text. So `{\set a {2}\set b {3}\calc{a * b}}` evaluated to
+    * the string `a b a * b`, which is why a macro could only return a value when its whole body was a single
+    * expression, and why packages that needed more used global variables as return channels.
+    *
+    * The body is run as ordinary content with its output captured, which is what a macro does in document position
+    * anyway, and the value is read back from the two things that run leaves behind:
+    *
+    *   - the **result** the last value-producing thing in the body set, and
+    *   - the **text** the body printed.
+    *
+    * The result wins when the body printed nothing but the result's own display — `{\calc{\n * 2}}` prints `6` and
+    * means the number 6, and `{\seq{a b}}` prints nothing and means the sequence. The printed text wins when the
+    * body wrote more than that, because a body like `{Item \the\n}` means its whole sentence and not the number
+    * inside it.
+    */
+  private[parser] def evalBodyExpr(body: Vector[Token], pos: CharReader): Value =
+    clearResult()
+    val printed = handler.capture(processTokenList(body))
+    takeResult match
+      case Some(v) if printed.trim == Value.display(v).trim => v
+      case r                                                =>
+        if printed.nonEmpty then Value.Text(printed)
+        else r.getOrElse(Value.Nil)
 
   /** Read a control sequence name (for \let, etc.) */
   def readControlSeqName(pos: CharReader): String =
@@ -930,6 +972,25 @@ class Processor(val handler: Handler):
       case Token.Text(s, _) if s.nonEmpty && s.head.isLetter && s.forall(c => c.isLetterOrDigit || c == '_') => s
       case Token.ControlSeq(name, _) => name
       case other => handler.error(s"Expected identifier, got ${Token.show(other)}", pos)
+
+  /** Read the name a binding is about to create, rejecting one that could never be read back.
+    *
+    * A control-sequence name is letters only, so `\set count2 {5}` used to succeed and `\count2` then tokenized as
+    * `\count` followed by the text `2` — the value was set and unreachable, and what came back was a wrong value
+    * rather than an error (`\count2` after `\count` is 3 reads as the string `32`, which then parses as a
+    * dimension). Digits stay legal where a name is *spelled out* rather than written as a control sequence — a
+    * counter, a register, a map key, a bare identifier inside `\calc` — because those are read back by the same
+    * spelling that made them.
+    */
+  def readBindingName(cmd: String, pos: CharReader): String =
+    val name = readIdentifier(pos)
+    if name.exists(_.isDigit) then
+      handler.error(
+        s"\\$cmd: '$name' cannot be a name — a control sequence is letters only, so \\$name would read as " +
+          s"\\${name.takeWhile(!_.isDigit)} followed by text",
+        pos,
+      )
+    name
 
   /** Read tokens until \else or \fi at the current conditional level */
   def skipToElseOrFi(): Boolean =
