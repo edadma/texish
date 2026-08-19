@@ -1,0 +1,289 @@
+---
+title: "Programming and Data"
+weight: 3
+---
+
+Every texish document is a program, whether or not it looks like one. A `\section` is a macro, a
+page number is a variable, and the packages that give a document its shape — `document`, `book`,
+`plot`, `chess` — are written in the same language a document is, with no privileged access to the
+engine. This page is that language: how to bind names, branch, loop, and hold data.
+
+It is worth saying what texish is *not*, because the difference explains a lot. TeX is a
+two-stage expansion machine over untyped token soup, and much of what a TeX programmer knows —
+`\expandafter`, `\edef`, `\noexpand`, catcode changes — exists to manage that. texish evaluates
+directly, with typed values and fixed catcodes, so none of that machinery exists and none of it is
+needed. A value is a number, a string, a boolean, a sequence, a map, a dimension, a glue or a macro,
+and it stays what it is.
+
+## Variables
+
+`\set` binds a name; `\the` prints one. A name is **letters only** — see [the naming
+trap](#names-are-letters-only) below.
+
+```texish
+\set author {Ada Lovelace}
+\set copies {12}
+
+Written by \the\author, in \the\copies copies.
+```
+
+Assignment is scoped to the enclosing group and reverts at its close, which is what makes a font
+change inside `{ … }` local. `\global` escapes that, and is how a value survives a loop iteration or
+a macro's own group:
+
+```texish
+{\set copies {3}}      // reverts at the closing brace
+\global\set copies {3} // persists
+```
+
+A bare name is also readable inside `\calc` (below), so `\set n {5}` can then be used as
+`\calc{n * 2}` as well as `\the\n`.
+
+## Arithmetic
+
+`\calc` evaluates an infix expression to a number — the whole numeric library lives inside the
+expression rather than as a control sequence per operation:
+
+```texish
+\set radius {12}
+\set area {\calc{pi * radius^2}}
+\set inset {\calc{0.5in - 3mm}}
+```
+
+It has the usual precedence ladder, unary sign, parentheses, `%` for remainder and right-associative
+`^`; the constants `pi`, `tau` and `e`; length units (`pt pc in cm mm em ex`), so a dimension
+computes directly; and about forty functions — the trigonometric family with `…d` variants that take
+degrees (`sind`, `cosd`, `atan2d`), `sqrt cbrt exp ln log log2 logb pow hypot`, and
+`abs floor ceil round trunc sign mod min max`.
+
+`\round{value}{places}` trims floating-point noise off a computed number (`0.30000000000000004`
+becomes `0.3`); `\fixed{value}{places}` gives exactly that many decimals, zeros kept, for a column of
+prices. The simple `\+ \- \* \/` also exist, but `\calc` is almost always clearer.
+
+> **`\calc` reads its argument as an expression *string*.** A variable works in it, spelled either
+> way — `\calc{n * 2}` and `\calc{\n * 2}` both resolve the variable `n`. **A primitive call does
+> not**: `\calc{\nth{\p}{1} * 2}` flattens to the identifier `nthp1` and fails with *unknown name*.
+> Bind what you need to a name first.
+
+## Conditionals
+
+`\if` takes a condition and two branches. The comparisons `\=`, `\!=`, `\<`, `\>`, `\<=`, `\>=` each
+yield a boolean, and any value can be tested directly — an empty string, an empty sequence, `0`,
+false and an unset name are all false.
+
+```texish
+\if {\> {\calc{copies}} {10}}
+  a large printing
+\else
+  a small one
+\fi
+```
+
+## Loops
+
+`\for` walks something known: a sequence, a string (character by character), or a map (entry by
+entry). Inside the body `\forloop` carries the position — `\forloop.index` (from 1), `.indexz` (from
+0), `.first`, `.last`, `.length`, `.rindex`, `.element`.
+
+```texish
+\for\name{\words{Ada Grace Katherine}}{\if {\forloop.first}\else, \fi\name}
+```
+
+`\while` is for a loop whose length is not known before it starts — consuming input until it runs
+out, or iterating until a computation converges. Its condition is re-read each time round:
+
+```texish
+\global\set x {2}
+\global\set d {1}
+\while {\> {\d} {0.0000001}} {
+  \global\set p {\x}
+  \global\set x {\calc{(x + 2/x) / 2}}
+  \global\set d {\calc{abs(x - p)}}
+}
+```
+
+Both open a scope per iteration, so a value meant to outlive the loop is set `\global`. Often it
+need not outlive it at all — see [computing a result](#computing-a-result-from-a-sequence).
+
+## Sequences
+
+`\seq{…}` builds one from whitespace-separated items, and a braced item keeps its spaces.
+`\words{s}` splits a string on whitespace, `\range{a}{b}` counts inclusively, and `\split` cuts on
+any separator.
+
+```texish
+\set names {\seq{Ada {Grace Hopper} Katherine}}
+\set fields {\split{surname,given,born}{,}}
+\set tens {\range{1}{10}}
+```
+
+Reading them:
+
+| | |
+|---|---|
+| `\nth{seq}{n}` | the nth item, counting from **1** |
+| `\head` `\tail` `\last` | first, all-but-first, final |
+| `\size{seq}` | how many |
+| `\slice{seq}{from}{count}` | a run of items, clamped at both ends |
+| `\contains{seq}{item}` `\indexof{seq}{item}` | membership, and where — `0` if absent |
+
+Building them — a sequence is a **value**, not a container that is mutated, so these return a new one:
+
+| | |
+|---|---|
+| `\append{seq}{item}` `\prepend{seq}{item}` | one more item at either end |
+| `\concat{a}{b}` | one sequence after another |
+| `\reverse{seq}` `\sort{seq}` | turned around, put in order |
+| `\chunk{seq}{n}` | grouped into sub-sequences of `n` |
+| `\join{seq}{sep}` | back to a string |
+| `\total` `\minimum` `\maximum` | sum, least, greatest |
+
+`\sort` orders numerically where the items are numbers and alphabetically where they are words, so
+`2` sorts before `10` rather than after it.
+
+> **A string is the sequence of its characters.** `\nth`, `\slice`, `\reverse`, `\size`,
+> `\contains`, `\indexof`, `\head`, `\tail`, `\last` and `\for` all take a string as readily as a
+> sequence, and give back the kind they were given. Characters means **code points**, so an emoji or
+> a math alphanumeric counts as one — `\size{a🎲b}` is 3, and walking it by index works.
+
+## Computing a result from a sequence
+
+`\for` typesets; it cannot hand back a value, which is why a loop that computes something has to
+write through a `\global` variable. Three commands take a body and collect its **value** instead,
+binding a variable of your choosing exactly as `\for` does:
+
+```texish
+\set squares {\transform\n{\range{1}{5}}{\calc{\n * \n}}}        // 1 4 9 16 25
+\set big     {\filter\n{\squares}{\> {\n} {5}}}                  // 9 16 25
+\set sorted  {\sortby\w{\words{Zebra apple Fig}}{\downcase{\w}}}  // apple Fig Zebra
+```
+
+`\sortby` is stable, so items with equal keys keep their original order — which matters, because a
+document must come out identical from one pass to the next.
+
+The body may be several statements, in which case its value is the last one that produced a value.
+That is what lets you pull fields out of a record before computing with them, given that `\calc`
+cannot call a primitive:
+
+```texish
+\set points {\chunk{\seq{1 2  3 4  5 6}}{2}}
+\set body {\set x {\nth{\p}{1}}\set y {\nth{\p}{2}}\calc{x * y}}
+\set sxy {\total{\transform\p{\points}{\set x {\nth{\p}{1}}\set y {\nth{\p}{2}}\calc{x * y}}}}
+```
+
+That is a fold, and it is exactly what the `plot` package's least-squares fit is built from.
+
+## Strings
+
+Beyond `\upcase`, `\downcase` and `\trim`: `\cat{a}{b}` joins two values as text, `\split` and
+`\join` convert to and from a sequence, `\replace{text}{from}{to}` changes every occurrence,
+`\repeat{text}{n}` repeats, and `\startswith` / `\endswith` test either end. Separators and patterns
+are matched **literally**, never as regular expressions, so a `.` means a full stop.
+
+```texish
+\set slug {\downcase{\replace{\title}{ }{-}}}
+```
+
+## Maps
+
+A map is an insertion-ordered store with computed keys — texish's answer to TeX's `\csname`, and what
+the counter machinery is built on.
+
+```texish
+\set roman {\map{i 1 v 5 x 10}}
+\mapset roman {l} {50}
+
+\set five {\roman.v}            // dotted access, for a literal key
+\set n {\mapget roman {\digit}} // \mapget, for a computed one
+```
+
+Both read a map **in expression position** — inside `\set`, `\if` or another command's argument —
+and neither prints on its own: `\the\roman.v` typesets the whole map followed by a literal `.v`,
+and a bare `\mapget` typesets nothing at all. Bind the value to a name and print that.
+
+`\maphas` tests a key, `\mapdel` removes one, and `\keys` and `\values` give a map's keys or values
+as sequences — so a map can be sorted, filtered or counted like anything else:
+
+```texish
+\for\k{\sort{\keys{\roman}}}{\set val {\mapget roman {\k}}\k = \the\val. }
+```
+
+A `\for` over the map itself visits `{key, value}` entries in insertion order, which is stable across
+passes.
+
+## Macros
+
+`\def` defines one. Parameters are named, and a body is not its own group:
+
+```texish
+\def greet name {Hello, \name!}
+\def emph [weight:bold] word {{\font lmroman 10 \weight \word}}
+\def head * title {\if {\star}\leftline{\title}\else\leftline{\thesection\ \title}\fi}
+\def literal <raw> {\code{\raw}}
+```
+
+- **named** parameters are read as braced arguments in order — `\greet{Ada}`;
+- **`[name:default]`** declares an optional parameter, supplied at the call site **positionally, in
+  brackets**: `\emph{word}` takes the default, `\emph[light]{word}` overrides it, and a macro with
+  two of them is called `\dropcap[3][6]{L}{orem}`;
+- **`*`** as the first parameter is a star flag, for the LaTeX `\section*` convention, tested inside
+  the body with `\if {\star}`;
+- **`<name>`** takes its argument verbatim, unexpanded — how a grammar or a code sample survives
+  being read.
+
+Note the two different bracket conventions, which are easy to confuse. A **macro's** optional
+arguments are positional and bracketed, as above. An **engine primitive's** are named and bare —
+`\hbox to:100`, `\geometry paper:a6`, `\picture width:3in`. Writing a primitive's option in
+brackets compiles, runs, and silently takes the default.
+
+`\let` aliases a name to whatever another means right now, `\gdef` defines globally, and
+`\newenvironment` pairs begin and end code for `\begin`/`\end`.
+
+> **A macro returns a value only when its body is a single value-producing expression.** `\def
+> double n {\calc{\n * 2}}` composes inside `\set` and `\calc`; a body that has to bind something
+> first does not, and a package that needs one writes its result to a `\global` variable instead.
+> This is the language's sharpest remaining edge.
+
+## Traps worth knowing
+
+These are the four that have actually cost time.
+
+### Names are letters only
+
+A control-sequence name is letters — but `\set` and `\def` will happily accept a digit and then the
+name can never be read back. `\set count2 {5}` succeeds, and `\count2` tokenizes as `\count`
+followed by the text `2`. It shows up as a *wrong value*, not an error. **Never put a digit in a
+name.**
+
+### An empty value is not "no value"
+
+`\= {\x} {}` is **false** even when `\x` is unset, because `{}` is nil and two nils fall through to a
+numeric comparison that fails. Use an explicit sentinel for "no value", or test with
+`\> {\size{\x}} {0}`.
+
+Relatedly, a lookup that finds nothing — `\mapget` of a missing key, `\nth` past the end, `\minimum`
+of an empty sequence — answers **undefined**, which is falsy and tests cleanly with `\if`.
+
+### A macro that runs inside a paragraph must be one line
+
+A newline in a macro body is an interword space, the indentation of a continuation line is another
+one, and two newlines are a paragraph break. A macro laid out over twelve indented lines drags a
+dozen spaces into the sentence that calls it. **Split a long routine into named one-line macros
+rather than indenting it**; a `//` comment eats the newline but not the next line's indentation, so
+flush-left continuation lines are the other way out. This does not bind macros that only draw
+(inside `\picture` stray text is discarded) or that only work between paragraphs.
+
+### Paragraph shape is read when the paragraph breaks
+
+`\leftskip`, `\rightskip`, `\parfillskip`, `\hangindent` and `\hangafter` are read at the paragraph
+break, not where they are set — so a closing brace can revert one out from under the break. Setting
+`\rightskip` at the top of a `\parbox` body does nothing at all, silently. End the paragraph with
+`\par` **inside** the group, which is what `\end{flushleft}` does for the same reason.
+
+## Where to look next
+
+The [Command Reference](../../reference/commands/) lists every command with its arguments, and
+[Parameters and Variables](../../reference/parameters/) every engine variable a document can read or
+set. The packages in `packages/` are the worked examples: `chess.texish` is a move generator and
+notation parser, `plot.texish` maps data onto a coordinate system, and `document.texish` is the
+article format itself — none of them using anything this page has not covered.

@@ -45,6 +45,14 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     valueOf("\\set v {\\nth{a🎲b}{3}}") shouldBe "b"
   }
 
+  "\\size counts the same characters \\nth indexes, so walking a string by index terminates" in {
+    // \\size counted UTF-16 units while everything else counted code points, so this loop ran one past the end
+    // of any string with an astral character in it
+    valueOf("\\set v {\\size{a\uD83C\uDFB2b}}") shouldBe "3"
+    valueOf("\\set s {a\uD83C\uDFB2b}\\global\\set v {}" +
+      "\\for\\i{\\range{1}{\\size{\\s}}}{\\global\\set v {\\cat{\\v}{\\nth{\\s}{\\i}}}}") shouldBe "a\uD83C\uDFB2b"
+  }
+
   "\\slice takes a count from a 1-based start, clamped at both ends" in {
     valueOf("\\set v {\\join{\\slice{\\seq{a b c d e}}{2}{3}}{-}}") shouldBe "b-c-d"
     valueOf("\\set v {\\join{\\slice{\\seq{a b c}}{2}{99}}{-}}") shouldBe "b-c"

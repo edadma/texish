@@ -1,6 +1,6 @@
 ---
 title: "Gujarati"
-weight: 16
+weight: 17
 ---
 
 texish sets the Gujarati script with the syllable shaping it needs. Like Devanagari, Bengali and the

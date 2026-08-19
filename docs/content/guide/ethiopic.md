@@ -1,6 +1,6 @@
 ---
 title: "Ethiopic"
-weight: 21
+weight: 22
 ---
 
 texish sets the Ethiopic script — Amharic, Tigrinya and Ge'ez — and it is the one non-Latin script

@@ -1,6 +1,6 @@
 ---
 title: "Hyphenation"
-weight: 3
+weight: 4
 ---
 
 Hyphenation is what lets a justified paragraph keep its spacing even. Without it the line breaker

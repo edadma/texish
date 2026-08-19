@@ -1,6 +1,6 @@
 ---
 title: "Plotting"
-weight: 8
+weight: 9
 ---
 
 The `plot` package draws 2-D data plots — line graphs, scatter plots, bar charts, and

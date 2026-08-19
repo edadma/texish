@@ -1,6 +1,6 @@
 ---
 title: "Vector Graphics"
-weight: 6
+weight: 7
 ---
 
 `\picture` opens a fixed-size drawing that flows in the text like any other box, so a

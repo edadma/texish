@@ -76,11 +76,17 @@ object DowncasePrimitive extends Primitive:
 object TrimPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit = stringOp(proc, pos, _.trim)
 
+/** `\size{v}` — how many items a value has: the characters of a string, the elements of a sequence, the entries of
+  * a map. A string counts in **code points**, not UTF-16 units, so an emoji or a math alphanumeric is one character
+  * — the same unit `\nth`, `\slice`, `\indexof`, `\head`, `\tail`, `\last` and `\for` count in. They have to
+  * agree: `\for\i{\range{1}{\size{\s}}}{\nth{\s}{\i}}` is the ordinary way to walk a string by index, and
+  * while this counted UTF-16 units that loop ran off the end of any string with an astral character in it.
+  */
 object SizePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val arg = proc.evalStringArgument(pos)
     val size = arg match
-      case Value.Text(s) => s.length
+      case Value.Text(s) => s.codePointCount(0, s.length)
       case Value.Seq(items) => items.size
       case Value.Map(entries) => entries.size
       case _ => 0

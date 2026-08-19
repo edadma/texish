@@ -3,7 +3,8 @@ title: "Guide"
 weight: 2
 ---
 
-How to write documents with texish: the document format, text and markup, hyphenation,
+How to write documents with texish: the document format, text and markup, programming and data
+(the language every package is written in), hyphenation,
 mathematics, figures and images, the inline vector-graphics mode, chemistry, data plotting,
 railroad (syntax) diagrams, node-and-edge diagrams (flowcharts, state machines and
 entity-relationship diagrams), month-grid calendars, chess diagrams and game scores, the

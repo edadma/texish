@@ -1,6 +1,6 @@
 ---
 title: "Right-to-left text"
-weight: 13
+weight: 14
 ---
 
 texish sets right-to-left scripts — Hebrew and Arabic — alongside left-to-right text in the same

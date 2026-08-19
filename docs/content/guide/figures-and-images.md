@@ -1,6 +1,6 @@
 ---
 title: "Figures and Images"
-weight: 5
+weight: 6
 ---
 
 ## Placing an image

@@ -1,6 +1,6 @@
 ---
 title: "Chemistry"
-weight: 7
+weight: 8
 ---
 
 The `chem` package adds chemical reaction equations and 2D structure drawings. Load it

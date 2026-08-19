@@ -1,6 +1,6 @@
 ---
 title: "Chess"
-weight: 12
+weight: 13
 ---
 
 The `chess` package sets chess diagrams and game scores. Load it with:
