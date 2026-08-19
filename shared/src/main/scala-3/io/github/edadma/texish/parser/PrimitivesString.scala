@@ -85,11 +85,9 @@ object TrimPrimitive extends Primitive:
 object SizePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val arg = proc.evalStringArgument(pos)
-    val size = arg match
-      case Value.Text(s) => s.codePointCount(0, s.length)
-      case Value.Seq(items) => items.size
-      case Value.Map(entries) => entries.size
-      case _ => 0
+    // Counted through the same itemsOf every other data primitive indexes by, so \size can never disagree with
+    // \nth, \slice or \for about how many items a value has.
+    val size = itemsOf(arg).length
     // value (for \if/\set, where output is suppressed) and typeset output (in direct position)
     proc.setResult(Value.Num(size))
     proc.handler.text(size.toString)

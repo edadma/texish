@@ -699,10 +699,9 @@ class Processor(val handler: Handler):
     if hasPlus || hasMinus then Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder)
     else Value.Dimen(natural)
 
-  /** Parse a simple value from a string (number, unit-suffixed dimension, or text) */
-  private def parseSimpleValue(s: String): Value =
-    try Value.Num(s.toDouble)
-    catch case _: Exception => parseDimension(s, handler.fontUnit).getOrElse(Value.Text(s))
+  /** Parse a simple value from a string — see `parseScalar`, which both this and [[evalTokens]] go through so
+    * that a lone run of characters cannot mean one thing in an optional parameter and another in an argument. */
+  private def parseSimpleValue(s: String): Value = parseScalar(s, handler.fontUnit)
 
   /** Process a list of tokens (used by primitives like \for) */
   def processTokenList(tokens: Vector[Token]): Unit =

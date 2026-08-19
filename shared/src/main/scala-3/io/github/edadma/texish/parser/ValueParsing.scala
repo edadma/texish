@@ -69,6 +69,29 @@ def parseGlue(s: String, fontUnit: String => Option[Double] = _ => None): Option
         else Value.Glue(natural, stretch, shrink, stretchOrder, shrinkOrder)
     case _ => None
 
+/** A whole-number literal that a `Double` cannot hold. `12345678901234567890` becomes `1.2345678901234567E19`,
+  * which is a different number written back out — so an order number, a barcode payload or an account identifier
+  * would be silently corrupted by being stored. Only an integer run is tested: a decimal fraction is an
+  * approximate quantity already, and almost none of them are exactly representable, so demanding it there would
+  * reject `.7`.
+  */
+private val IntegerLiteral = """[+-]?\d+""".r
+
+private def losesDigits(t: String, d: Double): Boolean =
+  IntegerLiteral.matches(t) && BigDecimal(t) != BigDecimal(d)
+
+/** Parse a lone run of characters into the value it stands for: a number, a unit-suffixed dimension, or the text
+  * itself. **A conversion that would change the number is refused and the text stays text** — see `losesDigits`.
+  *
+  * Arithmetic is not put out of reach by this: `Value.number` reads a numeric string, so `\calc{n + 1}`, `\round`
+  * and a picture coordinate all work against such a value exactly as they work against a number.
+  */
+def parseScalar(s: String, fontUnit: String => Option[Double] = _ => None): Value =
+  val t = s.trim
+  t.toDoubleOption match
+    case Some(d) if d.isFinite && !losesDigits(t, d) => Value.Num(d)
+    case _                                           => parseDimension(s, fontUnit).getOrElse(Value.Text(s))
+
 /** Split a string into its code points, each returned as a string — one element per typed character, keeping a
   * surrogate pair (an astral symbol, an emoji) together where a char-by-char split would break it into two
   * lone surrogates. Manual scan because `String.codePoints()` is a java.util.stream API that Scala.js lacks. */
@@ -87,10 +110,7 @@ def codePointStrings(s: String): Vector[String] =
 // Helper to evaluate tokens to a value
 def evalTokens(tokens: Vector[Token], handler: Handler): Value =
   stripOuterBraces(tokens) match
-    case Vector(Token.Text(s, _)) =>
-      // Try to parse as a number, then as a unit-suffixed dimension
-      try Value.Num(s.toDouble)
-      catch case _: Exception => parseDimension(s, handler.fontUnit).getOrElse(Value.Text(s))
+    case Vector(Token.Text(s, _)) => parseScalar(s, handler.fontUnit)
     case Vector(Token.ControlSeq(name, _)) =>
       handler.get(name)
     case _ =>

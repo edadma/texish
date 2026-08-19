@@ -339,3 +339,56 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     val src = "\\set v {\\join{\\transform\\c{Hi!}{\\ord{\\c}}}{ }}"
     valueOf(src) shouldBe "72 105 33"
   }
+
+  // ---- A number is the characters it displays as ----------------------------------
+
+  "\\size counts the same items \\nth indexes, for every kind of value" in {
+    // \size used to answer 0 for anything that was not a string, sequence or map, while itemsOf — which \nth,
+    // \slice and \for all index by — called a scalar one item. The same value cannot have both counts
+    valueOf("\\set v {\\size{\\seq{a b c}}}") shouldBe "3"
+    valueOf("\\set v {\\size{abc}}") shouldBe "3"
+    valueOf("\\set n {5}\\set v {\\size{\\n}}") shouldBe "1"
+    valueOf("\\set n {5}\\set v {\\nth{\\n}{1}}") shouldBe "5"
+  }
+
+  "a stored number counts as the characters it displays as" in {
+    // a run of digits becomes a number the moment it is stored, so without this the same text would have one
+    // length written out and another through a variable
+    valueOf("\\set v {\\size{12345}}") shouldBe "5"
+    valueOf("\\set n {12345}\\set v {\\size{\\n}}") shouldBe "5"
+    valueOf("\\set n {12345}\\set v {\\nth{\\n}{2}}") shouldBe "2"
+    valueOf("\\set n {12345}\\set v {\\join{\\reverse{\\n}}{}}") shouldBe "54321"
+  }
+
+  "\\ord and \\chr reach the digits of a stored number" in {
+    valueOf("\\set n {907}\\set v {\\join{\\transform\\c{\\n}{\\ord{\\c}}}{ }}") shouldBe "57 48 55"
+  }
+
+  // ---- A number too long for a Double stays text ----------------------------------
+
+  "a run of digits a Double cannot hold is kept as written" in {
+    // 12345678901234567890 becomes 1.2345678901234567E19 as a Double — a different number written back out. An
+    // order number, a barcode payload or an account identifier would be silently corrupted by being stored
+    valueOf("\\set n {12345678901234567890}\\set v {\\n}") shouldBe "12345678901234567890"
+    valueOf("\\set n {12345678901234567890}\\set v {\\size{\\n}}") shouldBe "20"
+    run("\\set v {12345678901234567890}").get("v") shouldBe Value.Text("12345678901234567890")
+  }
+
+  "an integer a Double holds exactly is still a number" in {
+    run("\\set v {12345}").get("v") shouldBe Value.Num(12345)
+    run("\\set v {-42}").get("v") shouldBe Value.Num(-42)
+    run("\\set v {9007199254740991}").get("v") shouldBe Value.Num(9007199254740991.0) // 2^53 - 1
+  }
+
+  "the alternate spellings of a number are still numbers" in {
+    // the test is about losing digits, not about the form: .7 and 1e3 name numbers a Double holds exactly
+    run("\\set v {.7}").get("v") shouldBe Value.Num(0.7)
+    run("\\set v {1e3}").get("v") shouldBe Value.Num(1000)
+    run("\\set v {007}").get("v") shouldBe Value.Num(7)
+  }
+
+  "a long digit run still computes as a number where one is wanted" in {
+    // kept as text, but \calc reads a numeric string, so nothing that worked before stops working
+    valueOf("\\set n {12345678901234567890}\\set v {\\> {\\n} {0}}") shouldBe "true"
+    valueOf("\\set n {12345678901234567890}\\set v {\\calc{n / n}}") shouldBe "1"
+  }

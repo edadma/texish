@@ -18,7 +18,9 @@ import io.github.edadma.char_reader.CharReader
   *   - **A string is a sequence of its characters**, so `\nth`, `\slice`, `\reverse`, `\contains` and `\indexof`
   *     take either and give back the kind they were given. Characters means *code points*, not UTF-16 units, so an
   *     emoji or a math alphanumeric is one item rather than two broken surrogate halves — the same rule `\head`,
-  *     `\tail`, `\last` and `\for` already follow.
+  *     `\tail`, `\last` and `\for` already follow. **A number counts as the characters it displays as**, because
+  *     a run of digits becomes a number the moment it is stored — so without this `\size{12345}` would answer 5
+  *     written out and 0 through a variable, which is the same text meaning two different things.
   *   - **Positions are 1-based and inclusive**, as they are everywhere a document counts things (lines, pages,
   *     items). `\indexof` answers 0 for "not found", which is therefore falsy and reads as `\if {\indexof …}`.
   *   - **Ordering is numeric where both sides are numbers and lexicographic otherwise**, so `\sort` on a list of
@@ -34,6 +36,7 @@ private def itemsOf(v: Value): Vector[Value] = v match
   case Value.Text(s)               => codePointStrings(s).map(Value.Text.apply)
   case Value.Map(entries)          => entries.map((k, x) => Value.Map(Map("key" -> Value.Text(k), "value" -> x))).toVector
   case Value.Nil | Value.Undefined => Vector.empty
+  case n: (Value.Num | Value.Bool) => codePointStrings(Value.display(n)).map(Value.Text.apply)
   case other                       => Vector(other)
 
 /** Rebuild a result in the shape of the value it came from: an operation on a string gives a string, an operation

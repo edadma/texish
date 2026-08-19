@@ -32,6 +32,14 @@ class RawParamTests extends AnyFreeSpec with Matchers:
     run("\\def g n <e> {\\n:\\e}\\g{1}{x|y}").result shouldBe "1:x|y"
   }
 
+  "a raw parameter can follow an optional one, taken and omitted" in {
+    // This is what lets a package present the interface an engine primitive presents: an option bracket read as
+    // tokens, then a verbatim body — the shape \qrcode[ecc:h]{https://…} needs, where the options are ordinary
+    // text but the data is a URL whose // must survive
+    run("\\def g [o:none] <e> {\\o|\\e}\\g{a//b}").result shouldBe "none|a//b"
+    run("\\def g [o:none] <e> {\\o|\\e}\\g[ecc:h]{a//b}").result shouldBe "ecc:h|a//b"
+  }
+
   "\\words splits a raw parameter on whitespace" in {
     run("\\def g <e> {\\for\\w{\\words{\\e}}{<\\w>}}\\g{ a ::= b | c }").result shouldBe "<a><::=><b><|><c>"
   }

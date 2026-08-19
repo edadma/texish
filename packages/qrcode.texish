@@ -1,0 +1,372 @@
+// qrcode — QR Code symbols, computed and drawn in the document language.
+//
+//     \use{qrcode}
+//     \qrcode{https://example.com}
+//     \qrcode[ecc:h cell:4pt dark:navy]{HELLO, WORLD}
+//
+// The symbol is drawn as \picture rectangles, one per dark module, so it stays
+// crisp on every backend and at every scale — there is no raster image anywhere
+// in it. A quiet zone of light modules surrounds the symbol so a scanner can
+// find its edges, and the whole area is painted with the light colour first so
+// the quiet zone stays clear of other ink even on a coloured page.
+//
+// Options ride an optional [key:value …] bracket, and each has a document
+// variable behind it that sets the default for every later call:
+//
+//     ecc     l, m, q or h — error correction, default q (the quartile level,
+//             which tolerates about a quarter of the symbol being damaged)
+//     cell    the side of one module, default 3pt; any length \calc understands
+//     quiet   the border width in modules, default 4 (the standard's minimum)
+//     dark    the module colour, default the pen colour in force
+//     light   the background, default white; light:none for a transparent one
+//
+// The data is read verbatim, so a URL's // is not a comment and %, ~ and # reach
+// the encoder as themselves.
+//
+// ---- How it works ---------------------------------------------------------------
+//
+// Everything below is the ISO/IEC 18004 encoder, written out: the text is packed
+// into a bit stream under whichever of the numeric, alphanumeric and byte modes
+// suits it, the stream is cut into codewords, Reed-Solomon check codewords are
+// computed over GF(256) and interleaved with the data, and the result is laid
+// into the grid in the zig-zag order the standard prescribes, around the finder,
+// timing and alignment patterns that a scanner locates the symbol by. All eight
+// mask patterns are then tried and the one with the lowest penalty score kept,
+// which is what stops a symbol from growing large blank patches or accidental
+// finder-like stripes that would confuse a reader.
+//
+// Three things in the language make this expressible at all, and none of them
+// existed before: \calc's bit operations (Galois-field addition IS exclusive-or),
+// \put (Reed-Solomon fills an array of check codewords by index) and \ord (the
+// payload has to become bytes before it can become bits).
+//
+// ---- Two rules this file obeys throughout ---------------------------------------
+//
+// EVERY MACRO IS WRITTEN ON ONE LINE, and no \if has a space beside a branch. A
+// newline in a macro body is an interword space and the indentation of the next
+// line is another, so a symbol placed in a paragraph from a macro laid out over
+// twelve lines drags a dozen spaces into the paragraph with it. Long routines are
+// split into named one-line macros rather than indented. Only the \picture body at
+// the end is laid out, because there text between drawing commands is discarded.
+//
+// A ROW OF THE GRID IS NEVER WRITTEN AS DIGITS. \set r {0101} stores the NUMBER
+// 101, not a four-character string, and every \nth into it then answers Undefined.
+// The four module states are spelled . # - + (light data, dark data, light
+// function, dark function) for that reason, and the bit buffer is a sequence of
+// numbers rather than a string of ones and zeros.
+
+// ---- Configuration --------------------------------------------------------------
+
+\set qrecc {q}
+\set qrcell {3}
+\set qrquiet {4}
+\set qrdark {}
+\set qrlight {white}
+
+// ---- Standard tables ------------------------------------------------------------
+// Error-correction codewords per block, then blocks per symbol, each indexed by
+// error-correction level (l m q h) and then by version, with a leading placeholder
+// so that version v sits at position v + 1.
+
+\set qzEccT {\seq{}}
+\set qzEccT {\append{\qzEccT}{\seq{0 7 10 15 20 26 18 20 24 30 18 20 24 26 30 22 24 28 30 28 28 28 28 30 30 26 28 30 30 30 30 30 30 30 30 30 30 30 30 30 30}}}
+\set qzEccT {\append{\qzEccT}{\seq{0 10 16 26 18 24 16 18 22 22 26 30 22 22 24 24 28 28 26 26 26 26 28 28 28 28 28 28 28 28 28 28 28 28 28 28 28 28 28 28 28}}}
+\set qzEccT {\append{\qzEccT}{\seq{0 13 22 18 26 18 24 18 22 20 24 28 26 24 20 30 24 28 28 26 30 28 30 30 30 30 28 30 30 30 30 30 30 30 30 30 30 30 30 30 30}}}
+\set qzEccT {\append{\qzEccT}{\seq{0 17 28 22 16 22 28 26 26 24 28 24 28 22 24 24 30 28 28 26 28 30 24 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30}}}
+
+\set qzBlkT {\seq{}}
+\set qzBlkT {\append{\qzBlkT}{\seq{0 1 1 1 1 1 2 2 2 2 4 4 4 4 4 6 6 6 6 7 8 8 9 9 10 12 12 12 13 14 15 16 17 18 19 19 20 21 22 24 25}}}
+\set qzBlkT {\append{\qzBlkT}{\seq{0 1 1 1 2 2 4 4 4 5 5 5 8 9 9 10 10 11 13 14 16 17 17 18 20 21 23 25 26 28 29 31 33 35 37 38 40 43 45 47 49}}}
+\set qzBlkT {\append{\qzBlkT}{\seq{0 1 1 2 2 4 4 6 6 8 8 8 10 12 16 12 17 16 18 21 20 23 23 25 27 29 34 34 35 38 40 43 45 48 51 53 56 59 62 65 68}}}
+\set qzBlkT {\append{\qzBlkT}{\seq{0 1 1 2 4 4 4 5 6 8 8 11 11 16 16 18 16 19 21 25 25 25 34 30 32 35 37 40 42 45 48 51 54 57 60 63 66 70 74 77 81}}}
+
+// The two-bit format value each level is written into the symbol as — deliberately
+// not the same order as the tables above, which are indexed by level number.
+\set qzFmtT {\seq{1 0 3 2}}
+
+// The 45 characters alphanumeric mode can carry, in their encoded order, and the
+// ten digits on their own. The digits are BUILT rather than written as a literal,
+// since a literal run of digits would be read as one number.
+\set qzAlnum {0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:}
+\set qzDigits {\join{\range{0}{9}}{}}
+
+// ---- The grid -------------------------------------------------------------------
+// One sequence of rows, each a string of . # - + — light data, dark data, light
+// function, dark function. Position (x, y) counts from 0 with y downward, as the
+// standard does; \nth counts from 1, hence the + 1 in every access.
+
+\def qzat x y {\nth{\nth{\qzGrid}{\calc{\y + 1}}}{\calc{\x + 1}}}
+\def qzput x y c {\global\set qzGrid {\put{\qzGrid}{\calc{\y + 1}}{\put{\nth{\qzGrid}{\calc{\y + 1}}}{\calc{\x + 1}}{\c}}}}
+\def qzfun x y d {\qzput{\x}{\y}{\nth{-+}{\calc{\d + 1}}}}
+\def qzdat x y d {\qzput{\x}{\y}{\nth{.#}{\calc{\d + 1}}}}
+
+// The cell code is 1 to 4 in the order . # - + , so that a module is dark exactly
+// when the code is even and a function module exactly when the code is above 2 —
+// both of them arithmetic, which keeps them usable inside \calc.
+\def qzcode x y {\indexof{.#-+}{\qzat{\x}{\y}}}
+\def qzdark x y {\calc{1 - \qzcode{\x}{\y} % 2}}
+\def qzisfun x y {\calc{floor((\qzcode{\x}{\y} - 1) / 2)}}
+
+// ---- The bit stream -------------------------------------------------------------
+// A sequence of ones and zeros, most significant first, which is how the standard
+// describes every field. \qzemit appends the low n bits of a value.
+
+\def qzbit b {\global\set qzBits {\append{\qzBits}{\b}}}
+\def qzemit v n {\for\qzEI{\range{1}{\n}}{\set qzES {\calc{\n - qzEI}}\qzbit{\calc{and(shr(\v, qzES), 1)}}}}
+\def qzemitmaybe v n {\if {\> {\n} {0}}\qzemit{\v}{\n}\fi}
+
+// ---- UTF-8 ----------------------------------------------------------------------
+// Byte mode carries bytes, and the payload is text, so the text is encoded here
+// rather than assumed to be Latin-1. A character above the basic plane is four
+// bytes, which is why \ord works in code points.
+
+\def qzbyte b {\global\set qzOct {\append{\qzOct}{\b}}}
+\def qzutf c {\set qzU {\ord{\c}}\if {\< {\qzU} {128}}\qzbyte{\qzU}\else\qzutfmore\fi}
+\def qzutfmore {\if {\< {\qzU} {2048}}\qzutftwo\else\qzutfrest\fi}
+\def qzutfrest {\if {\< {\qzU} {65536}}\qzutfthree\else\qzutffour\fi}
+\def qzutftwo {\qzbyte{\calc{or(192, shr(qzU, 6))}}\qzbyte{\calc{or(128, and(qzU, 63))}}}
+\def qzutfthree {\qzbyte{\calc{or(224, shr(qzU, 12))}}\qzbyte{\calc{or(128, and(shr(qzU, 6), 63))}}\qzbyte{\calc{or(128, and(qzU, 63))}}}
+\def qzutffour {\qzbyte{\calc{or(240, shr(qzU, 18))}}\qzbyte{\calc{or(128, and(shr(qzU, 12), 63))}}\qzbyte{\calc{or(128, and(shr(qzU, 6), 63))}}\qzbyte{\calc{or(128, and(qzU, 63))}}}
+
+// ---- Choosing a mode ------------------------------------------------------------
+// Digits pack three to ten bits, the 45 alphanumeric characters two to eleven, and
+// anything else costs a byte each, so the most compact mode the whole payload fits
+// is the one to use. Counting the characters that do NOT fit is one \filter.
+
+\def qznotnum s {\size{\filter\qzFC{\s}{\= {\indexof{\qzDigits}{\qzFC}} {0}}}}
+\def qznotalnum s {\size{\filter\qzFC{\s}{\= {\indexof{\qzAlnum}{\qzFC}} {0}}}}
+\def qzmode s {\if {\= {\qznotnum{\s}} {0}}\global\set qzMode {1}\else\qzmodealt{\s}\fi}
+\def qzmodealt s {\if {\= {\qznotalnum{\s}} {0}}\global\set qzMode {2}\else\global\set qzMode {4}\fi}
+
+// ---- The three segment encodings ------------------------------------------------
+
+\def qznumgroup g {\set qzGL {\size{\g}}\set qzGV {\calc{\join{\g}{}}}\set qzGB {\calc{qzGL * 3 + 1}}\qzemit{\qzGV}{\qzGB}}
+\def qzsegnum s {\global\set qzChars {\size{\s}}\for\qzNG{\chunk{\s}{3}}{\qznumgroup{\qzNG}}}
+
+\def qzalnval c {\calc{\indexof{\qzAlnum}{\c} - 1}}
+\def qzalnpair g {\set qzGA {\qzalnval{\nth{\g}{1}}}\set qzGB {\qzalnval{\nth{\g}{2}}}\set qzGV {\calc{qzGA * 45 + qzGB}}\qzemit{\qzGV}{11}}
+\def qzalnone g {\set qzGV {\qzalnval{\nth{\g}{1}}}\qzemit{\qzGV}{6}}
+\def qzalngroup g {\if {\= {\size{\g}} {2}}\qzalnpair{\g}\else\qzalnone{\g}\fi}
+\def qzsegaln s {\global\set qzChars {\size{\s}}\for\qzAG{\chunk{\s}{2}}{\qzalngroup{\qzAG}}}
+
+\def qzsegbyte s {\global\set qzOct {\seq{}}\for\qzBC{\s}{\qzutf{\qzBC}}\global\set qzChars {\size{\qzOct}}\for\qzBB{\qzOct}{\qzemit{\qzBB}{8}}}
+
+\def qzsegalt s {\if {\= {\qzMode} {2}}\qzsegaln{\s}\else\qzsegbyte{\s}\fi}
+\def qzsegdo s {\if {\= {\qzMode} {1}}\qzsegnum{\s}\else\qzsegalt{\s}\fi}
+\def qzsegment s {\qzmode{\s}\global\set qzBits {\seq{}}\qzsegdo{\s}\global\set qzSeg {\qzBits}}
+
+// ---- Capacity, and the smallest version that holds the data ---------------------
+// The data-region module count is the grid minus every function pattern, which the
+// standard gives as a closed form rather than a table.
+
+\def qzrawadj v {\set qzNA {\calc{floor(\v / 7) + 2}}\set qzRV {\calc{qzRV - ((25 * qzNA - 10) * qzNA - 55)}}\if {\> {\v} {6}}\set qzRV {\calc{qzRV - 36}}\fi}
+\def qzraw v {\set qzRV {\calc{(16 * \v + 128) * \v + 64}}\if {\> {\v} {1}}\qzrawadj{\v}\fi\qzRV}
+\def qzeccper v e {\nth{\nth{\qzEccT}{\calc{\e + 1}}}{\calc{\v + 1}}}
+\def qzblocks v e {\nth{\nth{\qzBlkT}{\calc{\e + 1}}}{\calc{\v + 1}}}
+\def qzdatacw v e {\set qzRW {\qzraw{\v}}\set qzEP {\qzeccper{\v}{\e}}\set qzNB {\qzblocks{\v}{\e}}\calc{floor(qzRW / 8) - qzEP * qzNB}}
+
+\set qzCCT {\seq{}}
+\set qzCCT {\append{\qzCCT}{\seq{10 12 14}}}
+\set qzCCT {\append{\qzCCT}{\seq{9 11 13}}}
+\set qzCCT {\append{\qzCCT}{\seq{8 16 16}}}
+\def qzccbits v {\set qzMI {\indexof{\seq{1 2 4}}{\qzMode}}\set qzGI {\calc{floor((\v + 7) / 17) + 1}}\nth{\nth{\qzCCT}{\qzMI}}{\qzGI}}
+
+\def qzvertoolong {\global\set qzFit {1}\global\set qzOver {1}}
+\def qzvernext {\global\set qzVer {\calc{qzVer + 1}}\if {\> {\qzVer} {40}}\qzvertoolong\fi}
+\def qzverstep {\if {\<= {\qzUsed} {\qzCap}}\global\set qzFit {1}\else\qzvernext\fi}
+\def qzvertry {\global\set qzCC {\qzccbits{\qzVer}}\global\set qzUsed {\calc{4 + qzCC + \size{\qzSeg}}}\global\set qzCap {\calc{\qzdatacw{\qzVer}{\qzEcl} * 8}}\qzverstep}
+\def qzfindver {\global\set qzVer {1}\global\set qzFit {0}\global\set qzOver {0}\while {\= {\qzFit} {0}}{\qzvertry}}
+
+// A symbol has spare room more often than not, so the level is raised to the
+// strongest one the chosen version still holds — free protection for the same size.
+\def qzboostry e {\set qzBC {\calc{\qzdatacw{\qzVer}{\e} * 8}}\if {\<= {\qzUsed} {\qzBC}}\global\set qzEcl {\e}\fi}
+\def qzboost {\for\qzBE{\range{1}{3}}{\qzboostry{\qzBE}}}
+
+// ---- Terminator and padding -----------------------------------------------------
+// Up to four zero bits close the message, zeros round it out to a whole codeword,
+// and the two alternating pad bytes of the standard fill whatever is left.
+
+\def qzpadbyte {\qzemit{\qzPB}{8}\global\set qzPB {\calc{xor(qzPB, 253)}}}
+\def qzpad {\global\set qzCap {\calc{\qzdatacw{\qzVer}{\qzEcl} * 8}}\set qzT {\calc{min(4, qzCap - \size{\qzBits})}}\qzemitmaybe{0}{\qzT}\set qzA {\calc{(8 - \size{\qzBits} % 8) % 8}}\qzemitmaybe{0}{\qzA}\global\set qzPB {236}\while {\< {\size{\qzBits}} {\qzCap}}{\qzpadbyte}}
+\def qzbuild {\global\set qzBits {\seq{}}\qzemit{\qzMode}{4}\qzemit{\qzChars}{\qzCC}\global\set qzBits {\concat{\qzBits}{\qzSeg}}\qzpad}
+
+// ---- Codewords ------------------------------------------------------------------
+
+\def qzbyteof g {\calc{\nth{\g}{1} * 128 + \nth{\g}{2} * 64 + \nth{\g}{3} * 32 + \nth{\g}{4} * 16 + \nth{\g}{5} * 8 + \nth{\g}{6} * 4 + \nth{\g}{7} * 2 + \nth{\g}{8}}}
+\def qzwords {\global\set qzData {\transform\qzWG{\chunk{\qzBits}{8}}{\qzbyteof{\qzWG}}}}
+
+// ---- Reed-Solomon over GF(256) --------------------------------------------------
+// Field addition is exclusive-or; multiplication is the shift-and-reduce loop, with
+// 0x11D (285) as the primitive polynomial. This is the whole reason \calc grew bit
+// operations — none of it can be said in ordinary arithmetic.
+
+\def qzrsstep x y i {\global\set qzZ {\calc{xor(xor(shl(qzZ, 1), shr(qzZ, 7) * 285), and(shr(\y, \i), 1) * \x)}}}
+\def qzrsmul x y {\global\set qzZ {0}\for\qzMI{\range{0}{7}}{\set qzMS {\calc{7 - qzMI}}\qzrsstep{\x}{\y}{\qzMS}}\qzZ}
+
+// The generator polynomial of the given degree, whose coefficients divide the data.
+\def qzrsdivstep d j {\set qzDA {\nth{\qzDiv}{\j}}\set qzDV {\qzrsmul{\qzDA}{\qzRoot}}\set qzDN {0}\if {\< {\j} {\d}}\set qzDJP {\calc{\j + 1}}\set qzDN {\nth{\qzDiv}{\qzDJP}}\fi\global\set qzDiv {\put{\qzDiv}{\j}{\calc{xor(qzDV, qzDN)}}}}
+\def qzrsdivround d {\for\qzDJ{\range{1}{\d}}{\qzrsdivstep{\d}{\qzDJ}}\global\set qzRoot {\qzrsmul{\qzRoot}{2}}}
+\def qzrsdivisor d {\global\set qzDiv {\put{\transform\qzDI{\range{1}{\d}}{0}}{\d}{1}}\global\set qzRoot {1}\for\qzDR{\range{1}{\d}}{\qzrsdivround{\d}}}
+
+// The remainder of the data by that polynomial — the check codewords themselves.
+\def qzremstep j {\set qzRX {\nth{\qzRem}{\j}}\set qzRD {\nth{\qzDiv}{\j}}\set qzRY {\qzrsmul{\qzRD}{\qzF}}\global\set qzRem {\put{\qzRem}{\j}{\calc{xor(qzRX, qzRY)}}}}
+\def qzrembyte b n {\set qzRH {\nth{\qzRem}{1}}\global\set qzF {\calc{xor(\b, qzRH)}}\global\set qzRem {\append{\tail{\qzRem}}{0}}\for\qzRJ{\range{1}{\n}}{\qzremstep{\qzRJ}}}
+\def qzremainder data n {\global\set qzRem {\transform\qzRI{\range{1}{\n}}{0}}\for\qzRB{\data}{\qzrembyte{\qzRB}{\n}}}
+
+// ---- Blocks and interleaving ----------------------------------------------------
+// A symbol above the smallest sizes splits its data into blocks, each with its own
+// check codewords, and then interleaves them so that a scuff across the printed
+// symbol damages a little of every block rather than all of one.
+
+\def qzsetup {\global\set qzEccLen {\qzeccper{\qzVer}{\qzEcl}}\global\set qzNumBlocks {\qzblocks{\qzVer}{\qzEcl}}\set qzRawX {\qzraw{\qzVer}}\global\set qzRawCw {\calc{floor(qzRawX / 8)}}\global\set qzNumShort {\calc{qzNumBlocks - qzRawCw % qzNumBlocks}}\global\set qzShortLen {\calc{floor(qzRawCw / qzNumBlocks)}}}
+\def qzblockone i {\set qzBL {\calc{qzShortLen - qzEccLen}}\if {\> {\i} {\qzNumShort}}\set qzBL {\calc{qzShortLen - qzEccLen + 1}}\fi\set qzBD {\slice{\qzData}{\qzK}{\qzBL}}\global\set qzK {\calc{qzK + qzBL}}\qzremainder{\qzBD}{\qzEccLen}\global\set qzDats {\append{\qzDats}{\qzBD}}\global\set qzEccs {\append{\qzEccs}{\qzRem}}}
+\def qzblocksall {\global\set qzDats {\seq{}}\global\set qzEccs {\seq{}}\global\set qzK {1}\qzrsdivisor{\qzEccLen}\for\qzBI{\range{1}{\qzNumBlocks}}{\qzblockone{\qzBI}}}
+
+\def qzilvone j i {\set qzIB {\nth{\qzDats}{\j}}\if {\>= {\size{\qzIB}} {\i}}\global\set qzAll {\append{\qzAll}{\nth{\qzIB}{\i}}}\fi}
+\def qzilvdat i {\for\qzIJ{\range{1}{\qzNumBlocks}}{\qzilvone{\qzIJ}{\i}}}
+\def qzilvecc i {\for\qzIK{\range{1}{\qzNumBlocks}}{\set qzIE {\nth{\qzEccs}{\qzIK}}\global\set qzAll {\append{\qzAll}{\nth{\qzIE}{\i}}}}}
+\def qzinterleave {\global\set qzAll {\seq{}}\set qzLong {\calc{qzShortLen - qzEccLen + 1}}\for\qzII{\range{1}{\qzLong}}{\qzilvdat{\qzII}}\for\qzIF{\range{1}{\qzEccLen}}{\qzilvecc{\qzIF}}}
+
+// ---- The function patterns ------------------------------------------------------
+// A bounds test written as arithmetic rather than as four nested conditionals: each
+// factor is 1 while the coordinate is in range and 0 once it is not.
+
+\def qzinbounds {\calc{min(1, max(0, qzPX + 1)) * min(1, max(0, qzPY + 1)) * min(1, max(0, qzMax - qzPX + 1)) * min(1, max(0, qzMax - qzPY + 1))}}
+
+\def qztiming {\for\qzTI{\range{0}{\qzMax}}{\set qzTD {\calc{1 - qzTI % 2}}\qzfun{6}{\qzTI}{\qzTD}\qzfun{\qzTI}{6}{\qzTD}}}
+
+// The three finder patterns, with their separators: dark except at Chebyshev
+// distance 2 and 4 from the centre, which is the 7x7 eye plus its light border.
+\def qzfindercell x y a b {\set qzDX {\calc{\a - 4}}\set qzDY {\calc{\b - 4}}\global\set qzPX {\calc{\x + qzDX}}\global\set qzPY {\calc{\y + qzDY}}\set qzFD {\calc{max(abs(qzDX), abs(qzDY))}}\set qzFV {\calc{min(1, abs(qzFD - 2) * abs(qzFD - 4))}}\if {\qzinbounds}\qzfun{\qzPX}{\qzPY}{\qzFV}\fi}
+\def qzfinder x y {\for\qzFA{\range{0}{8}}{\for\qzFB{\range{0}{8}}{\qzfindercell{\x}{\y}{\qzFA}{\qzFB}}}}
+\def qzfinders {\qzfinder{3}{3}\set qzXR {\calc{qzSize - 4}}\qzfinder{\qzXR}{3}\qzfinder{3}{\qzXR}}
+
+// The alignment patterns: a 5x5 target wherever two of the version's row/column
+// positions cross, except at the three corners the finders already occupy.
+\def qzaligncell x y a b {\set qzGX {\calc{\x + \a - 2}}\set qzGY {\calc{\y + \b - 2}}\set qzGD {\calc{max(abs(\a - 2), abs(\b - 2))}}\set qzGV {\calc{min(1, abs(qzGD - 1))}}\qzfun{\qzGX}{\qzGY}{\qzGV}}
+\def qzalign x y {\for\qzGA{\range{0}{4}}{\for\qzGB{\range{0}{4}}{\qzaligncell{\x}{\y}{\qzGA}{\qzGB}}}}
+\def qzalignstep j s {\set qzAX {\calc{qzAN + 2 - \j}}\global\set qzAP {\put{\qzAP}{\qzAX}{\qzAPP}}\global\set qzAPP {\calc{qzAPP - \s}}}
+\def qzalignposdo {\global\set qzAN {\calc{floor(qzVer / 7) + 2}}\set qzAS {\calc{floor((qzVer * 8 + qzAN * 3 + 5) / (qzAN * 4 - 4)) * 2}}\global\set qzAP {\transform\qzAI{\range{1}{\qzAN}}{0}}\global\set qzAP {\put{\qzAP}{1}{6}}\global\set qzAPP {\calc{qzSize - 7}}\for\qzAJ{\range{2}{\qzAN}}{\qzalignstep{\qzAJ}{\qzAS}}}
+\def qzalignpos {\global\set qzAP {\seq{}}\if {\> {\qzVer} {1}}\qzalignposdo\fi}
+\def qzalignok i j n {\calc{min(1, (abs(\i - 1) + abs(\j - 1)) * (abs(\i - 1) + abs(\j - \n)) * (abs(\i - \n) + abs(\j - 1)))}}
+\def qzalignmaybe i j n {\if {\qzalignok{\i}{\j}{\n}}\set qzAL {\nth{\qzAP}{\i}}\set qzAM {\nth{\qzAP}{\j}}\qzalign{\qzAL}{\qzAM}\fi}
+\def qzalignloop {\set qzANN {\size{\qzAP}}\for\qzAA{\range{1}{\qzANN}}{\for\qzAB{\range{1}{\qzANN}}{\qzalignmaybe{\qzAA}{\qzAB}{\qzANN}}}}
+\def qzalignall {\if {\> {\size{\qzAP}} {0}}\qzalignloop\fi}
+
+// ---- Format and version information ---------------------------------------------
+// Both are BCH-protected: a short value, a remainder by a fixed polynomial, and a
+// mask so that an all-zero field cannot look like valid information.
+
+\def qzfbit b {\calc{and(shr(qzFB, \b), 1)}}
+\def qzfmtrem {\for\qzFI{\range{1}{10}}{\global\set qzFR {\calc{xor(shl(qzFR, 1), shr(qzFR, 9) * 1335)}}}}
+\def qzfmtdraw {\for\qzFJ{\range{0}{5}}{\set qzFV {\qzfbit{\qzFJ}}\qzfun{8}{\qzFJ}{\qzFV}}\set qzFV {\qzfbit{6}}\qzfun{8}{7}{\qzFV}\set qzFV {\qzfbit{7}}\qzfun{8}{8}{\qzFV}\set qzFV {\qzfbit{8}}\qzfun{7}{8}{\qzFV}\for\qzFK{\range{9}{14}}{\set qzFX {\calc{14 - qzFK}}\set qzFV {\qzfbit{\qzFK}}\qzfun{\qzFX}{8}{\qzFV}}\for\qzFL{\range{0}{7}}{\set qzFY {\calc{qzSize - 1 - qzFL}}\set qzFV {\qzfbit{\qzFL}}\qzfun{\qzFY}{8}{\qzFV}}\for\qzFM{\range{8}{14}}{\set qzFZ {\calc{qzSize - 15 + qzFM}}\set qzFV {\qzfbit{\qzFM}}\qzfun{8}{\qzFZ}{\qzFV}}\set qzFN {\calc{qzSize - 8}}\qzfun{8}{\qzFN}{1}}
+\def qzformat m {\set qzFE {\nth{\qzFmtT}{\calc{qzEcl + 1}}}\set qzFD {\calc{or(shl(qzFE, 3), \m)}}\global\set qzFR {\qzFD}\qzfmtrem\global\set qzFB {\calc{xor(or(shl(qzFD, 10), qzFR), 21522)}}\qzfmtdraw}
+
+\def qzvbit b {\calc{and(shr(qzVB, \b), 1)}}
+\def qzvrem {\for\qzVI{\range{1}{12}}{\global\set qzVR {\calc{xor(shl(qzVR, 1), shr(qzVR, 11) * 7973)}}}}
+\def qzvcell i {\set qzVV {\qzvbit{\i}}\set qzVA {\calc{qzSize - 11 + \i % 3}}\set qzVBB {\calc{floor(\i / 3)}}\qzfun{\qzVA}{\qzVBB}{\qzVV}\qzfun{\qzVBB}{\qzVA}{\qzVV}}
+\def qzversiondo {\global\set qzVR {\qzVer}\qzvrem\global\set qzVB {\calc{or(shl(qzVer, 12), qzVR)}}\for\qzVJ{\range{0}{17}}{\qzvcell{\qzVJ}}}
+\def qzversion {\if {\> {\qzVer} {6}}\qzversiondo\fi}
+
+// ---- Laying the codewords into the grid -----------------------------------------
+// Two modules wide at a time, up the right-hand edge and down the next pair, past
+// the vertical timing pattern in column 6, skipping every function module.
+
+\def qzcwbit i {\set qzWI {\calc{floor(\i / 8) + 1}}\set qzWB {\nth{\qzAll}{\qzWI}}\calc{and(shr(qzWB, 7 - \i % 8), 1)}}
+\def qzdrawbit x y {\set qzCV {\qzcwbit{\qzCI}}\qzdat{\x}{\y}{\qzCV}\global\set qzCI {\calc{qzCI + 1}}}
+\def qzdrawput x y {\if {\< {\qzCI} {\qzNBits}}\qzdrawbit{\x}{\y}\fi}
+\def qzdrawcell x y {\set qzCF {\qzisfun{\x}{\y}}\if {\= {\qzCF} {0}}\qzdrawput{\x}{\y}\fi}
+\def qzdrawpair v j {\set qzQX {\calc{qzRight - \j}}\set qzUP {\calc{1 - floor(and(qzRight + 1, 2) / 2)}}\set qzQY {\calc{qzUP * (qzMax - \v) + (1 - qzUP) * \v}}\qzdrawcell{\qzQX}{\qzQY}}
+\def qzdrawcol {\if {\= {\qzRight} {6}}\global\set qzRight {5}\fi\for\qzDW{\range{0}{\qzMax}}{\qzdrawpair{\qzDW}{0}\qzdrawpair{\qzDW}{1}}\global\set qzRight {\calc{qzRight - 2}}}
+\def qzdrawcw {\global\set qzCI {0}\global\set qzNBits {\calc{\size{\qzAll} * 8}}\global\set qzRight {\qzMax}\while {\>= {\qzRight} {1}}{\qzdrawcol}}
+
+// ---- Masking --------------------------------------------------------------------
+// One of eight regular patterns is exclusive-ored over the data modules so that the
+// printed symbol has no large blank areas and no accidental finder-like stripes.
+// Each rule is written as arithmetic that answers 1 or 0, since a mask is applied
+// once per module and a chain of comparisons would be read a million times over.
+
+\def qzmaskh x y {\if {\= {\qzM} {6}}\calc{1 - ((\x * \y) % 2 + (\x * \y) % 3) % 2}\else\calc{1 - ((\x + \y) % 2 + (\x * \y) % 3) % 2}\fi}
+\def qzmaskg x y {\if {\= {\qzM} {5}}\calc{1 - min(1, (\x * \y) % 2 + (\x * \y) % 3)}\else\qzmaskh{\x}{\y}\fi}
+\def qzmaskf x y {\if {\= {\qzM} {4}}\calc{1 - (floor(\x / 3) + floor(\y / 2)) % 2}\else\qzmaskg{\x}{\y}\fi}
+\def qzmaske x y {\if {\= {\qzM} {3}}\calc{1 - min(1, (\x + \y) % 3)}\else\qzmaskf{\x}{\y}\fi}
+\def qzmaskd x y {\if {\= {\qzM} {2}}\calc{1 - min(1, \x % 3)}\else\qzmaske{\x}{\y}\fi}
+\def qzmaskc x y {\if {\= {\qzM} {1}}\calc{1 - \y % 2}\else\qzmaskd{\x}{\y}\fi}
+\def qzmask x y {\if {\= {\qzM} {0}}\calc{1 - (\x + \y) % 2}\else\qzmaskc{\x}{\y}\fi}
+
+\def qzflip x y {\set qzXV {\qzdark{\x}{\y}}\set qzXW {\calc{1 - qzXV}}\qzdat{\x}{\y}{\qzXW}}
+\def qzapplyflip x y {\set qzAV {\qzmask{\x}{\y}}\if {\= {\qzAV} {1}}\qzflip{\x}{\y}\fi}
+\def qzapplycell x y {\set qzAF {\qzisfun{\x}{\y}}\if {\= {\qzAF} {0}}\qzapplyflip{\x}{\y}\fi}
+\def qzapplymask {\for\qzMY{\range{0}{\qzMax}}{\for\qzMX{\range{0}{\qzMax}}{\qzapplycell{\qzMX}{\qzMY}}}}
+
+// ---- The penalty score ----------------------------------------------------------
+// Four rules, scored over the whole grid: runs of five or more alike modules, 2x2
+// blocks of one colour, anything resembling a finder pattern, and a dark-to-light
+// ratio far from even. The mask with the lowest total is the one kept.
+
+// Rule 3 needs the lengths of the last seven runs, most recent first, with an
+// implicit light margin before the first — hence the size added to the opening run.
+\def qzhistadd n {\set qzHL {\n}\set qzHF {\nth{\qzH}{1}}\if {\= {\qzHF} {0}}\set qzHL {\calc{\n + qzSize}}\fi\global\set qzH {\prepend{\slice{\qzH}{1}{6}}{\qzHL}}}
+\def qzhistcore {\set qzHA {\nth{\qzH}{3}}\set qzHB {\nth{\qzH}{4}}\set qzHC {\nth{\qzH}{5}}\set qzHD {\nth{\qzH}{6}}\calc{min(1, qzHN) * (1 - min(1, abs(qzHA - qzHN))) * (1 - min(1, abs(qzHB - qzHN * 3))) * (1 - min(1, abs(qzHC - qzHN))) * (1 - min(1, abs(qzHD - qzHN)))}}
+\def qzhistcount {\set qzHN {\nth{\qzH}{2}}\set qzHK {\qzhistcore}\set qzHFst {\nth{\qzH}{1}}\set qzHLst {\nth{\qzH}{7}}\global\set qzHP {\calc{qzHK * (min(1, max(0, qzHFst - qzHN * 4 + 1)) * min(1, max(0, qzHLst - qzHN + 1)) + min(1, max(0, qzHLst - qzHN * 4 + 1)) * min(1, max(0, qzHFst - qzHN + 1)))}}}
+
+\def qzrunmore {\global\set qzRunL {\calc{qzRunL + 1}}\if {\= {\qzRunL} {5}}\global\set qzPen {\calc{qzPen + 3}}\fi\if {\> {\qzRunL} {5}}\global\set qzPen {\calc{qzPen + 1}}\fi}
+\def qzrunend c {\qzhistadd{\qzRunL}\if {\= {\qzRunC} {0}}\qzhistcount\global\set qzPen {\calc{qzPen + qzHP * 40}}\fi\global\set qzRunC {\c}\global\set qzRunL {1}}
+\def qzruncell x y {\set qzPC {\qzdark{\x}{\y}}\if {\= {\qzPC} {\qzRunC}}\qzrunmore\else\qzrunend{\qzPC}\fi}
+\def qzrunreset {\global\set qzRunC {0}\global\set qzRunL {0}\global\set qzH {\transform\qzHI{\range{1}{7}}{0}}}
+\def qzrunterm {\set qzTL {\qzRunL}\if {\= {\qzRunC} {1}}\qzhistadd{\qzRunL}\set qzTL {0}\fi\set qzTM {\calc{qzTL + qzSize}}\qzhistadd{\qzTM}\qzhistcount\global\set qzPen {\calc{qzPen + qzHP * 40}}}
+\def qzrow y {\qzrunreset\for\qzSX{\range{0}{\qzMax}}{\qzruncell{\qzSX}{\y}}\qzrunterm}
+\def qzcol x {\qzrunreset\for\qzSY{\range{0}{\qzMax}}{\qzruncell{\x}{\qzSY}}\qzrunterm}
+
+\def qzblkcell x y {\set qzXP {\calc{\x + 1}}\set qzYP {\calc{\y + 1}}\set qzBA {\qzdark{\x}{\y}}\set qzBB {\qzdark{\qzXP}{\y}}\set qzBC {\qzdark{\x}{\qzYP}}\set qzBD {\qzdark{\qzXP}{\qzYP}}\set qzBS {\calc{qzBA + qzBB + qzBC + qzBD}}\if {\= {\qzBS} {0}}\global\set qzPen {\calc{qzPen + 3}}\fi\if {\= {\qzBS} {4}}\global\set qzPen {\calc{qzPen + 3}}\fi}
+
+\def qzdarkcount {\size{\filter\qzRC{\join{\qzGrid}{}}{\> {\indexof{#+}{\qzRC}} {0}}}}
+\def qzrulefour {\set qzDK {\qzdarkcount}\set qzTT {\calc{qzSize * qzSize}}\set qzKK {\calc{floor((abs(qzDK * 20 - qzTT * 10) + qzTT - 1) / qzTT) - 1}}\global\set qzPen {\calc{qzPen + qzKK * 10}}}
+
+\def qzpenalty {\global\set qzPen {0}\for\qzPR{\range{0}{\qzMax}}{\qzrow{\qzPR}}\for\qzPQ{\range{0}{\qzMax}}{\qzcol{\qzPQ}}\set qzMB {\calc{qzMax - 1}}\for\qzPI{\range{0}{\qzMB}}{\for\qzPJ{\range{0}{\qzMB}}{\qzblkcell{\qzPJ}{\qzPI}}}\qzrulefour}
+
+\def qzmaskkeep m {\if {\< {\qzPen} {\qzBest}}\global\set qzBest {\qzPen}\global\set qzBM {\m}\fi\qzapplymask}
+\def qzmasktry m {\global\set qzM {\m}\qzapplymask\qzformat{\m}\qzpenalty\qzmaskkeep{\m}}
+\def qzmasksearch {\global\set qzBest {999999999}\global\set qzBM {0}\for\qzSM{\range{0}{7}}{\qzmasktry{\qzSM}}\global\set qzM {\qzBM}\qzapplymask\qzformat{\qzBM}}
+
+// ---- Assembly -------------------------------------------------------------------
+
+\def qzgrid {\global\set qzSize {\calc{qzVer * 4 + 17}}\global\set qzMax {\calc{qzSize - 1}}\global\set qzGrid {\transform\qzGI{\range{1}{\qzSize}}{\repeat{.}{\qzSize}}}\qztiming\qzfinders\qzalignpos\qzalignall\qzformat{0}\qzversion}
+\def qzencodedo {\qzboost\qzbuild\qzwords\qzsetup\qzblocksall\qzinterleave\qzgrid\qzdrawcw\qzmasksearch}
+\def qzencode s {\qzsegment{\s}\qzfindver\if {\= {\qzOver} {0}}\qzencodedo\fi}
+
+// ---- Options --------------------------------------------------------------------
+
+\def qzoptsplit w {\set qzOI {\indexof{\w}{:}}\set qzOA {\calc{qzOI - 1}}\set qzOB {\calc{qzOI + 1}}\global\mapset qzOpts {\slice{\w}{1}{\qzOA}}{\slice{\w}{\qzOB}{\size{\w}}}}
+\def qzopts o {\global\set qzOpts {\map{}}\for\qzOW{\words{\o}}{\qzoptsplit{\qzOW}}}
+\def qzoptval k d {\if {\maphas qzOpts {\k}}\mapget qzOpts {\k}\else\d\fi}
+\def qzsetecl e {\set qzEI {\indexof{lmqh}{\e}}\if {\= {\qzEI} {0}}\message{qrcode: unknown ecc level '\e' — l, m, q or h}\set qzEI {3}\fi\global\set qzEcl {\calc{qzEI - 1}}}
+\def qzcolors {\if {\= {\qzDarkC} {}}\global\set qzDarkC {\thecolor}\fi}
+\def qzconfig o {\qzopts{\o}\set qzES {\qzoptval{ecc}{\qrecc}}\qzsetecl{\qzES}\set qzCS {\qzoptval{cell}{\qrcell}}\global\set qzCell {\calc{\qzCS}}\global\set qzQuiet {\qzoptval{quiet}{\qrquiet}}\global\set qzDarkC {\qzoptval{dark}{\qrdark}}\global\set qzLightC {\qzoptval{light}{\qrlight}}\qzcolors}
+
+// ---- Drawing --------------------------------------------------------------------
+
+\def qzlightvisible {\calc{1 - min(1, \indexof{\seq{none transparent}}{\qzLightC})}}
+\def qzcellrect x y {\set qzRRX {\calc{(\x + qzQuiet) * qzCell}}\set qzRRY {\calc{qzSide - (\y + qzQuiet + 1) * qzCell}}\rect{\qzRRX \qzRRY \qzCell \qzCell}}
+\def qzmodmaybe x y {\set qzMD {\qzdark{\x}{\y}}\if {\= {\qzMD} {1}}\qzcellrect{\x}{\y}\fi}
+\def qzside {\global\set qzSide {\calc{(qzSize + 2 * qzQuiet) * qzCell}}}
+
+\def qzdraw {\qzside\picture width:{\qzSide} height:{\qzSide} {
+  \nostroke
+  \if {\qzlightvisible}\fill{\qzLightC}\rect{0 0 \qzSide \qzSide}\fi
+  \fill{\qzDarkC}
+  \for\qzVY{\range{0}{\qzMax}}{
+    \for\qzVX{\range{0}{\qzMax}}{
+      \qzmodmaybe{\qzVX}{\qzVY}
+    }
+  }
+}}
+
+// ---- What a document calls -------------------------------------------------------
+// \qrcode places the symbol; \qrmatrix computes one without drawing it and leaves the
+// rows in qrmatrixvalue as strings of . and #, which is what the tests read.
+
+\def qztoolong {\message{qrcode: the data is too long for a QR Code symbol at this error-correction level}}
+\def qzfinish {\if {\= {\qzOver} {0}}\qzdraw\else\qztoolong\fi}
+\def qrcode [o:] <data> {\qzconfig{\o}\qzencode{\data}\qzfinish}
+\def qrmatrix [o:] <data> {\qzconfig{\o}\qzencode{\data}\global\set qrmatrixvalue {\transform\qzRW{\qzGrid}{\replace{\replace{\qzRW}{-}{.}}{+}{#}}}}
