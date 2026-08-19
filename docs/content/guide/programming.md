@@ -62,7 +62,8 @@ prices. The simple `\+ \- \* \/` also exist, but `\calc` is almost always cleare
 `\calc` reads its argument as an expression *string*, so a variable works in it spelled either way —
 `\calc{n * 2}` and `\calc{\n * 2}` both resolve the variable `n`. A call works too, as long as its
 arguments are braced: `\calc{\nth{\p}{1} * 2}` and `\calc{\total{\xs} / \size{\xs}}` evaluate the
-call and use what it produced. A call that gives something other than a number is an error.
+call and use what it produced. So does a dotted field, which is what lets a loop compute from its
+own position: `\calc{\forloop.index * 10}`. Anything that gives a non-number is an error.
 
 ## Conditionals
 

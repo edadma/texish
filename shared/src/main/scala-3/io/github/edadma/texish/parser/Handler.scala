@@ -31,6 +31,20 @@ trait Handler:
     finally captureSink = prev
     sb.toString
 
+  /** Run `thunk` with any capture in progress suspended, so its text goes where it normally would.
+    *
+    * A capture diverts [[text]] away from the typesetter, which is right for collecting what a body *writes* and
+    * wrong for content that is being built into a **box**: `\setbox b \hbox{observed}` inside a captured body
+    * stored an empty box, and `\wd b` then answered a width of nothing at all — a silent wrong number rather than
+    * an error. Box building is not document text, so the paths that exist to collect content into a box run under
+    * this.
+    */
+  def uncaptured[A](thunk: => A): A =
+    val prev = captureSink
+    captureSink = null
+    try thunk
+    finally captureSink = prev
+
   /** Called when text content should be output */
   def text(s: String): Unit
 

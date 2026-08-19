@@ -184,6 +184,13 @@ class LanguageSemanticsTests extends AnyFreeSpec with Matchers:
     display("\\set n {4}\\set v {\\calc{n * 2}}") shouldBe "8"
   }
 
+  "\\calc reads a dotted field, which is not an identifier" in {
+    // \forloop.index is a field of a map; flattening gave the text "forloop.index" and the expression failed on
+    // the name forloop, so a loop could not do arithmetic on its own position without binding it first
+    display("\\set m {\\map{w 4 h 3}}\\set v {\\calc{\\m.w * \\m.h}}") shouldBe "12"
+    out("\\for\\i{\\seq{a b c}}{\\calc{\\forloop.index * 10} }").trim shouldBe "10 20 30"
+  }
+
   "\\calc rejects a call that is not a number" in {
     val e = intercept[TexishException](run("\\set v {\\calc{\\upcase{ab} + 1}}"))
     e.getMessage should include("not a number")

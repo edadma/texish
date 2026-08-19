@@ -234,7 +234,7 @@ private[parser] def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, 
     case None    => null
   if toVal != null && spreadVal != null then proc.handler.error("a box takes either to: or spread:, not both", pos)
   if vertical then (if top then t.vtop(toVal, spreadVal) else t.vbox(toVal, spreadVal)) else t.hbox(toVal, spreadVal)
-  proc.processTokenList(body) // scoping happens automatically from { } tokens
+  proc.handler.uncaptured(proc.processTokenList(body)) // scoping happens automatically from { } tokens
   t.paragraph() // close any paragraph the body opened in vertical mode, so exit sees the box builder itself
   t.mode.exit
 
@@ -262,7 +262,7 @@ private[parser] def captureHBox(proc: Processor, t: Typesetter, handler: Typeset
   val body = proc.readArgument(pos)
   handler.flushPendingSpace()
   t.hbox(null)
-  proc.processTokenList(body)
+  proc.handler.uncaptured(proc.processTokenList(body))
   t.mode.exit
 
 // Read a numeric variable in points, falling back to `default` when it is unset — used for \fboxsep / \fboxrule,

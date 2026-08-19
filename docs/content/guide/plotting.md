@@ -45,6 +45,7 @@ series are `\picture` paths and shapes. There is no plot-specific engine primiti
 | `\xrange{min}{max}` | the x data range |
 | `\yrange{min}{max}` | the y data range |
 | `\autorange{x y x y …}` | derive both ranges from the data |
+| `\histrange{v v v …}` | derive both ranges from a `\histogram`'s values |
 | `\xcategories{A B C …}` | name the x ticks instead of numbering them |
 | `\xlabel{text}` / `\ylabel{text}` | axis labels (the y label is set vertically) |
 | `\plottitle{text}` | a title centred over the plot |
@@ -93,6 +94,8 @@ Every series takes two optional bracket arguments before its data — a **colour
 | `\fnplot[colour][label]{expression}` | a sampled curve of a function of `x` |
 | `\bubble[colour][label]{x y size …}` | a translucent disc at each point, sized by a third value |
 | `\errorbars[colour][label]{x y err …}` | a capped whisker of y ± err at each point |
+| `\bandplot[colour][label]{x lo hi …}` | the translucent band between a lower and an upper value |
+| `\histogram[colour][label]{v v v …}` | counts of raw **values**, binned into equal-width bars |
 | `\trendline[colour][label]{data}` | the least-squares line of best fit, drawn dashed |
 
 Both brackets are optional. With no colour (or an empty `[]`), a series takes its colour
@@ -184,6 +187,52 @@ value — a threshold, a target, a mean. With no colour they use `plotreflcolor`
 }
 ```
 
+## Bands and histograms
+
+`\bandplot` fills the region between a lower and an upper value at each x — a confidence
+interval, a min–max envelope, a forecast range. Its data is `x lo hi` triples. Draw it
+*before* the line it belongs to, so the line sits on top:
+
+```texish
+\xrange{0}{6}  \yrange{0}{12}
+\plot{
+  \bandplot[royalblue]{0 1 3  2 3 6  4 5 9  6 6 11}
+  \lineplot[royalblue][mean]{0 2  2 4.5  4 7  6 8.5}
+  \legend
+}
+```
+
+`\histogram` is the one series that takes raw **observations** rather than points: it bins
+them into `plothistbins` equal-width bars and draws the counts. `\histrange` sets both
+ranges from the same values, the way `\autorange` does for point data, so the two are used
+together:
+
+```texish
+\set plothistbins {8}
+\histrange{1 2 2 3 3 3 4 4 5 8 9 9}
+\xlabel{value}  \ylabel{count}
+\plot{ \histogram[teal]{1 2 2 3 3 3 4 4 5 8 9 9} }
+```
+
+The largest value falls in the last bin rather than one past the end, so nothing is
+silently dropped off the right edge.
+
+## Annotations
+
+`\annotate[colour]{x}{y}{text}` sets a short label just above a data point. The position
+is in *data* coordinates, so a note stays with its point when the range changes:
+
+```texish
+\plot{
+  \lineplot[crimson]{0 0  3 40  6 118}
+  \annotate{6}{118}{apogee}
+}
+```
+
+With no colour it takes `plotreflcolor`, as the reference lines do. A note sits inside the
+plot body, so it is clipped to the data area like a series — a label on a point at the very
+edge of the range needs `\set plotclip {0}`, or a point a little inside.
+
 ## Minor ticks and tick formatting
 
 `plotxminor` / `plotyminor` set the number of subdivisions per major interval; when
@@ -216,6 +265,8 @@ The look is controlled by variables you can `\set` after `\use{plot}` and before
 | `plotmarkr` | `2.6` | marker radius for `\scatter` |
 | `plotbubblemin` / `plotbubblemax` | `3` / `18` | smallest / largest bubble radius, in points (`\bubble`) |
 | `plotbubbleopacity` | `0.55` | bubble fill opacity, so overlaps show through |
+| `plotbandopacity` | `0.25` | `\bandplot` fill opacity, so a line inside it stays readable |
+| `plothistbins` | `10` | number of equal-width bins a `\histogram` divides its values into |
 | `plotsamples` | `80` | samples across the domain for `\fnplot` |
 | `plotbarfrac` | `0.6` | bar width as a fraction of the x step |
 | `plotxminor` / `plotyminor` | `0` | minor subdivisions per major interval (0 = none) |

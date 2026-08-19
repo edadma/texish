@@ -102,6 +102,11 @@ object RoundPrimitive extends Primitive:
   *
   * The call takes the control sequence and every braced group immediately after it, which is how a primitive call
   * is written; a `\macro` used this way must take its arguments in braces too.
+  *
+  * **A dotted field is read the same way.** `\forloop.index` is a field of a map, not an identifier, so flattening
+  * gave `forloop.index` and the expression failed on the name `forloop`. The field is evaluated and bound like a
+  * call, and whatever follows it in the same text token — `\forloop.indexz * histW` arrives as one token — carries
+  * on as expression text.
   */
 private def exprText(proc: Processor, tokens: Vector[Token], pos: CharReader): (String, Map[String, Double]) =
   val out   = new StringBuilder
@@ -123,17 +128,34 @@ private def exprText(proc: Processor, tokens: Vector[Token], pos: CharReader): (
         j += 1
       end
 
+  /** Bind a value under a private name the expression grammar can read, and write that name into the text. The
+    * names carry a digit, which `\set` and `\def` refuse, so no document variable can collide with one. */
+  def bind(what: String, value: Value, pos: CharReader, proc: Processor): Unit =
+    val name = s"call0arg${calls.size}"
+    calls(name) = Value
+      .number(value)
+      .getOrElse(proc.handler.error(s"\\calc: $what gave ${Value.display(value)}, which is not a number", pos))
+    out ++= name
+
   while i < tokens.length do
     tokens(i) match
+      // \var.field, whose field name runs to the first character that cannot be part of one
+      case Token.ControlSeq(n, csPos) if i + 1 < tokens.length && (tokens(i + 1) match
+            case Token.Text(t, _) => t.startsWith(".")
+            case _                => false
+          ) =>
+        val Token.Text(t, tPos) = tokens(i + 1): @unchecked
+        val rest     = t.drop(1)
+        val fieldEnd = rest.indexWhere(c => !c.isLetterOrDigit && c != '_')
+        val field    = if fieldEnd < 0 then rest else rest.substring(0, fieldEnd)
+        val tail     = if fieldEnd < 0 then "" else rest.substring(fieldEnd)
+        bind(s"\\$n.$field", proc.evalExpr(Vector(tokens(i), Token.Text("." + field, tPos)), pos), pos, proc)
+        out ++= tail
+        i += 2
       case Token.ControlSeq(n, _) if groupEnd(i + 1) > 0 =>
         var end = i + 1
         while groupEnd(end) > 0 do end = groupEnd(end)
-        val value = proc.evalExpr(tokens.slice(i, end), pos)
-        val name  = s"call0arg${calls.size}"
-        calls(name) = Value
-          .number(value)
-          .getOrElse(proc.handler.error(s"\\calc: \\$n gave ${Value.display(value)}, which is not a number", pos))
-        out ++= name
+        bind(s"\\$n", proc.evalExpr(tokens.slice(i, end), pos), pos, proc)
         i = end
       case Token.Text(s, _)       => out ++= s; i += 1
       case Token.Space(s, _)      => out ++= s; i += 1

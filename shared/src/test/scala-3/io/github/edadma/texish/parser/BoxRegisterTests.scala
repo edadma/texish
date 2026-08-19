@@ -161,3 +161,19 @@ class BoxRegisterTests extends AnyFreeSpec with Matchers:
     proc.process("\\set a {5} \\set r {\\isvoid a}")
     proc.handler.get("r") shouldBe Value.Bool(true)
   }
+
+  "a box built where output is being captured still holds its content" in {
+    // A capture diverts text away from the typesetter, which is right for collecting what a body writes and
+    // wrong for content going into a box: the register held an empty \hbox and \wd answered 0 — a silent wrong
+    // width rather than an error. It bites wherever a macro measures something and is used as a value, since
+    // reading a macro's value captures its output. Each character is 6 wide, so "AB" is 12.
+    val (_, proc) = fixture()
+    proc.process("\\def measure {\\setbox a \\hbox{AB}\\wd a}\\set w {\\measure}")
+    proc.handler.get("w") shouldBe Value.Dimen(12)
+  }
+
+  "the measured box is the one a capture would have swallowed, not a leftover" in {
+    val (_, proc) = fixture()
+    proc.process("\\def measure t {\\setbox a \\hbox{\\t}\\wd a}\\set w {\\measure{ABCD}}")
+    proc.handler.get("w") shouldBe Value.Dimen(24)
+  }

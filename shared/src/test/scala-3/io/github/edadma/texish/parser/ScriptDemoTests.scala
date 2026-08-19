@@ -61,3 +61,10 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
   "the book demo processes without error" in {
     noException should be thrownBy process("scripts/book-demo.script")
   }
+
+  // The plot demo is the package's own worked example: every series kind, both auto-ranging modes, the legend
+  // and the frame options, in one document. Its series are now folds over the point list rather than hand-rolled
+  // walks, so a defect in \chunk, \reverse, \minimum or a macro's value shows up here as a broken figure.
+  "the plot demo processes without error" in {
+    noException should be thrownBy process("scripts/plot-demo.script")
+  }

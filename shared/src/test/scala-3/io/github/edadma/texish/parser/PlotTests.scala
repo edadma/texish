@@ -157,6 +157,54 @@ class PlotTests extends AnyFreeSpec with Matchers:
     ops should contain(PictureOp.LineTo(280, 123))
   }
 
+  // ---- Series that came out of the point-list rewrite -------------------------------
+
+  "a band fills forward along its upper edge and back along its lower" in {
+    // x y-lo y-hi triples: the path runs (0,50) → (10,100) on top, then back (10,50) → (0,0)
+    // underneath, which is \reverse over the same points rather than a second walk
+    val ops = run(s"$preamble \\plot{ \\bandplot[royalblue]{0 0 50  10 50 100} }")
+    ops should contain(PictureOp.MoveTo(46, 123))
+    ops should contain(PictureOp.LineTo(280, 204))
+    ops should contain(PictureOp.LineTo(280, 123))
+    ops should contain(PictureOp.LineTo(46, 42))
+    ops should contain(PictureOp.Close)
+  }
+
+  "a histogram bins its values, with the maximum falling in the last bin" in {
+    // 0 5 5 10 in two bins over 0..10: bin 0 holds only the 0, and the 10 is clamped into
+    // bin 1 rather than falling one past the end — so the counts are 1 and 3
+    val ops = run(
+      "\\use{plot}\\set plotgrid {0}\\set plothistbins {2}\\xrange{0}{10}\\yrange{0}{162}" +
+        " \\plot{ \\histogram[teal]{0 5 5 10} }",
+    )
+    val barLefts = ops.collect { case PictureOp.MoveTo(x, y) if y == 42 => x }
+    barLefts should contain(46.0)  // bin 0 starts at x = 0
+    barLefts should contain(163.0) // bin 1 starts at x = 5
+    val barTops = ops.collect { case PictureOp.LineTo(_, y) => y }
+    barTops should contain(43.0) // a count of 1
+    barTops should contain(45.0) // a count of 3
+  }
+
+  "\\histrange spans the values and leaves headroom over the tallest bin" in {
+    val ops = run(
+      "\\use{plot}\\set plotgrid {0}\\set plothistbins {2}\\histrange{0 5 5 10}" +
+        " \\plot{ \\histogram[teal]{0 5 5 10}\\lineplot[black]{0 0  10 0} }",
+    )
+    // x spans the data exactly, so the extreme values land on the two area edges
+    ops should contain(PictureOp.MoveTo(46, 42))
+    ops should contain(PictureOp.LineTo(280, 42))
+    // and the tallest bar — the one whose left edge is at x = 5, device 163 — stops short of
+    // the top of the area, which is the 5% headroom \histrange leaves over the largest count
+    val barTop = ops.collect { case PictureOp.LineTo(x, y) if x == 163.0 => y }.max
+    barTop should (be > 42.0 and be < 204.0)
+  }
+
+  "an annotation is placed at its data point" in {
+    val ops = run(s"$preamble \\plot{ \\lineplot[black]{0 0  10 100}\\annotate{5}{50}{peak} }")
+    val places = ops.collect { case PictureOp.Place(_, _, x, y) => (x, y) }
+    places should contain((163.0, 127.0)) // (5,50) -> (163,123), lifted 4 points clear
+  }
+
   "minor ticks add shorter marks between the majors" in {
     // minor y tick length = plotticklen*0.6 = 2.4, so a minor y tick ends at x = 46 - 2.4 = 43.6
     val ops = run(s"$preamble \\set plotyminor {2} \\plot{ \\lineplot[black]{0 0  10 100} }")

@@ -219,6 +219,41 @@ legible where they overlap.
   \legend[sw]
 }
 
+\section{Bands and annotations}
+
+A \verb|\bandplot| reads \italic{x lo hi} triples and fills the region between the two
+values — a confidence interval, a min–max envelope, a forecast range. It is drawn before
+the line it belongs to so the line sits on top of it, and \verb|\annotate| puts a short
+note beside a point in \italic{data} coordinates, so the note travels with its point when
+the range changes.
+
+\xrange{0}{6}
+\yrange{0}{14}
+\xlabel{months ahead}
+\ylabel{units (thousands)}
+\plottitle{Forecast with uncertainty}
+\plot{
+  \bandplot[royalblue][80% interval]{0 1.8 2.2  1 2.4 3.4  2 3.0 4.8  3 3.4 6.4  4 3.6 8.2  5 3.6 10.2  6 3.4 12.4}
+  \lineplot[royalblue][central]{0 2  1 2.9  2 3.9  3 4.9  4 5.9  5 6.9  6 7.9}
+  \annotate[crimson]{3}{6.4}{spread widens}
+  \legend[nw]
+}
+
+\section{Histograms}
+
+Every other series takes points; \verb|\histogram| takes raw \italic{observations} and
+counts them into equal-width bins, \italic{plothistbins} of them. \verb|\histrange| derives
+both ranges from the same values — the width of the data across, and zero to a little
+above the tallest bin up — so the two are written together. The largest observation falls
+in the last bin rather than one past the end, so nothing drops off the right edge.
+
+\set plothistbins {9}
+\histrange{4 7 7 9 9 9 10 10 10 10 11 11 11 12 12 13 14 8 9 10 11 12 10 9 11 10 13 8 10 11}
+\xlabel{response time (ms)}
+\ylabel{requests}
+\plottitle{Latency distribution}
+\plot{ \histogram[seagreen]{4 7 7 9 9 9 10 10 10 10 11 11 11 12 12 13 14 8 9 10 11 12 10 9 11 10 13 8 10 11} }
+
 \section{Styling the frame}
 
 The frame is fully configurable. The grid can be turned off with \italic{plotgrid},
