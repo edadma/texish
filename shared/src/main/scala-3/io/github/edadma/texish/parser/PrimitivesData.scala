@@ -39,6 +39,32 @@ private def itemsOf(v: Value): Vector[Value] = v match
   case n: (Value.Num | Value.Bool) => codePointStrings(Value.display(n)).map(Value.Text.apply)
   case other                       => Vector(other)
 
+/** The text a value is read as a sequence of characters through: a string is itself, and a number or a boolean
+  * is what it displays as. Anything else is not a character sequence and answers None. */
+private def charText(v: Value): Option[String] = v match
+  case Value.Text(s)              => Some(s)
+  case n: (Value.Num | Value.Bool) => Some(Value.display(n))
+  case _                          => None
+
+/** How many items a value has, without building them. `itemsOf` allocates one value per character of a string,
+  * which is a great deal of garbage to make in order to ask a question about the length — and these are asked
+  * inside the innermost loops of anything that walks a grid. */
+private def itemCount(v: Value): Int = v match
+  case Value.Seq(items)            => items.length
+  case Value.Map(entries)          => entries.size
+  case Value.Nil | Value.Undefined => 0
+  case other                       => charText(other).map(s => s.codePointCount(0, s.length)).getOrElse(1)
+
+/** The nth item of a value, counting from 0, or None past either end — again without building the rest. */
+private def itemAt(v: Value, i: Int): Option[Value] = v match
+  case Value.Seq(items) => if i >= 0 && i < items.length then Some(items(i)) else None
+  case other =>
+    charText(other) match
+      case Some(s) =>
+        val at = if i >= 0 then s.offsetByCodePoints(0, math.min(i, s.codePointCount(0, s.length))) else -1
+        if i >= 0 && at < s.length then Some(Value.Text(s.substring(at, s.offsetByCodePoints(at, 1)))) else None
+      case None => itemsOf(v).lift(i)
+
 /** Rebuild a result in the shape of the value it came from: an operation on a string gives a string, an operation
   * on anything else a sequence. This is what lets `\reverse` and `\slice` serve both without a second name each.
   */
@@ -71,10 +97,8 @@ object NthPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val subject = proc.evalStringArgument(pos)
     val n       = Value.number(proc.evalArgumentExpr(pos)).map(_.toInt).getOrElse(0)
-    val items   = itemsOf(subject)
-    val result  = if n >= 1 && n <= items.length then items(n - 1) else Value.Undefined
 
-    valueResult(proc, result)
+    valueResult(proc, itemAt(subject, n - 1).getOrElse(Value.Undefined))
 
 /** `\slice {items} {from} {count}` — `count` items (or characters) starting at position `from`, counting from 1.
   * Both bounds are clamped, so a slice that runs off either end gives what is there rather than an error, and a
@@ -135,12 +159,19 @@ object PutPrimitive extends Primitive:
     val subject = proc.evalStringArgument(pos)
     val n       = Value.number(proc.evalArgumentExpr(pos)).map(_.toInt).getOrElse(0)
     val item    = proc.evalStringArgument(pos)
-    val items   = itemsOf(subject)
 
-    if n < 1 || n > items.length then
-      proc.handler.error(s"\\put: position $n is outside a sequence of ${items.length}", pos)
+    if n < 1 || n > itemCount(subject) then
+      proc.handler.error(s"\\put: position $n is outside a sequence of ${itemCount(subject)}", pos)
 
-    valueResult(proc, likeInput(subject, items.updated(n - 1, item)))
+    val result = charText(subject) match
+      // Spliced rather than taken apart and rebuilt: a grid held as rows of characters is written one cell at a
+      // time, so this runs once per cell and the difference is the whole cost of drawing one
+      case Some(s) =>
+        val at = s.offsetByCodePoints(0, n - 1)
+        Value.Text(s.substring(0, at) + Value.display(item) + s.substring(s.offsetByCodePoints(at, 1)))
+      case None => likeInput(subject, itemsOf(subject).updated(n - 1, item))
+
+    valueResult(proc, result)
 
 /** `\concat {a} {b}` — one sequence followed by another. This is the sequence counterpart of `\cat`, which joins two
   * values as *text*; the two are deliberately separate, because appending a list to a list and printing a list after

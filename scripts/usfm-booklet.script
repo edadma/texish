@@ -8,6 +8,7 @@
 // exactly one saddle-stitched signature: three A5 sheets, six PDF pages.
 
 \use{usfm}
+\use{qrcode}
 
 \usehyphenation{en-us}
 
@@ -83,7 +84,8 @@
 // ---- Back cover (folio 12) ----------------------------------------------------
 // The call to action: a QR code linking to the ministry site, a short invitation, and the imprint. The QR is drawn
 // as vector cells (crisp on the print), error-correction level Q so a fold crease or smudge across it still scans.
-// \qrcode reads its URL straight from the live source (a URL's // would otherwise read as a comment), so it cannot
+// \qrcode comes from the qrcode package, and reads its URL straight from the live source (a URL's // would
+// otherwise read as a comment), so it cannot
 // sit inside a collected argument such as \centerline or \fbox — it is issued directly and centred by setting fil
 // glue on both sides of its one-box line.
 {

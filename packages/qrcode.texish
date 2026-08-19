@@ -294,10 +294,15 @@
 \def qzmaskc x y {\if {\= {\qzM} {1}}\calc{1 - \y % 2}\else\qzmaskd{\x}{\y}\fi}
 \def qzmask x y {\if {\= {\qzM} {0}}\calc{1 - (\x + \y) % 2}\else\qzmaskc{\x}{\y}\fi}
 
-\def qzflip x y {\set qzXV {\qzdark{\x}{\y}}\set qzXW {\calc{1 - qzXV}}\qzdat{\x}{\y}{\qzXW}}
-\def qzapplyflip x y {\set qzAV {\qzmask{\x}{\y}}\if {\= {\qzAV} {1}}\qzflip{\x}{\y}\fi}
-\def qzapplycell x y {\set qzAF {\qzisfun{\x}{\y}}\if {\= {\qzAF} {0}}\qzapplyflip{\x}{\y}\fi}
-\def qzapplymask {\for\qzMY{\range{0}{\qzMax}}{\for\qzMX{\range{0}{\qzMax}}{\qzapplycell{\qzMX}{\qzMY}}}}
+// Applying a mask rewrites a row at a time, from the unmasked grid rather than by flipping the live one back and
+// forth: exclusive-or is its own inverse, so undoing a mask costs exactly as much as applying it, and keeping the
+// unmasked grid to copy from halves the work outright. Within a row a cell is one \nth into a string, where
+// reaching it through the grid was two \nth and two \calc — over eight masks that is the difference between a
+// symbol taking seconds and taking a moment.
+\def qzmaskdata x {\set qzMV {\qzmask{\x}{\qzMY}}\if {\= {\qzMV} {1}}\nth{.#}{\calc{3 - qzMK}}\else\qzMC\fi}
+\def qzmaskcell x {\global\set qzMC {\nth{\qzMRow}{\calc{\x + 1}}}\global\set qzMK {\indexof{.#}{\qzMC}}\if {\= {\qzMK} {0}}\qzMC\else\qzmaskdata{\x}\fi}
+\def qzmaskrow y {\global\set qzMY {\y}\set qzMP {\calc{\y + 1}}\global\set qzMRow {\nth{\qzBase}{\qzMP}}\global\set qzGrid {\put{\qzGrid}{\qzMP}{\join{\transform\qzMI{\range{0}{\qzMax}}{\qzmaskcell{\qzMI}}}{}}}}
+\def qzapplymask {\global\set qzGrid {\qzBase}\for\qzMR{\range{0}{\qzMax}}{\qzmaskrow{\qzMR}}}
 
 // ---- The penalty score ----------------------------------------------------------
 // Four rules, scored over the whole grid: runs of five or more alike modules, 2x2
@@ -305,34 +310,55 @@
 // ratio far from even. The mask with the lowest total is the one kept.
 
 // Rule 3 needs the lengths of the last seven runs, most recent first, with an
-// implicit light margin before the first — hence the size added to the opening run.
-\def qzhistadd n {\set qzHL {\n}\set qzHF {\nth{\qzH}{1}}\if {\= {\qzHF} {0}}\set qzHL {\calc{\n + qzSize}}\fi\global\set qzH {\prepend{\slice{\qzH}{1}{6}}{\qzHL}}}
-\def qzhistcore {\set qzHA {\nth{\qzH}{3}}\set qzHB {\nth{\qzH}{4}}\set qzHC {\nth{\qzH}{5}}\set qzHD {\nth{\qzH}{6}}\calc{min(1, qzHN) * (1 - min(1, abs(qzHA - qzHN))) * (1 - min(1, abs(qzHB - qzHN * 3))) * (1 - min(1, abs(qzHC - qzHN))) * (1 - min(1, abs(qzHD - qzHN)))}}
-\def qzhistcount {\set qzHN {\nth{\qzH}{2}}\set qzHK {\qzhistcore}\set qzHFst {\nth{\qzH}{1}}\set qzHLst {\nth{\qzH}{7}}\global\set qzHP {\calc{qzHK * (min(1, max(0, qzHFst - qzHN * 4 + 1)) * min(1, max(0, qzHLst - qzHN + 1)) + min(1, max(0, qzHLst - qzHN * 4 + 1)) * min(1, max(0, qzHFst - qzHN + 1)))}}}
+// implicit light margin before the first — hence the size added to the opening run. The list is only ever
+// prepended to and never trimmed: the entries past the seventh are not read, and dropping them would cost an
+// allocation on every run end, which is the most frequent thing this file does.
+\def qzhistadd n {\set qzHL {\n}\set qzHF {\nth{\qzH}{1}}\if {\= {\qzHF} {0}}\set qzHL {\calc{\n + qzSize}}\fi\global\set qzH {\prepend{\qzH}{\qzHL}}}
+// The finder-like pattern of rule 3 is a run of n light, n dark, 3n dark-centre, n dark, n light, and almost no
+// run in a real symbol is the start of one — so the test gives up at the first length that does not fit rather
+// than evaluating the whole shape. This is scored once per run end for every line in both directions and for all
+// eight masks, which makes the difference between bailing in one comparison and bailing in twenty a large one.
+\def qzhce {\set qzHFst {\nth{\qzH}{1}}\set qzHLst {\nth{\qzH}{7}}\global\set qzHP {\calc{min(1, max(0, qzHFst - qzHN * 4 + 1)) * min(1, max(0, qzHLst - qzHN + 1)) + min(1, max(0, qzHLst - qzHN * 4 + 1)) * min(1, max(0, qzHFst - qzHN + 1))}}}
+\def qzhcd {\if {\= {\nth{\qzH}{6}} {\qzHN}}\qzhce\fi}
+\def qzhcc {\if {\= {\nth{\qzH}{5}} {\qzHN}}\qzhcd\fi}
+\def qzhcb {\set qzHW {\calc{qzHN * 3}}\if {\= {\nth{\qzH}{4}} {\qzHW}}\qzhcc\fi}
+\def qzhca {\if {\= {\nth{\qzH}{3}} {\qzHN}}\qzhcb\fi}
+\def qzhistcount {\global\set qzHP {0}\global\set qzHN {\nth{\qzH}{2}}\if {\> {\qzHN} {0}}\qzhca\fi}
 
-\def qzrunmore {\global\set qzRunL {\calc{qzRunL + 1}}\if {\= {\qzRunL} {5}}\global\set qzPen {\calc{qzPen + 3}}\fi\if {\> {\qzRunL} {5}}\global\set qzPen {\calc{qzPen + 1}}\fi}
-\def qzrunend c {\qzhistadd{\qzRunL}\if {\= {\qzRunC} {0}}\qzhistcount\global\set qzPen {\calc{qzPen + qzHP * 40}}\fi\global\set qzRunC {\c}\global\set qzRunL {1}}
-\def qzruncell x y {\set qzPC {\qzdark{\x}{\y}}\if {\= {\qzPC} {\qzRunC}}\qzrunmore\else\qzrunend{\qzPC}\fi}
-\def qzrunreset {\global\set qzRunC {0}\global\set qzRunL {0}\global\set qzH {\transform\qzHI{\range{1}{7}}{0}}}
-\def qzrunterm {\set qzTL {\qzRunL}\if {\= {\qzRunC} {1}}\qzhistadd{\qzRunL}\set qzTL {0}\fi\set qzTM {\calc{qzTL + qzSize}}\qzhistadd{\qzTM}\qzhistcount\global\set qzPen {\calc{qzPen + qzHP * 40}}}
-\def qzrow y {\qzrunreset\for\qzSX{\range{0}{\qzMax}}{\qzruncell{\qzSX}{\y}}\qzrunterm}
-\def qzcol x {\qzrunreset\for\qzSY{\range{0}{\qzMax}}{\qzruncell{\x}{\qzSY}}\qzrunterm}
+\def qzrunmore {\global\set qzRunL {\calc{qzRunL + 1}}\global\set qzPen {\calc{qzPen + max(0, min(1, qzRunL - 4)) * (3 - 2 * max(0, min(1, qzRunL - 5)))}}}
+\def qzrunend c {\qzhistadd{\qzRunL}\if {\= {\qzRunC} {.}}\qzhistcount\global\set qzPen {\calc{qzPen + qzHP * 40}}\fi\global\set qzRunC {\c}\global\set qzRunL {1}}
+\def qzruncell c {\if {\= {\c} {\qzRunC}}\qzrunmore\else\qzrunend{\c}\fi}
+\def qzrunreset {\global\set qzRunC {.}\global\set qzRunL {0}\global\set qzH {\transform\qzHI{\range{1}{7}}{0}}}
+\def qzrunterm {\set qzTL {\qzRunL}\if {\= {\qzRunC} {#}}\qzhistadd{\qzRunL}\set qzTL {0}\fi\set qzTM {\calc{qzTL + qzSize}}\qzhistadd{\qzTM}\qzhistcount\global\set qzPen {\calc{qzPen + qzHP * 40}}}
 
-\def qzblkcell x y {\set qzXP {\calc{\x + 1}}\set qzYP {\calc{\y + 1}}\set qzBA {\qzdark{\x}{\y}}\set qzBB {\qzdark{\qzXP}{\y}}\set qzBC {\qzdark{\x}{\qzYP}}\set qzBD {\qzdark{\qzXP}{\qzYP}}\set qzBS {\calc{qzBA + qzBB + qzBC + qzBD}}\if {\= {\qzBS} {0}}\global\set qzPen {\calc{qzPen + 3}}\fi\if {\= {\qzBS} {4}}\global\set qzPen {\calc{qzPen + 3}}\fi}
+// The scan is a \for over the characters of one line, not an indexed walk of the grid. That matters more than it
+// looks: this runs twice over every module for each of the eight masks, so an extra \nth per cell is a hundred
+// thousand of them in one symbol. The grid is flattened to plain . and # first, and transposed once, so that a
+// column reads exactly as a row does.
+\def qzscan line {\qzrunreset\for\qzSC{\line}{\qzruncell{\qzSC}}\qzrunterm}
+\def qzflatten {\global\set qzDG {\transform\qzFW{\qzGrid}{\replace{\replace{\qzFW}{-}{.}}{+}{#}}}}
+\def qztcol x {\global\set qzTG {\append{\qzTG}{\join{\transform\qzTR{\qzDG}{\nth{\qzTR}{\x}}}{}}}}
+\def qztranspose {\global\set qzTG {\seq{}}\for\qzTX{\range{1}{\qzSize}}{\qztcol{\qzTX}}}
 
-\def qzdarkcount {\size{\filter\qzRC{\join{\qzGrid}{}}{\> {\indexof{#+}{\qzRC}} {0}}}}
-\def qzrulefour {\set qzDK {\qzdarkcount}\set qzTT {\calc{qzSize * qzSize}}\set qzKK {\calc{floor((abs(qzDK * 20 - qzTT * 10) + qzTT - 1) / qzTT) - 1}}\global\set qzPen {\calc{qzPen + qzKK * 10}}}
+// Rule 2 gives up as soon as two of the four modules differ, which is most of the time — a 2x2 block of one
+// colour is the exception, and testing all four every time costs three reads that answer nothing.
+\def qzblkc q {\if {\= {\qzCa} {\nth{\qzRB}{\q}}}\global\set qzPen {\calc{qzPen + 3}}\fi}
+\def qzblkb x q {\if {\= {\qzCa} {\nth{\qzRB}{\x}}}\qzblkc{\q}\fi}
+\def qzblkat x {\set qzXQ {\calc{\x + 1}}\global\set qzCa {\nth{\qzRA}{\x}}\if {\= {\qzCa} {\nth{\qzRA}{\qzXQ}}}\qzblkb{\x}{\qzXQ}\fi}
+\def qzblkrow y {\global\set qzRA {\nth{\qzDG}{\y}}\global\set qzRB {\nth{\qzDG}{\calc{\y + 1}}}\for\qzBX{\range{1}{\qzMax}}{\qzblkat{\qzBX}}}
 
-\def qzpenalty {\global\set qzPen {0}\for\qzPR{\range{0}{\qzMax}}{\qzrow{\qzPR}}\for\qzPQ{\range{0}{\qzMax}}{\qzcol{\qzPQ}}\set qzMB {\calc{qzMax - 1}}\for\qzPI{\range{0}{\qzMB}}{\for\qzPJ{\range{0}{\qzMB}}{\qzblkcell{\qzPJ}{\qzPI}}}\qzrulefour}
+\def qzrulefour {\set qzDK {\size{\filter\qzRC{\join{\qzDG}{}}{\= {\qzRC} {#}}}}\set qzTT {\calc{qzSize * qzSize}}\set qzKK {\calc{floor((abs(qzDK * 20 - qzTT * 10) + qzTT - 1) / qzTT) - 1}}\global\set qzPen {\calc{qzPen + qzKK * 10}}}
 
-\def qzmaskkeep m {\if {\< {\qzPen} {\qzBest}}\global\set qzBest {\qzPen}\global\set qzBM {\m}\fi\qzapplymask}
+\def qzpenalty {\global\set qzPen {0}\qzflatten\qztranspose\for\qzPR{\qzDG}{\qzscan{\qzPR}}\for\qzPQ{\qzTG}{\qzscan{\qzPQ}}\for\qzPI{\range{1}{\qzMax}}{\qzblkrow{\qzPI}}\qzrulefour}
+
+\def qzmaskkeep m {\if {\< {\qzPen} {\qzBest}}\global\set qzBest {\qzPen}\global\set qzBM {\m}\fi}
 \def qzmasktry m {\global\set qzM {\m}\qzapplymask\qzformat{\m}\qzpenalty\qzmaskkeep{\m}}
 \def qzmasksearch {\global\set qzBest {999999999}\global\set qzBM {0}\for\qzSM{\range{0}{7}}{\qzmasktry{\qzSM}}\global\set qzM {\qzBM}\qzapplymask\qzformat{\qzBM}}
 
 // ---- Assembly -------------------------------------------------------------------
 
 \def qzgrid {\global\set qzSize {\calc{qzVer * 4 + 17}}\global\set qzMax {\calc{qzSize - 1}}\global\set qzGrid {\transform\qzGI{\range{1}{\qzSize}}{\repeat{.}{\qzSize}}}\qztiming\qzfinders\qzalignpos\qzalignall\qzformat{0}\qzversion}
-\def qzencodedo {\qzboost\qzbuild\qzwords\qzsetup\qzblocksall\qzinterleave\qzgrid\qzdrawcw\qzmasksearch}
+\def qzencodedo {\qzboost\qzbuild\qzwords\qzsetup\qzblocksall\qzinterleave\qzgrid\qzdrawcw\global\set qzBase {\qzGrid}\qzmasksearch}
 \def qzencode s {\qzsegment{\s}\qzfindver\if {\= {\qzOver} {0}}\qzencodedo\fi}
 
 // ---- Options --------------------------------------------------------------------
