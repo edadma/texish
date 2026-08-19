@@ -1,0 +1,23 @@
+// datamatrix-demo — the datamatrix package. \datamatrix encodes its (verbatim) argument as an ECC200 Data
+// Matrix symbol and places it as a square box of filled cells, drawn in vector rectangles so it stays crisp
+// on every backend. Options ride an optional [key:value …] bracket: cell (per-module size, default 3pt),
+// quiet (border in modules, default 1) and dark / light colours. The data is read raw, so a URL's // is safe.
+// There is no barcode primitive in the engine — the encoder is written in the document language.
+
+\use{datamatrix}
+
+\geometry paperwidth:3.6in paperheight:6.2in margin:0.3in
+
+\datamatrix[cell:4pt]{123456}
+
+\vskip 14pt
+
+\datamatrix[cell:3pt]{PARCEL-4471-BOX-3-OF-7}
+
+\vskip 14pt
+
+\datamatrix[cell:2.5pt dark:navy]{https://christianevangelism.media}
+
+\vskip 14pt
+
+\datamatrix[cell:2pt]{The quick brown fox jumps over the lazy dog}

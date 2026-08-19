@@ -129,7 +129,7 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedPackages.scala"
       def esc(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
-      val embedded = Set("base", "document", "qrcode")
+      val embedded = Set("base", "document", "barcode", "qrcode", "datamatrix")
       val files    = (pkgDir * "*.texish").get.filter(f => embedded(f.getName.stripSuffix(".texish"))).sortBy(_.getName)
       val sb    = new StringBuilder
       sb.append("package io.github.edadma.texish\n\n")

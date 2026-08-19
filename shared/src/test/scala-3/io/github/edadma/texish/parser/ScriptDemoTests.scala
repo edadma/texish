@@ -75,3 +75,9 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
   "the QR demo processes without error" in {
     noException should be thrownBy process("scripts/qr-demo.script")
   }
+
+  // The Data Matrix demo covers the sizes the package builds, from the smallest square to one split into four
+  // data regions, so a placement that goes wrong only at a region boundary shows up here.
+  "the Data Matrix demo processes without error" in {
+    noException should be thrownBy process("scripts/datamatrix-demo.script")
+  }

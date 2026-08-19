@@ -1,0 +1,189 @@
+// datamatrix — ECC200 Data Matrix symbols, computed and drawn in the document language.
+//
+//     \use{datamatrix}
+//     \datamatrix{PARCEL-4471}
+//     \datamatrix[cell:4pt dark:navy]{https://example.com}
+//
+// A Data Matrix packs the same payload into rather less area than a QR Code, which is why it is
+// the symbology of shipping labels and of anything marked directly on a part. It is also the
+// simpler of the two to build: there is no masking, no format information and no version
+// information — the size of the symbol tells a reader everything it needs, and the solid L along
+// the left and bottom edges with the alternating track along the top and right is the whole of
+// the finder.
+//
+// Options ride an optional [key:value …] bracket, and each has a document variable behind it
+// that sets the default for every later call:
+//
+//     cell    (dmcell)  the side of one module, default 3pt; any length \calc understands
+//     quiet   (dmquiet) the border width in modules, default 1 (the standard's requirement)
+//     dark    (dmdark)  the module colour, default the pen colour in force
+//     light   (dmlight) the background, default white; light:none for a transparent one
+//
+// The data is read verbatim, so a URL's // is not a comment.
+//
+// ---- What is and is not here ----------------------------------------------------
+//
+// **Square symbols from 10x10 to 48x48**, which carry up to 174 codewords — a few hundred
+// characters of text, or twice that in digits, since a pair of digits costs one codeword. The
+// rectangular symbols are not built, and neither are the two largest square ones (52x52 and up),
+// which split their check codewords into more than one block; a payload too long for 48x48 is
+// reported rather than silently truncated.
+//
+// Encodation is the ASCII scheme throughout: a pair of digits in one codeword, any other byte in
+// one, a byte above 127 in two behind an upper shift. The text is encoded as UTF-8 first, so a
+// symbol carrying only ASCII is unambiguous; a reader handed an accented character will show the
+// UTF-8 bytes unless it is told otherwise, since no ECI is emitted.
+//
+// ---- Two rules this file obeys throughout ---------------------------------------
+//
+// EVERY MACRO IS ON ONE LINE, and no \if has a space beside a branch, because a newline in a macro
+// body is an interword space and a symbol may sit in the middle of a paragraph. And a row of the
+// grid is never written as digits — \set r {0101} stores the number 101 — so the module states are
+// spelled . # and ? for light, dark and not yet placed.
+
+\use{barcode}
+
+// ---- Configuration --------------------------------------------------------------
+
+\set dmcell {3}
+\set dmquiet {1}
+\set dmdark {}
+\set dmlight {white}
+
+// ---- The symbol sizes ------------------------------------------------------------
+// Side of the whole symbol, side of one data region, regions along each side, and the data and
+// check codewords each size carries. Every one of these has a single Reed-Solomon block.
+
+\set dmxSideT {\seq{10 12 14 16 18 20 22 24 26 32 36 40 44 48}}
+\set dmxRegT {\seq{8 10 12 14 16 18 20 22 24 14 16 18 20 22}}
+\set dmxPerT {\seq{1 1 1 1 1 1 1 1 1 2 2 2 2 2}}
+\set dmxDatT {\seq{3 5 8 12 18 22 30 36 44 62 86 114 144 174}}
+\set dmxEccT {\seq{5 7 10 12 14 18 20 24 28 36 42 48 56 68}}
+
+// ---- ASCII encodation -------------------------------------------------------------
+// A pair of digits is worth one codeword and is always taken when one is available, which is what
+// makes the symbology so compact for numbers.
+
+\def dmxisdig b {\calc{min(1, max(0, \b - 47)) * min(1, max(0, 58 - \b))}}
+\def dmxpairtest {\set dmxJ {\calc{dmxI + 1}}\global\set dmxB {\nth{\barcodebytes}{\dmxJ}}\global\set dmxP {\calc{\dmxisdig{\dmxA} * \dmxisdig{\dmxB}}}}
+\def dmxpair {\global\set dmxCw {\append{\dmxCw}{\calc{130 + (dmxA - 48) * 10 + (dmxB - 48)}}}\global\set dmxI {\calc{dmxI + 2}}}
+\def dmxhigh {\global\set dmxCw {\append{\dmxCw}{235}}\global\set dmxCw {\append{\dmxCw}{\calc{dmxA - 127}}}}
+\def dmxlow {\global\set dmxCw {\append{\dmxCw}{\calc{dmxA + 1}}}}
+\def dmxsingle {\if {\< {\dmxA} {128}}\dmxlow\else\dmxhigh\fi\global\set dmxI {\calc{dmxI + 1}}}
+\def dmxstep {\global\set dmxA {\nth{\barcodebytes}{\dmxI}}\global\set dmxP {0}\if {\< {\dmxI} {\size{\barcodebytes}}}\dmxpairtest\fi\if {\= {\dmxP} {1}}\dmxpair\else\dmxsingle\fi}
+\def dmxencode s {\barcodebytesof{\s}\global\set dmxCw {\seq{}}\global\set dmxI {1}\while {\<= {\dmxI} {\size{\barcodebytes}}} {\dmxstep}}
+
+// ---- Choosing a size, and filling what is left ------------------------------------
+// The pad codewords after the first are randomised by position, so that a symbol whose payload is
+// short does not end in a large regular block that a reader could mistake for part of the finder.
+
+\def dmxpickone k {\if {\<= {\size{\dmxCw}} {\nth{\dmxDatT}{\k}}}\global\set dmxN {\k}\fi}
+\def dmxpicktry k {\if {\= {\dmxN} {0}}\dmxpickone{\k}\fi}
+\def dmxpick {\global\set dmxN {0}\for\dmxPK{\range{1}{14}}{\dmxpicktry{\dmxPK}}\if {\> {\dmxN} {0}}\dmxsetsize\fi}
+\def dmxsetsize {\global\set dmxSide {\nth{\dmxSideT}{\dmxN}}\global\set dmxRS {\nth{\dmxRegT}{\dmxN}}\global\set dmxPer {\nth{\dmxPerT}{\dmxN}}\global\set dmxDCap {\nth{\dmxDatT}{\dmxN}}\global\set dmxECap {\nth{\dmxEccT}{\dmxN}}}
+
+\def dmxpadone {\set dmxPp {\calc{\size{\dmxCw} + 1}}\set dmxRr {\calc{(149 * dmxPp) % 253 + 1}}\set dmxVv {\calc{129 + dmxRr}}\if {\> {\dmxVv} {254}}\set dmxVv {\calc{dmxVv - 254}}\fi\global\set dmxCw {\append{\dmxCw}{\dmxVv}}}
+\def dmxpad {\if {\< {\size{\dmxCw}} {\dmxDCap}}\global\set dmxCw {\append{\dmxCw}{129}}\fi\while {\< {\size{\dmxCw}} {\dmxDCap}} {\dmxpadone}}
+
+// ---- Placement: the ECC200 walk ---------------------------------------------------
+// Codewords are laid into the mapping matrix as an L-shaped eight-module cluster that steps
+// diagonally up and to the right, then down and to the left, wrapping around the edges — with four
+// special shapes for the corners the diagonal cannot reach. This is Annex F of the standard, and
+// it is the part of a Data Matrix that cannot be guessed: a cluster placed one step out gives a
+// symbol that looks entirely correct and carries nothing a reader can make sense of.
+
+\def dmxmapget r c {\nth{\nth{\dmxMap}{\calc{\r + 1}}}{\calc{\c + 1}}}
+\def dmxmapset r c ch {\set dmxSr {\calc{\r + 1}}\global\set dmxMap {\put{\dmxMap}{\dmxSr}{\put{\nth{\dmxMap}{\dmxSr}}{\calc{\c + 1}}{\ch}}}}
+
+\def dmxwrap {\if {\< {\dmxR} {0}}\global\set dmxC {\calc{dmxC + 4 - ((dmxNRow + 4) % 8)}}\global\set dmxR {\calc{dmxR + dmxNRow}}\fi\if {\< {\dmxC} {0}}\global\set dmxR {\calc{dmxR + 4 - ((dmxNCol + 4) % 8)}}\global\set dmxC {\calc{dmxC + dmxNCol}}\fi}
+\def dmxmodule r c b {\global\set dmxR {\r}\global\set dmxC {\c}\dmxwrap\set dmxW {\nth{\dmxAll}{\dmxChr}}\set dmxV {\calc{and(shr(dmxW, 8 - \b), 1)}}\dmxmapset{\dmxR}{\dmxC}{\nth{.#}{\calc{dmxV + 1}}}}
+
+\def dmxutah r c {\set dmxRa {\calc{\r - 2}}\set dmxRb {\calc{\r - 1}}\set dmxCa {\calc{\c - 2}}\set dmxCb {\calc{\c - 1}}\dmxmodule{\dmxRa}{\dmxCa}{1}\dmxmodule{\dmxRa}{\dmxCb}{2}\dmxmodule{\dmxRb}{\dmxCa}{3}\dmxmodule{\dmxRb}{\dmxCb}{4}\dmxmodule{\dmxRb}{\c}{5}\dmxmodule{\r}{\dmxCa}{6}\dmxmodule{\r}{\dmxCb}{7}\dmxmodule{\r}{\c}{8}\global\set dmxChr {\calc{dmxChr + 1}}}
+
+\def dmxcornerone {\set dmxE {\calc{dmxNRow - 1}}\set dmxF {\calc{dmxNCol - 2}}\set dmxG {\calc{dmxNCol - 1}}\dmxmodule{\dmxE}{0}{1}\dmxmodule{\dmxE}{1}{2}\dmxmodule{\dmxE}{2}{3}\dmxmodule{0}{\dmxF}{4}\dmxmodule{0}{\dmxG}{5}\dmxmodule{1}{\dmxG}{6}\dmxmodule{2}{\dmxG}{7}\dmxmodule{3}{\dmxG}{8}\global\set dmxChr {\calc{dmxChr + 1}}}
+\def dmxcornertwo {\set dmxE {\calc{dmxNRow - 3}}\set dmxH {\calc{dmxNRow - 2}}\set dmxK {\calc{dmxNRow - 1}}\set dmxL {\calc{dmxNCol - 4}}\set dmxM {\calc{dmxNCol - 3}}\set dmxF {\calc{dmxNCol - 2}}\set dmxG {\calc{dmxNCol - 1}}\dmxmodule{\dmxE}{0}{1}\dmxmodule{\dmxH}{0}{2}\dmxmodule{\dmxK}{0}{3}\dmxmodule{0}{\dmxL}{4}\dmxmodule{0}{\dmxM}{5}\dmxmodule{0}{\dmxF}{6}\dmxmodule{0}{\dmxG}{7}\dmxmodule{1}{\dmxG}{8}\global\set dmxChr {\calc{dmxChr + 1}}}
+\def dmxcornerthree {\set dmxE {\calc{dmxNRow - 3}}\set dmxH {\calc{dmxNRow - 2}}\set dmxK {\calc{dmxNRow - 1}}\set dmxF {\calc{dmxNCol - 2}}\set dmxG {\calc{dmxNCol - 1}}\dmxmodule{\dmxE}{0}{1}\dmxmodule{\dmxH}{0}{2}\dmxmodule{\dmxK}{0}{3}\dmxmodule{0}{\dmxF}{4}\dmxmodule{0}{\dmxG}{5}\dmxmodule{1}{\dmxG}{6}\dmxmodule{2}{\dmxG}{7}\dmxmodule{3}{\dmxG}{8}\global\set dmxChr {\calc{dmxChr + 1}}}
+\def dmxcornerfour {\set dmxK {\calc{dmxNRow - 1}}\set dmxM {\calc{dmxNCol - 3}}\set dmxF {\calc{dmxNCol - 2}}\set dmxG {\calc{dmxNCol - 1}}\dmxmodule{\dmxK}{0}{1}\dmxmodule{\dmxK}{\dmxG}{2}\dmxmodule{0}{\dmxM}{3}\dmxmodule{0}{\dmxF}{4}\dmxmodule{0}{\dmxG}{5}\dmxmodule{1}{\dmxM}{6}\dmxmodule{1}{\dmxF}{7}\dmxmodule{1}{\dmxG}{8}\global\set dmxChr {\calc{dmxChr + 1}}}
+
+\def dmxckd {\set dmxCD {\calc{min(1, abs(dmxRow - dmxNRow - 4) + abs(dmxCol - 2) + dmxNCol % 8)}}\if {\= {\dmxCD} {0}}\dmxcornerfour\fi}
+\def dmxckc {\if {\= {\calc{dmxNCol % 8}} {4}}\dmxcornerthree\fi}
+\def dmxckbc {\if {\= {\calc{dmxNCol % 4}} {0}}\dmxckc\else\dmxcornertwo\fi}
+\def dmxckb {\set dmxCB {\calc{min(1, abs(dmxRow - dmxNRow + 2) + abs(dmxCol))}}\if {\= {\dmxCB} {0}}\dmxckbc\else\dmxckd\fi}
+\def dmxcorners {\set dmxCA {\calc{min(1, abs(dmxRow - dmxNRow) + abs(dmxCol))}}\if {\= {\dmxCA} {0}}\dmxcornerone\else\dmxckb\fi}
+
+\def dmxtryupc {\if {\= {\dmxmapget{\dmxRow}{\dmxCol}} {?}}\dmxutah{\dmxRow}{\dmxCol}\fi}
+\def dmxtryupb {\if {\>= {\dmxCol} {0}}\dmxtryupc\fi}
+\def dmxtryup {\if {\< {\dmxRow} {\dmxNRow}}\dmxtryupb\fi}
+\def dmxuponce {\dmxtryup\global\set dmxRow {\calc{dmxRow - 2}}\global\set dmxCol {\calc{dmxCol + 2}}}
+\def dmxupcond {\calc{min(1, max(0, dmxRow + 1)) * min(1, max(0, dmxNCol - dmxCol))}}
+\def dmxup {\dmxuponce\while {\dmxupcond} {\dmxuponce}}
+
+\def dmxtrydownc {\if {\= {\dmxmapget{\dmxRow}{\dmxCol}} {?}}\dmxutah{\dmxRow}{\dmxCol}\fi}
+\def dmxtrydownb {\if {\< {\dmxCol} {\dmxNCol}}\dmxtrydownc\fi}
+\def dmxtrydown {\if {\>= {\dmxRow} {0}}\dmxtrydownb\fi}
+\def dmxdownonce {\dmxtrydown\global\set dmxRow {\calc{dmxRow + 2}}\global\set dmxCol {\calc{dmxCol - 2}}}
+\def dmxdowncond {\calc{min(1, max(0, dmxNRow - dmxRow)) * min(1, max(0, dmxCol + 1))}}
+\def dmxdown {\dmxdownonce\while {\dmxdowncond} {\dmxdownonce}}
+
+\def dmxsweep {\dmxcorners\dmxup\global\set dmxRow {\calc{dmxRow + 1}}\global\set dmxCol {\calc{dmxCol + 3}}\dmxdown\global\set dmxRow {\calc{dmxRow + 3}}\global\set dmxCol {\calc{dmxCol + 1}}}
+\def dmxsweepcond {\calc{min(1, max(0, dmxNRow - dmxRow) + max(0, dmxNCol - dmxCol))}}
+
+// The bottom right corner is not reached by the walk in some sizes, and the standard fills it with
+// a fixed checkerboard rather than leaving it blank.
+\def dmxfinalset {\set dmxK {\calc{dmxNRow - 1}}\set dmxG {\calc{dmxNCol - 1}}\dmxmapset{\dmxK}{\dmxG}{#}\set dmxK {\calc{dmxNRow - 2}}\set dmxG {\calc{dmxNCol - 2}}\dmxmapset{\dmxK}{\dmxG}{#}}
+\def dmxfinal {\set dmxK {\calc{dmxNRow - 1}}\set dmxG {\calc{dmxNCol - 1}}\if {\= {\dmxmapget{\dmxK}{\dmxG}} {?}}\dmxfinalset\fi\global\set dmxMap {\transform\dmxRW{\dmxMap}{\replace{\dmxRW}{?}{.}}}}
+
+\def dmxplace {\global\set dmxNRow {\calc{dmxRS * dmxPer}}\global\set dmxNCol {\dmxNRow}\global\set dmxMap {\transform\dmxPI{\range{1}{\dmxNRow}}{\repeat{?}{\dmxNCol}}}\global\set dmxRow {4}\global\set dmxCol {0}\global\set dmxChr {1}\dmxsweep\while {\dmxsweepcond} {\dmxsweep}\dmxfinal}
+
+// ---- Assembling the symbol around the finder --------------------------------------
+// Each data region is bordered on its left and bottom by a solid run of dark modules — the L a
+// reader finds the symbol and its orientation by — and on its top and right by an alternating
+// track that tells the reader how large a module is.
+
+\def dmxdata y x {\set dmxQr {\calc{floor(\y / (dmxRS + 2)) * dmxRS + \y % (dmxRS + 2) - 1}}\set dmxQc {\calc{floor(\x / (dmxRS + 2)) * dmxRS + \x % (dmxRS + 2) - 1}}\dmxmapget{\dmxQr}{\dmxQc}}
+\def dmxcelld y x {\if {\= {\dmxWc} {\calc{dmxRS + 1}}}\nth{.#}{\calc{dmxWr % 2 + 1}}\else\dmxdata{\y}{\x}\fi}
+\def dmxcellc y x {\if {\= {\dmxWr} {0}}\nth{.#}{\calc{2 - dmxWc % 2}}\else\dmxcelld{\y}{\x}\fi}
+\def dmxcellb y x {\if {\= {\dmxWr} {\calc{dmxRS + 1}}}#\else\dmxcellc{\y}{\x}\fi}
+\def dmxcell y x {\global\set dmxWr {\calc{\y % (dmxRS + 2)}}\global\set dmxWc {\calc{\x % (dmxRS + 2)}}\if {\= {\dmxWc} {0}}#\else\dmxcellb{\y}{\x}\fi}
+\def dmxrow y {\join{\transform\dmxAX{\range{0}{\dmxMaxS}}{\dmxcell{\y}{\dmxAX}}}{}}
+\def dmxassemble {\global\set dmxMaxS {\calc{dmxSide - 1}}\global\set dmxGrid {\transform\dmxAY{\range{0}{\dmxMaxS}}{\dmxrow{\dmxAY}}}}
+
+// ---- Assembly ----------------------------------------------------------------------
+
+\def dmxbuild {\dmxpad\barcodedivisor{\dmxECap}\barcoderemainder{\dmxCw}{\dmxECap}\global\set dmxAll {\concat{\dmxCw}{\barcoderem}}\dmxplace\dmxassemble}
+\def dmxrun s {\global\set barcodepoly {301}\global\set barcoderoot {2}\dmxencode{\s}\dmxpick\if {\> {\dmxN} {0}}\dmxbuild\fi}
+
+// ---- Options -----------------------------------------------------------------------
+
+\def dmxoptsplit w {\set dmxOI {\indexof{\w}{:}}\set dmxOA {\calc{dmxOI - 1}}\set dmxOB {\calc{dmxOI + 1}}\global\mapset dmxOpts {\slice{\w}{1}{\dmxOA}}{\slice{\w}{\dmxOB}{\size{\w}}}}
+\def dmxopts o {\global\set dmxOpts {\map{}}\for\dmxOW{\words{\o}}{\dmxoptsplit{\dmxOW}}}
+\def dmxoptval k d {\if {\maphas dmxOpts {\k}}\mapget dmxOpts {\k}\else\d\fi}
+\def dmxcolors {\if {\= {\dmxDarkC} {}}\global\set dmxDarkC {\thecolor}\fi}
+\def dmxconfig o {\dmxopts{\o}\set dmxCS {\dmxoptval{cell}{\dmcell}}\global\set dmxCell {\calc{\dmxCS}}\global\set dmxQuiet {\dmxoptval{quiet}{\dmquiet}}\global\set dmxDarkC {\dmxoptval{dark}{\dmdark}}\global\set dmxLightC {\dmxoptval{light}{\dmlight}}\dmxcolors}
+
+// ---- Drawing -------------------------------------------------------------------------
+
+\def dmxlightvisible {\calc{1 - min(1, \indexof{\seq{none transparent}}{\dmxLightC})}}
+\def dmxcellrect x y {\set dmxRX {\calc{(\x + dmxQuiet) * dmxCell}}\set dmxRY {\calc{dmxSideP - (\y + dmxQuiet + 1) * dmxCell}}\rect{\dmxRX \dmxRY \dmxCell \dmxCell}}
+\def dmxmodmaybe x y {\if {\= {\nth{\nth{\dmxGrid}{\calc{\y + 1}}}{\calc{\x + 1}}} {#}}\dmxcellrect{\x}{\y}\fi}
+\def dmxsidepts {\global\set dmxSideP {\calc{(dmxSide + 2 * dmxQuiet) * dmxCell}}}
+
+\def dmxdraw {\dmxsidepts\picture width:{\dmxSideP} height:{\dmxSideP} {
+  \nostroke
+  \if {\dmxlightvisible}\fill{\dmxLightC}\rect{0 0 \dmxSideP \dmxSideP}\fi
+  \fill{\dmxDarkC}
+  \for\dmxVY{\range{0}{\dmxMaxS}}{
+    \for\dmxVX{\range{0}{\dmxMaxS}}{
+      \dmxmodmaybe{\dmxVX}{\dmxVY}
+    }
+  }
+}}
+
+// ---- What a document calls -------------------------------------------------------
+// \datamatrix places the symbol; \dmxmatrix computes one without drawing it and leaves the rows
+// in dmxmatrixvalue as strings of . and #, which is what the tests read.
+
+\def dmxtoolong {\message{datamatrix: the data is too long for a square Data Matrix symbol — 174 codewords is the largest this package builds}}
+\def dmxfinish {\if {\> {\dmxN} {0}}\dmxdraw\else\dmxtoolong\fi}
+\def datamatrix [o:] <data> {\dmxconfig{\o}\dmxrun{\data}\dmxfinish}
+\def dmxmatrix [o:] <data> {\dmxconfig{\o}\dmxrun{\data}\global\set dmxmatrixvalue {\dmxGrid}}

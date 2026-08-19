@@ -56,14 +56,25 @@ object Value:
     case b: Boolean    => Bool(b)
     case null          => Nil
     case other         => Native(other)
-  /** Check if a value is "truthy" (for conditionals) */
+  /** Whether a value counts as true where a condition is wanted — `\if`, `\while` and `\filter` alike.
+    *
+    * **There is one rule and this is it.** `\if` used to carry its own copy and `\while` and `\filter` used this
+    * one, and the two disagreed about a number: `\if {0}` was false while `\while {0}` looped for ever, so a
+    * condition written as arithmetic — which is how a package says "in range" or "not yet placed" without four
+    * nested comparisons — meant opposite things in the two loops.
+    *
+    * Nothing, zero, and the text `0`, `false` or blank are false; a number that is not zero, a non-empty sequence,
+    * and any other value are true. The text cases are what make a condition read the same whether it arrived as a
+    * value or as the characters of one.
+    */
   def truthy(v: Value): Boolean = v match
-    case Bool(false) => false
-    case Nil         => false
-    case Undefined   => false
-    case Text("")    => false
-    case Seq(items) if items.isEmpty => false
-    case _           => true
+    case Bool(b)    => b
+    case Num(n)     => n != 0
+    case Text(s)    => val t = s.trim; t.nonEmpty && t != "0" && t.toLowerCase != "false"
+    case Nil        => false
+    case Undefined  => false
+    case Seq(items) => items.nonEmpty
+    case _          => true
 
   /** Check if a value is "falsy" */
   def falsy(v: Value): Boolean = !truthy(v)

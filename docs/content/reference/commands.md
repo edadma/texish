@@ -523,7 +523,7 @@ the back, `duplexshift:<len>` pulls every front side that far left to bring the 
 The drawing commands available inside `\picture` (paths, shapes, strokes, fills, transforms, text,
 arrows) are listed in the [drawing reference](../drawing/).
 
-## QR codes *(`\use{qrcode}`)*
+## Two-dimensional barcodes *(`\use{qrcode}`, `\use{datamatrix}`)*
 
 | Command | Effect |
 |---------|--------|
@@ -545,6 +545,32 @@ variable behind it that sets the default for every later call:
 The encoder is written in the document language rather than built into the engine — the mode
 selection, the Reed-Solomon check codewords and the mask search are all `\calc`, `\for` and `\put`
 over sequences.
+
+### Data Matrix
+
+| Command | Effect |
+|---------|--------|
+| `\datamatrix[options]{data}` | encode the data and place an ECC200 symbol |
+| `\dmxmatrix[options]{data}` | encode without drawing; the rows land in `dmxmatrixvalue` |
+
+A Data Matrix packs the same payload into rather less area than a QR code, which is why it is the
+symbology of shipping labels and of parts marked directly. It has no error-correction setting —
+ECC200 fixes it by symbol size — and so takes four options rather than five:
+
+| Option | Variable | Effect |
+|---|---|---|
+| `cell:3pt` | `dmcell` | the side of one module |
+| `quiet:1` | `dmquiet` | the light border, in modules — 1 is what the standard requires |
+| `dark:` | `dmdark` | the module colour; the pen colour in force by default |
+| `light:white` | `dmlight` | the background; `light:none` leaves the page showing through |
+
+**Square symbols from 10×10 to 48×48**, carrying up to 174 codewords — a few hundred characters, or
+twice that in digits, since a pair of digits costs one codeword. The rectangular symbols and the two
+largest square ones are not built; a payload too long is reported rather than silently truncated.
+Text is encoded as UTF-8, so a symbol carrying only ASCII is unambiguous, and no ECI is emitted.
+
+Both packages load `barcode`, which holds what they share: the payload as bytes, and Reed-Solomon
+over GF(256). Nothing calls `\use{barcode}` directly.
 
 ## Floats and text wrapping *(`\use{float}`)*
 

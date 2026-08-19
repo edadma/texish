@@ -360,6 +360,36 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     valueOf("\\set n {12345}\\set v {\\join{\\reverse{\\n}}{}}") shouldBe "54321"
   }
 
+  "\\for iterates the same items \\nth indexes and \\size counts" in {
+    // \for carried its own copy of the rule and stopped at "a scalar is one item", so a run of digits — which
+    // is a number the moment it is stored — iterated once instead of once per digit
+    valueOf("\\global\\set v {}\\for\\c{abc}{\\global\\set v {\\cat{\\v}{[\\c]}}}") shouldBe "[a][b][c]"
+    valueOf("\\global\\set v {}\\set n {123}\\for\\c{\\n}{\\global\\set v {\\cat{\\v}{[\\c]}}}") shouldBe "[1][2][3]"
+    valueOf("\\set n {123}\\set v {\\size{\\n}}") shouldBe "3"
+  }
+
+  // ---- One rule for what counts as true -------------------------------------------
+
+  "\\if, \\while and \\filter agree about what is true" in {
+    // \if carried its own copy of the rule and \while and \filter used Value.truthy, and the two disagreed
+    // about a number: \if {0} was false while \while {0} never stopped. A condition written as arithmetic —
+    // which is how a package says "in range" without four nested comparisons — meant opposite things
+    run("\\if {0}{yes}\\else{no}\\fi").result shouldBe "no"
+    valueOf("\\global\\set n {3}\\while {\\calc{n - 3}} {\\global\\set n {9}}\\set v {\\n}") shouldBe "3"
+    valueOf("\\set v {\\join{\\filter\\x{\\seq{1 0 2 0 3}}{\\x}}{,}}") shouldBe "1,2,3"
+  }
+
+  "the false values are the same in every conditional" in {
+    for cond <- List("0", "", "false", "\\seq{}") do
+      withClue(s"'$cond' should be false: ") {
+        run(s"\\if {$cond}{yes}\\else{no}\\fi").result shouldBe "no"
+      }
+    for cond <- List("1", "-1", "x", "\\seq{a}") do
+      withClue(s"'$cond' should be true: ") {
+        run(s"\\if {$cond}{yes}\\else{no}\\fi").result shouldBe "yes"
+      }
+  }
+
   "\\ord and \\chr reach the digits of a stored number" in {
     valueOf("\\set n {907}\\set v {\\join{\\transform\\c{\\n}{\\ord{\\c}}}{ }}") shouldBe "57 48 55"
   }

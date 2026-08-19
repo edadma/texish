@@ -40,6 +40,11 @@
 // \put (Reed-Solomon fills an array of check codewords by index) and \ord (the
 // payload has to become bytes before it can become bits).
 //
+// The field arithmetic and the UTF-8 encoding are not here: they are the same for
+// every two-dimensional symbology and live in the `barcode` package, which this one
+// loads. What differs between symbologies is only which field, and that is set at
+// the moment of encoding rather than at load, since a document may use both.
+//
 // ---- Two rules this file obeys throughout ---------------------------------------
 //
 // EVERY MACRO IS WRITTEN ON ONE LINE, and no \if has a space beside a branch. A
@@ -54,6 +59,8 @@
 // The four module states are spelled . # - + (light data, dark data, light
 // function, dark function) for that reason, and the bit buffer is a sequence of
 // numbers rather than a string of ones and zeros.
+
+\use{barcode}
 
 // ---- Configuration --------------------------------------------------------------
 
@@ -115,19 +122,6 @@
 \def qzemit v n {\for\qzEI{\range{1}{\n}}{\set qzES {\calc{\n - qzEI}}\qzbit{\calc{and(shr(\v, qzES), 1)}}}}
 \def qzemitmaybe v n {\if {\> {\n} {0}}\qzemit{\v}{\n}\fi}
 
-// ---- UTF-8 ----------------------------------------------------------------------
-// Byte mode carries bytes, and the payload is text, so the text is encoded here
-// rather than assumed to be Latin-1. A character above the basic plane is four
-// bytes, which is why \ord works in code points.
-
-\def qzbyte b {\global\set qzOct {\append{\qzOct}{\b}}}
-\def qzutf c {\set qzU {\ord{\c}}\if {\< {\qzU} {128}}\qzbyte{\qzU}\else\qzutfmore\fi}
-\def qzutfmore {\if {\< {\qzU} {2048}}\qzutftwo\else\qzutfrest\fi}
-\def qzutfrest {\if {\< {\qzU} {65536}}\qzutfthree\else\qzutffour\fi}
-\def qzutftwo {\qzbyte{\calc{or(192, shr(qzU, 6))}}\qzbyte{\calc{or(128, and(qzU, 63))}}}
-\def qzutfthree {\qzbyte{\calc{or(224, shr(qzU, 12))}}\qzbyte{\calc{or(128, and(shr(qzU, 6), 63))}}\qzbyte{\calc{or(128, and(qzU, 63))}}}
-\def qzutffour {\qzbyte{\calc{or(240, shr(qzU, 18))}}\qzbyte{\calc{or(128, and(shr(qzU, 12), 63))}}\qzbyte{\calc{or(128, and(shr(qzU, 6), 63))}}\qzbyte{\calc{or(128, and(qzU, 63))}}}
-
 // ---- Choosing a mode ------------------------------------------------------------
 // Digits pack three to ten bits, the 45 alphanumeric characters two to eleven, and
 // anything else costs a byte each, so the most compact mode the whole payload fits
@@ -149,7 +143,7 @@
 \def qzalngroup g {\if {\= {\size{\g}} {2}}\qzalnpair{\g}\else\qzalnone{\g}\fi}
 \def qzsegaln s {\global\set qzChars {\size{\s}}\for\qzAG{\chunk{\s}{2}}{\qzalngroup{\qzAG}}}
 
-\def qzsegbyte s {\global\set qzOct {\seq{}}\for\qzBC{\s}{\qzutf{\qzBC}}\global\set qzChars {\size{\qzOct}}\for\qzBB{\qzOct}{\qzemit{\qzBB}{8}}}
+\def qzsegbyte s {\barcodebytesof{\s}\global\set qzChars {\size{\barcodebytes}}\for\qzBB{\barcodebytes}{\qzemit{\qzBB}{8}}}
 
 \def qzsegalt s {\if {\= {\qzMode} {2}}\qzsegaln{\s}\else\qzsegbyte{\s}\fi}
 \def qzsegdo s {\if {\= {\qzMode} {1}}\qzsegnum{\s}\else\qzsegalt{\s}\fi}
@@ -195,32 +189,14 @@
 \def qzbyteof g {\calc{\nth{\g}{1} * 128 + \nth{\g}{2} * 64 + \nth{\g}{3} * 32 + \nth{\g}{4} * 16 + \nth{\g}{5} * 8 + \nth{\g}{6} * 4 + \nth{\g}{7} * 2 + \nth{\g}{8}}}
 \def qzwords {\global\set qzData {\transform\qzWG{\chunk{\qzBits}{8}}{\qzbyteof{\qzWG}}}}
 
-// ---- Reed-Solomon over GF(256) --------------------------------------------------
-// Field addition is exclusive-or; multiplication is the shift-and-reduce loop, with
-// 0x11D (285) as the primitive polynomial. This is the whole reason \calc grew bit
-// operations — none of it can be said in ordinary arithmetic.
-
-\def qzrsstep x y i {\global\set qzZ {\calc{xor(xor(shl(qzZ, 1), shr(qzZ, 7) * 285), and(shr(\y, \i), 1) * \x)}}}
-\def qzrsmul x y {\global\set qzZ {0}\for\qzMI{\range{0}{7}}{\set qzMS {\calc{7 - qzMI}}\qzrsstep{\x}{\y}{\qzMS}}\qzZ}
-
-// The generator polynomial of the given degree, whose coefficients divide the data.
-\def qzrsdivstep d j {\set qzDA {\nth{\qzDiv}{\j}}\set qzDV {\qzrsmul{\qzDA}{\qzRoot}}\set qzDN {0}\if {\< {\j} {\d}}\set qzDJP {\calc{\j + 1}}\set qzDN {\nth{\qzDiv}{\qzDJP}}\fi\global\set qzDiv {\put{\qzDiv}{\j}{\calc{xor(qzDV, qzDN)}}}}
-\def qzrsdivround d {\for\qzDJ{\range{1}{\d}}{\qzrsdivstep{\d}{\qzDJ}}\global\set qzRoot {\qzrsmul{\qzRoot}{2}}}
-\def qzrsdivisor d {\global\set qzDiv {\put{\transform\qzDI{\range{1}{\d}}{0}}{\d}{1}}\global\set qzRoot {1}\for\qzDR{\range{1}{\d}}{\qzrsdivround{\d}}}
-
-// The remainder of the data by that polynomial — the check codewords themselves.
-\def qzremstep j {\set qzRX {\nth{\qzRem}{\j}}\set qzRD {\nth{\qzDiv}{\j}}\set qzRY {\qzrsmul{\qzRD}{\qzF}}\global\set qzRem {\put{\qzRem}{\j}{\calc{xor(qzRX, qzRY)}}}}
-\def qzrembyte b n {\set qzRH {\nth{\qzRem}{1}}\global\set qzF {\calc{xor(\b, qzRH)}}\global\set qzRem {\append{\tail{\qzRem}}{0}}\for\qzRJ{\range{1}{\n}}{\qzremstep{\qzRJ}}}
-\def qzremainder data n {\global\set qzRem {\transform\qzRI{\range{1}{\n}}{0}}\for\qzRB{\data}{\qzrembyte{\qzRB}{\n}}}
-
 // ---- Blocks and interleaving ----------------------------------------------------
 // A symbol above the smallest sizes splits its data into blocks, each with its own
 // check codewords, and then interleaves them so that a scuff across the printed
 // symbol damages a little of every block rather than all of one.
 
 \def qzsetup {\global\set qzEccLen {\qzeccper{\qzVer}{\qzEcl}}\global\set qzNumBlocks {\qzblocks{\qzVer}{\qzEcl}}\set qzRawX {\qzraw{\qzVer}}\global\set qzRawCw {\calc{floor(qzRawX / 8)}}\global\set qzNumShort {\calc{qzNumBlocks - qzRawCw % qzNumBlocks}}\global\set qzShortLen {\calc{floor(qzRawCw / qzNumBlocks)}}}
-\def qzblockone i {\set qzBL {\calc{qzShortLen - qzEccLen}}\if {\> {\i} {\qzNumShort}}\set qzBL {\calc{qzShortLen - qzEccLen + 1}}\fi\set qzBD {\slice{\qzData}{\qzK}{\qzBL}}\global\set qzK {\calc{qzK + qzBL}}\qzremainder{\qzBD}{\qzEccLen}\global\set qzDats {\append{\qzDats}{\qzBD}}\global\set qzEccs {\append{\qzEccs}{\qzRem}}}
-\def qzblocksall {\global\set qzDats {\seq{}}\global\set qzEccs {\seq{}}\global\set qzK {1}\qzrsdivisor{\qzEccLen}\for\qzBI{\range{1}{\qzNumBlocks}}{\qzblockone{\qzBI}}}
+\def qzblockone i {\set qzBL {\calc{qzShortLen - qzEccLen}}\if {\> {\i} {\qzNumShort}}\set qzBL {\calc{qzShortLen - qzEccLen + 1}}\fi\set qzBD {\slice{\qzData}{\qzK}{\qzBL}}\global\set qzK {\calc{qzK + qzBL}}\barcoderemainder{\qzBD}{\qzEccLen}\global\set qzDats {\append{\qzDats}{\qzBD}}\global\set qzEccs {\append{\qzEccs}{\barcoderem}}}
+\def qzblocksall {\global\set qzDats {\seq{}}\global\set qzEccs {\seq{}}\global\set qzK {1}\barcodedivisor{\qzEccLen}\for\qzBI{\range{1}{\qzNumBlocks}}{\qzblockone{\qzBI}}}
 
 \def qzilvone j i {\set qzIB {\nth{\qzDats}{\j}}\if {\>= {\size{\qzIB}} {\i}}\global\set qzAll {\append{\qzAll}{\nth{\qzIB}{\i}}}\fi}
 \def qzilvdat i {\for\qzIJ{\range{1}{\qzNumBlocks}}{\qzilvone{\qzIJ}{\i}}}
@@ -359,7 +335,7 @@
 
 \def qzgrid {\global\set qzSize {\calc{qzVer * 4 + 17}}\global\set qzMax {\calc{qzSize - 1}}\global\set qzGrid {\transform\qzGI{\range{1}{\qzSize}}{\repeat{.}{\qzSize}}}\qztiming\qzfinders\qzalignpos\qzalignall\qzformat{0}\qzversion}
 \def qzencodedo {\qzboost\qzbuild\qzwords\qzsetup\qzblocksall\qzinterleave\qzgrid\qzdrawcw\global\set qzBase {\qzGrid}\qzmasksearch}
-\def qzencode s {\qzsegment{\s}\qzfindver\if {\= {\qzOver} {0}}\qzencodedo\fi}
+\def qzencode s {\global\set barcodepoly {285}\global\set barcoderoot {1}\qzsegment{\s}\qzfindver\if {\= {\qzOver} {0}}\qzencodedo\fi}
 
 // ---- Options --------------------------------------------------------------------
 

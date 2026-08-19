@@ -18,15 +18,12 @@ object ForPrimitive extends Primitive:
     // Read body
     val bodyTokens = proc.readArgument(pos)
 
-    // Get items to iterate. A string iterates by code point, so an astral symbol (an emoji, a math letter)
-    // is one iteration rather than two broken surrogate halves. A map iterates in its own entry order — \map
-    // literals and \mapset build insertion-ordered maps, so entries visit as declared.
-    val items: Vector[Value] = seqValue match
-      case Value.Seq(items) => items
-      case Value.Text(s) => codePointStrings(s).map(Value.Text.apply)
-      case Value.Map(entries) => entries.map((k, v) => Value.Map(Map("key" -> Value.Text(k), "value" -> v))).toVector
-      case Value.Nil | Value.Undefined => Vector.empty
-      case _ => Vector(seqValue)
+    // Get items to iterate, through the same itemsOf that \nth indexes and \size counts by, so that the three
+    // can never disagree about what a value's items are. A string iterates by code point, so an astral symbol
+    // (an emoji, a math letter) is one iteration rather than two broken surrogate halves; a number iterates as
+    // the characters it displays as, which is what a run of digits is once it has been stored; and a map
+    // iterates in its own entry order, since \map literals and \mapset build insertion-ordered maps.
+    val items: Vector[Value] = itemsOf(seqValue)
 
     // Iterate
     val length = items.size

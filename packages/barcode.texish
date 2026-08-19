@@ -1,0 +1,51 @@
+// barcode — the arithmetic two-dimensional symbologies share, so that it is written once.
+//
+// Nothing here draws anything. It is what `qrcode` and `datamatrix` both need before they can
+// begin: the payload as bytes, and Reed-Solomon check codewords over GF(256). A document does
+// not \use this directly — the symbology packages do.
+//
+// The two symbologies differ in the field and in the generator polynomial, and both differences
+// are silent ones: a symbol built with the wrong constant looks perfect and does not scan. So
+// they are parameters rather than literals, and a package sets them at the moment it encodes
+// rather than when it loads, because a document may well use both packages and whichever loaded
+// last would otherwise have decided for both.
+//
+//     barcodepoly   the field's primitive polynomial — 0x11D (285) for QR, 0x12D (301) for ECC200
+//     barcoderoot   the exponent the generator's first root takes — 1 for QR, 2 for ECC200
+//
+// EVERY MACRO HERE IS ON ONE LINE. A newline in a macro body is an interword space, and these run
+// inside \qrcode, which a document may well put in the middle of a paragraph.
+
+\set barcodepoly {285}
+\set barcoderoot {1}
+
+// ---- The payload as bytes --------------------------------------------------------
+// Both symbologies carry bytes and the payload is text, so the text is encoded rather than
+// assumed to be Latin-1. A character above the basic plane is four bytes, which is why \ord
+// works in code points and not in UTF-16 units.
+
+\def bcbyte b {\global\set barcodebytes {\append{\barcodebytes}{\b}}}
+\def bctwo {\bcbyte{\calc{or(192, shr(bcU, 6))}}\bcbyte{\calc{or(128, and(bcU, 63))}}}
+\def bcthree {\bcbyte{\calc{or(224, shr(bcU, 12))}}\bcbyte{\calc{or(128, and(shr(bcU, 6), 63))}}\bcbyte{\calc{or(128, and(bcU, 63))}}}
+\def bcfour {\bcbyte{\calc{or(240, shr(bcU, 18))}}\bcbyte{\calc{or(128, and(shr(bcU, 12), 63))}}\bcbyte{\calc{or(128, and(shr(bcU, 6), 63))}}\bcbyte{\calc{or(128, and(bcU, 63))}}}
+\def bcrest {\if {\< {\bcU} {65536}}\bcthree\else\bcfour\fi}
+\def bcmore {\if {\< {\bcU} {2048}}\bctwo\else\bcrest\fi}
+\def bcchar c {\global\set bcU {\ord{\c}}\if {\< {\bcU} {128}}\bcbyte{\bcU}\else\bcmore\fi}
+\def barcodebytesof s {\global\set barcodebytes {\seq{}}\for\bcCh{\s}{\bcchar{\bcCh}}}
+
+// ---- Reed-Solomon over GF(256) ---------------------------------------------------
+// Field addition is exclusive-or and multiplication is the shift-and-reduce loop; there is no way
+// to say either without \calc's bit operations. \barcodedivisor builds the generator polynomial of
+// a given degree into barcodediv, and \barcoderemainder divides a codeword sequence by it, leaving
+// the check codewords in barcoderem.
+
+\def bcmulstep x y i {\global\set bcZ {\calc{xor(xor(shl(bcZ, 1), shr(bcZ, 7) * barcodepoly), and(shr(\y, \i), 1) * \x)}}}
+\def barcodemul x y {\global\set bcZ {0}\for\bcMI{\range{0}{7}}{\set bcMS {\calc{7 - bcMI}}\bcmulstep{\x}{\y}{\bcMS}}\bcZ}
+
+\def bcdivstep d j {\set bcDA {\nth{\barcodediv}{\j}}\set bcDV {\barcodemul{\bcDA}{\bcRoot}}\set bcDN {0}\if {\< {\j} {\d}}\set bcDK {\calc{\j + 1}}\set bcDN {\nth{\barcodediv}{\bcDK}}\fi\global\set barcodediv {\put{\barcodediv}{\j}{\calc{xor(bcDV, bcDN)}}}}
+\def bcdivround d {\for\bcDJ{\range{1}{\d}}{\bcdivstep{\d}{\bcDJ}}\global\set bcRoot {\barcodemul{\bcRoot}{2}}}
+\def barcodedivisor d {\global\set barcodediv {\put{\transform\bcDI{\range{1}{\d}}{0}}{\d}{1}}\global\set bcRoot {\barcoderoot}\for\bcDR{\range{1}{\d}}{\bcdivround{\d}}}
+
+\def bcremstep j {\set bcRX {\nth{\barcoderem}{\j}}\set bcRD {\nth{\barcodediv}{\j}}\set bcRY {\barcodemul{\bcRD}{\bcF}}\global\set barcoderem {\put{\barcoderem}{\j}{\calc{xor(bcRX, bcRY)}}}}
+\def bcrembyte b n {\set bcRH {\nth{\barcoderem}{1}}\global\set bcF {\calc{xor(\b, bcRH)}}\global\set barcoderem {\append{\tail{\barcoderem}}{0}}\for\bcRJ{\range{1}{\n}}{\bcremstep{\bcRJ}}}
+\def barcoderemainder data n {\global\set barcoderem {\transform\bcRI{\range{1}{\n}}{0}}\for\bcRB{\data}{\bcrembyte{\bcRB}{\n}}}

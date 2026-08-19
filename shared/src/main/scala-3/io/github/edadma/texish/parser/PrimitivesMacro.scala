@@ -145,16 +145,9 @@ object SetPrimitive extends Primitive:
 
 object IfPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
-    // Evaluate the condition expression
-    val condValue = proc.evalArgumentExpr(pos)
-    val cond = condValue match
-      case Value.Bool(b)     => b
-      case Value.Text(s)     => s.trim.nonEmpty && s.trim != "0" && s.trim.toLowerCase != "false"
-      case Value.Num(n)      => n != 0
-      case Value.Nil         => false
-      case Value.Undefined   => false
-      case Value.Seq(items)  => items.nonEmpty
-      case _                 => true
+    // Evaluate the condition expression. The rule lives in Value.truthy, which \while and \filter test by too —
+    // this used to be a second copy of it, and the two had drifted apart over what a number means.
+    val cond = Value.truthy(proc.evalArgumentExpr(pos))
 
     if !cond then
       // Skip to \else or \fi
