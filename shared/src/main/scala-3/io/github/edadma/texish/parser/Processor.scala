@@ -946,10 +946,21 @@ class Processor(val handler: Handler):
     * means the number 6, and `{\seq{a b}}` prints nothing and means the sequence. The printed text wins when the
     * body wrote more than that, because a body like `{Item \the\n}` means its whole sentence and not the number
     * inside it.
+    *
+    * Ambient suppression is lifted for the run, because the body's text is being *collected*, not written: a
+    * capture yields nothing while output is suppressed, and a module loads with output suppressed for the whole
+    * file, so `\def usfmfamily {lmroman}` followed by `\font \usfmfamily 10 regular` in the same package read the
+    * family as nothing at all. Nothing escapes to the document — it goes to the capture buffer — and an expression
+    * evaluated *inside* the body suppresses on its own account, so a comparison on the way still writes no
+    * `true`/`false` into what is collected.
     */
   private[parser] def evalBodyExpr(body: Vector[Token], pos: CharReader): Value =
     clearResult()
-    val printed = handler.capture(processTokenList(body))
+    val savedSuppress = handler.outputSuppressed
+    handler.suppressOutput(false)
+    val printed =
+      try handler.capture(processTokenList(body))
+      finally handler.suppressOutput(savedSuppress)
     takeResult match
       case Some(v) if printed.trim == Value.display(v).trim => v
       case r                                                =>

@@ -64,6 +64,18 @@ class LanguageSemanticsTests extends AnyFreeSpec with Matchers:
     out("\\def area {\\set a {3}\\set b {4}\\calc{a * b}}\\area") shouldBe "12"
   }
 
+  "a macro is worth the same thing while a module is loading, where output is suppressed" in {
+    // \use suppresses output for the whole file, and a macro's value is read from what its body writes — so a
+    // package that says \def usfmfamily {lmroman} and then \font \usfmfamily 10 regular read the family as
+    // nothing at all, and the font selection failed on the package's own line
+    val h    = new StringHandler
+    val proc = new Processor(h)
+    h.suppressOutput(true)
+    proc.process("\\def fam {lmroman}\\set v {\\fam}")
+    h.suppressOutput(false)
+    Value.display(h.get("v")) shouldBe "lmroman"
+  }
+
   // ---- "produced nothing" is not the same fact as "produced Nil" -------------------
 
   "a stored empty value reads back as empty rather than as the source text" in {
