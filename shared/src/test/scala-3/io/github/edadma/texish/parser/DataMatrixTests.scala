@@ -53,9 +53,7 @@ class DataMatrixTests extends AnyFreeSpec with Matchers:
       case Value.Seq(items) => items.map(v => Value.number(v).getOrElse(-1.0).toInt)
       case other            => fail(s"$name is not a sequence: $other")
 
-  private def digest(rows: Vector[String]): String =
-    val md = java.security.MessageDigest.getInstance("SHA-256")
-    java.util.Base64.getEncoder.encodeToString(md.digest(rows.mkString("\n").getBytes("UTF-8"))).take(22)
+  private def digest(rows: Vector[String]): String = SymbolFingerprint.of(rows)
 
   private def picture(src: String): PictureBox =
     val (t, _) = run(src)
@@ -155,25 +153,25 @@ class DataMatrixTests extends AnyFreeSpec with Matchers:
 
   "the encoder agrees with an independent one at every size it builds" - {
     "a mixed payload of letters, digits and punctuation" in {
-      digest(matrix("\\dmxmatrix{PARCEL-4471}")) shouldBe "28KdBcvSq7PcrK1l2eoztS"
+      digest(matrix("\\dmxmatrix{PARCEL-4471}")) shouldBe "414ec23399fdbd97"
     }
     "a URL, whose // has to reach the encoder rather than starting a comment" in {
-      digest(matrix("\\dmxmatrix{https://example.com}")) shouldBe "1ghp9VvFzXw63+v0aKe6DK"
+      digest(matrix("\\dmxmatrix{https://example.com}")) shouldBe "c683fac2f0beee95"
     }
     "twenty digits, which pack two to a codeword and which no Double could have carried" in {
-      digest(matrix("\\dmxmatrix{12345678901234567890}")) shouldBe "H/msMc3wmVW+4mKCRUTszw"
+      digest(matrix("\\dmxmatrix{12345678901234567890}")) shouldBe "f6612f86573ea669"
     }
     "a sentence, at a size with one data region" in {
-      digest(matrix("\\dmxmatrix{The quick brown fox jumps over the lazy dog}")) shouldBe "1AgIjrb0cO4hpgfjWXatwS"
+      digest(matrix("\\dmxmatrix{The quick brown fox jumps over the lazy dog}")) shouldBe "c41654a65acd70db"
     }
     "an accented letter, encoded as UTF-8 behind an upper shift" in {
-      digest(matrix("\\dmxmatrix{Caf\u00e9}")) shouldBe "Ey5B7bMmERRLlg1fZx+Lhp"
+      digest(matrix("\\dmxmatrix{Caf\u00e9}")) shouldBe "0a219c584e684dd9"
     }
     "a payload large enough to be split into four data regions" in {
-      digest(matrix("\\dmxmatrix{" + "A" * 100 + "}")) shouldBe "QT8iU88RGJUfsaFDWQH/Pn"
+      digest(matrix("\\dmxmatrix{" + "A" * 100 + "}")) shouldBe "bddad5ad843ebe9a"
     }
     "two hundred digits, which fit the same size as a hundred letters" in {
-      digest(matrix("\\dmxmatrix{" + "9" * 200 + "}")) shouldBe "vjICVXV1s9pc2UuRqznTg8"
+      digest(matrix("\\dmxmatrix{" + "9" * 200 + "}")) shouldBe "496e0cc3ef395bb8"
     }
   }
 

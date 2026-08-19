@@ -45,9 +45,7 @@ class QrCodeTests extends AnyFreeSpec with Matchers:
       case Value.Seq(items) => items.map(Value.display)
       case other            => fail(s"no matrix: $other")
 
-  private def digest(rows: Vector[String]): String =
-    val md = java.security.MessageDigest.getInstance("SHA-256")
-    java.util.Base64.getEncoder.encodeToString(md.digest(rows.mkString("\n").getBytes("UTF-8"))).take(22)
+  private def digest(rows: Vector[String]): String = SymbolFingerprint.of(rows)
 
   private def picture(src: String): PictureBox =
     val (t, _) = run(src)
@@ -147,25 +145,25 @@ class QrCodeTests extends AnyFreeSpec with Matchers:
 
   "the encoder agrees with an independent one over every mode, level and version tested" - {
     "byte mode, reached by a character outside the alphanumeric set" in {
-      digest(matrix("\\qrmatrix{hello world}")) shouldBe "utW5Q/DFtw6cR1J7g1cesp"
+      digest(matrix("\\qrmatrix{hello world}")) shouldBe "7b5b5a41f0527139"
     }
     "a URL, whose // has to reach the encoder rather than starting a comment" in {
-      digest(matrix("\\qrmatrix{https://example.com}")) shouldBe "sjIv1YfR4n9VM4CZQuI380"
+      digest(matrix("\\qrmatrix{https://example.com}")) shouldBe "99c1c176eca51cfd"
     }
     "a longer URL, at the version where the alignment pattern first appears" in {
-      digest(matrix("\\qrmatrix{https://christianevangelism.media}")) shouldBe "f7YDAt3avdaXgp1aSaz/HM"
+      digest(matrix("\\qrmatrix{https://christianevangelism.media}")) shouldBe "6bc4167ddf1f994e"
     }
     "a multi-block symbol, whose data and check codewords interleave" in {
-      digest(matrix("\\qrmatrix{The quick brown fox jumps over the lazy dog}")) shouldBe "QevO3TOZgYYKNL1+MoZ6EL"
+      digest(matrix("\\qrmatrix{The quick brown fox jumps over the lazy dog}")) shouldBe "f42179febf9c6238"
     }
     "text encoded as UTF-8, so an accented letter costs two bytes" in {
-      digest(matrix("\\qrmatrix{Caf\u00e9 na\u00efve r\u00e9sum\u00e9}")) shouldBe "eaI8iu8WkJ/bwZ1YeJXRbE"
+      digest(matrix("\\qrmatrix{Caf\u00e9 na\u00efve r\u00e9sum\u00e9}")) shouldBe "429a7fc4a09ef5ca"
     }
     "a hundred and twenty digits, which no Double could have carried" in {
-      digest(matrix("\\qrmatrix{" + "0123456789" * 12 + "}")) shouldBe "LbIl5kz0GYuo043dz3nNrr"
+      digest(matrix("\\qrmatrix{" + "0123456789" * 12 + "}")) shouldBe "911523f653923859"
     }
     "version 7 and up, which carries a version-information block as well" in {
-      digest(matrix("\\qrmatrix{" + "A" * 120 + "}")) shouldBe "8n38nQB8IcAl45lwjlYait"
+      digest(matrix("\\qrmatrix{" + "A" * 120 + "}")) shouldBe "15801edb479be3b3"
     }
   }
 
