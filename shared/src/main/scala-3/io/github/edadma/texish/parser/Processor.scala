@@ -64,6 +64,7 @@ class Processor(val handler: Handler):
 
   // Loop primitives
   registerPrimitive("for", ForPrimitive)
+  registerPrimitive("while", WhilePrimitive)
   registerPrimitive("done", DonePrimitive)
 
   // File inclusion (raw input) and module import (load-once, no typesetting)
@@ -113,6 +114,35 @@ class Processor(val handler: Handler):
   registerPrimitive("mapset", MapSetPrimitive)
   registerPrimitive("mapget", MapGetPrimitive)
   registerPrimitive("maphas", MapHasPrimitive)
+  registerPrimitive("mapdel", MapDelPrimitive)
+  registerPrimitive("keys", KeysPrimitive)
+  registerPrimitive("values", ValuesPrimitive)
+
+  // Data primitives: indexing, slicing, ordering, searching and folding over sequences and strings
+  // (see PrimitivesData.scala). A string counts as the sequence of its characters throughout.
+  registerPrimitive("nth", NthPrimitive)
+  registerPrimitive("slice", SlicePrimitive)
+  registerPrimitive("reverse", ReversePrimitive)
+  registerPrimitive("append", AppendPrimitive)
+  registerPrimitive("prepend", PrependPrimitive)
+  registerPrimitive("concat", ConcatPrimitive)
+  registerPrimitive("join", JoinPrimitive)
+  registerPrimitive("chunk", ChunkPrimitive)
+  registerPrimitive("contains", ContainsPrimitive)
+  registerPrimitive("indexof", IndexOfPrimitive)
+  registerPrimitive("total", TotalPrimitive)
+  registerPrimitive("minimum", MinimumPrimitive)
+  registerPrimitive("maximum", MaximumPrimitive)
+  registerPrimitive("sort", SortPrimitive)
+  registerPrimitive("sortby", SortByPrimitive)
+  registerPrimitive("filter", FilterPrimitive)
+  registerPrimitive("transform", TransformPrimitive)
+  registerPrimitive("split", SplitPrimitive)
+  registerPrimitive("replace", ReplacePrimitive)
+  registerPrimitive("repeat", RepeatPrimitive)
+  registerPrimitive("startswith", StartsWithPrimitive)
+  registerPrimitive("endswith", EndsWithPrimitive)
+  registerPrimitive("fixed", FixedPrimitive)
 
   // Token-stream control
   registerPrimitive("ignorespaces", IgnoreSpacesPrimitive)
@@ -796,7 +826,7 @@ class Processor(val handler: Handler):
     }
 
   /** Evaluate a list of tokens as an expression (without outputting to handler) */
-  private def evalTokensExpr(tokens: Vector[Token], pos: CharReader): Value =
+  private[parser] def evalTokensExpr(tokens: Vector[Token], pos: CharReader): Value =
     tokens match
       // Empty
       case Vector() => Value.Nil

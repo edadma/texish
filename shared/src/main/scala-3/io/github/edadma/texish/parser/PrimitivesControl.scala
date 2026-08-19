@@ -55,6 +55,33 @@ object ForPrimitive extends Primitive:
       proc.handler.exitScope()
     }
 
+/** `\while {condition} {body}` — run the body over and over while the condition holds, re-evaluating it each time.
+  *
+  * `\for` walks a sequence that is known before the loop starts; this is the loop for the case where it is not —
+  * consuming input until it runs out, or iterating a computation until it converges. The condition is re-read from
+  * its own tokens every time round, so it sees whatever the body changed; as in a `\for` body, an assignment meant
+  * to outlive the iteration needs `\global`.
+  *
+  * A runaway loop is stopped rather than left to hang the run: a document whose condition never goes false is a bug
+  * in the document, and the error names the limit and the condition so it can be found. The cap is high enough that
+  * no honest loop reaches it.
+  */
+object WhilePrimitive extends Primitive:
+  private val limit = 1000000
+
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val cond = stripOuterBraces(proc.readArgument(pos))
+    val body = proc.readArgument(pos)
+    var runs = 0
+
+    while Value.truthy(proc.evalTokensExpr(cond, pos)) do
+      if runs >= limit then
+        proc.handler.error(s"\\while: stopped after $limit iterations — the condition never became false", pos)
+      runs += 1
+      proc.handler.enterScope()
+      try proc.processTokenList(body)
+      finally proc.handler.exitScope()
+
 object DonePrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit = ()
     // End of for loop - marker only

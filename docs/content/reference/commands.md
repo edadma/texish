@@ -635,11 +635,65 @@ linework and the run-time overlay cannot drift out of register.
 | `\calc{…}` `\+ \- \* \/` | arithmetic |
 | `\round{value}{places}` | round a number to a fixed number of decimals |
 | `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean) |
-| `\for … \done` | iteration |
+| `\for … \done` | iteration over a known sequence |
+| `\while {condition} {body}` | iteration until a condition goes false, re-read each time |
 | `\the\name` | output a variable's value (`\the\pageno`, `\the\hsize`, …) |
 | `\seq{…}` `\words{s}` `\head` `\tail` `\last` `\size` `\cat` `\range{a}{b}` | sequences; `\words` splits on whitespace, `\range` counts `a`–`b`, `\last` is the final element |
 | `\upcase{…}` `\downcase{…}` `\trim{…}` | uppercase / lowercase / strip surrounding whitespace |
-| `\map{…}` `\mapset` `\mapget` `\maphas` | keyed maps |
+| `\map{…}` `\mapset` `\mapget` `\maphas` `\mapdel` | keyed maps |
+| `\keys{map}` `\values{map}` | a map's keys or values as a sequence |
+
+### Working with sequences and strings
+
+**A string is the sequence of its characters**, so these take either and give back the kind they were
+given. Characters means code points, so an emoji or a math alphanumeric is one item. **Positions
+count from 1**, and `\indexof` answers `0` for "not found" — which is falsy, so one call both tests
+and locates.
+
+| Command | Effect |
+|---------|--------|
+| `\nth{items}{n}` | the nth item or character (Undefined past either end) |
+| `\slice{items}{from}{count}` | `count` items from position `from`, clamped at both ends |
+| `\reverse{items}` | the items in the opposite order |
+| `\append{seq}{item}` `\prepend{seq}{item}` | the sequence with one more item on either end |
+| `\concat{a}{b}` | one sequence followed by another (`\cat` joins two values as *text*) |
+| `\join{seq}{sep}` `\split{text}{sep}` | sequence ↔ string, on a **literal** separator (empty splits into characters) |
+| `\chunk{seq}{n}` | the items grouped into sub-sequences of `n` — a flat `x y x y` list becomes pairs |
+| `\contains{items}{item}` | membership, or substring for a string |
+| `\indexof{items}{item}` | where it first occurs, counting from 1; `0` if absent |
+| `\total{seq}` `\minimum{seq}` `\maximum{seq}` | sum, least and greatest (`\total`, not `\sum` — that is the math operator) |
+| `\sort{seq}` | in order: numeric where the items are numbers, alphabetical where they are words |
+| `\replace{text}{from}{to}` | every occurrence, matched literally |
+| `\repeat{text}{n}` | the text `n` times over |
+| `\startswith{text}{s}` `\endswith{text}{s}` | test either end |
+| `\fixed{number}{places}` | exactly that many decimals, zeros kept (`\round` drops them) |
+
+Three take a body evaluated once per item, binding a variable of your choosing exactly as `\for`
+does — the difference being that they collect the body's **value** rather than typesetting its
+output, which is what lets a loop compute a result instead of accumulating through a `\global`
+variable:
+
+| Command | Effect |
+|---------|--------|
+| `\filter \v {seq} {condition}` | the items for which the condition holds |
+| `\transform \v {seq} {expression}` | each item replaced by what the expression computes |
+| `\sortby \v {seq} {key}` | ordered by a key computed from each item (stable) |
+
+```texish
+\set squares {\transform\n{\range{1}{4}}{\calc{\n * \n}}}      % 1, 4, 9, 16
+\set big     {\filter\n{\squares}{\> {\n} {5}}}                  % 9, 16
+\set byname  {\sortby\w{\words{Zebra apple Fig}}{\downcase{\w}}} % apple, Fig, Zebra
+```
+
+The body may be several statements, in which case its value is the last one that produced a value.
+That matters because **`\calc` reads its argument as an expression *string***: a variable works
+there (`\calc{\n * 2}`), but a primitive call does not — `\calc{\nth{\p}{1} * 2}` reads
+`\nth{\p}{1}` as an identifier. Bind what you need first:
+
+```texish
+\set sxy {\total{\transform\p{\chunk{\data}{2}}%
+  {\set x {\nth{\p}{1}}\set y {\nth{\p}{2}}\calc{x * y}}}}
+```
 | `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
 | `\oklch{L}{C}{h}` `\oklchof{color}` | build / read a colour in the Oklch space (lightness, chroma, hue) — derive shades by varying L |
 | `\newcounter` `\setcounter` `\addtocounter` `\stepcounter` `\value` `\counterwithin` | named counters; `\counterwithin` resets a child when its parent steps |

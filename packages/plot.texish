@@ -130,17 +130,19 @@
 }
 
 // ---- Auto-ranging --------------------------------------------------------------
-// \autorange{x1 y1 x2 y2 …} derives the ranges from the data: x spans the data
+// \autorange{x1 y1 x2 y2 …} derives the ranges from the data: \chunk pairs the flat list
+// into points, one \transform pulls out each axis, and \minimum / \maximum bound it. x spans the data
 // exactly, y is padded by 5% of its span (and pinned to a 0 baseline when the data is
 // all non-negative, so bars and lines rest on the axis). Call it before \plot; an
 // explicit \xrange / \yrange afterwards still overrides.
 \def autorange data {
-  \set plotARitems {\seq{\data}}
-  \global\set plotARxmin {\calc{1000000000}}
-  \global\set plotARxmax {\calc{-1000000000}}
-  \global\set plotARymin {\calc{1000000000}}
-  \global\set plotARymax {\calc{-1000000000}}
-  \plotARfold{\plotARitems}
+  \set plotARpts {\chunk{\seq{\data}}{2}}
+  \set plotARxs {\transform\arP{\plotARpts}{\nth{\arP}{1}}}
+  \set plotARys {\transform\arP{\plotARpts}{\nth{\arP}{2}}}
+  \set plotARxmin {\minimum{\plotARxs}}
+  \set plotARxmax {\maximum{\plotARxs}}
+  \set plotARymin {\minimum{\plotARys}}
+  \set plotARymax {\maximum{\plotARys}}
   \xrange{\plotARxmin}{\plotARxmax}
   \set plotARyspan {\calc{plotARymax - plotARymin}}
   \if {\< {\plotARyspan} {0.000001}} \set plotARyspan {1} \fi
@@ -149,18 +151,6 @@
   \set plotARyhi {\calc{plotARymax + plotARyspan * 0.05}}
   \yrange{\plotARylo}{\plotARyhi}
 }
-
-// Walk the data two values at a time, tracking the running min/max of each axis.
-\def plotARfold items {
-  \if {\size{\items}}
-    \set arx {\head{\items}}
-    \set ary {\head{\tail{\items}}}
-    \if {\< {\arx} {\plotARxmin}} \global\set plotARxmin {\arx} \fi
-    \if {\> {\arx} {\plotARxmax}} \global\set plotARxmax {\arx} \fi
-    \if {\< {\ary} {\plotARymin}} \global\set plotARymin {\ary} \fi
-    \if {\> {\ary} {\plotARymax}} \global\set plotARymax {\ary} \fi
-    \plotARfold{\tail{\tail{\items}}}
-  \fi}
 
 // ---- Device-coordinate mapping -------------------------------------------------
 // \px{v} / \py{v} map a data coordinate to a device coordinate. The argument is a
@@ -654,8 +644,7 @@
 \def trendline [color:auto] [label:] data {{
   \plotResolveColor{\color}
   \plotRecord{line}{\plotCurColor}{\label}
-  \global\set tlN {0} \global\set tlSx {0} \global\set tlSy {0} \global\set tlSxy {0} \global\set tlSxx {0}
-  \plotTrendFold{\seq{\data}}
+  \plotTrendSums{\seq{\data}}
   \set tlSlope {\calc{(tlN * tlSxy - tlSx * tlSy) / (tlN * tlSxx - tlSx * tlSx)}}
   \set tlInt {\calc{(tlSy - tlSlope * tlSx) / tlN}}
   \set tlY0 {\calc{tlSlope * plotXmin + tlInt}}
@@ -664,17 +653,17 @@
   \line{\px{plotXmin} \py{tlY0}  \px{plotXmax} \py{tlY1}}
   \linetype{solid}
 }}
-\def plotTrendFold items {
-  \if {\size{\items}}
-    \set tfx {\head{\items}}
-    \set tfy {\head{\tail{\items}}}
-    \global\set tlN {\calc{tlN + 1}}
-    \global\set tlSx {\calc{tlSx + tfx}}
-    \global\set tlSy {\calc{tlSy + tfy}}
-    \global\set tlSxy {\calc{tlSxy + tfx * tfy}}
-    \global\set tlSxx {\calc{tlSxx + tfx * tfx}}
-    \plotTrendFold{\tail{\tail{\items}}}
-  \fi}
+// The five sums a least-squares fit needs, each a \total of one \transform over the points
+// rather than a running \global accumulator. \calc reads its argument as an expression string, so
+// a primitive call inside it would not evaluate — the coordinates are bound to names first.
+\def plotTrendSums items {
+  \set tlPts {\chunk{\items}{2}}
+  \set tlN {\size{\tlPts}}
+  \set tlSx {\total{\transform\tfP{\tlPts}{\nth{\tfP}{1}}}}
+  \set tlSy {\total{\transform\tfP{\tlPts}{\nth{\tfP}{2}}}}
+  \set tlSxy {\total{\transform\tfP{\tlPts}{\set tfx {\nth{\tfP}{1}}\set tfy {\nth{\tfP}{2}}\calc{tfx * tfy}}}}
+  \set tlSxx {\total{\transform\tfP{\tlPts}{\set tfx {\nth{\tfP}{1}}\calc{tfx * tfx}}}}
+}
 
 // ---- Reference lines -----------------------------------------------------------
 // \hline[colour]{y} / \vline[colour]{x} draw a dashed line across the plot at a data
