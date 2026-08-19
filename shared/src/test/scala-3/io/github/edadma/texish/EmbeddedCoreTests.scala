@@ -19,8 +19,10 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
     * math face, the glyph-fallback face, and the code face `\code` sets a listing in. */
   private val CoreFamilies = Typesetter.CoreFamilies
 
-  /** The packages compiled into the artifact: what a document needs to be an ordinary document. */
-  private val CorePackages = Set("base", "document")
+  /** The packages compiled into the artifact: what a document needs to be an ordinary document, plus `qrcode`,
+    * which was an engine primitive until it became a package and must not quietly stop working for anyone who
+    * installs the binary alone. */
+  private val CorePackages = Set("base", "document", "qrcode")
 
 
   /** A typesetter that opens the paths the way any host does, and lets a test read back what got registered.
@@ -106,7 +108,9 @@ class EmbeddedCoreTests extends AnyFreeSpec with Matchers:
   // The embedded packages are a whitelist: what a document needs to be an ordinary document, and nothing whose
   // own font requirements the embed cannot meet. `music` is the clearest case of the second — it sets notation
   // from a SMuFL face, and those are catalogue fonts, so embedding it would ship a module that resolves and then
-  // cannot draw a note.
+  // cannot draw a note. `qrcode` is on the list for the opposite reason twice over: it draws rectangles and needs
+  // no face at all, and it replaced an engine primitive, so leaving it out would mean a binary that used to draw
+  // a QR code from a bare install and silently stopped.
   "the embedded packages are exactly the core set" in {
     EmbeddedPackages.sources.keySet shouldBe CorePackages
     EmbeddedFontData.chunks.keys.filter(_.contains("Bravura")) shouldBe empty

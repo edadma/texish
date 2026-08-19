@@ -64,7 +64,6 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
       "io.github.edadma" %%% "cross_platform" % "0.1.7",
       "io.github.edadma" %%% "path"           % "0.0.6",
       "io.github.edadma" %%% "highlighter"    % "0.0.10",
-      "io.github.edadma" %%% "qr"             % "0.0.1",
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
@@ -130,7 +129,7 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         (Compile / sourceManaged).value / "io" / "github" / "edadma" / "texish" / "EmbeddedPackages.scala"
       def esc(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n")
-      val embedded = Set("base", "document")
+      val embedded = Set("base", "document", "qrcode")
       val files    = (pkgDir * "*.texish").get.filter(f => embedded(f.getName.stripSuffix(".texish"))).sortBy(_.getName)
       val sb    = new StringBuilder
       sb.append("package io.github.edadma.texish\n\n")

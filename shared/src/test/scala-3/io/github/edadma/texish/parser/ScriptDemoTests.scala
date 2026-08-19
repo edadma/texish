@@ -68,3 +68,10 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
   "the plot demo processes without error" in {
     noException should be thrownBy process("scripts/plot-demo.script")
   }
+
+  // The QR demo is the qrcode package end to end: \use, the option bracket, the verbatim URL and the picture.
+  // It was an engine primitive until the package replaced it, so this is also what says the replacement still
+  // draws something — a broken encoder throws here rather than shipping a symbol that quietly will not scan.
+  "the QR demo processes without error" in {
+    noException should be thrownBy process("scripts/qr-demo.script")
+  }

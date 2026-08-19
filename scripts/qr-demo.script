@@ -1,7 +1,10 @@
-// qr-demo — the \qrcode primitive. It encodes its (verbatim) argument as a QR Code and places it as a square box
-// of filled cells, drawn in vector rectangles so it stays crisp on every backend. Options ride an optional
-// [key:value …] bracket: ecc (l/m/q/h error correction, default q), cell (per-module size, default 3pt), quiet
-// (border in modules, default 4), and dark / light colours. The data is read raw, so a URL's // is safe.
+// qr-demo — the qrcode package. \qrcode encodes its (verbatim) argument as a QR Code and places it as a
+// square box of filled cells, drawn in vector rectangles so it stays crisp on every backend. Options ride an
+// optional [key:value …] bracket: ecc (l/m/q/h error correction, default q), cell (per-module size, default
+// 3pt), quiet (border in modules, default 4), and dark / light colours. The data is read raw, so a URL's // is
+// safe. There is no QR primitive in the engine — the encoder is written in the document language.
+
+\use{qrcode}
 
 \geometry paperwidth:3.2in paperheight:6in margin:0.3in
 

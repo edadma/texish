@@ -519,10 +519,32 @@ the back, `duplexshift:<len>` pulls every front side that far left to bring the 
 | `\defbitmap{name}{w}{h}{depth}{base64}` | define an inline bitmap from embedded data (so a package can carry a glyph) |
 | `\usebitmap[width:… height:…]{name}` | place a bitmap defined by `\defbitmap` |
 | `\picture width:… height:… {…}` | open a vector-graphics drawing |
-| `\qrcode[ecc:q cell:… quiet:… dark:… light:…]{data}` | a QR code drawn as crisp vector modules (via the `io.github.edadma.qr` library) |
 
 The drawing commands available inside `\picture` (paths, shapes, strokes, fills, transforms, text,
 arrows) are listed in the [drawing reference](../drawing/).
+
+## QR codes *(`\use{qrcode}`)*
+
+| Command | Effect |
+|---------|--------|
+| `\qrcode[options]{data}` | encode the data and place the symbol, drawn as one vector rectangle per dark module |
+| `\qrmatrix[options]{data}` | encode without drawing; the rows land in `qrmatrixvalue` as strings of `.` and `#` |
+
+The data is read **verbatim**, so a URL's `//` is not a comment and `%`, `~` and `#` reach the
+encoder as themselves. Options ride one optional `[key:value …]` bracket, and each has a document
+variable behind it that sets the default for every later call:
+
+| Option | Variable | Effect |
+|---|---|---|
+| `ecc:q` | `qrecc` | error correction `l`, `m`, `q` or `h` — default `q`, and raised automatically to the strongest level the chosen size still holds |
+| `cell:3pt` | `qrcell` | the side of one module, in any length `\calc` understands |
+| `quiet:4` | `qrquiet` | the light border, in modules — 4 is the standard's minimum |
+| `dark:` | `qrdark` | the module colour; the pen colour in force by default |
+| `light:white` | `qrlight` | the background; `light:none` leaves the page showing through |
+
+The encoder is written in the document language rather than built into the engine — the mode
+selection, the Reed-Solomon check codewords and the mask search are all `\calc`, `\for` and `\put`
+over sequences.
 
 ## Floats and text wrapping *(`\use{float}`)*
 

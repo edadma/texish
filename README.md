@@ -58,7 +58,8 @@ outer margin of a two-sided document), a numbered reference list with citations 
 (`thebibliography`/`\cite`, resolved through the same label table), and an alphabetical index
 (`\index`/`\printindex`, gathered and page-merged) — and bundled packages
 add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), QR
-codes (`\qrcode`), text sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
+codes (`\use{qrcode}` — the encoder is written in the document language, not built into the
+engine), text sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
 plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), railroad
 syntax diagrams (`\use{railroad}` — a W3C-style EBNF grammar drawn as one diagram per rule),
 node-and-edge diagrams (`\use{diagram}`, with `flowchart`, `automaton` and `er` presets —
