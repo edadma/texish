@@ -15,11 +15,40 @@ are in [Parameters and Variables](../parameters/), and the `\picture` drawing co
 | `\title{…}` `\author{…}` `\date{…}` | set the title-block fields |
 | `\maketitle` | typeset the centered title block |
 | `\begin{abstract}…\end{abstract}` | a centered, indented summary |
-| `\section{…}` `\subsection{…}` | auto-numbered headings |
+| `\section{…}` `\subsection{…}` `\subsubsection{…}` | auto-numbered headings (each has a starred, unnumbered form) |
+| `\paragraph{…}` `\subparagraph{…}` | bold run-in headings below the numbered levels |
+| `\appendix` | letter the top level from here on — `A`, `B`, … (in `book`, the chapters) |
 | `\begin{itemize}` `\begin{enumerate}` `\item` | bulleted and numbered lists |
+| `\begin{description}` `\item[Term]` | terms with hanging definitions |
 | `\begin{quote}` `\begin{quotation}` | indented quotation blocks |
 | `\footnote{…}` | a numbered footnote |
+| `\marginpar{…}` | a note in the margin beside the line, taking no room in the text |
 | `\figure[htb]{…}` `\table[htb]{…}` `\caption{…}` | floats with numbered captions |
+
+List labels change with depth and each is a macro of its own, so redefining one changes that level
+throughout: `\labelenumi`…`\labelenumiv` are `1.`, `(a)`, `i.`, `A.`, and `\labelitemi`…`\labelitemiv`
+are `•`, `–`, `∗`, `·`. Each `enumerate` level counts on its own counter (`enumi`…`enumiv`), so a
+nested list never disturbs the one around it. `\marginparwidth`, `\marginparsep` and
+`\marginparstyle` are the margin note's measure, gap and setting; a two-sided document puts its notes
+in the outer margin.
+
+## Citations, bibliography and index *(format)*
+
+Both resolve across passes, like every other cross-reference: an index or a citation of something the
+pass has not reached yet appears once the document has been set through.
+
+| Command | Effect |
+|---------|--------|
+| `\begin{thebibliography}…\end{thebibliography}` | a numbered reference list, under `\bibname` |
+| `\bibitem{key}` | open one entry, numbered, and label it under `key` |
+| `\cite{key}` `\cite{key other}` | print the entry numbers in one bracketed group — `[1]`, `[1, 2]` |
+| `\index{term}` | mark this point as a place `term` is discussed; draws nothing |
+| `\printindex` | set the collected terms alphabetically, each with its pages |
+| `\indexlist{list}{format}` | low-level: replay a named list gathered by title — one call per distinct term, sorted, with its pages deduplicated and joined — as `format{level}{number}{title}{pages}` |
+| `\marginalnote rise:… {offset}{width}{…}` | low-level: the box `\marginpar` is built on, placed at `offset` from the left edge of the text block |
+
+In `book` the reference list and the index open as chapters rather than sections, and `\bibname` is
+"Bibliography" rather than "References".
 
 ## Cross-references and contents *(format)*
 

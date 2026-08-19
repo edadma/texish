@@ -4,7 +4,8 @@
 // engine: a title block, an abstract, numbered sectioning, a table of contents,
 // lists, quotations, alignment helpers, inline markup, a full set of font-size
 // declarations, text symbols, floating figures and tables
-// with numbered captions, minipages, and a couple of conditionals. This single
+// with numbered captions, minipages, margin notes, a numbered reference list with
+// citations into it, an index, and a couple of conditionals. This single
 // script exercises every public command, environment, and declaration the
 // package provides, framed as a short article about itself.
 
@@ -39,7 +40,7 @@ body on a tight \LaTeX{} type scale.
 \vfill\eject
 
 // ---- Sectioning ----------------------------------------------------------------
-\section {Sectioning}
+\section {Sectioning}\index{sectioning}
 
 The \mono{section}, \mono{subsection} and \mono{subsubsection} commands give
 three numbered levels. Numbering is automatic: a subsection resets to one at the
@@ -74,7 +75,11 @@ number and without a contents entry.
 it sets its title bold on the same line as the text it introduces, with no number
 and no break after it. The body continues immediately, as you see here.
 
-\section {Lists}
+\subparagraph{And a level below that.} The \mono{subparagraph} command is the same
+run-in heading one step down, indented from the margin so that the two levels read
+as a hierarchy rather than as one level used twice.
+
+\section {Lists}\index{lists}
 
 The package provides three list environments, all of which nest cleanly.
 
@@ -88,6 +93,34 @@ The \mono{enumerate} environment numbers its items automatically \dots
 aligns under the text rather than the number,
 \item and a third point.
 \end{enumerate}
+
+Nested lists change their label with depth, as in LaTeX: arabic numbers at the top
+level, then bracketed letters, then lowercase roman numerals, then capitals.
+
+\begin{enumerate}
+\item The first level counts 1, 2, 3.
+
+\begin{enumerate}
+\item The second level letters its items,
+
+\item like this,
+
+\begin{enumerate}
+\item and the third level numbers them in lowercase roman,
+
+\begin{enumerate}
+\item with capital letters at the fourth.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+\item Back at the first level, the numbering carries on from where it left off —
+each level counts on its own, so an inner list never disturbs the one around it.
+\end{enumerate}
+
+Each label is a macro of its own — \mono{labelenumi} through \mono{labelenumiv} for
+the numbers, \mono{labelitemi} through \mono{labelitemiv} for the bullets — so
+redefining one changes that level throughout the document.
 
 \subsection {Bulleted and nested lists}
 
@@ -174,7 +207,7 @@ measure:
 \noindent The \mono{centering} declaration switches the rest of a group to
 centred lines, the basis of the \mono{center} environment above.
 
-\section {Inline markup}
+\section {Inline markup}\index{markup}
 
 The body can be set \italic{emphasised}, \italic{italic}, \slanted{slanted},
 \bold{bold}, \smallcaps{in small caps}, or \underline{underlined}, switched between
@@ -199,7 +232,7 @@ sign~\copyright, the registered mark~\textregistered, the trademark~\texttradema
 the pound sign~\pounds, a bullet~\textbullet, an em dash~\textemdash, an en
 dash~\textendash, and the degree sign~\textdegree.
 
-\section {Floats: figures and tables}
+\section {Floats: figures and tables}\index{floats}
 
 A \mono{figure} detaches its body to the top of a page, and a \mono{caption}
 written inside numbers it on the figure counter. The \mono{label} on the caption
@@ -259,6 +292,28 @@ And this is the right minipage, the same width, set as its own little paragraph.
 — and \if {\={texish}{tex}}they are equal\else the two strings are \italic{not}
 equal\fi.
 
+\section {Margin notes}\index{margin notes}
+
+The \mono{marginpar} command sets a short note in the margin beside the line it is
+written on.\marginpar{Like this one, set beside the line that called for it.} The
+note takes no room in the text: the line is set, and the page broken, exactly as if
+it were not there, so adding one never reflows the paragraph that carries it.
+
+In a two-sided document the note goes in the \italic{outer} margin — the right of a
+recto, the left of a verso — so notes sit at the open edges of an opening rather
+than down its gutter. \mono{marginparwidth} is the measure, \mono{marginparsep} the
+gap from the text, and \mono{marginparstyle} how it is set — the face, and the
+ragged right edge a measure this narrow wants.
+
+\section {Citations and the bibliography}\index{citations}
+
+The \mono{thebibliography} environment sets a numbered reference list, and
+\mono{cite} names its entries in the running text: the first entry here is
+\cite{knuth}, and both together are \cite{knuth lamport}. A citation is an ordinary
+cross-reference, so it resolves across passes exactly as \mono{ref} does — a
+citation of an entry that appears later in the document shows \mono{??} until the
+pass that has seen it, never a stale number.
+
 \appendix
 
 \section {After the appendix}
@@ -270,5 +325,18 @@ command. A subsection here follows along as A.1.
 \subsection {A lettered subsection}
 
 This subsection reads A.1, built on the appendix's lettered top level.
+
+// ---- Reference list and index ---------------------------------------------------
+// \bibitem declares a label under the entry's number, which is what lets \cite above
+// resolve to it; \printindex gathers every \index mark in the document into one
+// alphabetical list, with the pages each term was marked on.
+
+\begin{thebibliography}
+\bibitem{knuth} Knuth, Donald E. \italic{The \TeX{}book}. Addison-Wesley, 1984.
+\bibitem{lamport} Lamport, Leslie. \italic{\LaTeX: A Document Preparation System}.
+Addison-Wesley, second edition, 1994.
+\end{thebibliography}
+
+\printindex
 
 \vfill\eject

@@ -50,3 +50,14 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
     // tree, and a tag that has been renamed or a file that has been dropped breaks it.
     noException should be thrownBy process("scripts/hyphenation-demo.script")
   }
+
+  // The document and book demos are the two that claim to exercise every command their package provides, so a
+  // feature added to either package is added to its demo as well — and a demo that has stopped processing is
+  // the first sign that it was not.
+  "the document demo processes without error" in {
+    noException should be thrownBy process("scripts/document-demo.script")
+  }
+
+  "the book demo processes without error" in {
+    noException should be thrownBy process("scripts/book-demo.script")
+  }

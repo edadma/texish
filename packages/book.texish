@@ -121,6 +121,21 @@
 // running head names whichever chapter a page belongs to.
 \def thechapter {\arabic{\value{chapter}}}
 
+// The word a numbered chapter is announced by, and the form of its number. Both are
+// macros because \appendix swaps them: the chapters after it read "Appendix A", "Appendix
+// B", counting from zero again, while every \chapter, \section and \label around them is
+// written exactly as before. Everything built on the chapter number — the section numbers,
+// the float captions, the contents entries — reads \thechapter rather than the counter, so
+// the switch carries through all of them from this one place.
+\def chaptername {Chapter}
+
+\def appendix {
+  \openpage
+  \setcounter{chapter}{0}
+  \def chaptername {Appendix}
+  \def thechapter {\Alph{\value{chapter}}}
+}
+
 \def chapter * t {
   \openpage
   \vskip 36pt
@@ -128,9 +143,9 @@
     \if {\star}
     \else
       \stepcounter{chapter}
-      \leftline{\font lmroman 14 bold Chapter \thechapter}
+      \leftline{\font lmroman 14 bold \chaptername \thechapter}
       \vskip 8pt
-      \headingmeta{0}{\thechapter}{Chapter}{\t}
+      \headingmeta{0}{\thechapter}{\chaptername}{\t}
     \fi
   \fi
   \leftline{\font lmroman 24 bold \t}
@@ -167,7 +182,7 @@
 // heading. The value \thesectionnum joins them with \cat, because the document package
 // feeds it to \tocentry and \label as a value, where a bare `.` is the member-access
 // operator rather than a printed dot.
-\def thesection {\arabic{\value{chapter}}.\arabic{\value{section}}}
+\def thesection {\thechapter.\arabic{\value{section}}}
 \def thesectionnum {\cat{\thechapter}{\cat{.}{\arabic{\value{section}}}}}
 
 // ---- Float captions ------------------------------------------------------------
@@ -177,9 +192,19 @@
 // number printed by \caption to match the per-chapter counters declared above.
 \def caption text {{
 \stepcounter \captioncounter
-\global\set currentlabel {\cat{\arabic{\value{chapter}}}{\cat{.}{\arabic{\value \captioncounter}}}}
+\global\set currentlabel {\cat{\thechapter}{\cat{.}{\arabic{\value \captioncounter}}}}
 \global\set currentlabeltype {\captionkind}
 \global\set currentlabelname {\text}
-\addcontentsline{\captionlist}{1}{\cat{\arabic{\value{chapter}}}{\cat{.}{\arabic{\value \captioncounter}}}}{\text}
-\the\captionkind \arabic{\value{chapter}}.\arabic{\value \captioncounter}: \text
+\addcontentsline{\captionlist}{1}{\cat{\thechapter}{\cat{.}{\arabic{\value \captioncounter}}}}{\text}
+\the\captionkind \thechapter.\arabic{\value \captioncounter}: \text
 }}
+
+// ---- Bibliography and index headings -------------------------------------------
+// The document package opens its reference list and its index with a \section*, the
+// top level an article has. In a book both are divisions in their own right — they sit
+// beside the chapters in the table of contents and open on a fresh page like one — so
+// each is a \chapter* here instead. The list and index themselves are inherited from
+// the document package unchanged; only the heading above them differs.
+\def bibname {Bibliography}
+\def bibheading {\chapter*{\bibname}}
+\def indexheading {\chapter*{\indextitle}}

@@ -52,8 +52,11 @@ freeform paths, transforms, and placed type — built on the same rendering pipe
 
 A document format (`\use{document}`) supplies the article furniture — title blocks, numbered
 sections, cross-references and a table of contents (`\label`/`\ref`/`\pageref`, `\tableofcontents`,
-resolved by typesetting the document twice over a shared label table), lists, quotations, figures
-and tables with captions, and footnotes — and bundled packages
+resolved by typesetting the document twice over a shared label table), lists whose labels change with
+depth, quotations, figures and tables with captions, footnotes, margin notes (`\marginpar`, in the
+outer margin of a two-sided document), a numbered reference list with citations into it
+(`thebibliography`/`\cite`, resolved through the same label table), and an alphabetical index
+(`\index`/`\printindex`, gathered and page-merged) — and bundled packages
 add clickable links and images (`\includegraphics`, `\href`/`\url` as real PDF annotations), QR
 codes (`\qrcode`), text sub/superscripts, chemistry (`\ce` reaction equations and skeletal structures), data
 plots (`\use{plot}` — line, scatter, bar, and function plots with labelled axes), railroad

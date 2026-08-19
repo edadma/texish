@@ -314,6 +314,84 @@ private[parser] def registerFlowPrimitives(proc: Processor, handler: TypesetterH
     },
   )
 
+  // \indexlist - 2 args (list, format-macro): the index form of \contentslist. Where \contentslist replays a named
+  // list line by line in document order, an index wants the same entries gathered: one line per distinct term,
+  // alphabetically, carrying every page the term was written on. So the entries collected for the named list are
+  // grouped by title, sorted, and their pages deduplicated and put in ascending order, then the format macro is
+  // called once per term as macro{level}{number}{title}{pages} — the same four-argument shape \contentslist uses, so
+  // one format macro can serve either — with `pages` the comma-joined folio list and `number` whatever the first
+  // entry of the term carried (empty, for an \index that files no number).
+  //
+  // The sort is by the term folded to lower case, with the term itself breaking ties, so "Zebra" files under Z
+  // rather than ahead of "apple" as a raw code-point sort would put it, and two terms differing only in case keep a
+  // stable order between them. Like every contents list it reads the previous pass's collection, so an index emits
+  // nothing on the first pass.
+  proc.registerPrimitive(
+    "indexlist",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val list        = Value.display(evalArg(proc, pos))
+        val formatMacro = Value.display(evalArg(proc, pos))
+        val entries     = t.references.list(list)
+
+        if entries.nonEmpty then
+          val terms = entries
+            .groupBy(_.title)
+            .toVector
+            .sortBy((title, _) => (title.toLowerCase, title))
+
+          val src = terms
+            .map { (title, es) =>
+              val pages = es.map(_.page).distinct.sorted.mkString(", ")
+              val level = es.head.level
+              val num   = es.head.number
+
+              s"\\$formatMacro{$level}{$num}{$title}{$pages}"
+            }
+            .mkString
+
+          proc.processContent(src)
+    },
+  )
+
+  // \marginalnote - 3 args (offset, width, body): set the body in the margin beside the line it was written in. The
+  // body is typeset immediately into a vertical box of the given width and rides the vertical list as a zero-size
+  // item (see MarginalBox), so the line it annotates is set, and the page broken, exactly as if the note were not
+  // there. `offset` is measured from the left edge of the text block — \hsize plus a gap puts the note in the right
+  // margin, a negative offset puts it in the left — and an optional `rise:` lifts the note above the point where it
+  // lands, a rise of one baseline levelling its first line with the line it annotates. The document language's
+  // \marginpar is the everyday form, which is where the outer-margin choice of a two-sided document is made.
+  proc.registerPrimitive(
+    "marginalnote",
+    new Primitive {
+      def execute(proc: Processor, pos: CharReader): Unit =
+        val opts   = proc.readOptionalParams(pos)
+        val rise   = opts.get("rise").flatMap(points).getOrElse(0.0)
+        val offset = points(evalArg(proc, pos)).getOrElse(0.0)
+        val width  = points(evalArg(proc, pos)).getOrElse(0.0)
+        val body   = proc.readArgument(pos)
+
+        // typeset now, in its own scope and its own measure, exactly as a float's body is: the note is detached, so
+        // neither its font and spacing changes nor a \noindent inside it may flow back into the running text
+        val savedIndent = t.indentParagraph
+        val savedHsize  = t.getNumber("hsize")
+
+        t.enter()
+        t.set("hsize", width)
+        t.vbox()
+        proc.processTokenList(body)
+        t.paragraph()
+
+        val content = t.mode.exit
+
+        t.exit()
+        t.set("hsize", savedHsize)
+        t.indentParagraph = savedIndent
+
+        if content ne null then t.add(new MarginalBox(content, offset, rise))
+    },
+  )
+
   // footnote - an optional [marker] then 1 body arg: a raised marker in the running text, with the body typeset at
   // the foot of whatever page the marker lands on. With no [marker] the note auto-numbers (a running counter in
   // `footnoteno`); with an explicit [marker] that content is the caller instead — a letter, a symbol, an italic

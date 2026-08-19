@@ -60,6 +60,16 @@ A second paragraph opens with the usual first-line indent.
 Numbered 1.1, 1.2, and so on.
 ```
 
+There are three numbered levels — `\section`, `\subsection`, `\subsubsection` — and below them two
+unnumbered run-in headings, `\paragraph` and `\subparagraph`, which set their title bold on the same
+line as the text they introduce. Every numbered heading has a starred form (`\section*{…}`) that
+skips the counter and files no contents entry.
+
+`\appendix` restarts the top-level counter and switches its number to a letter, so the sections after
+it read Appendix A, B, … while every command around them stays the same. In the `book` package it
+does the same to the chapters, and the section numbers, float captions and contents entries beneath
+them follow the letter.
+
 ## Cross-references and a table of contents
 
 `\label` binds a name to the section (or figure or table) it follows — its number, its kind, its
@@ -114,6 +124,18 @@ content rather than the marker.
 \end{itemize}
 ```
 
+Both kinds of label change with depth, as in LaTeX: an `enumerate` counts `1.`, then `(a)`, then
+`i.`, then `A.`, and an `itemize` marks `•`, then `–`, then `∗`, then `·`. Each is a macro of its own
+— `\labelenumi` through `\labelenumiv`, `\labelitemi` through `\labelitemiv` — so redefining one
+changes that level throughout the document:
+
+```texish
+\def labelitemi {→}
+```
+
+Each `enumerate` level has a counter of its own, so a nested list never disturbs the numbering of the
+list around it.
+
 ## Quotations
 
 `quote` indents a block on both sides; `quotation` indents it further. Both revert at the
@@ -133,6 +155,59 @@ page the marker lands on.
 ```texish
 The result was first noted by Gauss\footnote{In a letter of 1809.} and later refined.
 ```
+
+## Margin notes
+
+`\marginpar` sets a short note in the margin beside the line it is written on. The note takes no room
+in the text: the line is set, and the page broken, exactly as if it were not there, so adding one
+never reflows the paragraph that carries it.
+
+```texish
+The engine breaks paragraphs by cost.\marginpar{As TeX does, and for the same reason.}
+```
+
+One-sided the note goes in the right margin; two-sided it goes in the *outer* one — the right of a
+recto, the left of a verso — so notes sit at the open edges of an opening rather than down its
+gutter. `\marginparwidth` is the measure and `\marginparsep` the gap from the text; `\marginparstyle`
+is how the note is set, a small face with a ragged right margin by default.
+
+## Citations and a bibliography
+
+`thebibliography` sets a numbered reference list and `\cite` names its entries in the running text.
+The two are joined by the ordinary cross-reference machinery: `\bibitem{key}` labels its entry under
+the number it was given, so a `\cite` of it resolves across passes exactly as `\ref` does — a
+citation of an entry further down the document shows `??` until the pass that has seen it, never a
+stale number.
+
+```texish
+As shown before\cite{knuth}, and in both accounts\cite{knuth lamport}, ...
+
+\begin{thebibliography}
+\bibitem{knuth} Knuth, Donald E. \italic{The \TeX{}book}. Addison-Wesley, 1984.
+\bibitem{lamport} Lamport, Leslie. \italic{\LaTeX}. Addison-Wesley, 1994.
+\end{thebibliography}
+```
+
+`\cite` takes one key or several separated by spaces, and prints them as one bracketed group —
+`[1]`, `[1, 2]` — rather than as several brackets in a row. The list's heading is `\bibname`,
+"References" in an article and "Bibliography" in a book.
+
+## An index
+
+`\index{term}` marks a point as a place the term is discussed, and draws nothing where it is written.
+`\printindex` sets everything collected: one line per distinct term, alphabetically, each with the
+pages it was marked on and repeats of a page dropped.
+
+```texish
+Paragraphs are broken by cost.\index{line breaking}
+
+...
+
+\printindex
+```
+
+Like a table of contents, an index appears once the document has been set through — the pass that
+collects the marks is not the pass that can know what pages they fell on.
 
 ## Spacing and page breaks
 

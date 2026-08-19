@@ -296,12 +296,53 @@
   \noindent {\font lmroman 10 bold \t}\hskip 6 \ignorespaces
 }
 
+// \subparagraph is the level below \paragraph: the same bold run-in heading, indented
+// from the margin so the two read as a hierarchy rather than as one repeated level.
+\def subparagraph t {
+  \smallskip
+  \indent {\font lmroman 10 bold \t}\hskip 6 \ignorespaces
+}
+
 // \appendix restarts the section counter and switches its number to a letter, so the
 // sections after it read Appendix A, B, … while keeping the same \section command.
 \def appendix {
   \setcounter{section}{0}
   \def thesection {\Alph{\value{section}}}
 }
+
+// ---- Margin notes ----------------------------------------------------------------
+// \marginpar{...} sets its argument in the margin beside the line it was written in,
+// over the engine's \marginalnote. The note takes no room in the text: the line is set,
+// and the page broken, exactly as if it were not there, so a note never reflows the
+// paragraph that carries it.
+//
+// One-sided it goes in the right margin. Two-sided it goes in the *outer* one — the
+// right of a recto, the left of a verso — so notes sit at the open edges of an opening
+// rather than down its gutter. A left-margin note is placed by a negative offset: the
+// offset is measured from the left edge of the text block, so the note's own width and
+// the gap have to come off it. \marginparwidth and \marginparsep are the measure and
+// the gap; \marginparstyle is how the note is set — the face, and a ragged right
+// margin, which a measure this narrow needs if its lines are not to be stretched wide
+// apart — and is redefinable like \foliostyle.
+//
+// The rise is one baseline, which levels the note's first line with the line it
+// annotates: an item written inside a paragraph attaches to its line and lands just
+// below it, so without the lift the note would start a line late. \marginpar must be
+// one line of source — it can run inside a paragraph, where a source newline is an
+// interword space.
+//
+// The note's body ends with a \par, and that is not decoration: \leftskip, \rightskip
+// and the rest of the paragraph shape are read when the paragraph is BROKEN, and the
+// closing brace of the body would revert \marginparstyle's ragged right margin before
+// that happened — the note would come out justified in a 54-point measure, its words
+// pulled apart. Breaking the paragraph inside the group is what \end{flushleft} does
+// for the same reason.
+\set marginparwidth {54}
+\set marginparsep {10}
+\def marginparstyle {\font lmroman 8 regular\set rightskip {0 plus 1fil}\set parfillskip {0 plus 1fil}}
+\def marginparouter t {\marginalnote rise:\calc{baselineskip} {\calc{hsize + marginparsep}}{\calc{marginparwidth}}{\marginparstyle\noindent\t\par}}
+\def marginparinner t {\marginalnote rise:\calc{baselineskip} {\calc{0 - marginparwidth - marginparsep}}{\calc{marginparwidth}}{\marginparstyle\noindent\t\par}}
+\def marginpar t {\iftwoside{\ifrecto{\marginparouter{\t}}{\marginparinner{\t}}}{\marginparouter{\t}}}
 
 // ---- Lists ---------------------------------------------------------------------
 // Lists nest: listdepth is a scoped variable, so each environment sees one more
@@ -312,19 +353,60 @@
 \set listindent {22}
 \set labelsep {5}
 
+// Both marker schemes change with depth, as LaTeX's do, so a nested list is told apart
+// from its parent by its labels and not only by its indent. Each level's label is a
+// macro of its own — \labelitemi… for the bullets, \labelenumi… for the numbers — so a
+// document redefines one of them to change that level everywhere, exactly as it
+// redefines \foliostyle or \dropcaptext. Four levels are defined, LaTeX's depth, and a
+// list nested deeper than that keeps the fourth level's label rather than failing.
+//
+// Each enumerate level needs a counter of its own: counters are global (TeX never
+// restores one at group exit), so a single shared counter would have an inner list
+// zero the number its enclosing list is counting with. The labels use the roman-numeral
+// names LaTeX gives them — enumi, enumii, … — and no digits, because a control-sequence
+// name is letters only and a name with a digit in it can be set and never read back.
+\def labelitemi {•}
+\def labelitemii {–}
+\def labelitemiii {∗}
+\def labelitemiv {·}
+
+\newcounter{enumi}
+\newcounter{enumii}
+\newcounter{enumiii}
+\newcounter{enumiv}
+
+\def labelenumi {\arabic{\value{enumi}}.}
+\def labelenumii {(\alph{\value{enumii}})}
+\def labelenumiii {\roman{\value{enumiii}}.}
+\def labelenumiv {\Alph{\value{enumiv}}.}
+
+// The marker is chosen by depth at the moment the environment opens. \itemmark is what
+// \item draws, so each of these binds the level's counter and label into it: the
+// enumerate forms step their own counter as the marker is drawn, which is what numbers
+// the items in order without \item having to know it is in a numbered list.
+\def itemmarki {\def itemmark {\labelitemi}}
+\def itemmarkii {\def itemmark {\labelitemii}}
+\def itemmarkiii {\def itemmark {\labelitemiii}}
+\def itemmarkiv {\def itemmark {\labelitemiv}}
+\def itemizemark {\if {\= {\calc{listdepth}} {1}}\itemmarki\else\if {\= {\calc{listdepth}} {2}}\itemmarkii\else\if {\= {\calc{listdepth}} {3}}\itemmarkiii\else\itemmarkiv\fi\fi\fi}
+
+\def enummarki {\setcounter{enumi}{0}\def itemmark {\stepcounter{enumi}\labelenumi}}
+\def enummarkii {\setcounter{enumii}{0}\def itemmark {\stepcounter{enumii}\labelenumii}}
+\def enummarkiii {\setcounter{enumiii}{0}\def itemmark {\stepcounter{enumiii}\labelenumiii}}
+\def enummarkiv {\setcounter{enumiv}{0}\def itemmark {\stepcounter{enumiv}\labelenumiv}}
+\def enumeratemark {\if {\= {\calc{listdepth}} {1}}\enummarki\else\if {\= {\calc{listdepth}} {2}}\enummarkii\else\if {\= {\calc{listdepth}} {3}}\enummarkiii\else\enummarkiv\fi\fi\fi}
+
 \newenvironment itemize {
   \set listdepth {\calc{listdepth + 1}}
   \set leftskip {\calc{listdepth * listindent}}
-  \def itemmark {•}
+  \itemizemark
 } {}
 
 \newenvironment enumerate {
   \set listdepth {\calc{listdepth + 1}}
   \set leftskip {\calc{listdepth * listindent}}
-  \setcounter{enumi}{0}
-  \def itemmark {\stepcounter{enumi}\arabic{\value{enumi}}.}
+  \enumeratemark
 } {}
-\newcounter{enumi}
 
 // A description list: terms with hanging definitions. The marker for each item is the
 // bracketed label given to \item ( \item[Term] ), set bold, rather than a bullet or
@@ -384,3 +466,55 @@
 // environment form of \parbox, over the engine's \beginminipage / \endminipage pair. [pos] (t / c / b) aligns the
 // box on the surrounding baseline, defaulting to centred as in LaTeX.
 \newenvironment minipage [pos:c] w {\beginminipage[\pos]{\w}} {\endminipage}
+
+// ---- Index ---------------------------------------------------------------------
+// \index{term} marks this point as a place the term is discussed, and \printindex sets
+// the collected terms as an index. Both ride the engine's named contents lists: \index
+// files an entry into the list called "idx", whose page — like a \label's — is learned
+// when the page carrying it ships, and \printindex replays that list through
+// \indexlist, the index form of \contentslist. \indexlist is what does the gathering
+// the running text cannot: one line per distinct term, in alphabetical order, carrying
+// every page the term was marked on, with repeats of a page dropped.
+//
+// So the index appears once the document has been set through — an index of a document
+// read once cannot know what pages its terms fall on, which is the same reason a table
+// of contents needs a second pass.
+//
+// \index must be one line of source: it is written inside a paragraph, where a source
+// newline would become an interword space in the sentence it marks. It draws nothing.
+\def indextitle {Index}
+\def indexheading {\section*{\indextitle}}
+\def index t {\addcontentsline{idx}{1}{}{\t}}
+\def indexformat lvl num ttl pg {\par\noindent\ttl, \pg}
+\def printindex {\indexheading\indexlist{idx}{indexformat}}
+
+// ---- Bibliography and citations ------------------------------------------------
+// \begin{thebibliography} … \end{thebibliography} sets a numbered reference list, and
+// \cite names entries of it in the running text. The two are joined by the ordinary
+// cross-reference machinery rather than by any new one: \bibitem{key} declares a label
+// under the entry's number, so \cite{key} is a \ref of it and resolves across passes
+// the way every other forward reference does — showing "??" until the pass that has
+// seen the entry, never a stale number.
+//
+// \cite takes one key or several separated by spaces — \cite{knuth} and
+// \cite{knuth lamport} — and prints them as one bracketed, comma-separated group, so a
+// citation of three works reads [1, 2, 3] rather than as three brackets in a row. The
+// separator is carried in citefirst, set globally because the \for body is a scope of
+// its own and a plain \set inside it would revert on every pass round the loop.
+//
+// \cite, \citesep and \citeone run inside a paragraph, so all three are one line.
+\def bibname {References}
+\def bibheading {\section*{\bibname}}
+\newcounter{bibitemno}
+
+\newenvironment thebibliography {
+  \bibheading
+  \set leftskip {\calc{listindent}}
+  \setcounter{bibitemno}{0}
+} {}
+
+\def bibitem key {\par\stepcounter{bibitemno}\global\set currentlabel {\arabic{\value{bibitemno}}}\global\set currentlabeltype {}\global\set currentlabelname {}\label{\key}\noindent\if {\> {\calc{pardir}} {0}}\rlap{\hskip\labelsep[\arabic{\value{bibitemno}}]}\else\llap{[\arabic{\value{bibitemno}}]\hskip\labelsep}\fi\ignorespaces}
+
+\def citesep {\if {\= {\calc{citefirst}} {1}}\global\set citefirst {0}\else, \fi}
+\def citeone k {\citesep\ref{\k}}
+\def cite keys {[\global\set citefirst {1}\for\citekey{\words{\keys}}{\citeone{\citekey}}]}

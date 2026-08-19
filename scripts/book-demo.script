@@ -165,6 +165,24 @@ This chapter was written \mono{\\chapter*}, so it carries no number and does not
 in the table of contents, yet it still begins on a fresh page and updates the running
 head. Starred sectioning is how a book sets apart material that should not be numbered.
 
+// ===== Appendices ===============================================================
+// \appendix restarts the chapter counter and letters it, and renames the word the
+// chapter opening announces — so the chapters after it read "Appendix A" while every
+// \chapter, \section and caption around them is written exactly as before. Section
+// numbers, float captions and contents entries all follow the letter, because each is
+// built on \thechapter rather than on the counter.
+\appendix
+
+\chapter{Reference tables}
+
+This is Appendix~A. It was written with the same \mono{chapter} command as every
+chapter before it; only the counter and the announcing word changed.
+
+\section{A lettered section}
+
+Section A.1 — the section number is built on the chapter's letter, so the appendix
+carries its own numbering through every level beneath it.
+
 // ===== Back matter ==============================================================
 // \backmatter unnumbers chapters again but keeps the arabic folio running, so an
 // afterword, bibliography or index reads as a titled chapter without a number.
@@ -178,5 +196,14 @@ page count continues unbroken from the main matter.
 
 That completes the tour: a title page, a contents list, roman front matter, two parts of
 numbered chapters with per-chapter sections, figures and cross-references, a starred
-interlude, and unnumbered back matter — the whole LaTeX \mono{book} class, in one
-short document.
+interlude, a lettered appendix, a reference list and unnumbered back matter — the whole
+LaTeX \mono{book} class, in one short document.
+
+// The reference list opens as a chapter here rather than as a section: in a book both
+// the bibliography and the index are divisions in their own right, so the book package
+// overrides the two heading macros the document package sets them with.
+\begin{thebibliography}
+\bibitem{knuth} Knuth, Donald E. \italic{The \TeX{}book}. Addison-Wesley, 1984.
+\bibitem{lamport} Lamport, Leslie. \italic{\LaTeX: A Document Preparation System}.
+Addison-Wesley, second edition, 1994.
+\end{thebibliography}
