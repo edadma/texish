@@ -679,12 +679,12 @@ linework and the run-time overlay cannot drift out of register.
 | `\def name args {body}` | define a macro (`[name:default]` optional args, `<name>` a verbatim argument) |
 | `\newenvironment name {begin}{end}` | define a `\begin`/`\end` environment |
 | `\let` `\global` `\gdef` | aliasing and global definitions |
-| `\if` `\else` `\fi` | conditionals |
+| `\if` `\else` `\fi` | conditionals; `\if`, `\while` and `\filter` all test one rule — `0`, `false`, an empty string or sequence and an unset name are false. In a value position an `\if` is worth the branch it chose |
 | `\ifx \a \b` | whether two names *mean* the same thing — alike macros, a `\let` copy and its original, two names that mean nothing at all |
 | `\calc{…}` `\+ \- \* \/` | arithmetic |
 | `\round{value}{places}` | round a number to a fixed number of decimals |
 | `\= \!= \< \> \<= \>=` | comparisons (each yields a capturable boolean); `\=` compares sequences and maps by contents, and counts an unset name and an empty value as alike |
-| `\for … \done` | iteration over a known sequence |
+| `\for … \done` | iteration over a known sequence; in a value position it is worth the text it wrote |
 | `\while {condition} {body}` | iteration until a condition goes false, re-read each time |
 | `\the\name` | output a variable's value (`\the\pageno`, `\the\hsize`, …) |
 | `\seq{…}` `\words{s}` `\head` `\tail` `\last` `\size` `\cat` `\range{a}{b}` | sequences; `\words` splits on whitespace, `\range` counts `a`–`b`, `\last` is the final element |
@@ -695,9 +695,11 @@ linework and the run-time overlay cannot drift out of register.
 ### Working with sequences and strings
 
 **A string is the sequence of its characters**, so these take either and give back the kind they were
-given. Characters means code points, so an emoji or a math alphanumeric is one item. **Positions
-count from 1**, and `\indexof` answers `0` for "not found" — which is falsy, so one call both tests
-and locates.
+given. Characters means code points, so an emoji or a math alphanumeric is one item. **A number
+counts as the characters it displays as**, since a run of digits becomes a number as soon as it is
+stored — `\size{12345}` is 5 whether it is written out or read from a variable. **Positions count
+from 1**, and `\indexof` answers `0` for "not found" — which is falsy, so one call both tests and
+locates.
 
 | Command | Effect |
 |---------|--------|

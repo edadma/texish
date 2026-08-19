@@ -402,6 +402,7 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     // order number, a barcode payload or an account identifier would be silently corrupted by being stored
     valueOf("\\set n {12345678901234567890}\\set v {\\n}") shouldBe "12345678901234567890"
     valueOf("\\set n {12345678901234567890}\\set v {\\size{\\n}}") shouldBe "20"
+    run("\\set order {12345678901234567890}\\the\\order").result shouldBe "12345678901234567890"
     run("\\set v {12345678901234567890}").get("v") shouldBe Value.Text("12345678901234567890")
   }
 
@@ -434,6 +435,8 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     valueOf("\\set v {\\if {1}{yes}\\else{no}\\fi}") shouldBe "yes"
     valueOf("\\set v {\\if {\\= {1} {2}}{yes}\\else{no}\\fi}") shouldBe "no"
     valueOf("\\set v {\\if {1}{\\if {0}{x}\\else{y}\\fi}\\else{z}\\fi}") shouldBe "y"
+    // the branches need no braces of their own, which is how the guide writes it
+    valueOf("\\set n {40}\\set v {\\if {\\> {\\n} {10}}large\\else small\\fi}") shouldBe "large"
   }
 
   "an \\if with no matching branch is worth nothing, not its own source" in {

@@ -38,6 +38,17 @@ a macro's own group:
 A bare name is also readable inside `\calc` (below), so `\set n {5}` can then be used as
 `\calc{n * 2}` as well as `\the\n`.
 
+A value that looks like a number is stored as one — **unless storing it would change it**. Past
+about sixteen digits a whole number can no longer be held exactly, and such a run is kept as text
+rather than rounded: an order number, a barcode payload or an account identifier comes back out
+exactly as it went in. Nothing is lost by this, since arithmetic reads a numeric string as readily
+as a number.
+
+```texish
+\set order {12345678901234567890}
+\the\order          // 12345678901234567890, not 1.2345678901234567E19
+```
+
 ## Arithmetic
 
 `\calc` evaluates an infix expression to a number — the whole numeric library lives inside the
@@ -76,7 +87,9 @@ own position: `\calc{\forloop.index * 10}`. Anything that gives a non-number is 
 
 `\if` takes a condition and two branches. The comparisons `\=`, `\!=`, `\<`, `\>`, `\<=`, `\>=` each
 yield a boolean, and any value can be tested directly — an empty string, an empty sequence, `0`,
-false and an unset name are all false.
+false and an unset name are all false. **`\while` and `\filter` test by the same rule**, so a
+condition written as arithmetic — which is how a package says "in range" without four nested
+comparisons — means the same thing wherever it is used.
 
 ```texish
 \if {\> {\calc{copies}} {10}}
@@ -153,12 +166,25 @@ Building them — a sequence is a **value**, not a container that is mutated, so
 > `\contains`, `\indexof`, `\head`, `\tail`, `\last` and `\for` all take a string as readily as a
 > sequence, and give back the kind they were given. Characters means **code points**, so an emoji or
 > a math alphanumeric counts as one — `\size{a🎲b}` is 3, and walking it by index works.
+>
+> **A number counts as the characters it displays as**, for the same commands. A run of digits
+> becomes a number the moment it is stored, so without this the same text would answer one length
+> written out and another through a variable: `\size{12345}` is 5 either way, and
+> `\for\d{\n}{[\d]}` over a stored `123` visits three digits.
 
 ## Computing a result from a sequence
 
-`\for` typesets; it cannot hand back a value, which is why a loop that computes something has to
-write through a `\global` variable. Three commands take a body and collect its **value** instead,
-binding a variable of your choosing exactly as `\for` does:
+A loop **is** worth what it wrote: `\set totals {\for\n{\xs}{[\n]}}` collects the text of every
+iteration. The same goes for `\while`, and for a conditional — an `\if` in a value position is
+worth the branch it chose:
+
+```texish
+\set size {\if {\> {\n} {10}}large\else small\fi}
+```
+
+That is rarely what you want from a loop, though, because it collects **text**. Three commands
+collect the body's **value** instead, binding a variable of your choosing exactly as `\for` does,
+and they are what a loop that computes something should use:
 
 ```texish
 \set squares {\transform\n{\range{1}{5}}{\calc{\n * \n}}}        // 1 4 9 16 25

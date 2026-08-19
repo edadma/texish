@@ -16,6 +16,14 @@ thousands of vertices "one `\calc` at a time" at runtime is too slow. The same a
 capability gap — the macro language is Turing-complete — it is a **performance and ergonomics** gap
 for computation.
 
+**A second data point, 2026-08-19.** The `qrcode` package is an ISO/IEC 18004 encoder written
+entirely in the document language, and it works — but a version-4 symbol takes about four seconds on
+the native binary, against effectively zero for the compiled primitive it replaced. Three rounds of
+algorithmic tuning took it from seventeen seconds to that; what remains is the evaluator's
+per-operation cost, not the algorithm. `datamatrix`, which has no mask search, is well under a
+second. So the ache is real and measurable outside `map` and `plot`, and it is *throughput*, not
+expressiveness: the language could say everything the standard required.
+
 ## Guiding principles
 
 1. **Host the language in Scala; do not embed a foreign runtime.** texish runs on three backends
@@ -148,8 +156,9 @@ reused:
   or `place(…)` alone in a loop ships to the current list, no keyword.
 - **A bare value expression does not** — a lone `b`, or `x + 1`, as a statement is not an implicit
   emit (that is the surprising, typo-prone case). To ship a *stored* box, write it explicitly:
-  **`emit b`**. (`emit` over `\put` — program-mode-native, and dodges any collision with picture-mode
-  `\put`.)
+  **`emit b`**. (`emit` over `\put` — program-mode-native, and dodges a collision with picture-mode
+  `\put` *and*, since 2026-08-19, with the document language's own `\put`, which writes one item of
+  a sequence. The name is doubly taken now, so this choice is settled rather than merely preferred.)
 
 ## Value model
 

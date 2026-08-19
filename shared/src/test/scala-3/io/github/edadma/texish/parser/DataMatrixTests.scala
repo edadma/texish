@@ -175,9 +175,12 @@ class DataMatrixTests extends AnyFreeSpec with Matchers:
     }
   }
 
-  "a payload past the largest size this package builds is reported, not truncated" in {
-    // \dmxmatrix leaves the previous symbol alone rather than producing a wrong one
-    noException should be thrownBy run("\\dmxmatrix{" + "A" * 400 + "}")
+  "a payload past the largest size this package builds draws nothing, rather than something wrong" in {
+    // a truncated symbol would scan and give back the wrong data, which is worse than no symbol
+    val (t, _) = run("\\datamatrix{" + "A" * 400 + "}")
+    t.pictures shouldBe empty
+    val (ok, _) = run("\\datamatrix{HELLO}")
+    ok.pictures should have size 1
   }
 
   // ---- What is drawn ---------------------------------------------------------------

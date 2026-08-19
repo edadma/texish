@@ -108,7 +108,8 @@ page its float ships on.
 - `multicol` / `\twocolumn`. **[ENGINE]** — `\columns{n}{…}` balances columns **[done]**, but as
   a single box within a page: a balanced block taller than a page is not yet split across
   pages, and that needs the page-builder/output-routine hook.
-- `\marginpar`. **[ENGINE]** (the same hook)
+- `\marginpar`. **[done]** — a `document` package macro since v0.28.0, with `\marginparwidth`,
+  `\marginparsep` and `\marginparstyle`; it needed no page-builder hook after all.
 
 ## G. Graphics transforms & framing  [done bar one]
 
@@ -158,5 +159,6 @@ styles. Neither has come up in a real document.
 4. **`\rule`, `\ensuremath`, `\ifdefined`, `\definecolor`** (A, G, I) — small, self-contained prims.
 5. **`\halign to:`/`spread`, `p{width}`, `\arraystretch`** (C) — finish the alignment surface.
 6. **`\span`/`\multispan` → `\multicolumn`/`\multirow`** (C) — the alignment engine gap.
-7. **The page-builder hook** (F) — page-spanning `multicol`/`\twocolumn` and `\marginpar`; the
-   deepest of these, and the one that unlocks the rest of the page-layout column.
+7. **The page-builder hook** (F) — page-spanning `multicol`/`\twocolumn`; the deepest of these, and
+   the one that unlocks the rest of the page-layout column. (`\marginpar`, once expected to need
+   this, shipped without it.)

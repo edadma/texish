@@ -189,6 +189,12 @@ class QrCodeTests extends AnyFreeSpec with Matchers:
     }
   }
 
+  "a payload too long for any version draws nothing, rather than something wrong" in {
+    // a truncated symbol would scan and give back the wrong data, which is worse than no symbol
+    val (t, _) = run("\\qrcode{" + "A" * 5000 + "}")
+    t.pictures shouldBe empty
+  }
+
   // ---- What is drawn ---------------------------------------------------------------
 
   "the drawn symbol" - {
