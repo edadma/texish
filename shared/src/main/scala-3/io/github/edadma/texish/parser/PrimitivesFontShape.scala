@@ -121,8 +121,9 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
         val rf   = font.renderFont.asInstanceOf[t.RenderFont]
         val ext  = t.glyphExtents(rf, t.glyphIndex(rf, cp))
         val w    = ext.xBearing + ext.width
-        proc.setResult(Value.Num(w))
-        proc.handler.text(w.toString)
+        // Through valueResult, so what is typeset is the value's own display: a Double's toString writes a
+        // measured 6 as "6.0", where every other numeric primitive writes "6".
+        valueResult(proc, Value.Num(w))
     },
   )
 

@@ -375,6 +375,7 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     // about a number: \if {0} was false while \while {0} never stopped. A condition written as arithmetic —
     // which is how a package says "in range" without four nested comparisons — meant opposite things
     run("\\if {0}{yes}\\else{no}\\fi").result shouldBe "no"
+    valueOf("\\set v {\\if {0}{yes}\\else{no}\\fi}") shouldBe "no"
     valueOf("\\global\\set n {3}\\while {\\calc{n - 3}} {\\global\\set n {9}}\\set v {\\n}") shouldBe "3"
     valueOf("\\set v {\\join{\\filter\\x{\\seq{1 0 2 0 3}}{\\x}}{,}}") shouldBe "1,2,3"
   }
@@ -421,4 +422,36 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
     // kept as text, but \calc reads a numeric string, so nothing that worked before stops working
     valueOf("\\set n {12345678901234567890}\\set v {\\> {\\n} {0}}") shouldBe "true"
     valueOf("\\set n {12345678901234567890}\\set v {\\calc{n / n}}") shouldBe "1"
+  }
+
+  // ---- A conditional is worth the branch it took ----------------------------------
+
+  "\\if in expression position is worth the branch it chose" in {
+    // \if works by steering the token stream — it skips to its \else and leaves the branch for the loop to
+    // process — and expression position ran no loop, so the branch never ran, nothing was printed, and the
+    // fallback rendered the original tokens: {\if {0}{yes}\else{no}\fi} came out " 0yesno", the condition's
+    // source text followed by BOTH branches
+    valueOf("\\set v {\\if {1}{yes}\\else{no}\\fi}") shouldBe "yes"
+    valueOf("\\set v {\\if {\\= {1} {2}}{yes}\\else{no}\\fi}") shouldBe "no"
+    valueOf("\\set v {\\if {1}{\\if {0}{x}\\else{y}\\fi}\\else{z}\\fi}") shouldBe "y"
+  }
+
+  "an \\if with no matching branch is worth nothing, not its own source" in {
+    run("\\set v {\\if {0}{yes}\\fi}").get("v") shouldBe Value.Nil
+  }
+
+  "\\for and \\while in expression position are worth what they wrote" in {
+    // \for used to evaluate to its iteration COUNT, which is the kind of wrong answer that reads as a
+    // plausible number
+    valueOf("\\set v {\\for\\i{\\range{1}{3}}{[\\i]}}") shouldBe "[1][2][3]"
+    valueOf("\\global\\set n {0}\\set v {\\while {\\< {\\n} {3}} {\\global\\set n {\\calc{n + 1}}[\\n]}}") shouldBe "[1][2][3]"
+  }
+
+  "a value primitive still yields its value, not the text it typeset" in {
+    // the guard on the change above: everything that already worked has to keep its type
+    run("\\set v {\\calc{1 + 1}}").get("v") shouldBe Value.Num(2)
+    run("\\set v {\\nth{\\seq{a b c}}{2}}").get("v") shouldBe Value.Text("b")
+    run("\\set v {\\= {1} {1}}").get("v") shouldBe Value.Bool(true)
+    run("\\set v {\\size{abc}}").get("v") shouldBe Value.Num(3)
+    run("\\set v {\\seq{a b}}").get("v") shouldBe Value.Seq(Vector(Value.Text("a"), Value.Text("b")))
   }

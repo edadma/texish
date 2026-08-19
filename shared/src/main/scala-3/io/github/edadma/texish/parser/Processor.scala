@@ -893,20 +893,14 @@ class Processor(val handler: Handler):
           case _ =>
             primitives.get(name) match
               case Some(prim) =>
-                // Push remaining tokens as a source for the primitive to read its arguments from, then clean it up.
-                // Track the pushed source by identity: argument reading skips spaces, which can exhaust and pop
-                // this source already, so popping whatever is now on top would over-pop into the enclosing
-                // source. Only pop our own source, and only if the primitive left it on top unexhausted.
-                val rest       = tokens.tail
-                val restSource = if rest.nonEmpty then Some(TokenListSource(rest)) else None
-                restSource.foreach(tokenSources.push)
-                lastResult = None
-                val savedSuppress = handler.outputSuppressed
-                handler.suppressOutput(true)
-                try prim.execute(this, csPos)
-                finally handler.suppressOutput(savedSuppress)
-                restSource.foreach(s => if tokenSources.nonEmpty && (tokenSources.top eq s) then tokenSources.pop())
-                takeResult.getOrElse(evalTokens(tokens, handler))
+                // Run the WHOLE token run as content and take its value, exactly as a macro body is taken.
+                // Reading the arguments off a pushed source and calling the primitive once is not enough for a
+                // primitive that works by steering the token stream: \if skips to its \else and then leaves the
+                // branch it chose for the loop to process, and in expression position there was no loop — so the
+                // branch was never run, nothing was printed, and the fallback rendered the original tokens as
+                // text. `{\if {0}{yes}\else{no}\fi}` came out as the condition's source followed by BOTH
+                // branches.
+                evalBodyExpr(tokens, csPos)
               case None =>
                 // A variable followed by more tokens is a text interpolation: concatenate the value's display
                 // with the rest (`\set y {\x tail}` keeps " tail") instead of silently dropping the tail. A tail
