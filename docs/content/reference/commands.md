@@ -657,6 +657,7 @@ and locates.
 | `\slice{items}{from}{count}` | `count` items from position `from`, clamped at both ends |
 | `\reverse{items}` | the items in the opposite order |
 | `\append{seq}{item}` `\prepend{seq}{item}` | the sequence with one more item on either end |
+| `\put{items}{n}{value}` | the nth item replaced — the counterpart of `\nth`, and the only way to write at a position (out of range is an error, not a no-op) |
 | `\concat{a}{b}` | one sequence followed by another (`\cat` joins two values as *text*) |
 | `\join{seq}{sep}` `\split{text}{sep}` | sequence ↔ string, on a **literal** separator (empty splits into characters) |
 | `\chunk{seq}{n}` | the items grouped into sub-sequences of `n` — a flat `x y x y` list becomes pairs |
@@ -668,6 +669,7 @@ and locates.
 | `\repeat{text}{n}` | the text `n` times over |
 | `\startswith{text}{s}` `\endswith{text}{s}` | test either end |
 | `\fixed{number}{places}` | exactly that many decimals, zeros kept (`\round` drops them) |
+| `\ord{char}` `\chr{n}` | a character's Unicode code point and its inverse — the door between text and arithmetic |
 
 Three take a body evaluated once per item, binding a variable of your choosing exactly as `\for`
 does — the difference being that they collect the body's **value** rather than typesetting its

@@ -1,5 +1,6 @@
 package io.github.edadma.texish.parser
 
+import io.github.edadma.texish.TexishException
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -272,4 +273,69 @@ class DataPrimitivesTests extends AnyFreeSpec with Matchers:
       "\\while {\\> {\\d} {0.0000001}} {\\global\\set p {\\x}\\global\\set x {\\calc{(x + 2/x)/2}}" +
       "\\global\\set d {\\calc{abs(x - p)}}}\\set v {\\fixed{\\x}{6}}"
     valueOf(src) shouldBe "1.414214"
+  }
+
+  // ---- \put ------------------------------------------------------------------------
+
+  "\\put replaces the nth item, counting from 1" in {
+    valueOf("\\set v {\\join{\\put{\\seq{a b c}}{2}{X}}{,}}") shouldBe "a,X,c"
+    valueOf("\\set v {\\join{\\put{\\seq{a b c}}{1}{X}}{,}}") shouldBe "X,b,c"
+    valueOf("\\set v {\\join{\\put{\\seq{a b c}}{3}{X}}{,}}") shouldBe "a,b,X"
+  }
+
+  "\\put leaves the original sequence alone — it returns a new one" in {
+    val h = run("\\set xs {\\seq{a b c}}\\set ys {\\put{\\xs}{2}{X}}\\set v {\\join{\\xs}{,}}")
+    Value.display(h.get("v")) shouldBe "a,b,c"
+    Value.display(h.get("ys")) should include("X")
+  }
+
+  "\\put replaces the nth character of a string, and gives a string back" in {
+    valueOf("\\set v {\\put{hello}{1}{H}}") shouldBe "Hello"
+    run("\\set v {\\put{hello}{1}{H}}").get("v") shouldBe Value.Text("Hello")
+  }
+
+  "a \\put outside the sequence is an error, not a silent no-op" in {
+    // a read past the end can answer "nothing there" (\nth does), but a write past the end is a mistake in the
+    // document, and one that quietly discarded the value would surface far from its cause
+    a[TexishException] should be thrownBy run("\\set v {\\put{\\seq{a b}}{3}{X}}")
+    a[TexishException] should be thrownBy run("\\set v {\\put{\\seq{a b}}{0}{X}}")
+  }
+
+  "\\put fills a sequence by index, which nothing else here can do" in {
+    // the Reed-Solomon shape: an accumulator of zeros written at computed positions
+    val src = "\\global\\set acc {\\transform\\i{\\range{1}{4}}{0}}" +
+      "\\for\\i{\\seq{1 2 3 4}}{\\global\\set acc {\\put{\\acc}{\\i}{\\calc{i * i}}}}" +
+      "\\set v {\\join{\\acc}{,}}"
+    valueOf(src) shouldBe "1,4,9,16"
+  }
+
+  // ---- \ord and \chr ---------------------------------------------------------------
+
+  "\\ord gives the code point of the first character" in {
+    valueOf("\\set v {\\ord{A}}") shouldBe "65"
+    valueOf("\\set v {\\ord{Apple}}") shouldBe "65"
+    valueOf("\\set v {\\ord{0}}") shouldBe "48"
+  }
+
+  "\\chr is the inverse of \\ord" in {
+    valueOf("\\set v {\\chr{65}}") shouldBe "A"
+    valueOf("\\set v {\\chr{\\ord{Q}}}") shouldBe "Q"
+    valueOf("\\set v {\\ord{\\chr{233}}}") shouldBe "233"
+  }
+
+  "\\ord and \\chr work in code points, so an astral character survives the round trip" in {
+    valueOf("\\set v {\\ord{\ud835\udc00}}") shouldBe "119808" // MATHEMATICAL BOLD CAPITAL A
+    valueOf("\\set v {\\chr{119808}}") shouldBe "\ud835\udc00"
+  }
+
+  "\\ord of nothing, and \\chr of a non-character, are errors" in {
+    a[TexishException] should be thrownBy run("\\set v {\\ord{}}")
+    a[TexishException] should be thrownBy run("\\set v {\\chr{-1}}")
+    a[TexishException] should be thrownBy run("\\set v {\\chr{55296}}") // a lone surrogate is not a character
+  }
+
+  "\\ord makes a string computable as bytes" in {
+    // the ASCII encodation step both barcode symbologies start from
+    val src = "\\set v {\\join{\\transform\\c{Hi!}{\\ord{\\c}}}{ }}"
+    valueOf(src) shouldBe "72 105 33"
   }

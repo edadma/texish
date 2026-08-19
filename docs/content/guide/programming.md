@@ -55,6 +55,13 @@ computes directly; and about forty functions — the trigonometric family with `
 degrees (`sind`, `cosd`, `atan2d`), `sqrt cbrt exp ln log log2 logb pow hypot`, and
 `abs floor ceil round trunc sign mod min max`.
 
+It also does bit manipulation — `and`, `or`, `xor`, `not`, `shl` and `shr` — over the integer part of
+each argument. `and`, `or` and `xor` take any number of arguments and fold, so a mask of several
+flags is one call; `not` complements over 64 bits and so gives a negative, which makes
+`and(not(x), 255)` the way to mask a byte. This is what lets a package compute a checksum, pack a
+colour, or run the Galois-field arithmetic a barcode's error correction needs, all of which are
+exclusive-or underneath.
+
 `\round{value}{places}` trims floating-point noise off a computed number (`0.30000000000000004`
 becomes `0.3`); `\fixed{value}{places}` gives exactly that many decimals, zeros kept, for a column of
 prices. The simple `\+ \- \* \/` also exist, but `\calc` is almost always clearer.
@@ -132,6 +139,7 @@ Building them — a sequence is a **value**, not a container that is mutated, so
 | | |
 |---|---|
 | `\append{seq}{item}` `\prepend{seq}{item}` | one more item at either end |
+| `\put{seq}{n}{value}` | the nth item replaced — the only way to write at a position |
 | `\concat{a}{b}` | one sequence after another |
 | `\reverse{seq}` `\sort{seq}` | turned around, put in order |
 | `\chunk{seq}{n}` | grouped into sub-sequences of `n` |
@@ -182,6 +190,15 @@ are matched **literally**, never as regular expressions, so a `.` means a full s
 
 ```texish
 \set slug {\downcase{\replace{\title}{ }{-}}}
+```
+
+`\ord{char}` gives a character's Unicode code point and `\chr{n}` gives it back, which is what makes
+a string computable rather than only comparable — a document can encode text as bytes, shift a
+letter, or index a table by character. Both work in code points, so an emoji or a math alphanumeric
+survives the round trip in one piece.
+
+```texish
+\set bytes {\transform\c{\payload}{\ord{\c}}}
 ```
 
 ## Maps

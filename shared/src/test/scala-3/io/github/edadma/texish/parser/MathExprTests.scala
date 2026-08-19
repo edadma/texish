@@ -65,6 +65,40 @@ class MathExprTests extends AnyFreeSpec with Matchers:
     assert(approx(ev("sind(angle)", vars.get), 0.5))
   }
 
+  "bit operations work over the integer part of their arguments" in {
+    ev("and(12, 10)") shouldBe 8.0
+    ev("or(12, 10)") shouldBe 14.0
+    ev("xor(12, 10)") shouldBe 6.0
+    ev("shl(1, 8)") shouldBe 256.0
+    ev("shr(256, 4)") shouldBe 16.0
+    ev("and(5.9, 3.2)") shouldBe 1.0 // truncated to 5 & 3
+  }
+
+  "and, or and xor fold over any number of arguments" in {
+    ev("or(1, 2, 4, 8)") shouldBe 15.0
+    ev("xor(1, 2, 4)") shouldBe 7.0
+    ev("xor(255, 255, 255)") shouldBe 255.0
+    ev("and(255)") shouldBe 255.0
+    a[MathExpr.MathExprException] should be thrownBy ev("xor()")
+  }
+
+  "not complements over 64 bits, so a byte mask is and(not(x), 255)" in {
+    ev("not(0)") shouldBe -1.0
+    ev("and(not(12), 255)") shouldBe 243.0
+  }
+
+  "the log table of GF(256) can be built with shl, and and xor" in {
+    // x <<= 1, and when it overflows a byte, reduce by the primitive polynomial — this is the loop every
+    // Reed-Solomon encoder starts with, and the reason the bit operations exist
+    def double(x: Double, poly: Int): Double =
+      val shifted = ev(s"shl($x, 1)")
+      if shifted >= 256 then ev(s"xor($shifted, $poly)") else shifted
+
+    double(1, 0x11d) shouldBe 2.0
+    double(0x80, 0x11d) shouldBe 0x1d.toDouble  // QR's polynomial
+    double(0x80, 0x12d) shouldBe 0x2d.toDouble  // DataMatrix ECC200's, which differs
+  }
+
   "malformed or unevaluable expressions are reported" in {
     a[MathExpr.MathExprException] should be thrownBy ev("2 +")
     a[MathExpr.MathExprException] should be thrownBy ev("(2 + 3")
@@ -72,6 +106,7 @@ class MathExprTests extends AnyFreeSpec with Matchers:
     a[MathExpr.MathExprException] should be thrownBy ev("nope")          // unknown name
     a[MathExpr.MathExprException] should be thrownBy ev("frobnicate(2)") // unknown function
     a[MathExpr.MathExprException] should be thrownBy ev("atan2(1)")      // wrong arity
+    a[MathExpr.MathExprException] should be thrownBy ev("shl(1)")        // wrong arity
   }
 
   "the \\calc primitive computes, reads document variables, and flows into other expressions" in {

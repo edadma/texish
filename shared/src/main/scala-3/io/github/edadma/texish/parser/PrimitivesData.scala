@@ -116,6 +116,29 @@ object PrependPrimitive extends Primitive:
 
     valueResult(proc, Value.Seq(item +: itemsOf(seq)))
 
+/** `\put {items} {n} {value}` — the sequence with its nth item replaced, or the string with its nth character
+  * replaced, counting from 1. The counterpart of `\nth`, and the only way to change an item in place: everything
+  * else here builds a sequence from one end (`\append`, `\prepend`, `\concat`) or from all of it at once
+  * (`\transform`, `\filter`), which leaves an algorithm that fills an array by index — a Reed–Solomon remainder,
+  * a sieve, a grid of cells — with nothing to say. Like every other operation on a sequence this returns a new
+  * value rather than mutating one, so it is used as `\set xs {\put{\xs}{3}{9}}`.
+  *
+  * A position outside the sequence is an **error**, not a silent no-op. A read past the end can reasonably answer
+  * "nothing there" — that is what `\nth` does — but a write past the end is a mistake in the document, and one
+  * that discards the value would show up as a wrong result far from its cause. Use `\append` to grow a sequence.
+  */
+object PutPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val subject = proc.evalStringArgument(pos)
+    val n       = Value.number(proc.evalArgumentExpr(pos)).map(_.toInt).getOrElse(0)
+    val item    = proc.evalStringArgument(pos)
+    val items   = itemsOf(subject)
+
+    if n < 1 || n > items.length then
+      proc.handler.error(s"\\put: position $n is outside a sequence of ${items.length}", pos)
+
+    valueResult(proc, likeInput(subject, items.updated(n - 1, item)))
+
 /** `\concat {a} {b}` — one sequence followed by another. This is the sequence counterpart of `\cat`, which joins two
   * values as *text*; the two are deliberately separate, because appending a list to a list and printing a list after
   * a list are different operations and picking one silently would be a trap.
@@ -428,3 +451,33 @@ object MapDelPrimitive extends Primitive:
         val updated = Value.Map(m - key)
         if global then proc.handler.setGlobal(name, updated) else proc.handler.set(name, updated)
       case _ => ()
+
+// ============ CHARACTERS AND CODE POINTS ============
+
+/** `\ord {char}` — the Unicode code point of a character, as a number, and `\chr {n}` its inverse. Together they
+  * are the door between text and arithmetic: with them a document can compute over characters — encode a string as
+  * bytes, shift a letter, build a table indexed by character — where before it could only compare them.
+  *
+  * `\ord` reads the **first** code point of its argument, so `\ord{A}` and `\ord{Apple}` are both 65 and an
+  * astral character (an emoji, a math alphanumeric) gives its real code point rather than a lone surrogate. An
+  * empty argument is an error: there is no number for no character.
+  */
+object OrdPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val text = Value.display(proc.evalStringArgument(pos))
+
+    if text.isEmpty then proc.handler.error("\\ord: no character to take the code point of", pos)
+
+    valueResult(proc, Value.Num(text.codePointAt(0).toDouble))
+
+/** `\chr {n}` — the character with a given code point, the inverse of `\ord`. A code point outside
+  * U+0000–U+10FFFF is an error, as is one in the surrogate range, which is not a character on its own.
+  */
+object ChrPrimitive extends Primitive:
+  def execute(proc: Processor, pos: CharReader): Unit =
+    val n = Value.number(proc.evalArgumentExpr(pos)).map(_.toInt).getOrElse(-1)
+
+    if n < 0 || n > 0x10ffff || (n >= 0xd800 && n <= 0xdfff) then
+      proc.handler.error(s"\\chr: $n is not a Unicode code point", pos)
+
+    valueResult(proc, Value.Text(new String(Character.toChars(n))))

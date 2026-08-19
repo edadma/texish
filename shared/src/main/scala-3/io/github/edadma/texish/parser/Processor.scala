@@ -125,6 +125,7 @@ class Processor(val handler: Handler):
   registerPrimitive("nth", NthPrimitive)
   registerPrimitive("slice", SlicePrimitive)
   registerPrimitive("reverse", ReversePrimitive)
+  registerPrimitive("put", PutPrimitive)
   registerPrimitive("append", AppendPrimitive)
   registerPrimitive("prepend", PrependPrimitive)
   registerPrimitive("concat", ConcatPrimitive)
@@ -145,6 +146,8 @@ class Processor(val handler: Handler):
   registerPrimitive("startswith", StartsWithPrimitive)
   registerPrimitive("endswith", EndsWithPrimitive)
   registerPrimitive("fixed", FixedPrimitive)
+  registerPrimitive("ord", OrdPrimitive)
+  registerPrimitive("chr", ChrPrimitive)
 
   // Token-stream control
   registerPrimitive("ignorespaces", IgnoreSpacesPrimitive)
