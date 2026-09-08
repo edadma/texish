@@ -220,7 +220,7 @@ platform. As a library, texish is cross-published for the JVM and Scala Native â
 build with the `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.29.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.29.1"
 ```
 
 That is the whole setup. There is no font tree to install and no environment variable to set. Compiled
