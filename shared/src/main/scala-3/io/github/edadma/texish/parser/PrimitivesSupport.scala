@@ -234,8 +234,18 @@ private[parser] def buildBox(proc: Processor, t: Typesetter, vertical: Boolean, 
     case None    => null
   if toVal != null && spreadVal != null then proc.handler.error("a box takes either to: or spread:, not both", pos)
   if vertical then (if top then t.vtop(toVal, spreadVal) else t.vbox(toVal, spreadVal)) else t.hbox(toVal, spreadVal)
-  proc.handler.uncaptured(proc.processTokenList(body)) // scoping happens automatically from { } tokens
+  // TeX ends a box by breaking the paragraph (end_graf) and only then restoring the group (unsave), so a
+  // parameter set inside the box still governs the box's LAST paragraph. The body carries its own braces,
+  // so processing it whole would pop the scope first and break that paragraph under the enclosing values
+  // instead -- silently, with no error, and only for the last paragraph, since every earlier one is broken
+  // by a \par that arrives while the scope is still live. Split the closing brace off, break the paragraph
+  // while the scope still stands, then let the brace pop it. An unbraced body has no brace to split and is
+  // unaffected. Regression: BoxParagraphScopeTests.
+  val closesGroup = body.length >= 2 && body.last.isInstanceOf[Token.EndGroup]
+  val inner       = if closesGroup then body.dropRight(1) else body
+  proc.handler.uncaptured(proc.processTokenList(inner)) // scoping happens automatically from { } tokens
   t.paragraph() // close any paragraph the body opened in vertical mode, so exit sees the box builder itself
+  if closesGroup then proc.handler.uncaptured(proc.processTokenList(body.takeRight(1)))
   t.mode.exit
 
 // Read the <box> that follows \lower / \raise / \setbox — the next \hbox, \vbox, or \vtop, built and returned
