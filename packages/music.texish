@@ -53,6 +53,10 @@
 // staff space is a quarter of the em, the font is set at a size of four staff spaces (\set fs inside \score)
 // and its own coordinates fall straight onto the staff.
 
+// Everything below is code: the package sets no literal text of its own (syllables and chord names come from
+// the document), so its whitespace only separates and never adds space beside a score set inside a line.
+\codesyntax
+
 // ---- Configuration (override with \set after \use, before \score) ---------------
 // Sizes are in points (72 per inch).
 \set musicgap {8}          // space between adjacent staff lines — the staff space, the unit everything scales from
@@ -157,7 +161,7 @@
   // little below. Pull the stem foot this far toward that tip so the stem meets the head instead of starting at
   // dead centre and overshooting past the tip — a small amount that reads well across SMuFL fonts.
   \set msStemAttach {\calc{0.2 * g}}
-
+  //
   // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff, G2
   // (index -10) on the bass, F3 (-4) on the alto, D3 (-6) on the tenor. A note's index is msOct*7 + its pitch
   // class; its step above the bottom line is that index minus this base, and half the staff space per step
@@ -167,7 +171,7 @@
   \else \if {\= {\musicclef} {alto}} \set msBase {-4}
   \else \if {\= {\musicclef} {tenor}} \set msBase {-6}
   \fi \fi \fi
-
+  //
   // Lyrics armed by \lyrics are measured before anything is placed: musicLyricPlan measures every syllable and
   // works out how far right the first note must sit for its syllable to stay inside the picture (msLyrLead), 0
   // for a score without lyrics. \lyrics arms only the next score, so the flag is cleared here.
@@ -176,7 +180,7 @@
   \global\set msSylN {0}
   \global\set msLyrLead {0}
   \if {\= {\msLyr} {1}} \musicLyricPlan \fi
-
+  //
   // The spacing plan then walks the notes once, ahead of drawing, and records the advance every token will take
   // (msTokAdv): musicnote unless a syllable, a chord name or an accidental needs more. It also notes whether the
   // score names any chord (msChordOn), which reserves a lane above the staff, whether it has dynamics or hairpins
@@ -185,7 +189,7 @@
   \musicSpacePlan
   \set chRoom {0}
   \if {\= {\msChordOn} {1}} \set chRoom {\calc{musicchordrise + 0.9 * musicchordsize}} \fi
-
+  //
   // Below the staff: the dynamics, then the lyric line clear beneath them. With no dynamics the lane is the
   // usual one and the lyrics keep their usual drop; the picture keeps the largest room any of them needs below
   // the bottom line.
@@ -205,7 +209,7 @@
   // bottom one.
   \set msChordY {\calc{msTop + musicchordrise}}
   \set msLyrY {\calc{msBottom - lyDrop}}
-
+  //
   // The leading area runs clef → key signature → time signature → notes, each taking the room it needs so the
   // next clears it. The key signature is |musickey| accidentals at 0.9 staff-space steps; the time signature a
   // column wide enough for its longest row of figures. The first note sits past all of it (but no closer than
@@ -221,13 +225,13 @@
   \set msTimeLen {\calc{max(\size{\cat{\musictimenum}{}}, \size{\cat{\musictimeden}{}})}}
   \set msTimeW {\calc{msTimeLen * 1.4 * g}}
   \set msFirstX {\calc{max(msTimeX + msTimeW + 0.6 * g, musicleft, msLyrLead)}}
-
+  //
   // The staff runs from the clef to where the spacing plan ended: the right edge of a closing barline, or one
   // advance past the last note. The picture is as wide as that, or as the furthest syllable or chord name if one
   // reaches past it, with a hair to spare.
   \set msStaffEnd {\calc{msFirstX + msPlanEnd}}
   \set msW {\calc{max(msStaffEnd, msFirstX + msPlanInk) + 2}}
-
+  //
   // The walk's running state. msBeam is 1 while a [ … ] run is open. The spanning expression marks: a slur ( … )
   // records its first and last note, a tie its first note so the curve can be closed at the second, a hairpin
   // its opening x and kind. A dynamic or hairpin token only arms its mark; the next note fixes the x for it.
@@ -248,7 +252,7 @@
   // The lane below the staff where dynamics and hairpins are drawn. Each dynamic or hairpin moves it to its own
   // group's lane as the walk reaches it.
   \global\set msUnder {\calc{msBottom + dyLane * g}}
-
+  //
   \picture width:{\msW} height:{\msH} {
     \musicStaffLines
     \musicClef
@@ -277,8 +281,7 @@
   \if {\size{\items}}
     \set tok {\head{\items}}
     // msTokI is this token's place in the list, which indexes the advance the spacing plan recorded for it.
-    \set wti {\msTokI}
-    \global\set msTokI {\calc{wti + 1}}
+    \global\set msTokI {\calc{msTokI + 1}}
     \if {\= {\tok} {[}}
       \global\set msBeam {1}
       \global\set msBeamPrev {0}
@@ -340,7 +343,9 @@
 // ---- Lyrics --------------------------------------------------------------------
 // \lyrics records the syllables for the next \score and arms it; the score clears the flag, so a later score
 // without its own \lyrics has none.
-\def lyrics words {\global\set msLyrToks {\seq{\words}}\global\set msLyrArmed {1}}
+\def lyrics words {
+  \global\set msLyrText {\words}
+  \global\set msLyrArmed {1}}
 
 // Measure the lyric line before the score is drawn. Three parallel lists hold one entry per syllable — its text
 // (msSylT, `_` for a note left without one), its width in the lyric font (msSylW), and whether a hyphen joins it
@@ -351,7 +356,7 @@
   \global\set msSylH {\seq{}}
   \musicLyrMeasure{-}
   \global\set msHyphW {\msLyrWv}
-  \musicLyrPrep{\msLyrToks}
+  \musicLyrPrep{\seq{\msLyrText}}
   \global\set msSylN {\size{\msSylT}}
   // The first syllable is centred under the first note, so the note sits far enough right that the syllable's
   // left edge stays inside the picture.
@@ -459,89 +464,58 @@
   \else \global\set msChPart {ext} \global\set msChExt {\cat{\msChExt}{\pc}}
   \fi}
 
-// Lay out a chord name split by musicChordParts from x, on baseline y: the root and the bass at the chord size,
-// the extension at musicchordsupscale of it, raised by musicchordsupraise of the size. A `b` or `#` anywhere in
-// the name is a flat or sharp sign (root letters are capitals and no extension word has a b), set from the music
-// font's chord-symbol accidentals — glyphs made to stand on the baseline at about the height of a capital — since
-// a text face has neither sign. With chDraw 1 every piece is drawn; with 0 nothing is, and chX still ends at the
-// name's right edge, which is how its width is measured.
-\def musicChordLay x y {
-  \global\set chX {\x}
-  \set clSz {\musicchordsize}
-  \set clY {\y}
-  \musicChordRun{\msChRoot}{\clSz}{\clY}
-  \if {\> {\size{\msChExt}} {0}}
-    \set clSup {\calc{clSz * musicchordsupscale}}
-    \set clSupY {\calc{clY + clSz * musicchordsupraise}}
-    \musicChordRun{\msChExt}{\clSup}{\clSupY}
-  \fi
-  \if {\> {\size{\msChBass}} {0}} \musicChordRun{\msChBass}{\clSz}{\clY} \fi}
+// A chord name split by musicChordParts, as one box of text: the root at the chord size, the extension raised by
+// musicchordsupraise of the size and set at musicchordsupscale of it, then the slash bass at the chord size.
+\def musicChordBox {
+  \hbox{
+    \musicChordRun{\msChRoot}{\musicchordsize}
+    \if {\> {\size{\msChExt}} {0}}
+      \raise{\calc{musicchordsize * musicchordsupraise}}\hbox{\musicChordRun{\msChExt}{\calc{musicchordsize * musicchordsupscale}}}
+    \fi
+    \musicChordRun{\msChBass}{\musicchordsize}
+  }}
 
-// One run of chord text at size sz on baseline yy: letters gather into a buffer set as one piece of text, and
-// each sign flushes the buffer and is placed after it.
-\def musicChordRun s sz yy {
-  \global\set chBuf {}
-  \global\set chSz {\sz}
-  \global\set chY {\yy}
-  \musicChordRunChars{\s}
-  \musicChordFlush}
+// One run of a chord name at size sz, in the chord face and weight. A `b` or `#` in it is a flat or sharp sign
+// (root letters are capitals and no extension word has a b): the music font's chord-symbol accidental, a glyph
+// made to stand on the baseline at about the height of a capital, set at the same weight as the letters — a bold
+// chord name gets a synthetic bold sign, since a music font has one weight.
+\def musicChordRun s sz {
+  {\font {\musicchordfont} {\sz} {\musicchordweight}\musicChordRunChars{\s}{\sz}}}
 
-\def musicChordRunChars s {
+\def musicChordRunChars s sz {
   \if {\size{\s}}
-    \set rc {\head{\s}}
-    \if {\= {\rc} {b}} \musicChordFlush \musicChordSign{\cpCsymFlat}
-    \else \if {\= {\rc} {#}} \musicChordFlush \musicChordSign{\cpCsymSharp}
-    \else \global\set chBuf {\cat{\chBuf}{\rc}}
-    \fi\fi
-    \musicChordRunChars{\tail{\s}}
+    \musicChordChar{\head{\s}}{\sz}
+    \musicChordRunChars{\tail{\s}}{\sz}
   \fi}
 
-// Set the buffered letters, if any, at chX and advance past them.
-\def musicChordFlush {
-  \if {\> {\size{\chBuf}} {0}}
-    \setbox msChordBox \hbox{\musicChordText}
-    \set cfW {\wd msChordBox}
-    \if {\= {\chDraw} {1}} \at anchor:baseline {\chX \chY}{\musicChordText} \fi
-    \set cfX {\chX}
-    \global\set chX {\calc{cfX + cfW}}
-    \global\set chBuf {}
+\def musicChordChar c sz {
+  \if {\= {\c} {b}}
+    \musicChordSign{\cpCsymFlat}{\sz}
+  \else
+    \if {\= {\c} {#}}
+      \musicChordSign{\cpCsymSharp}{\sz}
+    \else
+      \c
+    \fi
   \fi}
 
-// The buffered letters in the chord font at the run's size. One line: it is typeset inside a box.
-\def musicChordText {{\font {\musicchordfont} {\chSz} {\musicchordweight}\chBuf}}
-
-// A flat or sharp sign at chX, sized so its three-staff-space height matches the run's capitals, with a little
-// room either side. The music font has one weight, lighter than bold text, so for a bold chord name the sign is
-// stamped twice a hair apart, which thickens its upright strokes to match the letters beside it.
-\def musicChordSign cp {
-  \set csSz {\chSz}
-  \set csFs {\calc{csSz * 0.95}}
-  \set csW {\glyphwidth{\musicfont}{\csFs}{\cp}}
-  \set csX {\chX}
-  \set csPad {\calc{csSz * 0.03}}
-  \set csEm {0}
-  \if {\= {\musicchordweight} {bold}} \set csEm {\calc{csSz * 0.035}} \fi
-  \if {\= {\chDraw} {1}} \musicChordSignDraw{\cp}{\calc{csX + csPad}}{\csFs}{\csEm} \fi
-  \global\set chX {\calc{csX + csW + csEm + 2 * csPad}}}
-
-\def musicChordSignDraw cp x fs em {
-  \fontglyph anchor:baseline {\x \chY}{\musicfont}{\fs}{\cp}
-  \if {\> {\em} {0}} \fontglyph anchor:baseline {\calc{\x + \em} \chY}{\musicfont}{\fs}{\cp} \fi}
+// A sign at just under the run's size, so its three-staff-space height matches the capitals, with a hair of room
+// either side.
+\def musicChordSign cp sz {
+  {\font {\musicfont} {\calc{\sz * 0.95}} {\musicchordweight}\kern{\calc{\sz * 0.03}}\char{\cp}\kern{\calc{\sz * 0.03}}}}
 
 // Set the chord name waiting for this note or rest, its left edge on the head's, on the lane above the staff.
 \def musicChordDraw {
   \fill{\musiccolor} \nostroke
   \musicChordParts{\msChordPend}
-  \global\set chDraw {1}
-  \musicChordLay{\msX}{\msChordY}
+  \at anchor:baseline {\msX \msChordY}{\musicChordBox}
   \global\set msChordPend {-}}
 
 // The width of a chord name as musicChordDraw sets it, into msChordWv.
 \def musicChordMeasure s {
   \musicChordParts{\s}
-  \global\set chDraw {0}
-  \musicChordLay{0}{0}
-  \global\set msChordWv {\chX}}
+  \setbox msChordBox \hbox{\musicChordBox}
+  \global\set msChordWv {\wd msChordBox}}
 
 // ---- The spacing plan ----------------------------------------------------------
 // One pass over the score ahead of drawing, appending to msTokAdv the advance each token will take, in token
@@ -726,9 +700,7 @@
 \def musicDynGroupClose {
   \if {\= {\spGrpOpen} {1}}
     \global\set msDynLanes {\append{\msDynLanes}{\spGrpLane}}
-    \set dcL {\spGrpLane}
-    \set dcM {\msDynLane}
-    \global\set msDynLane {\calc{min(dcM, dcL)}}
+    \global\set msDynLane {\calc{min(msDynLane, spGrpLane)}}
     \global\set spGrpOpen {0}
   \fi}
 
@@ -736,48 +708,48 @@
 // it, its lowest ink (spLow, for a note) lowers the group's lane; otherwise it is one more note since the group's
 // last mark.
 \def musicDynNote {
-  \set dnOn {0}
-  \if {\= {\spGrpOpen} {1}} \if {\= {\spHair} {1}} \set dnOn {1} \fi \fi
-  \if {\= {\spGrpOpen} {1}} \if {\> {\spSpan} {0}} \set dnOn {1} \fi \fi
-  \if {\= {\dnOn} {1}} \musicDynLower \else \musicDynSince \fi}
+  \if {\= {\spGrpOpen} {1}}
+    \if {\= {\spHair} {1}} \musicDynLower
+    \else \if {\> {\spSpan} {0}} \musicDynLower
+    \else \global\set spSince {\calc{spSince + 1}}
+    \fi \fi
+  \else \global\set spSince {\calc{spSince + 1}}
+  \fi}
 
+// The marks over this note keep three-fifths of a staff space clear of its lowest ink.
 \def musicDynLower {
-  \set dlL {\spGrpLane}
-  \set dlLow {\spLow}
-  \set dlTop {\spItemTop}
-  \global\set spGrpLane {\calc{min(dlL, dlLow - dlTop - 0.6)}}
-  \set dlS {\spSpan}
-  \global\set spSpan {\calc{max(0, dlS - 1)}}
+  \global\set spGrpLane {\calc{min(spGrpLane, spLow - spItemTop - 0.6)}}
+  \global\set spSpan {\calc{max(0, spSpan - 1)}}
   \if {\= {\spSpan} {0}} \global\set spItemTop {1.1} \fi
   \global\set spSince {0}}
 
 // How far above the lane's baseline the marks over the current note reach (spItemTop, staff spaces): a hairpin's
-// upper rule 1.1; a dynamic's letters 1.1, or 1.78 if they include the tall f. A hairpin opened while a dynamic's
-// letters still reach over a note keeps the taller of the two.
+// upper rule 1.1, or a dynamic's tallest letter as the music font draws it (an f rises well above a p or an m). A
+// hairpin opened while a dynamic's letters still reach over a note keeps the taller of the two.
 \def musicDynTopHair {
   \if {\= {\spSpan} {0}} \global\set spItemTop {1.1} \fi}
 
 \def musicDynTopLetters s {
-  \global\set spItemTop {1.1}
+  \global\set spItemTop {0}
   \musicDynTopScan{\s}}
 
 \def musicDynTopScan s {
   \if {\size{\s}}
-    \if {\= {\head{\s}} {f}} \global\set spItemTop {1.78} \fi
+    \musicDynGlyph{\head{\s}}
+    \global\set spItemTop {\calc{max(spItemTop, \glyphheight{\musicfont}{\fs}{\msDynCp} / g)}}
     \musicDynTopScan{\tail{\s}}
   \fi}
 
-\def musicDynSince {
-  \set dsS {\spSince}
-  \global\set spSince {\calc{dsS + 1}}}
+// The music-font glyph for one dynamic letter (p m f r s z n), into msDynCp; any other letter reads as f.
+\set musicDynGlyphs {\map{p 58656 m 58657 f 58658 r 58659 s 58660 z 58661 n 58662}}
+\def musicDynGlyph c {
+  \global\set msDynCp {\cpDynF}
+  \if {\= {\mapget musicDynGlyphs {\c}} {}} \else \global\set msDynCp {\mapget musicDynGlyphs {\c}} \fi}
 
 // In the drawing walk: a dynamic or hairpin token moves msUnder to its group's lane.
 \def musicDynLaneNext {
-  \set dxI {\msDynI}
-  \global\set msDynI {\calc{dxI + 1}}
-  \set dxK {\nth{\msDynTokGrp}{\msDynI}}
-  \set dxLane {\nth{\msDynLanes}{\dxK}}
-  \set msUnder {\calc{msBottom + dxLane * g}}}
+  \global\set msDynI {\calc{msDynI + 1}}
+  \set msUnder {\calc{msBottom + \nth{\msDynLanes}{\nth{\msDynTokGrp}{\msDynI}} * g}}}
 
 // The lowest ink of this note, into spLow, in staff spaces from the bottom line: the bottom of its head; the foot
 // of a down-stem (as long as musicStem draws it); the articulations stacked under an up-stemmed note; and the slur
@@ -786,21 +758,17 @@
 \def musicSpaceLow {
   \set slI {\mapget musicLetters {\msLetter}}
   \set slSt {\calc{msOct * 7 + slI - msBase}}
-  \set slDur {\msDur}
   \set slLow {\calc{slSt / 2 - 0.5}}
   \set slDown {0}
-  \if {\>= {\slSt} {4}} \if {\= {\spBeam} {0}} \if {\>= {\slDur} {2}} \set slDown {1} \fi\fi\fi
-  \set slLen {3.3}
-  \if {\>= {\slDur} {8}} \set slLen {4.0} \fi
-  \if {\>= {\slDur} {16}} \set slLen {4.4} \fi
-  \if {\= {\slDown} {1}} \set slLow {\calc{min(slLow, slSt / 2 - slLen)}} \fi
-  \set slA {\msArtStacc}
-  \set slB {\msArtTen}
-  \set slC {\msArtAccent}
-  \set slD {\msArtMarc}
-  \set slArt {\calc{slA + slB + slC + slD}}
-  \if {\= {\slDown} {0}} \if {\> {\slArt} {0}} \set slLow {\calc{min(slLow, slSt / 2 - 1.1 - (slArt - 1) * 0.9 - 0.45)}} \fi\fi
-  \if {\= {\slDown} {0}} \if {\= {\spSlur} {1}} \set slLow {\calc{min(slLow, slSt / 2 - 2.9)}} \fi\fi
+  \if {\>= {\slSt} {4}} \if {\= {\spBeam} {0}} \if {\>= {\msDur} {2}} \set slDown {1} \fi \fi \fi
+  \if {\= {\slDown} {1}}
+    \musicDownStemLen{\msDur}
+    \set slLow {\calc{min(slLow, slSt / 2 - msDownLen / g)}}
+  \else
+    \set slArt {\calc{msArtStacc + msArtTen + msArtAccent + msArtMarc}}
+    \if {\> {\slArt} {0}} \set slLow {\calc{min(slLow, slSt / 2 - 1.1 - (slArt - 1) * 0.9 - 0.45)}} \fi
+    \if {\= {\spSlur} {1}} \set slLow {\calc{min(slLow, slSt / 2 - 2.9)}} \fi
+  \fi
   \global\set spLow {\slLow}}
 
 // The room sung note spJ needs before the next: half its syllable, half the next one's, the gap, and a hyphen
@@ -926,83 +894,49 @@
     \if {\>= {\msDur} {2}} \set msHasStem {1} \fi
     \if {\= {\msBeam} {1}} \set msHasStem {1} \fi
     \musicArtic
-
-    // Expression marks are tracked by updating globals once per note, here at the note's own scope where msX and
-    // ny read cleanly. A 0/1 flag masks each update arithmetically — msSlur, msHairArmed, msDynArmed and msTie
-    // are 1 exactly when the mark applies — so the right note fixes each coordinate without a gating \if. \calc
-    // resolves only lexical (\set) names, never \global ones, so each global it needs is first copied into a local
-    // with plain interpolation; the masked result is computed in a \set, then published back to the global.
-    // Publish this note's reference points. The masked updates below recompute the live coordinate inline from
-    // msX/ny (which are always readable in \calc) rather than from a saved local: an intervening \global\set —
-    // and there are several — zeroes out a plain local when a later \calc tries to read it, the same way an \if
-    // does. Each block's own helper locals are therefore set immediately before the \calc that consumes them.
+    //
+    // The expression marks this note takes part in, each kept in globals that outlive the walk's recursion. First
+    // this note's reference point, the head's centre, where a hairpin running up to it ends.
     \global\set msNoteX {\calc{msX + msHeadW / 2}}
-    \global\set msNoteLeft {\calc{msX}}
-
-    // Stash the tie opener and pending flag of the *previous* note before this note overwrites them, so the tie
-    // it requested can still be drawn once the captures are done.
-    \global\set msTieDrawXop {\msTieXop}
-    \global\set msTieDrawY {\msTieY}
-    \global\set msTieDrawOn {\msTiePending}
-
-    // A tie: this note's right edge opens a tie if it carries the mark (msTie is 0 or 1, used as a mask).
-    \set gTie {\msTie}
-    \set gTieXZero {\msTieXop}
-    \set gTieY {\msTieY}
-    \set tieXcap {\calc{gTieXZero + gTie * (msX + msHeadW - gTieXZero)}}
-    \set tieYn {\calc{gTieY + gTie * (ny - gTieY)}}
-    \global\set msTieXop {\tieXcap}
-    \global\set msTieY {\tieYn}
+    // A tie opened by the note before closes here, from that note's right edge to this head's left; and this note
+    // opens one in turn if it carries the mark.
+    \if {\= {\msTiePending} {1}} \musicDrawTie{\msTieXop}{\msTieY}{\msX} \fi
     \global\set msTiePending {\msTie}
+    \if {\= {\msTie} {1}}
+      \global\set msTieXop {\calc{msX + msHeadW}}
+      \global\set msTieY {\ny}
+    \fi
+    \if {\= {\msSlur} {1}} \musicSlurNote \fi
+    // A hairpin's left end is the first note after it opens.
+    \if {\= {\msHairArmed} {1}}
+      \global\set msHairXst {\calc{msX + msHeadW / 2}}
+      \global\set msHairArmed {0}
+    \fi
+    // A dynamic's letters start under the note it precedes.
+    \if {\= {\msDynArmed} {1}}
+      \global\set dynX {\msX}
+      \fill{\musiccolor} \nostroke
+      \musicDynChars{\msDynStr}
+      \global\set msDynArmed {0}
+    \fi
+  \fi}
 
-    // A slur: the first note in the run fixes the start point, every note in the run pushes out the end point.
-    \set gSlur {\msSlur}
-    \set gSlurStarted {\msSlurStarted}
-    \set gSlurXZero {\msSlurXst}
-    \set gSlurYZero {\msSlurYst}
-    \set gSlurXOne {\msSlurXen}
-    \set gSlurYOne {\msSlurYen}
-    \set wantStart {\calc{gSlur * (1 - gSlurStarted)}}
-    \set slXstC {\calc{gSlurXZero + wantStart * (msX + msHeadW / 2 - gSlurXZero)}}
-    \set slYstC {\calc{gSlurYZero + wantStart * (ny - gSlurYZero)}}
-    \set slStartedn {\calc{gSlurStarted + wantStart}}
-    \set slXenC {\calc{gSlurXOne + gSlur * (msX + msHeadW / 2 - gSlurXOne)}}
-    \set slYenC {\calc{gSlurYOne + gSlur * (ny - gSlurYOne)}}
-    // The same two ends for a slur drawn above the run — a little over the head, or over the stem tip of an
-    // up-stemmed note — and whether any note in the run stems down, which sends the slur above.
-    \set gSlurYZeroA {\msSlurYstA}
-    \set gSlurYOneA {\msSlurYenA}
-    \set gSlurDown {\msSlurDown}
-    \set slYstA {\calc{gSlurYZeroA + wantStart * (ny + 1.1 * g + msStemUp * msHasStem * 2.6 * g - gSlurYZeroA)}}
-    \set slYenA {\calc{gSlurYOneA + gSlur * (ny + 1.1 * g + msStemUp * msHasStem * 2.6 * g - gSlurYOneA)}}
-    \set slDownN {\calc{max(gSlurDown, gSlur * msHasStem * (1 - msStemUp))}}
-    \global\set msSlurYstA {\slYstA}
-    \global\set msSlurYenA {\slYenA}
-    \global\set msSlurDown {\slDownN}
-    \global\set msSlurXst {\slXstC}
-    \global\set msSlurYst {\slYstC}
-    \global\set msSlurStarted {\slStartedn}
-    \global\set msSlurXen {\slXenC}
-    \global\set msSlurYen {\slYenC}
-
-    // A hairpin: the first armed note fixes the left end; msNoteX above already tracks the last note, the right end.
-    \set gHairArmed {\msHairArmed}
-    \set gHairXZero {\msHairXst}
-    \set hairXcap {\calc{gHairXZero + gHairArmed * (msX + msHeadW / 2 - gHairXZero)}}
-    \global\set msHairXst {\hairXcap}
-    \global\set msHairArmed {0}
-
-    // A dynamic: seat the start of its letters under this note when one is pending (branchless, like the others).
-    \set gDynArmed {\msDynArmed}
-    \set gDynX {\dynX}
-    \set dynXn {\calc{gDynX + gDynArmed * (msX - gDynX)}}
-    \global\set dynX {\dynXn}
-
-    // Drawing comes last: these \if blocks would otherwise sit between a \set and a \calc above and zero it out.
-    // They read only globals, through interpolation (which an \if does not disturb) or as arguments.
-    \if {\= {\msTieDrawOn} {1}} \musicDrawTie{\msTieDrawXop}{\msTieDrawY}{\msNoteLeft} \fi
-    \if {\= {\msDynArmed} {1}} \fill{\musiccolor} \nostroke \musicDynChars{\msDynStr} \fi
-    \global\set msDynArmed {0}
+// This note's part in an open slur: the first note of the run fixes the start, every note pushes out the end. Both
+// ends are kept for either side the slur may take — below, by the head's centre height, and above, a little over
+// the head or over the stem tip of an up-stemmed note — and any down-stem in the run sends the slur above.
+\def musicSlurNote {
+  \set snAbove {\calc{ny + 1.1 * g + msStemUp * msHasStem * 2.6 * g}}
+  \if {\= {\msSlurStarted} {0}}
+    \global\set msSlurXst {\calc{msX + msHeadW / 2}}
+    \global\set msSlurYst {\ny}
+    \global\set msSlurYstA {\snAbove}
+    \global\set msSlurStarted {1}
+  \fi
+  \global\set msSlurXen {\calc{msX + msHeadW / 2}}
+  \global\set msSlurYen {\ny}
+  \global\set msSlurYenA {\snAbove}
+  \if {\= {\msHasStem} {1}}
+    \if {\= {\msStemUp} {0}} \global\set msSlurDown {1} \fi
   \fi}
 
 // An augmentation dot, drawn right of the head for a dotted note. A dot belongs in a space, so when the head
@@ -1018,6 +952,19 @@
 // The stem and, for an eighth note, its flag. A note below the middle line stems up on the head's right edge,
 // one at or above it stems down on its left; the stem meets the head at its centre height. The head's right
 // edge comes from the font (msHeadW), so the stem seats correctly whatever music font is in use.
+// The length of a down-stem for a note of duration dur, into msDownLen (points). A down-stem sits on the head's
+// left, and its flag curls back up on the head's side; on a plain-length stem the flag's tip would run into the
+// head, so a flagged down-stem is made long enough that the flag — measured from the music font, so this holds
+// for any face — stops a quarter of a staff space below the head.
+\def musicDownStemLen dur {
+  \global\set msDownLen {\calc{3.3 * g}}
+  \if {\>= {\dur} {8}}
+    \set dsFlag {\cpEighthFlagDown}
+    \if {\>= {\dur} {16}} \set dsFlag {\cpSixteenthFlagDown} \fi
+    \set dsFlagH {\glyphheight{\musicfont}{\fs}{\dsFlag}}
+    \global\set msDownLen {\calc{max(3.3 * g, dsFlagH + 0.75 * g)}}
+  \fi}
+
 \def musicStem {
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.12 * g}}
   \set msStemLen {\calc{3.3 * g}}
@@ -1033,12 +980,8 @@
       \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpEighthFlagUp}
     \fi \fi
   \else
-    // A down-stem sits on the head's left, and its flag curls back up on the head's side, about three and a quarter
-    // staff spaces tall. On a plain-length stem the flag's tip runs into the head, so a flagged down-stem is
-    // lengthened until the tip stops a quarter-space short of it — further for a sixteenth's taller double flag.
-    \if {\>= {\msDur} {16}} \set msStemLen {\calc{4.4 * g}}
-    \else \if {\>= {\msDur} {8}} \set msStemLen {\calc{4.0 * g}}
-    \fi\fi
+    \musicDownStemLen{\msDur}
+    \set msStemLen {\msDownLen}
     \set msStemX {\calc{msX + msStemHalf}}
     \set msStemTop {\calc{ny - msStemLen}}
     \line{\msStemX \calc{ny - msStemAttach}  \msStemX \msStemTop}
@@ -1275,20 +1218,9 @@
 // way mf or sfz do.
 \def musicDynChars s {
   \if {\size{\s}}
-    \set dc {\head{\s}}
-    \global\set dcp {\cpDynF}
-    \if {\= {\dc} {p}} \global\set dcp {\cpDynP}
-    \else \if {\= {\dc} {m}} \global\set dcp {\cpDynM}
-    \else \if {\= {\dc} {r}} \global\set dcp {\cpDynR}
-    \else \if {\= {\dc} {s}} \global\set dcp {\cpDynS}
-    \else \if {\= {\dc} {z}} \global\set dcp {\cpDynZ}
-    \else \if {\= {\dc} {n}} \global\set dcp {\cpDynN}
-    \fi \fi \fi \fi \fi \fi
-    \fontglyph anchor:baseline {\dynX \msUnder}{\musicfont}{\fs}{\dcp}
-    \set dcurX {\dynX}
-    \set dcw {\glyphwidth{\musicfont}{\fs}{\dcp}}
-    \set dynXadv {\calc{dcurX + dcw}}
-    \global\set dynX {\dynXadv}
+    \musicDynGlyph{\head{\s}}
+    \fontglyph anchor:baseline {\dynX \msUnder}{\musicfont}{\fs}{\msDynCp}
+    \global\set dynX {\calc{dynX + \glyphwidth{\musicfont}{\fs}{\msDynCp}}}
     \musicDynChars{\tail{\s}}
   \fi}
 

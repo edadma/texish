@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, GlyphBox, HBox, HeadlessTypesetter, PictureBox, PictureOp, Typesetter}
+import io.github.edadma.texish.{Box, CharBox, GlyphBox, HBox, HeadlessTypesetter, PictureBox, PictureOp, ShiftBox, TextExtents, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -47,8 +47,7 @@ class MusicTests extends AnyFreeSpec with Matchers:
         case _              =>
       super.add(box)
 
-  private def run(src: String): Capture =
-    val t       = new Capture
+  private def run(src: String, t: Capture = new Capture): Capture =
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
@@ -282,13 +281,19 @@ class MusicTests extends AnyFreeSpec with Matchers:
     peakY(ops("( b8 g8 )")) should be > 62.0  // mixed: one down-stem sends it above
   }
 
-  "a flagged down-stem is long enough that its flag clears the head" in {
-    // the stem of a down-stemmed eighth runs further below its head than a quarter's, which carries no flag
+  "a flagged down-stem is long enough that its flag clears the head, by the flag's measured height" in {
+    // a backend whose down flags are as tall as a real font's (26 and 30 points at this size), so the rule shows:
+    // the stem reaches the flag's height plus three-quarters of a staff space (6), never less than 3.3 spaces
+    class TallFlags extends Capture:
+      override def glyphExtents(font: RenderFont, glyph: Int): TextExtents = glyph match
+        case 0xe241 => TextExtents(0, -26, 6, 26, 6, 0) // flag8thDown
+        case 0xe243 => TextExtents(0, -30, 6, 30, 6, 0) // flag16thDown
+        case _      => super.glyphExtents(font, glyph)
     def stemLen(score: String): Double =
-      val (y0, y1) = vlines(ops(score)).head
+      val (y0, y1) = vlines(run(s"\\score{$score}", new TallFlags).pictures.head.displayList).head
       math.abs(y1 - y0)
-    stemLen("c'8") should be > stemLen("c'4")
-    stemLen("c'16") should be > stemLen("c'8")
+    (stemLen("c'8") - stemLen("c'4")) shouldBe (32.0 - 3.3 * 8) +- 0.001
+    (stemLen("c'16") - stemLen("c'4")) shouldBe (36.0 - 3.3 * 8) +- 0.001
     stemLen("c8") shouldBe stemLen("c4") // an up-stem flag curls away from the head; its stem is unchanged
   }
 
@@ -305,15 +310,21 @@ class MusicTests extends AnyFreeSpec with Matchers:
   }
 
   "the dynamics lane drops to clear low notes" in {
-    def dynY(score: String): Double =
-      glyphs(ops(score)).filter((cp, _, _) => cp == DynP).head._3
-    // a high note leaves the lane where it always sat; middle C's ledger line (y=22) pushes it further down
-    dynY("!p g'") shouldBe (30.0 - 2.6 * 8) +- 0.001
-    dynY("!p c") should be < dynY("!p g'")
-    // the letter's top (1.1 staff spaces above its baseline for p) clears the head below the ledger line
-    (22.0 - 4.0) - (dynY("!p c") + 1.1 * 8) should be > 4.0
+    // the dynamic's baseline, measured from the bottom staff line (which moves up when the picture grows)
+    def dynBelow(score: String): Double =
+      val o = ops(score)
+      // the staff lines are the horizontals that start at the staff's left end, half a staff space in
+      val bottom = o.sliding(2).collect {
+        case Vector(PictureOp.MoveTo(4.0, y0), PictureOp.LineTo(_, y1)) if y0 == y1 => y0
+      }.min
+      bottom - glyphs(o).filter((cp, _, _) => cp == DynP).head._3
+    // a high note leaves the lane where it always sat, 2.6 staff spaces below the bottom line
+    dynBelow("!p g'") shouldBe (2.6 * 8) +- 0.001
+    // middle C (its head's bottom 1.5 spaces below the line) pushes it down: the letter's top — 8 points above
+    // its baseline on this backend — keeps three-fifths of a space (4.8) clear of the head
+    dynBelow("!p c") shouldBe (1.5 * 8 + 8 + 0.6 * 8) +- 0.001
     // and the picture grows to hold it: the lane stays above the picture's bottom edge
-    dynY("!p c") - 0.6 * 8 should be > 0.0
+    glyphs(ops("!p c")).filter((cp, _, _) => cp == DynP).head._3 - 0.6 * 8 should be > 0.0
   }
 
   "lyrics move below a lowered dynamics lane" in {
@@ -323,23 +334,33 @@ class MusicTests extends AnyFreeSpec with Matchers:
     lyr should be < dyn - 0.6 * 8 // the syllable's baseline is below the p's descender
   }
 
-  "a b or # in a chord name is drawn as a flat or sharp sign from the music font" in {
-    val CsymFlat  = 0xed60
-    val CsymSharp = 0xed62
-    val o         = opsRaw("\\score{\"Bbm7\" c \"F#\" d \"G7b9\" e}")
-    val signs     = glyphs(o).filter((cp, _, _) => cp == CsymFlat || cp == CsymSharp).map(_._1)
-    signs shouldBe Vector(CsymFlat, CsymSharp, CsymFlat)
-    glyphs(opsRaw("\\score{\"Am7\" c}")).filter((cp, _, _) => cp == CsymFlat || cp == CsymSharp) shouldBe empty
+  // every piece of text in a placed box, depth first, as (text, font, baseline shift from the box's own)
+  private def runs(b: Box, shift: Double = 0): Vector[(String, io.github.edadma.texish.Font, Double)] = b match
+    case c: CharBox  => Vector((c.text, c.font, shift))
+    case s: ShiftBox => runs(s.box, shift + s.shift)
+    case h: HBox     => h.boxes.toVector.flatMap(runs(_, shift))
+    case _           => Vector()
+  private def chordRuns(o: Vector[PictureOp]) =
+    o.collect { case PictureOp.Place(b: HBox, _, _, y) if y > 62.0 => runs(b) }
+
+  "a b or # in a chord name is a flat or sharp sign from the music font, as bold as the letters" in {
+    // each sign is text set in the music font — the chord-symbol accidental — at the chord's weight, which a
+    // one-weight music font provides as a synthetic bold
+    val signs = chordRuns(opsRaw("\\score{\"Bbm7\" c \"F#\" d \"G7b9\" e}")).flatten
+      .filter((t, _, _) => t == "\ued60" || t == "\ued62")
+    signs.map(_._1) shouldBe Vector("\ued60", "\ued62", "\ued60")
+    signs.foreach((_, f, _) => (f.typeface, f.syntheticBold) shouldBe ("bravura", true))
+    chordRuns(opsRaw("\\score{\"Am7\" c}")).flatten.map(_._1).mkString shouldBe "Am7"
   }
 
-  "a chord extension is raised and smaller, the root and a slash bass are not" in {
-    val ts = texts(opsRaw("\\score{\"G7/B\" c}"))
-    ts should have size 3 // G, 7, /B
-    val Vector(root, ext, bass) = ts
-    ext._2 should be > root._2  // raised
-    bass._2 shouldBe root._2    // back on the baseline
-    ext._1 should be > root._1
-    bass._1 should be > ext._1
+  "a chord name is one box: the extension raised and smaller, the root and a slash bass on the baseline" in {
+    val Vector(name) = chordRuns(opsRaw("\\score{\"G7/B\" c}"))
+    name.map(_._1).mkString shouldBe "G7/B"
+    def run(c: String) = name.find(_._1.contains(c)).get
+    run("7")._3 should be < 0.0                       // raised (a negative shift is upward)
+    run("7")._2.size should be < run("G")._2.size     // and smaller
+    run("B")._3 shouldBe 0.0                          // the bass is back on the baseline, at full size
+    run("B")._2.size shouldBe run("G")._2.size
   }
 
   "hairpins open the way they are written" in {
