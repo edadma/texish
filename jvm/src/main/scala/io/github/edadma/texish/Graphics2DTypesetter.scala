@@ -90,9 +90,19 @@ class Graphics2DTypesetter(dpi: Double = 72) extends Typesetter:
   // undo that.) createGlyphVector maps characters to glyphs one-to-one with no reordering or shaping, the
   // same codepoint-order drawing the Cairo, SVG and canvas backends do, so all four agree glyph for glyph.
   def drawString(text: String, x: Double, y: Double): Unit =
-    if text.nonEmpty then
-      val gv = g.getFont.createGlyphVector(frc, text)
-      g.drawGlyphVector(gv, x.toFloat, y.toFloat)
+    if text.nonEmpty then drawVector(g.getFont.createGlyphVector(frc, text), x, y)
+
+  // Draw a glyph vector at a baseline origin — plainly, or for synthetic bold as its outline filled and then
+  // stroked with the embolden width (round joins, so corners thicken evenly), the previous stroke restored after.
+  private def drawVector(gv: java.awt.font.GlyphVector, x: Double, y: Double): Unit =
+    if embolden > 0 then
+      val outline = gv.getOutline(x.toFloat, y.toFloat)
+      g.fill(outline)
+      val saved = g.getStroke
+      g.setStroke(new BasicStroke(embolden.toFloat, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND))
+      g.draw(outline)
+      g.setStroke(saved)
+    else g.drawGlyphVector(gv, x.toFloat, y.toFloat)
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
     g.draw(new java.awt.geom.Line2D.Double(x1, y1, x2, y2))
   def drawRect(x: Double, y: Double, width: Double, height: Double): Unit =
@@ -158,7 +168,7 @@ class Graphics2DTypesetter(dpi: Double = 72) extends Typesetter:
     )
 
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit =
-    g.drawGlyphVector(font.font.createGlyphVector(frc, Array(glyph)), x.toFloat, y.toFloat)
+    drawVector(font.font.createGlyphVector(frc, Array(glyph)), x, y)
 
   // java.awt.Font won't surface its raw table bytes, so reach the SFNT directory by reading the font
   // file the face was loaded from and slicing the requested table out of it.

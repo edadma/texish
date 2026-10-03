@@ -82,7 +82,21 @@ abstract class CairoTypesetter extends Typesetter:
 
   def drawString(text: String, x: Double, y: Double): Unit =
     ctx.moveTo(x, y)
-    ctx.showText(text)
+    if embolden > 0 then
+      ctx.textPath(text)
+      fillAndOutline()
+    else ctx.showText(text)
+
+  // Synthetic bold: fill the glyph outlines on the current path, then stroke the same path with the embolden
+  // width, round-joined so corners thicken evenly. The line settings are saved and restored around it, so the
+  // stroke never changes how the next rule is drawn.
+  private def fillAndOutline(): Unit =
+    ctx.fillPreserve()
+    ctx.save()
+    ctx.setLineWidth(embolden)
+    ctx.setLineJoin(CairoLineJoin.ROUND)
+    ctx.stroke()
+    ctx.restore()
 
   def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit =
     ctx.moveTo(x1, y1)
@@ -143,7 +157,11 @@ abstract class CairoTypesetter extends Typesetter:
 
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit =
     setFont(font)
-    ctx.showGlyphs(Seq(Glyph(glyph.toLong, x, y)))
+    if embolden > 0 then
+      ctx.newPath()
+      ctx.glyphPath(Seq(Glyph(glyph.toLong, x, y)))
+      fillAndOutline()
+    else ctx.showGlyphs(Seq(Glyph(glyph.toLong, x, y)))
 
   def sfntTable(font: RenderFont, tag: String): Option[Array[Byte]] = font.ft.loadSfntTable(tag)
 

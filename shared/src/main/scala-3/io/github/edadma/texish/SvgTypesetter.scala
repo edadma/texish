@@ -294,6 +294,8 @@ class SvgTypesetter extends Typesetter:
           curveCmd(d, ctm(x + x1 * size, y - y1 * size), ctm(x + x2 * size, y - y2 * size), ctm(x + px * size, y - py * size))
         case PathSeg.Close => d.append("Z")
 
+  // A glyph run's outlines, filled in the current colour — and, for synthetic bold, stroked as well with the
+  // embolden width, round-joined so the corners thicken evenly.
   private def fillPathData(d: String): Unit =
     page.content
       .append("<path d=\"")
@@ -302,7 +304,15 @@ class SvgTypesetter extends Typesetter:
       .append(cssColor(curColor))
       .append('"')
       .append(opacityAttr("fill-opacity", curColor))
-      .append("/>\n")
+    if embolden > 0 then
+      page.content
+        .append(" stroke=\"")
+        .append(cssColor(curColor))
+        .append("\" stroke-width=\"")
+        .append(fmt(embolden))
+        .append("\" stroke-linejoin=\"round\"")
+        .append(opacityAttr("stroke-opacity", curColor))
+    page.content.append("/>\n")
 
   // ─── immediate rules (drawLine / drawRect / fillRect) ─────────────────────────
   //

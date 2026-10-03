@@ -29,10 +29,22 @@ private def splitItems(groupTokens: Vector[Token], handler: Handler): Vector[Val
   flush()
   items.result()
 
+/** `\seq{…}` splits its argument into items. When the argument is a single variable holding text — `\seq{\x}`
+  * after `\set x {a b c}` — it is that text which is split, word by word, exactly as `\seq{a b c}` written out
+  * would be: the variable stands for its words, as a macro argument does. A variable holding anything else (a
+  * number, a sequence) is one item, as before. */
 object SeqPrimitive extends Primitive:
   def execute(proc: Processor, pos: CharReader): Unit =
     val groupTokens = stripWrappingGroups(proc.readArgument(pos))
-    valueResult(proc, Value.Seq(splitItems(groupTokens, proc.handler)))
+    val items = splitItems(groupTokens, proc.handler) match
+      case Vector(Value.Text(s)) if isVariable(groupTokens) =>
+        s.split("\\s+").toVector.filter(_.nonEmpty).map(w => evalTokens(Vector(Token.Text(w, pos)), proc.handler))
+      case other => other
+    valueResult(proc, Value.Seq(items))
+
+  private def isVariable(tokens: Vector[Token]): Boolean = tokens match
+    case Vector(Token.ControlSeq(_, _)) => true
+    case _                              => false
 
 /** \message{text} — expand the argument and write the resulting text to standard error at once, as TeX's \message
   * does, for tracing what a document or a macro-heavy package is doing while it runs. The argument is processed like

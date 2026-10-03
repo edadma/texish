@@ -125,6 +125,8 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
 
     if text.nonEmpty then
       t.setColor(color)
+      // A synthetic-bold font is drawn emboldened; the setting is cleared again once the run is drawn.
+      t.embolden = font.emboldenWidth
       if shapedGlyphs != null then
         t.setFont(font)
         drawPositioned(shapedGlyphs, shapedPlaces, x, y)
@@ -140,9 +142,11 @@ class CharBox(t: Typesetter, val text: String, val font: Font, val color: Color,
         var i  = 0
         while i < segments.length do
           t.setFont(segments(i)._2)
+          t.embolden = segments(i)._2.emboldenWidth
           t.drawString(segments(i)._1, cx, y)
           cx += segMetrics(i).xAdvance
           i += 1
+      t.embolden = 0.0
 
   /** Draw a positioned glyph run: a base advances the pen and is drawn at the cursor; a mark advances
     * nothing and is drawn relative to the origin of the glyph it attaches to, so a vowel point or a

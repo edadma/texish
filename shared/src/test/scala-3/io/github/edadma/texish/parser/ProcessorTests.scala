@@ -318,6 +318,15 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       process("\\def f x {\\set s {\\seq{\\x}}\\the\\s}\\f{a b c }") shouldBe "[a, b, c]"
     }
 
+    "should split a variable holding text into its words, as the words written out would be" in {
+      process("\\set x {a b c}\\set s {\\seq{\\x}}\\the\\s") shouldBe "[a, b, c]"
+      process("\\set x {1 2 3}\\set s {\\seq{\\x}}\\the\\s") shouldBe "[1, 2, 3]"
+      // a single word, a number, and a variable among other items stay single items
+      process("\\set x {abc}\\set s {\\seq{\\x}}\\size{\\s}") shouldBe "1"
+      process("\\set n {5}\\set s {\\seq{\\n}}\\size{\\s}") shouldBe "1"
+      process("\\set x {a b}\\set s {\\seq{\\x c}}\\size{\\s}") shouldBe "2"
+    }
+
     "should split a doubly-wrapped sequence like a singly-wrapped one" in {
       // the extra brace layer (as macro substitution produces) is stripped, not split into empty elements
       process("\\set s {\\seq{{a b c}}}\\the\\s") shouldBe "[a, b, c]"
