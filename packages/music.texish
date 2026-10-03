@@ -80,6 +80,8 @@
 \set musicchordsupscale {0.7}  // a chord extension's size (the 7 of G7), as a fraction of the chord size
 \set musicchordsupraise {0.4}  // how far an extension is raised, as a fraction of the chord size
 \set musicchordrise {22}   // how far the chord-name baseline sits above the top staff line
+\set musicwidth {}         // the width of a system; empty for the measure of the text (\hsize)
+\set musicsystemgap {6}    // extra space between the systems of a score that runs over several lines
 // No score has lyrics until \lyrics arms the next one.
 \global\set msLyrArmed {0}
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
@@ -226,11 +228,13 @@
   \set msTimeW {\calc{msTimeLen * 1.4 * g}}
   \set msFirstX {\calc{max(msTimeX + msTimeW + 0.6 * g, musicleft, msLyrLead)}}
   //
-  // The staff runs from the clef to where the spacing plan ended: the right edge of a closing barline, or one
-  // advance past the last note. The picture is as wide as that, or as the furthest syllable or chord name if one
-  // reaches past it, with a hair to spare.
-  \set msStaffEnd {\calc{msFirstX + msPlanEnd}}
-  \set msW {\calc{max(msStaffEnd, msFirstX + msPlanInk) + 2}}
+  // A system after the first repeats the clef and key signature but not the time signature, so its notes start
+  // sooner.
+  \set msLeadN {\calc{max(msKeyX + msKeyW + 1.1 * g, musicleft)}}
+  // The width a system may take: musicwidth if it is set, otherwise the measure of the text.
+  \set msAvail {\hsize}
+  \if {\> {\size{\cat{\musicwidth}{}}} {0}} \set msAvail {\musicwidth} \fi
+  \musicBreak
   //
   // The walk's running state. msBeam is 1 while a [ … ] run is open. The spanning expression marks: a slur ( … )
   // records its first and last note, a tie its first note so the curve can be closed at the second, a hairpin
@@ -253,15 +257,149 @@
   // group's lane as the walk reaches it.
   \global\set msUnder {\calc{msBottom + dyLane * g}}
   //
-  \picture width:{\msW} height:{\msH} {
+  // A score that fits on one line is one picture, set wherever the call stands, as wide as it naturally is. A
+  // longer one ends the paragraph and stacks its systems on the page, each its own line, so a page break can fall
+  // between any two.
+  \set msSysN {\size{\msSysStart}}
+  \if {\> {\msSysN} {1}} \par \fi
+  \musicSystem{1}
+}}
+
+// ---- Line breaking -------------------------------------------------------------
+// Break the score into systems, at barlines, each as many whole bars as fit in msAvail beside its leading clef
+// and signatures. The systems' first and last tokens (by position in the token list) go into msSysStart and
+// msSysEnd. A bar too wide for a line on its own still gets a line of its own, overflowing it, rather than being
+// split; the tokens after the last barline ride with the last system.
+\def musicBreak {
+  \global\set msSysStart {\seq{}}
+  \global\set msSysEnd {\seq{}}
+  \global\set brStart {1}
+  \global\set brLead {\msFirstX}
+  \global\set brLast {0}
+  \global\set brI {1}
+  \musicBreakScan
+  \global\set msSysStart {\append{\msSysStart}{\brStart}}
+  \global\set msSysEnd {\append{\msSysEnd}{\size{\msList}}}}
+
+\def musicBreakScan {
+  \if {\<= {\brI} {\size{\msList}}}
+    \if {\> {\nth{\msTokReach}{\brI}} {0}}
+      \musicBreakBar
+    \else
+      \global\set brI {\calc{brI + 1}}
+    \fi
+    \musicBreakScan
+  \fi}
+
+// At the barline brI: if the system so far still fits with it as the last bar, it becomes the latest place the
+// system could end; if not, the system ends at the last place that did fit and a new one begins after it, and this
+// barline is looked at again as part of the new system. A barline that cannot fit even as a system's first bar
+// ends that system on its own.
+\def musicBreakBar {
+  \set bbWidth {\calc{brLead + \nth{\msTokX}{\brI} - \nth{\msTokX}{\brStart} + \nth{\msTokReach}{\brI}}}
+  \if {\<= {\bbWidth} {\msAvail}}
+    \global\set brLast {\brI}
+    \global\set brI {\calc{brI + 1}}
+  \else
+    \if {\= {\brLast} {0}}
+      \global\set brLast {\brI}
+      \global\set brI {\calc{brI + 1}}
+    \fi
+    \if {\< {\brLast} {\size{\msList}}}
+      \global\set msSysStart {\append{\msSysStart}{\brStart}}
+      \global\set msSysEnd {\append{\msSysEnd}{\brLast}}
+      \global\set brStart {\calc{brLast + 1}}
+      \global\set brLead {\msLeadN}
+      \global\set brLast {0}
+    \fi
+  \fi}
+
+// Draw system k and then the ones after it. A system is justified: its notes and barlines are spread by
+// msStretch so the staff runs the full width, except the last when it is under three-quarters full, which keeps
+// its natural spacing rather than gaping. A score of one system keeps its natural width outright, and so does
+// any system that is overfull (msStretch never goes below 1). Marks still open at a system's end — a slur, a tie,
+// a hairpin, a word's hyphen — are drawn to the line's end and taken up again on the next line.
+\def musicSystem k {
+  \set syS {\nth{\msSysStart}{\k}}
+  \set syE {\nth{\msSysEnd}{\k}}
+  \set syLead {\msLeadN}
+  \if {\= {\k} {1}} \set syLead {\msFirstX} \fi
+  // The span of the system's tokens, from its first to its last barline (or, for a last system that does not end
+  // on one, to where the score's staff ends), and how far the closing barline's rules reach past it.
+  \set sySpan {\calc{\nth{\msTokX}{\syE} - \nth{\msTokX}{\syS}}}
+  \set syTail {\nth{\msTokReach}{\syE}}
+  \if {\= {\syTail} {0}} \set sySpan {\calc{msPlanEnd - \nth{\msTokX}{\syS}}} \fi
+  \global\set msStretch {1}
+  \if {\> {\msSysN} {1}}
+    \set syRoom {\calc{msAvail - syLead - syTail}}
+    \set syFull {\calc{(sySpan + syTail) / (msAvail - syLead)}}
+    \if {\< {\k} {\msSysN}} \global\set msStretch {\calc{max(1, syRoom / sySpan)}} \fi
+    \if {\= {\k} {\msSysN}} \if {\>= {\syFull} {0.75}} \global\set msStretch {\calc{max(1, syRoom / sySpan)}} \fi \fi
+  \fi
+  \set msStaffEnd {\calc{syLead + sySpan * msStretch + syTail}}
+  // A single score keeps a hair of room past its furthest ink; a system of several is exactly as wide as its staff,
+  // which a justified one fills to the measure.
+  \set syW {\msStaffEnd}
+  \if {\= {\msSysN} {1}} \set syW {\calc{max(msStaffEnd, msFirstX + msPlanInk) + 2}} \fi
+  \musicSlice{\syS}{\syE}
+  \if {\> {\msSysN} {1}}
+    \hbox{\musicSystemPicture{\k}{\syLead}}
+    \if {\< {\k} {\msSysN}} \vskip{\musicsystemgap} \fi
+  \else
+    \musicSystemPicture{\k}{\syLead}
+  \fi
+  \if {\< {\k} {\msSysN}} \musicSystem{\calc{\k + 1}} \fi}
+
+\def musicSystemPicture k lead {
+  \picture width:{\syW} height:{\msH} {
     \musicStaffLines
     \musicClef
     \musicKeySig
-    \musicTimeSig
-    \set msX {\msFirstX}
-    \musicWalk{\msList}
-  }
-}}
+    \if {\= {\k} {1}} \musicTimeSig \fi
+    \set msX {\lead}
+    \global\set msTokI {\calc{syS - 1}}
+    \musicSystemOpen{\lead}
+    \musicWalk{\msSlice}
+    \if {\< {\k} {\msSysN}} \musicSystemClose \fi
+  }}
+
+// The tokens from position a to b of the score, into msSlice.
+\def musicSlice a b {
+  \global\set msSlice {\seq{}}
+  \global\set msSliceI {\a}
+  \musicSliceFrom{\b}}
+
+\def musicSliceFrom b {
+  \if {\<= {\msSliceI} {\b}}
+    \global\set msSlice {\append{\msSlice}{\nth{\msList}{\msSliceI}}}
+    \global\set msSliceI {\calc{msSliceI + 1}}
+    \musicSliceFrom{\b}
+  \fi}
+
+// At the end of a system that is not the last, finish what is still open: a slur to its last note (it resumes at
+// the next system's first), a tie and a hairpin to the end of the staff, and a word's hyphen just after its
+// syllable.
+\def musicSystemClose {
+  \if {\= {\msSlur} {1}} \if {\= {\msSlurStarted} {1}}
+    \musicSlurEnd
+    \global\set msSlurStarted {0}
+    \global\set msSlurDown {0}
+  \fi \fi
+  \if {\= {\msTiePending} {1}} \musicDrawTie{\msTieXop}{\msTieY}{\msStaffEnd} \fi
+  \if {\> {\msHair} {0}}
+    \global\set msNoteX {\msStaffEnd}
+    \musicHairpinEnd
+  \fi
+  \if {\= {\msLyrHyPend} {1}}
+    \musicLyricHyphen{\msLyrPrevR}{\calc{msLyrPrevR + 2 * musiclyricgap + msHyphW}}
+    \global\set msLyrHyPend {0}
+  \fi}
+
+// At the start of a system after the first, take up what the last one left open: a tie or a hairpin continues
+// from just before the first note.
+\def musicSystemOpen lead {
+  \global\set msTieXop {\calc{\lead - 1.2 * g}}
+  \global\set msHairXst {\calc{\lead - 0.5 * g}}}
 
 // The five staff lines, spanning the full width, at the SMuFL staff-line thickness. They begin half a staff
 // space in from the picture edge, leaving the clef room to sit inside the staff rather than off its left end.
@@ -315,28 +453,23 @@
       \global\set msChordPend {\msChordStr}
     \else \if {\= {\tok} {|}}
       \musicBarThin{\msX}
-      \set msX {\calc{msX + musicnote * 0.6}}
     \else \if {\= {\tok} {||}}
       \musicBarDouble
-      \set msX {\calc{msX + musicnote * 0.7}}
     \else \if {\= {\tok} {|.}}
       \musicBarFinal
-      \set msX {\calc{msX + musicnote * 0.8}}
     \else \if {\= {\tok} {|:}}
       \musicBarRepeatStart
-      \set msX {\calc{msX + musicnote}}
     \else \if {\= {\tok} {:|}}
       \musicBarRepeatEnd
-      \set msX {\calc{msX + musicnote * 0.9}}
     \else
       \musicNote{\tok}
-      // A sung note takes its syllable (a rest takes none), a note or rest takes the chord name waiting for it,
-      // and either moves on by the advance planned for it.
+      // A sung note takes its syllable (a rest takes none), and a note or rest the chord name waiting for it.
       \if {\= {\msLyr} {1}} \if {\= {\msLetter} {r}} \else \musicLyricNote \fi \fi
       \if {\= {\msChordPend} {-}} \else \musicChordDraw \fi
-      \set msAdvNow {\nth{\msTokAdv}{\msTokI}}
-      \set msX {\calc{msX + msAdvNow}}
     \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi
+    // Every token moves the cursor on by the advance the spacing plan gave it (none, for a mark), stretched to
+    // justify the system it is in.
+    \set msX {\calc{msX + \nth{\msTokAdv}{\msTokI} * msStretch}}
     \musicWalk{\tail{\items}}
   \fi}
 
@@ -519,19 +652,19 @@
 
 // ---- The spacing plan ----------------------------------------------------------
 // One pass over the score ahead of drawing, appending to msTokAdv the advance each token will take, in token
-// order, so the drawing walk can read its own by position. Only a note or rest advances by it (barlines keep
-// their own fixed advances), and it is musicnote unless something needs more:
+// order, so the drawing walk can read its own by position. A barline advances by its fixed fraction of
+// musicnote, a mark by nothing, and a note or rest by musicnote unless something needs more:
 //   - a sung note whose syllable and the next one, each centred on its note, would come closer than
 //     musiclyricgap — with room for a hyphen and a second gap when the two are one word;
 //   - a note or rest carrying a chord name, when the next note or rest also carries one (or the score ends) and
-//     the name is wider than the advance — it gets its width plus musicchordgap.
-// Every point added past musicnote widens the score by that much (msSpaceExtra). A score with neither lyrics
-// nor chords plans musicnote for every note, the fixed spacing it has always had.
+//     the name is wider than the advance — it gets its width plus musicchordgap;
+//   - a note followed by one with an accidental, which needs room for the sign (musicSpaceAcc).
+// A score with none of these plans musicnote for every note, the fixed spacing it has always had.
 \def musicSpacePlan {
   \global\set msTokAdv {\seq{}}
-  \global\set msSpaceExtra {0}
+  \global\set msTokX {\seq{}}
+  \global\set msTokReach {\seq{}}
   \global\set msChordOn {0}
-  \global\set msChordN {0}
   \global\set spJ {1}
   \global\set spChW {0}
   \global\set spBeam {0}
@@ -564,20 +697,23 @@
   \if {\size{\items}}
     \set st {\head{\items}}
     \global\set spAdv {0}
+    \global\set spReach {0}
+    // Where this token sits, for the line breaker: its x from the first note, and — for a barline, where a line
+    // may end — how far right of that its rules reach (msTokReach is 0 for every other token).
+    \global\set msTokX {\append{\msTokX}{\spX}}
     \musicTokKind{\st}
     \if {\= {\msKind} {chord}}
       \musicChordName{\st}
       \musicChordMeasure{\msChordStr}
       \global\set spChW {\msChordWv}
       \global\set msChordOn {1}
-      \set scn {\msChordN}
-      \global\set msChordN {\calc{scn + 1}}
     \else \if {\= {\msKind} {note}}
       \musicSpaceNote{\st}{\tail{\items}}
     \else
       \musicSpaceMark{\st}
     \fi \fi
     \global\set msTokAdv {\append{\msTokAdv}{\spAdv}}
+    \global\set msTokReach {\append{\msTokReach}{\spReach}}
     \musicSpaceWalk{\tail{\items}}
   \fi}
 
@@ -591,25 +727,15 @@
   \global\set spChNeed {0}
   \global\set spChRight {0}
   \if {\> {\spChW} {0}} \musicSpaceChord{\rest} \fi
-  \set snL {\spLyrNeed}
-  \set snC {\spChNeed}
-  \set snA {\calc{max(musicnote, snL, snC)}}
-  \global\set spAdv {\snA}
-  \set snX {\msSpaceExtra}
-  \global\set msSpaceExtra {\calc{snX + snA - musicnote}}
+  \global\set spAdv {\calc{max(musicnote, spLyrNeed, spChNeed)}}
   // How far this note's syllable (centred on its head) and chord name (from its head) reach, and the cursor and
   // staff end moving on by its advance.
-  \set snP {\spX}
-  \set snSw {\spSylW}
-  \set snCr {\spChRight}
-  \set snI {\spInk}
-  \global\set spInk {\calc{max(snI, snP + msHeadW / 2 + snSw / 2, snP + snCr)}}
-  \global\set spX {\calc{snP + snA}}
-  \global\set spEnd {\calc{snP + snA}}
+  \global\set spInk {\calc{max(spInk, spX + msHeadW / 2 + spSylW / 2, spX + spChRight)}}
+  \global\set spX {\calc{spX + spAdv}}
+  \global\set spEnd {\spX}
   // This note is the one an accidental on the next note would have to clear.
-  \set snTi {\size{\msTokAdv}}
-  \global\set spPrevNote {\calc{snTi + 1}}
-  \global\set spPrevAdv {\snA}
+  \global\set spPrevNote {\calc{\size{\msTokAdv} + 1}}
+  \global\set spPrevAdv {\spAdv}
   \global\set spBarSince {0}
   \global\set spPrevLedger {0}
   \if {\= {\msLetter} {r}} \else \musicSpaceLedger \fi
@@ -672,9 +798,10 @@
 // reach from its x (reach, in staff spaces) — where the staff ends if it closes the score.
 \def musicSpaceBar adv reach {
   \global\set spBarSince {1}
-  \set sbX {\spX}
-  \global\set spEnd {\calc{sbX + \reach * g}}
-  \global\set spX {\calc{sbX + \adv * musicnote}}}
+  \global\set spAdv {\calc{\adv * musicnote}}
+  \global\set spReach {\calc{\reach * g}}
+  \global\set spEnd {\calc{spX + spReach}}
+  \global\set spX {\calc{spX + spAdv}}}
 
 // Dynamics and hairpins are set in groups, each on one line of its own just low enough to clear the notes it sits
 // under, as an engraver places them: a dynamic, or a hairpin, that follows the last mark's notes with at most one

@@ -270,3 +270,26 @@ The names a lead sheet uses most, each over its own note.
 \set musictimeden {}
 \bigskip
 \centerline{\score{"C" c'4 "Am7" a4 "Dm7" d'4 "G7" g4 | "Cmaj7" c'4 "F/C" f4 "Bbm7" -b4 "Eb" -e'4 | "Gsus4" g4 "G7b9" g4 "F#m" +f4 "C" c'4 |.}}
+
+\section{Scores longer than a line}
+
+A score too long for the line breaks at its barlines into systems, stacked down
+the page like lines of a paragraph, so a whole song can be written as one
+\mono{\\score}. Each system but the last is spread to the full measure; every one
+repeats the clef and key signature, and only the first carries the time
+signature. Lyrics and chord names run on from line to line, and a tie, slur or
+hairpin that crosses a break is finished at the end of one line and taken up at
+the start of the next. Setting \mono{\\set musicwidth} narrows the systems; it
+defaults to the measure of the text. Here two verses of \italic{Amazing Grace}
+to the same tune, as one score.
+
+\set musickey {1}
+\set musictimenum {3}
+\set musictimeden {4}
+\bigskip
+\noindent
+\lyrics{A -- maz -- ing _ grace, how sweet the sound that saved a _ wretch like me! 'Twas grace that _ taught my heart to fear, and grace my _ fears re -- lieved.}
+\score{d4 | "G" g2 ( [ b8 g8 ] ) | "G7" b2 a4 | "C" g2 e4 | "G" d2 d4 | "G" g2 ( [ b8 g8 ] ) | "Em" b2 a4 | "D" d'2. || d4 | "G" g2 ( [ b8 g8 ] ) | "G7" b2 a4 | "C" g2 e4 | "G" d2 d4 | "G" g2 ( [ b8 g8 ] ) | "Em" b2 a4 | "D" d'2. |.}
+\set musickey {0}
+\set musictimenum {}
+\set musictimeden {}

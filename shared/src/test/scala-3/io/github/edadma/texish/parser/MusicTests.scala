@@ -511,3 +511,52 @@ class MusicTests extends AnyFreeSpec with Matchers:
     run("\\score{c d}\\score{\"G\" c d}\\score{c d}").pictures.map(_.ascent) shouldBe
       Seq(plain.ascent, chord.ascent, plain.ascent)
   }
+
+  // eight bars of four quarters, with a 4/4 time signature, set in systems of musicwidth 300
+  private val eightBars = (1 to 8).map(_ => "c d e f").mkString(" | ") + " |."
+  private def systems(extra: String = "", score: String = eightBars): Vector[PictureBox] =
+    run(s"\\set musicwidth {300}\\set musictimenum {4}\\set musictimeden {4}$extra\\score{$score}").pictures.toVector
+
+  "a score too long for one line breaks at barlines into justified systems" in {
+    val ps = systems()
+    ps.size should be > 1
+    ps.init.foreach(_.width shouldBe 300.0 +- 0.001) // every system but the last runs the full measure
+    ps.last.width should be <= 300.0 + 0.001
+    // every note is set exactly once across the systems
+    ps.map(p => heads(p.displayList).size).sum shouldBe 32
+  }
+
+  "every system repeats the clef; only the first carries the time signature" in {
+    val ps = systems()
+    ps.foreach(p => glyphs(p.displayList).head._1 shouldBe GClef)
+    def figures(p: PictureBox) = glyphs(p.displayList).count((cp, _, _) => cp >= TimeSig0 && cp <= TimeSig0 + 9)
+    figures(ps.head) shouldBe 2
+    ps.tail.foreach(figures(_) shouldBe 0)
+  }
+
+  "lyrics run on across the systems, one syllable to a note" in {
+    val words = (1 to 32).map(i => s"w$i").mkString(" ")
+    val ps    = systems(s"\\lyrics{$words}")
+    ps.map(p => texts(p.displayList).size).sum shouldBe 32
+  }
+
+  "a tie across a line break is drawn to the end of one line and from the start of the next" in {
+    // a measure only one bar wide, so the tied whole notes fall on two lines: one curve on each
+    val ps = systems("\\set musicwidth {90}", "c1- | c1 |.")
+    ps.size shouldBe 2
+    val withTie = ps.map(p => p.displayList.count(_.isInstanceOf[PictureOp.CurveTo]))
+    withTie.sum shouldBe 2
+    withTie.count(_ == 1) shouldBe 2
+  }
+
+  "a bar too wide for any line gets a line of its own rather than looping or splitting it" in {
+    val ps = systems(score = "c d e f g a b c' d' e' f' g' | c d |.")
+    ps.size shouldBe 2
+    ps.head.width should be > 300.0 // overfull, and left at its natural spacing
+  }
+
+  "a score that fits on one line is a single picture at its natural width" in {
+    val ps = systems(score = "c d e f |.")
+    ps.size shouldBe 1
+    ps.head.width should be < 300.0
+  }
