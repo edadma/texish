@@ -715,6 +715,12 @@ linework and the run-time overlay cannot drift out of register.
 | `\keys{map}` `\values{map}` | a map's keys or values as a sequence |
 | `\codesyntax` | in a package, after its header: every whitespace in the package's later macro bodies only separates and never sets text |
 | `\space` | one ordinary interword space — how a `\codesyntax` package sets a space it means |
+| `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
+| `\oklch{L}{C}{h}` `\oklchof{color}` | build / read a colour in the Oklch space (lightness, chroma, hue) — derive shades by varying L |
+| `\newcounter` `\setcounter` `\addtocounter` `\stepcounter` `\value` `\counterwithin` | named counters; `\counterwithin` resets a child when its parent steps |
+| `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph`/`\fnsymbol` | format a number as digits / roman / letters / footnote symbols |
+| `\use{name}` `\include{path}` | load a format / include raw input |
+| `\usfm{path}` | typeset a Scripture file in USFM format through the `\usfm…` macros *(`\use{usfm}`)* |
 
 **A package's layout is not text.** In a macro or environment body defined inside a package, a line
 break — with the trailing spaces before it and the indentation after it — only separates (two
@@ -778,12 +784,6 @@ there (`\calc{\n * 2}`), but a primitive call does not — `\calc{\nth{\p}{1} * 
 \set sxy {\total{\transform\p{\chunk{\data}{2}}%
   {\set x {\nth{\p}{1}}\set y {\nth{\p}{2}}\calc{x * y}}}}
 ```
-| `\message{…}` | write expanded text to standard error (a diagnostic; no page output) |
-| `\oklch{L}{C}{h}` `\oklchof{color}` | build / read a colour in the Oklch space (lightness, chroma, hue) — derive shades by varying L |
-| `\newcounter` `\setcounter` `\addtocounter` `\stepcounter` `\value` `\counterwithin` | named counters; `\counterwithin` resets a child when its parent steps |
-| `\arabic`/`\roman`/`\Roman`/`\alph`/`\Alph`/`\fnsymbol` | format a number as digits / roman / letters / footnote symbols |
-| `\use{name}` `\include{path}` | load a format / include raw input |
-| `\usfm{path}` | typeset a Scripture file in USFM format through the `\usfm…` macros *(`\use{usfm}`)* |
 
 ## Scripture *(`\use{usfm}`)*
 
