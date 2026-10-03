@@ -82,6 +82,8 @@ only inside its body.
 | `\glyph[anchor:baseline]{x y}{codepoint}` | place one glyph of the current font by codepoint |
 | `\fontglyph[anchor:baseline]{x y}{face}{size}{cp}` | place a glyph from a named typeface at a size |
 | `\glyphwidth{face}{size}{cp}` | the inked width of a glyph, in points, as a number for `\set` / `\calc` |
+| `\glyphheight{face}{size}{cp}` | how far a glyph's ink rises above its baseline, in points |
+| `\glyphdepth{face}{size}{cp}` | how far a glyph's ink descends below its baseline, in points |
 
 ## Arrows
 

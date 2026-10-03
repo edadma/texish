@@ -129,7 +129,8 @@ need not outlive it at all — see [computing a result](#computing-a-result-from
 
 `\seq{…}` builds one from whitespace-separated items, and a braced item keeps its spaces.
 `\words{s}` splits a string on whitespace, `\range{a}{b}` counts inclusively, and `\split` cuts on
-any separator.
+any separator. A variable holding text, given to `\seq`, splits as the words written out would:
+after `\set w {one two three}`, `\seq{\w}` has three items.
 
 ```texish
 \set names {\seq{Ada {Grace Hopper} Katherine}}
@@ -331,14 +332,32 @@ which is how a package asks whether something was ever defined.
 
 These two have actually cost time, and both are about typesetting rather than about values.
 
-### A macro that runs inside a paragraph must be one line
+### Spaces in a macro body are set — except a package's layout
 
-A newline in a macro body is an interword space, the indentation of a continuation line is another
-one, and two newlines are a paragraph break. A macro laid out over twelve indented lines drags a
-dozen spaces into the sentence that calls it. **Split a long routine into named one-line macros
-rather than indenting it**; a `//` comment eats the newline but not the next line's indentation, so
-flush-left continuation lines are the other way out. This does not bind macros that only draw
-(inside `\picture` stray text is discarded) or that only work between paragraphs.
+In a macro defined in the **document**, a newline in the body is an interword space, the indentation
+of a continuation line is another one, and two newlines are a paragraph break. A document macro laid
+out over twelve indented lines drags a dozen spaces into the sentence that calls it, so keep one that
+runs inside a paragraph on one line. Spaces do not collapse into one, as they do in TeX: each is its
+own glue.
+
+In a **package** — a file loaded with `\use` — a line break in a macro or environment body, with the
+trailing spaces before it and the indentation after it, is *layout*: it still separates (two
+coordinates of a point split over two lines, two `\seq` items) but sets nothing. Package code can be
+indented freely. A blank line is still a paragraph break, and a space typed **within** a line is
+still set — the space between a month's name and its year in a calendar heading is one of those.
+
+The spaces within a line still leak in a macro that runs inside a line of text — the spaces around
+`\if {…} \a \else \b \fi` are set. A package that is pure code declares `\codesyntax` once, after its
+header: from there on every whitespace in its macro bodies only separates. A space it does mean is
+written `\space`.
+
+```texish
+\codesyntax
+
+\def tag x {
+  \if {\x} \bold{\x}\space \fi
+}
+```
 
 ### Paragraph shape is read when the paragraph breaks
 

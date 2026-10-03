@@ -95,6 +95,11 @@ the current face carries the OpenType `smcp` feature (EB Garamond and most moder
 `\smallcaps`/`\scshape` synthesise true small capitals from that feature rather than
 falling back to ordinary lowercase.
 
+Bold is synthesised the same way when a face has none. Asking `bold` — or `semibold`, `demibold`,
+`extrabold` or `black` — of a face with no such cut (a one-weight face such as the music font
+`bravura`) draws its glyphs emboldened, filled and outlined, instead of setting them at regular
+weight. A missing light weight falls back to regular.
+
 `\mono`/`\ttfamily` and `\sans`/`\sffamily` fall back to a document-level typewriter or sans
 family when the current family has no such member (Garamond, Cinzel, Amiri …), so an inline
 `\mono` never fails. `\ttdefault{name}`/`\sfdefault{name}` name those fallback families (Latin
@@ -297,6 +302,7 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\dag` `\ddag` `\S` `\P` | † ‡ § ¶ |
 | `\pounds` `\textdegree` `\textbullet` | £ ° • |
 | `\textemdash` `\textendash` | — – |
+| `\char{codepoint}` | the character with that Unicode code point (`\char{8364}` is €), set as ordinary text in the current font |
 
 ## Mathematics
 
@@ -618,6 +624,22 @@ Configured with `\set` after `\use{chess}`: `chesssquare`, `chesscoords`, `chess
 `chesshighlight`, `chesslight`, `chessdark`, `chessborder`, `chesshighlightink`, `chesspieceink`,
 `chesspiecescale`, `chessfigurines`, `chessmovesize`.
 
+## Music *(`\use{music}`)*
+
+Staff notation in a SMuFL music font over the `\picture` layer. A score too long for the line breaks
+at its barlines into justified systems stacked down the page. See the [music guide](/guide/music/).
+
+| Command | Effect |
+|---------|--------|
+| `\score{notes}` | draw a staff of notes: `+`/`-`/`n` accidental, pitch `a`–`g`, `'`/`,` octaves, duration `1 2 4 8 16 32`, `.` dot, articulations `> ! = * ;`, `-` tie; `r` rest, `\|` `\|\|` `\|.` `\|:` `:\|` barlines, `[ ]` beam, `( )` slur, `!p` `!mf` … dynamics, `<` `>` … `=` hairpins, `"G7"` a chord name over the next note |
+| `\lyrics{syllables}` | words under the next `\score`, one syllable per note (rests take none); `--` hyphenates, `_` skips a note |
+
+Configured with `\set` after `\use{music}`: `musicgap`, `musicnote`, `musicleft`, `musicpad`,
+`musiccolor`, `musicfont`, `musicclef`, `musickey`, `musictimenum`, `musictimeden`,
+`musiclyricfont`, `musiclyricsize`, `musiclyricgap`, `musiclyricdrop`, `musicchordfont`,
+`musicchordsize`, `musicchordweight`, `musicchordgap`, `musicchordrise`, `musicchordsupscale`,
+`musicchordsupraise`, `musicwidth`, `musicsystemgap`.
+
 ## Plotting *(`\use{plot}`)*
 
 | Command | Effect |
@@ -691,6 +713,14 @@ linework and the run-time overlay cannot drift out of register.
 | `\upcase{…}` `\downcase{…}` `\trim{…}` | uppercase / lowercase / strip surrounding whitespace |
 | `\map{…}` `\mapset` `\mapget` `\maphas` `\mapdel` | keyed maps |
 | `\keys{map}` `\values{map}` | a map's keys or values as a sequence |
+| `\codesyntax` | in a package, after its header: every whitespace in the package's later macro bodies only separates and never sets text |
+| `\space` | one ordinary interword space — how a `\codesyntax` package sets a space it means |
+
+**A package's layout is not text.** In a macro or environment body defined inside a package, a line
+break — with the trailing spaces before it and the indentation after it — only separates (two
+coordinates of a point, two `\seq` items) and sets no space, so package code can be laid out over as
+many indented lines as reads well. A blank line is still a paragraph break, and a space typed within a
+line is still set. `\codesyntax` extends this to every space, for a package that is pure code.
 
 ### Working with sequences and strings
 
@@ -699,7 +729,8 @@ given. Characters means code points, so an emoji or a math alphanumeric is one i
 counts as the characters it displays as**, since a run of digits becomes a number as soon as it is
 stored — `\size{12345}` is 5 whether it is written out or read from a variable. **Positions count
 from 1**, and `\indexof` answers `0` for "not found" — which is falsy, so one call both tests and
-locates.
+locates. **`\seq{\x}` where `\x` holds text** splits that text into items exactly as the words
+written out would be, so `\set w {one two three}` then `\seq{\w}` has three items.
 
 | Command | Effect |
 |---------|--------|
