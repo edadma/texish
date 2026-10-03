@@ -248,6 +248,11 @@ abstract class Typesetter:
   /** Draw a single glyph, by index, at a baseline origin, in the current color. */
   def drawGlyph(font: RenderFont, glyph: Int, x: Double, y: Double): Unit
 
+  /** While positive, the width of the stroke every glyph drawn by [[drawString]] and [[drawGlyph]] is outlined
+    * with as well as filled — synthetic bold. Set around the drawing of a run whose font is a synthetic-bold
+    * stand-in (see [[Font.syntheticBold]]) and cleared after, so it never leaks into other text or into rules. */
+  var embolden: Double = 0.0
+
   /** The raw bytes of one SFNT table of `font`, by four-character tag (e.g. "MATH"), or `None` if the
     * font has no such table. This is how the math layer reaches the OpenType `MATH` table, which the
     * rasterizers expose no structured API for; see [[io.github.edadma.texish.opentype.MathTable]].
@@ -1237,14 +1242,11 @@ abstract class Typesetter:
         // least essential axes in turn — small caps first, then slope, then weight — keeping the family role (the
         // mono/sans member) as long as possible. So a mono face with no small-caps or slanted cut falls back to
         // upright mono rather than failing, as LaTeX's font substitution does.
-        val inFamily =
-          fonts
-            .get(wanted)
-            .orElse(LazyList(StyleAxis.Caps, StyleAxis.Slope, StyleAxis.Series)
-              .scanLeft(wanted)((k, axis) => k.filterNot(t => axisOf(t) == axis))
-              .tail
-              .flatMap(fonts.get)
-              .headOption)
+        val resolvedKey =
+          LazyList(StyleAxis.Caps, StyleAxis.Slope, StyleAxis.Series)
+            .scanLeft(wanted)((k, axis) => k.filterNot(t => axisOf(t) == axis))
+            .find(fonts.contains)
+        val inFamily = resolvedKey.flatMap(fonts.get)
 
         inFamily match
           case Some((face, ligatures)) =>
@@ -1253,6 +1255,11 @@ abstract class Typesetter:
             // Small caps was asked for but no dedicated small-caps cut exists (the caps axis fell back to the
             // ordinary face). The render layer may then synthesize small caps through the font's `smcp` feature.
             val syntheticSmallcaps = wanted.contains("smallcaps") && !fonts.contains(wanted)
+            // Likewise a heavy weight was asked for but the cut found carries no weight of its own: the face is drawn
+            // emboldened. A light weight that is missing just falls back to the regular cut, as before.
+            val heavy         = Set("bold", "semibold", "demibold", "extrabold", "black")
+            val syntheticBold =
+              wanted.exists(heavy) && !resolvedKey.exists(_.exists(s => axisOf(s) == StyleAxis.Series))
 
             Font(
               typeface,
@@ -1264,6 +1271,7 @@ abstract class Typesetter:
               baseline,
               ligatures,
               syntheticSmallcaps,
+              syntheticBold,
             )
 
           case None =>

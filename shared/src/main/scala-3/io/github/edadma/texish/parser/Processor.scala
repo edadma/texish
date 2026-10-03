@@ -39,10 +39,10 @@ class Processor(val handler: Handler):
   // file is a no-op — dependency diamonds load once.
   private val loadedModules = mutable.Set[String]()
 
-  // True while a module (\use) is loading. A module is code, not prose: an isolated source newline between the
-  // statements of a captured macro/environment body is insignificant, the way a trailing // makes it. While this
-  // is set, a captured body has its lone newlines dropped (see moduleBody), so package code needs no line-end
-  // comments to stop a line break becoming a stray interword space when the macro later runs in a document.
+  // True while a module (\use) is loading. A module is code, not prose: the line breaks and indentation between
+  // the statements of a captured macro/environment body are insignificant. While this is set, a captured body has
+  // that layout dropped (see moduleBody), so package code can be indented freely without a line break or an
+  // indent becoming a stray interword space when the macro later runs in a document.
   var inModuleLoad: Boolean = false
 
   // Named counters (LaTeX-style \newcounter/\stepcounter/\value, …). Counters are global by definition — TeX never
@@ -260,6 +260,7 @@ class Processor(val handler: Handler):
     try
       token match
         case Token.Text(s, _)            => handler.text(s)
+        case t if Token.isLayoutSpace(t) => // the layout of package code: it separated, and sets nothing
         case Token.Space(_, _)           => handler.space()
         case Token.Newline(_)            => handler.newline()
         case Token.BeginGroup(pos)       => handleBeginGroup(pos)
@@ -760,27 +761,37 @@ class Processor(val handler: Handler):
       inModuleLoad = savedModule
       dirStack.pop()
 
-  /** Filter a macro/environment body captured while a module is loading. An isolated source newline between two
-    * statements of package code is dropped — outside a paragraph it never mattered, and inside one it would
-    * become a stray interword space when the macro later runs, which is why hand-written packages terminate every
-    * body line with `//`. A blank line (a run of two or more newlines) is kept, so an intentional paragraph break
-    * inside a body still ends the paragraph. Outside module loading the body is returned unchanged. */
+  /** Filter a macro/environment body captured while a module is loading, so that the layout of package code —
+    * its line breaks and its indentation — never becomes text when the macro later runs inside a paragraph or a
+    * box. A line break, together with the trailing spaces of the line before it and the indentation of the line
+    * after, becomes one layout space (`Token.layoutSpace`): it still separates what is on either side — the two
+    * coordinates of a point written over two lines, two items of a `\seq` — but sets nothing when typeset. Package
+    * code can therefore be laid out over as many indented lines as reads well, and a macro called inside a
+    * `\centerline` or a running head adds nothing beside what it sets. A line break at the very start or end of the
+    * body, with its whitespace, is dropped outright. A blank line (two or more line breaks with only whitespace between) is kept as one paragraph
+    * break, so an intentional `\par` inside a body still ends the paragraph. Spaces within a line are untouched —
+    * they are the author's. Outside module loading the body is returned unchanged. */
   def moduleBody(body: Vector[Token]): Vector[Token] =
     if !inModuleLoad then body
     else
+      def blank(t: Token) = t.isInstanceOf[Token.Newline] || t.isInstanceOf[Token.Space]
       val out = Vector.newBuilder[Token]
       val n   = body.length
       var i   = 0
       while i < n do
-        body(i) match
-          case _: Token.Newline =>
-            var j = i
-            while j < n && body(j).isInstanceOf[Token.Newline] do j += 1
-            if j - i >= 2 then out ++= body.slice(i, j) // blank line: a real paragraph break, keep it
-            i = j
-          case t =>
-            out += t
-            i += 1
+        if blank(body(i)) then
+          var j        = i
+          var newlines = 0
+          while j < n && blank(body(j)) do
+            if body(j).isInstanceOf[Token.Newline] then newlines += 1
+            j += 1
+          if newlines >= 2 then out ++= body.slice(i, j).filter(_.isInstanceOf[Token.Newline]).take(2)
+          else if newlines == 1 && i > 0 && j < n then out += Token.layoutSpace(Token.pos(body(i)))
+          else if newlines == 0 then out ++= body.slice(i, j) // spaces within a line, even at an end: the author's
+          i = j
+        else
+          out += body(i)
+          i += 1
       out.result()
 
   /** Process tokens until stack depth reaches minDepth */

@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Anchor, Box, Color, GlyphBox, PictureBox, PictureOp, HeadlessTypesetter, TexishException, Typesetter}
+import io.github.edadma.texish.{Anchor, Box, CharBox, Color, GlyphBox, HBox, PictureBox, PictureOp, HeadlessTypesetter, TexishException, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -134,6 +134,51 @@ class PicturePrimitivesTests extends AnyFreeSpec with Matchers:
     // the headless backend reports every glyph as 6 wide with a zero bearing, so the measured ink width is 6
     val ops = run("\\picture width:1in height:1in { \\stroke{black} \\line{\\glyphwidth{bravura}{40}{65} 0  0 0} }")
     ops should contain(PictureOp.MoveTo(6.0, 0.0))
+  }
+
+  "\\glyphheight and \\glyphdepth measure a glyph's ink above and below its baseline" in {
+    // the headless backend's glyph ink runs from 8 above the baseline (yBearing -8) to 2 below (height 10)
+    run("\\picture width:1in height:1in { \\stroke{black} \\line{\\glyphheight{bravura}{40}{65} 0  0 0} }") should
+      contain(PictureOp.MoveTo(8.0, 0.0))
+    run("\\picture width:1in height:1in { \\stroke{black} \\line{\\glyphdepth{bravura}{40}{65} 0  0 0} }") should
+      contain(PictureOp.MoveTo(2.0, 0.0))
+  }
+
+  "\\char sets the character with a codepoint as text" in {
+    // a private-use music symbol, set inside ordinary text in a box, exactly as if it had been typed
+    val placed = run("\\picture width:1in height:1in { \\at {0 0}{x\\char{57952}y} }").collect {
+      case PictureOp.Place(b: HBox, _, _, _) => b
+    }
+    placed should have size 1
+    placed.head.boxes.collect { case c: CharBox => c.text }.mkString shouldBe "xy"
+  }
+
+  "\\char of a value that is not a codepoint is an error" in {
+    val (_, proc) = fixture()
+    a[TexishException] should be thrownBy proc.process("\\char{-1}")
+  }
+
+  "bold asked of a face with no bold cut is a synthetic bold; a real bold cut is not" in {
+    val t = new HeadlessTypesetter
+    t.makeFont("bravura", 12, Set("bold")).syntheticBold shouldBe true // Bravura has one weight
+    t.makeFont("bravura", 12, Set.empty).syntheticBold shouldBe false
+    t.makeFont("bravura", 12, Set("light")).syntheticBold shouldBe false // a missing light weight is not bold
+    t.makeFont("lmroman", 12, Set("bold")).syntheticBold shouldBe false  // Latin Modern has a real bold
+    t.makeFont("bravura", 12, Set("bold")).emboldenWidth shouldBe (12 * 0.035) +- 1e-9
+  }
+
+  "a synthetic-bold run is drawn emboldened, and the setting does not outlive it" in {
+    // record the embolden width the backend sees for each string it is asked to draw
+    class Recording extends HeadlessTypesetter:
+      val seen                                                       = ArrayBuffer[(String, Double)]()
+      override def drawString(text: String, x: Double, y: Double): Unit = seen += ((text, embolden))
+    val t    = new Recording
+    val bold = new CharBox(t, "", t.makeFont("bravura", 12, Set("bold")), Color("black"))
+    val real = new CharBox(t, "B", t.makeFont("lmroman", 12, Set("bold")), Color("black"))
+    bold.draw(t, 0, 0)
+    real.draw(t, 0, 0)
+    t.seen.toVector shouldBe Vector(("", 12 * 0.035), ("B", 0.0))
+    t.embolden shouldBe 0.0
   }
 
   "a drawing command outside \\picture is an error" in {

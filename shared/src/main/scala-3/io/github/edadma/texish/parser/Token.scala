@@ -43,6 +43,18 @@ object Token:
     case Newline(p)       => p
     case EOF(p)           => p
 
+  /** A layout space: what a line break in package code, with the indentation around it, becomes (see
+    * `Processor.moduleBody`). It separates whatever is on either side of it exactly as a space does — two
+    * coordinates, two `\seq` items, two words of an expression — but sets nothing when typeset, so the layout of
+    * package code never becomes glue in the text a macro produces. Its text is a line break, which no tokenized
+    * space ever holds, so a conversion to text still sees whitespace there. */
+  def layoutSpace(pos: CharReader): Token = Space("\n", pos)
+
+  /** Whether a token is a layout space. */
+  def isLayoutSpace(t: Token): Boolean = t match
+    case Space("\n", _) => true
+    case _              => false
+
   /** Check if token is end of input */
   def isEOF(t: Token): Boolean = t match
     case EOF(_) => true

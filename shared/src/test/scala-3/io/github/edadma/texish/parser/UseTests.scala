@@ -103,6 +103,53 @@ class UseTests extends AnyFreeSpec with Matchers:
     }
   }
 
+  "a module body drops the indentation and trailing spaces around a line break too" in {
+    // Indented package code: the indentation of each continuation line and the spaces left at a line's end are
+    // layout, not text, so the macro sets nothing between its pieces.
+    withModules(
+      "m.texish" -> "\\def ab {\n    a   \n      b\n  }\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\ab").result shouldBe "ab"
+    }
+  }
+
+  "a blank line in a module body is a paragraph break even when its lines carry indentation" in {
+    // two line breaks with only whitespace between them (an indented blank line) are still one paragraph break
+    withModules(
+      "m.texish" -> "\\def para {\n  a\n    \n  b\n}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\para").result shouldBe "a\n\nb"
+    }
+  }
+
+  "a line break in a module body still separates the items on either side of it" in {
+    // a list (or a point's two coordinates) written over two lines keeps two items: the layout separates, it only
+    // never sets anything as text
+    withModules(
+      "m.texish" -> "\\def n {\n  \\set q {\\seq{1\n      2}}\n  \\size{\\q}\n}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\n").result shouldBe "2"
+    }
+  }
+
+  "spaces within a line of a module body are kept" in {
+    // only layout goes: a space between two words on one line is the author's
+    withModules(
+      "m.texish" -> "\\def ab {\n  a b\n}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\ab").result shouldBe "a b"
+    }
+  }
+
+  "a space typed at the end of a one-line module body is kept" in {
+    // usfm's \usfmfr ends its body with a deliberate space before the closing brace; only a line break is layout
+    withModules(
+      "m.texish" -> "\\def r t {\\t }\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\r{x}y").result shouldBe "x y"
+    }
+  }
+
   "an environment's begin/end code defined in a module also drops isolated newlines" in {
     withModules(
       "m.texish" -> "\\newenvironment e {a\nb}{c\nd}\n",

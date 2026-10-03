@@ -110,20 +110,43 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
   // the distance from the glyph's origin to the right edge of its ink (x-bearing + ink width). Returns a number
   // for \set / \calc, so a drawing can size itself to a real glyph rather than a guessed constant — the music
   // package reads a notehead's width this way to seat a stem on its right edge whatever the music font.
+  //
+  // \glyphheight and \glyphdepth are its vertical companions, with the same three arguments: how far the glyph's
+  // ink reaches above its baseline, and how far below it (0 for a glyph that sits on the baseline). Together they
+  // let a drawing seat a glyph against something else by the glyph's real extent rather than by numbers copied
+  // from one font's metadata, so it stays right when the font is changed.
+  def glyphMetric(name: String, measure: TextExtents => Double): Unit =
+    proc.registerPrimitive(
+      name,
+      new Primitive {
+        def execute(proc: Processor, pos: CharReader): Unit =
+          val face = Value.display(proc.evalArgumentExpr(pos))
+          val size = num1(proc, pos)
+          val cp   = num1(proc, pos).toInt
+          val font = t.makeFont(face, size, Set.empty[String])
+          val rf   = font.renderFont.asInstanceOf[t.RenderFont]
+          val ext  = t.glyphExtents(rf, t.glyphIndex(rf, cp))
+          // Through valueResult, so what is typeset is the value's own display: a Double's toString writes a
+          // measured 6 as "6.0", where every other numeric primitive writes "6".
+          valueResult(proc, Value.Num(measure(ext)))
+      },
+    )
+  // Extents follow the usual raster convention, y growing downward: yBearing is the (negative) offset from the
+  // baseline to the ink's top, and height the ink's full height.
+  glyphMetric("glyphwidth", ext => ext.xBearing + ext.width)
+  glyphMetric("glyphheight", ext => math.max(0.0, -ext.yBearing))
+  glyphMetric("glyphdepth", ext => math.max(0.0, ext.height + ext.yBearing))
+
+  // \char{codepoint} - the character with that Unicode codepoint, set as text in the current font exactly as if it
+  // had been typed. For a character that is awkward or impossible to type in source — a private-use music symbol,
+  // a combining mark — so it can be set inside ordinary text and boxes, measured with them, and kerned like them.
   proc.registerPrimitive(
-    "glyphwidth",
+    "char",
     new Primitive {
       def execute(proc: Processor, pos: CharReader): Unit =
-        val face = Value.display(proc.evalArgumentExpr(pos))
-        val size = num1(proc, pos)
-        val cp   = num1(proc, pos).toInt
-        val font = t.makeFont(face, size, Set.empty[String])
-        val rf   = font.renderFont.asInstanceOf[t.RenderFont]
-        val ext  = t.glyphExtents(rf, t.glyphIndex(rf, cp))
-        val w    = ext.xBearing + ext.width
-        // Through valueResult, so what is typeset is the value's own display: a Double's toString writes a
-        // measured 6 as "6.0", where every other numeric primitive writes "6".
-        valueResult(proc, Value.Num(w))
+        val cp = num1(proc, pos).toInt
+        if !Character.isValidCodePoint(cp) then handler.error(s"\\char: $cp is not a Unicode codepoint", pos)
+        else handler.text(String(Character.toChars(cp)))
     },
   )
 
