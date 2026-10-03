@@ -33,6 +33,7 @@ class MusicTests extends AnyFreeSpec with Matchers:
   private val AccentBelow   = 0xe4a1
   private val StaccatoBelow = 0xe4a3
   private val Fermata       = 0xe4c0
+  private val DynP          = 0xe520
   private val DynM          = 0xe521
   private val DynF          = 0xe522
 
@@ -272,6 +273,25 @@ class MusicTests extends AnyFreeSpec with Matchers:
     ops("( c d e )").count(_.isInstanceOf[PictureOp.CurveTo]) shouldBe 1
   }
 
+  "a slur goes under the notes when every stem is up, and over them when one points down" in {
+    // the arc's lowest/highest control point is its peak; compare it with the staff
+    def peakY(o: Vector[PictureOp]): Double =
+      o.collect { case PictureOp.CurveTo(_, y1, _, _, _, _) => y1 }.head
+    peakY(ops("( c d e )")) should be < 30.0  // c d e stem up: the arc bows below the bottom line
+    peakY(ops("( c' d' e' )")) should be > 62.0 // c' d' e' stem down: the arc bows above the top line
+    peakY(ops("( b8 g8 )")) should be > 62.0  // mixed: one down-stem sends it above
+  }
+
+  "a flagged down-stem is long enough that its flag clears the head" in {
+    // the stem of a down-stemmed eighth runs further below its head than a quarter's, which carries no flag
+    def stemLen(score: String): Double =
+      val (y0, y1) = vlines(ops(score)).head
+      math.abs(y1 - y0)
+    stemLen("c'8") should be > stemLen("c'4")
+    stemLen("c'16") should be > stemLen("c'8")
+    stemLen("c8") shouldBe stemLen("c4") // an up-stem flag curls away from the head; its stem is unchanged
+  }
+
   "a tie joins two notes with a curve" in {
     ops("c c").count(_.isInstanceOf[PictureOp.CurveTo]) shouldBe 0
     ops("c- c").count(_.isInstanceOf[PictureOp.CurveTo]) shouldBe 1
@@ -282,6 +302,44 @@ class MusicTests extends AnyFreeSpec with Matchers:
     dyn.map(_._1) shouldBe Vector(DynM, DynF) // mezzo then forte, in writing order
     dyn.foreach((_, _, y) => y should be < 30.0) // below the bottom staff line at y=30
     dyn(0)._2 should be < dyn(1)._2 // laid out left to right
+  }
+
+  "the dynamics lane drops to clear low notes" in {
+    def dynY(score: String): Double =
+      glyphs(ops(score)).filter((cp, _, _) => cp == DynP).head._3
+    // a high note leaves the lane where it always sat; middle C's ledger line (y=22) pushes it further down
+    dynY("!p g'") shouldBe (30.0 - 2.6 * 8) +- 0.001
+    dynY("!p c") should be < dynY("!p g'")
+    // the letter's top (1.1 staff spaces above its baseline for p) clears the head below the ledger line
+    (22.0 - 4.0) - (dynY("!p c") + 1.1 * 8) should be > 4.0
+    // and the picture grows to hold it: the lane stays above the picture's bottom edge
+    dynY("!p c") - 0.6 * 8 should be > 0.0
+  }
+
+  "lyrics move below a lowered dynamics lane" in {
+    val o   = opsRaw("\\lyrics{one}\\score{!p c}")
+    val dyn = glyphs(o).filter((cp, _, _) => cp == DynP).head._3
+    val lyr = texts(o).head._2
+    lyr should be < dyn - 0.6 * 8 // the syllable's baseline is below the p's descender
+  }
+
+  "a b or # in a chord name is drawn as a flat or sharp sign from the music font" in {
+    val CsymFlat  = 0xed60
+    val CsymSharp = 0xed62
+    val o         = opsRaw("\\score{\"Bbm7\" c \"F#\" d \"G7b9\" e}")
+    val signs     = glyphs(o).filter((cp, _, _) => cp == CsymFlat || cp == CsymSharp).map(_._1)
+    signs shouldBe Vector(CsymFlat, CsymSharp, CsymFlat)
+    glyphs(opsRaw("\\score{\"Am7\" c}")).filter((cp, _, _) => cp == CsymFlat || cp == CsymSharp) shouldBe empty
+  }
+
+  "a chord extension is raised and smaller, the root and a slash bass are not" in {
+    val ts = texts(opsRaw("\\score{\"G7/B\" c}"))
+    ts should have size 3 // G, 7, /B
+    val Vector(root, ext, bass) = ts
+    ext._2 should be > root._2  // raised
+    bass._2 shouldBe root._2    // back on the baseline
+    ext._1 should be > root._1
+    bass._1 should be > ext._1
   }
 
   "hairpins open the way they are written" in {
@@ -367,10 +425,68 @@ class MusicTests extends AnyFreeSpec with Matchers:
     (xs(2) - xs(1)) shouldBe 22.0 +- 0.001
   }
 
-  "a score inside a line adds nothing beside its picture, with or without lyrics" in {
+  "a score inside a line adds nothing beside its picture, with or without lyrics or chords" in {
     // everything \score does before its picture runs in the surrounding mode, so a stray source space there would
     // sit beside the score in a \centerline and push it off centre; the box around it must be the picture exactly
-    for src <- Seq("\\hbox{\\score{c d}}", "\\hbox{\\lyrics{Wonderfully marvellously}\\score{c d}}") do
+    for src <- Seq(
+        "\\hbox{\\score{c d}}",
+        "\\hbox{\\lyrics{Wonderfully marvellously}\\score{c d}}",
+        "\\hbox{\\score{\"Gsus4\" c \"Am7\" d}}",
+      )
+    do
       val t = run(src)
       t.hboxes.map(_.width) should contain(t.pictures.head.width)
+  }
+
+  "a chord name is set above the staff, starting at its note's head" in {
+    val o  = opsRaw("\\score{\"G\" c d \"C\" e}")
+    val ts = texts(o)
+    val hs = heads(o)
+    ts should have size 2
+    ts.foreach((_, y, _) => y should be > 62.0) // above the top staff line
+    ts(0)._1 shouldBe hs(0)._2 +- 0.001 // G over c
+    ts(1)._1 shouldBe hs(2)._2 +- 0.001 // C over e, the note after its token
+  }
+
+  "a chord token takes no room on the staff" in {
+    // short names: the notes keep the fixed advance and the score is as wide as without them
+    val o  = run("\\score{\"G\" c \"C\" d}").pictures.head
+    val xs = heads(o.displayList).map(_._2)
+    (xs(1) - xs(0)) shouldBe 22.0 +- 0.001
+    o.width shouldBe run("\\score{c d}").pictures.head.width +- 0.001
+    heads(o.displayList) shouldBe heads(ops("c d"))
+  }
+
+  "a chord name wider than the advance pushes the next chord along" in {
+    // a name is several pieces (G, then the raised sus4); the first name's right edge is that of its last piece
+    val o      = opsRaw("\\score{\"Gsus4\" c \"Cmaj7\" d}")
+    val second = heads(o)(1)._2 // the second name starts at its note's head
+    val right  = texts(o).filter(_._1 < second).map((x, _, w) => x + w).max
+    (second - right) shouldBe 8.0 +- 0.001 // exactly musicchordgap between the names
+    // but a wide name followed by a plain note leaves that note at the fixed advance
+    val xs = heads(opsRaw("\\score{\"Gsus4\" c d \"C\" e}")).map(_._2)
+    (xs(1) - xs(0)) shouldBe 22.0 +- 0.001
+  }
+
+  "a chord name can sit over a rest, and one with no note after it is not drawn" in {
+    val o = opsRaw("\\score{\"F\" r4 c}")
+    texts(o) should have size 1
+    texts(opsRaw("\\score{c \"G\"}")) shouldBe empty
+  }
+
+  "chords and lyrics share a score: names above, syllables below" in {
+    val o  = opsRaw("\\lyrics{one two}\\score{\"G\" c \"C\" d}")
+    val ts = texts(o)
+    ts should have size 4
+    ts.count(_._2 > 62.0) shouldBe 2
+    ts.count(_._2 < 30.0) shouldBe 2
+  }
+
+  "a score with chords reserves room above the staff; one without keeps its height" in {
+    val plain = run("\\score{c d}").pictures.head
+    val chord = run("\\score{\"G\" c d}").pictures.head
+    chord.ascent should be > plain.ascent // a picture's height is its ascent
+    // \score{c d} before and after a chord score is the same height: the lane is reserved per score
+    run("\\score{c d}\\score{\"G\" c d}\\score{c d}").pictures.map(_.ascent) shouldBe
+      Seq(plain.ascent, chord.ascent, plain.ascent)
   }

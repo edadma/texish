@@ -35,8 +35,18 @@
 // Syllables are space-separated and taken by the notes in order (rests take none). A `--` between two syllables
 // joins them as one word, drawn with a hyphen centred in the gap; a `_` gives its note no syllable. Each syllable
 // is centred under its note, and a note is moved further from the next when the two syllables need the room — so
-// a long word spreads the music out rather than running into its neighbour. A score without \lyrics is spaced
-// exactly as before, every note musicnote from the last.
+// a long word spreads the music out rather than running into its neighbour.
+//
+// A chord name in double quotes, written as its own token, is set above the staff over the note or rest that
+// follows it — the convention of ABC notation and of a lead sheet:
+//
+//     \score{"G" g4 a4 b4 "C" c'4 | "D7" d'2 "G" g2}
+//
+// The name starts at the left edge of its note's head and is set as a lead sheet sets it: the root (with a b or
+// # written as a flat or sharp sign, and a minor m) at full size, the extension raised and smaller (G7, Cmaj7,
+// Gsus4, G7b9), a slash bass at full size (F/C, Eb/Bb). Where a chord name is wider than the room to the next
+// chord, its note is moved along to make that room. Otherwise notes stand musicnote apart, more where an
+// accidental needs room to clear the note before it.
 //
 // Heads, clefs, flags, rests, accidentals and time-signature figures are real engraved glyphs from the music
 // font, stamped with \fontglyph; stems, beams, staff lines, ledger lines and barlines are ruled. Since one
@@ -59,6 +69,13 @@
 \set musiclyricsize {11}   // the lyric font size
 \set musiclyricgap {6}     // the least white space left between two neighbouring syllables
 \set musiclyricdrop {26}   // how far the lyric baseline sits below the bottom staff line
+\set musicchordfont {lmroman} // the text face chord names are set in
+\set musicchordsize {12}   // the chord-name font size
+\set musicchordweight {bold} // the chord-name weight (regular, bold, …)
+\set musicchordgap {8}     // the least white space left between two neighbouring chord names
+\set musicchordsupscale {0.7}  // a chord extension's size (the 7 of G7), as a fraction of the chord size
+\set musicchordsupraise {0.4}  // how far an extension is raised, as a fraction of the chord size
+\set musicchordrise {22}   // how far the chord-name baseline sits above the top staff line
 // No score has lyrics until \lyrics arms the next one.
 \global\set msLyrArmed {0}
 // c d e f g a b -> 0..6, the diatonic step of each pitch class within an octave.
@@ -99,6 +116,8 @@
 \set cpAccNatural {57953}       // U+E261 accidentalNatural
 \set cpAccSharp {57954}         // U+E262 accidentalSharp
 \set cpTimeDigitBase {57472}    // U+E080 timeSig0; a digit d is at cpTimeDigitBase + d
+\set cpCsymFlat {60768}         // U+ED60 csymAccidentalFlat — the chord-symbol flat, standing on the baseline
+\set cpCsymSharp {60770}        // U+ED62 csymAccidentalSharp
 
 // Articulations come in an above and a below form; the package picks the one on the side away from the stem.
 \set cpAccentAbove {58528}      // U+E4A0 articAccentAbove
@@ -125,119 +144,112 @@
 // list left to right. The bottom staff line sits at y = musicpad; a pitch's vertical position is half the
 // staff space per diatonic step above it. The font size fs is four staff spaces, so a SMuFL glyph's own
 // units (where the staff space is a quarter of the em) come out one staff space = musicgap points.
-// Everything \score does before its \picture runs in whatever mode surrounds the call — inside a \centerline, a
-// line of text — where an indented or blank source line in a package body becomes a space beside the score. So
-// that part of the body is written flush left, with `//` lines rather than blank ones between its sections; the
-// picture body that follows discards stray text and is indented as usual.
 \def score notes {{
-\set msList {\seq{\notes}}
-\set msN {\size{\msList}}
-\set g {\musicgap}
-\set fs {\calc{4 * g}}
-//
-// The notehead's actual width (points), read from the chosen music font, so a stem seats on the head's right
-// edge and a ledger line spans the head whatever font is in use — no per-font constants. (A black and a half
-// notehead share a width, so one measurement covers every stemmed note.)
-\set msHeadW {\glyphwidth{\musicfont}{\fs}{\cpNoteBlack}}
-\set msStemHalf {\calc{0.06 * g}}
-// The head is tilted, so its right tip (where an up-stem joins) sits a little above centre and its left tip a
-// little below. Pull the stem foot this far toward that tip so the stem meets the head instead of starting at
-// dead centre and overshooting past the tip — a small amount that reads well across SMuFL fonts.
-\set msStemAttach {\calc{0.2 * g}}
-//
-// Lyrics armed by \lyrics are planned before anything is placed: musicLyricPlan measures every syllable and
-// works out how far each note must advance (msSylAdv), how much wider that makes the score (msLyrExtra), how far
-// right the first note must sit for its syllable to stay inside the picture (msLyrLead), and how much room the
-// lyric line needs below the staff (msLyrRoom). All four are 0 for a score without lyrics, which leaves its
-// layout untouched. \lyrics arms only the next score, so the flag is cleared here. The plan's own macros are
-// indented, so it runs inside a discarded box where their stray spaces land nowhere; every result it keeps is a
-// global, so nothing is lost with the box.
-\set msLyr {\msLyrArmed}
-\global\set msLyrArmed {0}
-\global\set msLyrExtra {0}
-\global\set msLyrLead {0}
-\global\set msLyrRoom {0}
-\if {\= {\msLyr} {1}}\setbox msLyrScratch \hbox{\musicLyricPlan}\fi
-\set lyExtra {\msLyrExtra}
-\set lyLead {\msLyrLead}
-\set lyRoom {\msLyrRoom}
-//
-\set msBottom {\calc{max(musicpad, lyRoom)}}
-\set msTop {\calc{msBottom + 4 * g}}
-\set msMiddle {\calc{msBottom + 2 * g}}
-\set msH {\calc{msBottom + 4 * g + musicpad}}
-//
-// The leading area runs clef → key signature → time signature → notes, each taking the room it needs so the
-// next clears it. The key signature is |musickey| accidentals at 0.9 staff-space steps; the time signature a
-// column wide enough for its longest row of figures. The first note sits past all of it (but no closer than
-// musicleft, which still controls the spacing when there is neither a key nor a time signature).
-\set msKeyX {\calc{4.8 * g}}
-\set msKeyN {\calc{musickey}}
-\if {\< {\msKeyN} {0}} \set msKeyN {\calc{0 - msKeyN}} \fi
-// Key signatures are placed for treble, bass and alto; the tenor C-clef's layout is irregular, so it reserves
-// no key-signature column (a key set with the tenor clef is simply not drawn).
-\if {\= {\musicclef} {tenor}} \set msKeyN {0} \fi
-\set msKeyW {\calc{msKeyN * 0.9 * g}}
-\set msTimeX {\calc{msKeyX + msKeyW + 0.5 * g}}
-\set msTimeW {0}
-\if {\size{\cat{\musictimenum}{}}}
-\set msTimeLen {\size{\cat{\musictimenum}{}}}
-\if {\< {\msTimeLen} {\size{\cat{\musictimeden}{}}}} \set msTimeLen {\size{\cat{\musictimeden}{}}} \fi
-\set msTimeW {\calc{msTimeLen * 1.4 * g}}
-\fi
-\set msFirstX {\calc{msTimeX + msTimeW + 0.6 * g}}
-\if {\< {\msFirstX} {\musicleft}} \set msFirstX {\musicleft} \fi
-\if {\< {\msFirstX} {\lyLead}} \set msFirstX {\lyLead} \fi
-//
-\set msW {\calc{msFirstX + msN * musicnote + 12 + lyExtra}}
-// The lyric baseline, a fixed drop below the bottom staff line.
-\set msLyrY {\calc{msBottom - musiclyricdrop}}
-\global\set msLyrJ {1}
-\global\set msLyrHyPend {0}
-\global\set msLyrPrevR {0}
-//
-// msBeam is 1 while a [ … ] run is open. The beam itself is not flat: when a run opens, its line (a start
-// height and a per-note slope) is measured from the run's pitches, so the beam tilts to follow the melody.
-\set msBeam {0}
-//
-// Spanning expression marks carry state across the walk: a slur ( … ) records its first and last note, a
-// hairpin its opening x and kind, and a tie its first note so the curve can be closed at the second. A hairpin
-// or dynamic token only sets a flag; the next note records the x for it, since msX reads cleanly inside a note
-// but not in the bracketing tokens at the walk's own recursion level.
-\global\set msSlur {0}
-\global\set msSlurStarted {0}
-\global\set msSlurXst {0}
-\global\set msSlurYst {0}
-\global\set msSlurXen {0}
-\global\set msSlurYen {0}
-\global\set msTie {0}
-\global\set msTiePending {0}
-\global\set msTieXop {0}
-\global\set msTieY {0}
-\global\set msTieDrawXop {0}
-\global\set msTieDrawY {0}
-\global\set msTieDrawOn {0}
-\global\set msNoteLeft {0}
-\global\set msHair {0}
-\global\set msHairArmed {0}
-\global\set msHairXst {0}
-\global\set msDynArmed {0}
-\global\set dynX {0}
-\global\set msNoteX {0}
-// The lane below the staff where dynamics and hairpins are drawn, clear of the notes.
-\set msUnder {\calc{msBottom - 2.6 * g}}
-//
-// The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff, G2
-// (index -10) on the bass, F3 (-4) on the alto, D3 (-6) on the tenor. A note's index is msOct*7 + its pitch
-// class; its step above the bottom line is that index minus this base, and half the staff space per step
-// gives its height. Middle C sits on the middle line in the alto clef, the fourth line in the tenor.
-\set msBase {2}
-\if {\= {\musicclef} {bass}} \set msBase {-10}
-\else \if {\= {\musicclef} {alto}} \set msBase {-4}
-\else \if {\= {\musicclef} {tenor}} \set msBase {-6}
-\fi\fi\fi
-//
-\picture width:{\msW} height:{\msH} {
+  \set msList {\seq{\notes}}
+  \set g {\musicgap}
+  \set fs {\calc{4 * g}}
+  // The notehead's actual width (points), read from the chosen music font, so a stem seats on the head's right
+  // edge and a ledger line spans the head whatever font is in use — no per-font constants. (A black and a half
+  // notehead share a width, so one measurement covers every stemmed note.)
+  \set msHeadW {\glyphwidth{\musicfont}{\fs}{\cpNoteBlack}}
+  \set msStemHalf {\calc{0.06 * g}}
+  // The head is tilted, so its right tip (where an up-stem joins) sits a little above centre and its left tip a
+  // little below. Pull the stem foot this far toward that tip so the stem meets the head instead of starting at
+  // dead centre and overshooting past the tip — a small amount that reads well across SMuFL fonts.
+  \set msStemAttach {\calc{0.2 * g}}
+
+  // The diatonic step of the bottom line, used to place every pitch: E4 (index 2) on the treble staff, G2
+  // (index -10) on the bass, F3 (-4) on the alto, D3 (-6) on the tenor. A note's index is msOct*7 + its pitch
+  // class; its step above the bottom line is that index minus this base, and half the staff space per step
+  // gives its height. Middle C sits on the middle line in the alto clef, the fourth line in the tenor.
+  \set msBase {2}
+  \if {\= {\musicclef} {bass}} \set msBase {-10}
+  \else \if {\= {\musicclef} {alto}} \set msBase {-4}
+  \else \if {\= {\musicclef} {tenor}} \set msBase {-6}
+  \fi \fi \fi
+
+  // Lyrics armed by \lyrics are measured before anything is placed: musicLyricPlan measures every syllable and
+  // works out how far right the first note must sit for its syllable to stay inside the picture (msLyrLead), 0
+  // for a score without lyrics. \lyrics arms only the next score, so the flag is cleared here.
+  \set msLyr {\msLyrArmed}
+  \global\set msLyrArmed {0}
+  \global\set msSylN {0}
+  \global\set msLyrLead {0}
+  \if {\= {\msLyr} {1}} \musicLyricPlan \fi
+
+  // The spacing plan then walks the notes once, ahead of drawing, and records the advance every token will take
+  // (msTokAdv): musicnote unless a syllable, a chord name or an accidental needs more. It also notes whether the
+  // score names any chord (msChordOn), which reserves a lane above the staff, whether it has dynamics or hairpins
+  // (msDynOn), and how low the dynamics must sit to clear everything drawn below the staff (msDynLane, in staff
+  // spaces below the bottom line, never above the usual 2.6).
+  \musicSpacePlan
+  \set chRoom {0}
+  \if {\= {\msChordOn} {1}} \set chRoom {\calc{musicchordrise + 0.9 * musicchordsize}} \fi
+
+  // Below the staff: the dynamics, then the lyric line clear beneath them. With no dynamics the lane is the
+  // usual one and the lyrics keep their usual drop; the picture keeps the largest room any of them needs below
+  // the bottom line.
+  \set dyLane {-2.6}
+  \set dyRoom {0}
+  \if {\= {\msDynOn} {1}} \set dyLane {\msDynLane} \fi
+  \if {\= {\msDynOn} {1}} \set dyRoom {\calc{(1.1 - dyLane) * g}} \fi
+  \set lyDrop {\musiclyricdrop}
+  \if {\= {\msDynOn} {1}} \set lyDrop {\calc{max(musiclyricdrop, (1.4 - dyLane) * g + 0.8 * musiclyricsize)}} \fi
+  \set lyRoom {0}
+  \if {\= {\msLyr} {1}} \set lyRoom {\calc{lyDrop + 0.6 * musiclyricsize}} \fi
+  \set msBottom {\calc{max(musicpad, lyRoom, dyRoom)}}
+  \set msTop {\calc{msBottom + 4 * g}}
+  \set msMiddle {\calc{msBottom + 2 * g}}
+  \set msH {\calc{msBottom + 4 * g + max(musicpad, chRoom)}}
+  // The chord-name baseline, a fixed rise above the top staff line, and the lyric baseline, its drop below the
+  // bottom one.
+  \set msChordY {\calc{msTop + musicchordrise}}
+  \set msLyrY {\calc{msBottom - lyDrop}}
+
+  // The leading area runs clef → key signature → time signature → notes, each taking the room it needs so the
+  // next clears it. The key signature is |musickey| accidentals at 0.9 staff-space steps; the time signature a
+  // column wide enough for its longest row of figures. The first note sits past all of it (but no closer than
+  // musicleft, which still controls the spacing when there is neither a key nor a time signature, nor closer
+  // than its syllable needs).
+  \set msKeyX {\calc{4.8 * g}}
+  \set msKeyN {\calc{abs(musickey)}}
+  // Key signatures are placed for treble, bass and alto; the tenor C-clef's layout is irregular, so it reserves
+  // no key-signature column (a key set with the tenor clef is simply not drawn).
+  \if {\= {\musicclef} {tenor}} \set msKeyN {0} \fi
+  \set msKeyW {\calc{msKeyN * 0.9 * g}}
+  \set msTimeX {\calc{msKeyX + msKeyW + 0.5 * g}}
+  \set msTimeLen {\calc{max(\size{\cat{\musictimenum}{}}, \size{\cat{\musictimeden}{}})}}
+  \set msTimeW {\calc{msTimeLen * 1.4 * g}}
+  \set msFirstX {\calc{max(msTimeX + msTimeW + 0.6 * g, musicleft, msLyrLead)}}
+
+  // The staff runs from the clef to where the spacing plan ended: the right edge of a closing barline, or one
+  // advance past the last note. The picture is as wide as that, or as the furthest syllable or chord name if one
+  // reaches past it, with a hair to spare.
+  \set msStaffEnd {\calc{msFirstX + msPlanEnd}}
+  \set msW {\calc{max(msStaffEnd, msFirstX + msPlanInk) + 2}}
+
+  // The walk's running state. msBeam is 1 while a [ … ] run is open. The spanning expression marks: a slur ( … )
+  // records its first and last note, a tie its first note so the curve can be closed at the second, a hairpin
+  // its opening x and kind. A dynamic or hairpin token only arms its mark; the next note fixes the x for it.
+  \global\set msBeam {0}
+  \global\set msSlur {0}
+  \global\set msSlurStarted {0}
+  \global\set msSlurDown {0}
+  \global\set msTie {0}
+  \global\set msTiePending {0}
+  \global\set msHair {0}
+  \global\set msHairArmed {0}
+  \global\set msDynArmed {0}
+  \global\set msChordPend {-}
+  \global\set msTokI {0}
+  \global\set msLyrJ {1}
+  \global\set msLyrHyPend {0}
+  \global\set msDynI {0}
+  // The lane below the staff where dynamics and hairpins are drawn. Each dynamic or hairpin moves it to its own
+  // group's lane as the walk reaches it.
+  \global\set msUnder {\calc{msBottom + dyLane * g}}
+
+  \picture width:{\msW} height:{\msH} {
     \musicStaffLines
     \musicClef
     \musicKeySig
@@ -253,7 +265,7 @@
   \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
   \for\i{\range{0}{4}}{
     \set ly {\calc{msBottom + \i * g}}
-    \line{\calc{0.5 * g} \ly  \calc{msW - 10} \ly}
+    \line{\calc{0.5 * g} \ly  \msStaffEnd \ly}
   }}
 
 // Walk the note list, advancing msX. Only notes and barlines advance the cursor; the bracketing and expression
@@ -264,6 +276,9 @@
 \def musicWalk items {
   \if {\size{\items}}
     \set tok {\head{\items}}
+    // msTokI is this token's place in the list, which indexes the advance the spacing plan recorded for it.
+    \set wti {\msTokI}
+    \global\set msTokI {\calc{wti + 1}}
     \if {\= {\tok} {[}}
       \global\set msBeam {1}
       \global\set msBeamPrev {0}
@@ -273,21 +288,28 @@
     \else \if {\= {\tok} {(}}
       \global\set msSlur {1}
       \global\set msSlurStarted {0}
+      \global\set msSlurDown {0}
     \else \if {\= {\tok} {)}}
       \musicSlurEnd
       \global\set msSlur {0}
     \else \if {\= {\tok} {<}}
+      \musicDynLaneNext
       \global\set msHair {1}
       \global\set msHairArmed {1}
     \else \if {\= {\tok} {>}}
+      \musicDynLaneNext
       \global\set msHair {2}
       \global\set msHairArmed {1}
     \else \if {\= {\tok} {=}}
       \musicHairpinEnd
       \global\set msHair {0}
     \else \if {\= {\head{\cat{\tok}{}}} {!}}
+      \musicDynLaneNext
       \global\set msDynStr {\tail{\cat{\tok}{}}}
       \global\set msDynArmed {1}
+    \else \if {\= {\head{\cat{\tok}{}}} {"}}
+      \musicChordName{\tok}
+      \global\set msChordPend {\msChordStr}
     \else \if {\= {\tok} {|}}
       \musicBarThin{\msX}
       \set msX {\calc{msX + musicnote * 0.6}}
@@ -305,12 +327,13 @@
       \set msX {\calc{msX + musicnote * 0.9}}
     \else
       \musicNote{\tok}
-      // A sung note takes its syllable and the advance planned for it; a rest takes neither.
-      \global\set msLyrAdvNow {\musicnote}
+      // A sung note takes its syllable (a rest takes none), a note or rest takes the chord name waiting for it,
+      // and either moves on by the advance planned for it.
       \if {\= {\msLyr} {1}} \if {\= {\msLetter} {r}} \else \musicLyricNote \fi \fi
-      \set msAdvNow {\msLyrAdvNow}
+      \if {\= {\msChordPend} {-}} \else \musicChordDraw \fi
+      \set msAdvNow {\nth{\msTokAdv}{\msTokI}}
       \set msX {\calc{msX + msAdvNow}}
-    \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi
+    \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi \fi
     \musicWalk{\tail{\items}}
   \fi}
 
@@ -319,9 +342,9 @@
 // without its own \lyrics has none.
 \def lyrics words {\global\set msLyrToks {\seq{\words}}\global\set msLyrArmed {1}}
 
-// Plan the lyric line before the score is drawn. Three parallel lists hold one entry per syllable — its text
+// Measure the lyric line before the score is drawn. Three parallel lists hold one entry per syllable — its text
 // (msSylT, `_` for a note left without one), its width in the lyric font (msSylW), and whether a hyphen joins it
-// to the next (msSylH) — and a fourth, msSylAdv, the advance from each sung note to the next.
+// to the next (msSylH). The spacing plan reads them to decide how far each sung note advances.
 \def musicLyricPlan {
   \global\set msSylT {\seq{}}
   \global\set msSylW {\seq{}}
@@ -330,18 +353,13 @@
   \global\set msHyphW {\msLyrWv}
   \musicLyrPrep{\msLyrToks}
   \global\set msSylN {\size{\msSylT}}
-  \global\set msSylAdv {\seq{}}
-  \global\set msLyrK {1}
-  \musicLyrAdvance
   // The first syllable is centred under the first note, so the note sits far enough right that the syllable's
   // left edge stays inside the picture.
   \if {\> {\msSylN} {0}}
     \set lpW {\nth{\msSylW}{1}}
     \global\set msLyrLead {\calc{lpW / 2 - msHeadW / 2 + 2}}
   \fi
-  // Room below the bottom staff line for the drop to the lyric baseline, the descenders beneath it, and a little
-  // clearance from whatever follows the score.
-  \global\set msLyrRoom {\calc{musiclyricdrop + 0.6 * musiclyricsize}}}
+  }
 
 // The width of one piece of lyric text, set in the lyric font, into msLyrWv.
 \def musicLyrMeasure s {
@@ -366,36 +384,14 @@
     \musicLyrPrep{\tail{\toks}}
   \fi}
 
-// The advance from sung note k to the next: never less than musicnote, and otherwise enough that syllable k and
-// syllable k+1, each centred on its note, are at least musiclyricgap apart — with room for a hyphen and a second
-// gap between them when they are one word. Every point added past musicnote widens the score by that much.
-\def musicLyrAdvance {
-  \if {\<= {\msLyrK} {\msSylN}}
-    \set lk {\msLyrK}
-    \set lkn {\calc{lk + 1}}
-    \set lwb {0}
-    \if {\< {\lk} {\msSylN}} \set lwb {\nth{\msSylW}{\lkn}} \fi
-    \set lwa {\nth{\msSylW}{\lk}}
-    \set lha {\nth{\msSylH}{\lk}}
-    \set lhw {\msHyphW}
-    \set lneed {\calc{lwa / 2 + lwb / 2 + musiclyricgap + lha * (lhw + musiclyricgap)}}
-    \set ladv {\calc{max(musicnote, lneed)}}
-    \global\set msSylAdv {\append{\msSylAdv}{\ladv}}
-    \set lex {\msLyrExtra}
-    \global\set msLyrExtra {\calc{lex + ladv - musicnote}}
-    \global\set msLyrK {\calc{lk + 1}}
-    \musicLyrAdvance
-  \fi}
-
 // Set the syllable for the sung note at msX, centred under its head, and the hyphen left pending by the syllable
 // before it, centred in the gap between the two. msLyrJ counts the sung notes; notes past the last syllable get
-// none and keep the plain advance.
+// none.
 \def musicLyricNote {
   \set lj {\msLyrJ}
   \if {\<= {\lj} {\msSylN}}
     \set lsT {\nth{\msSylT}{\lj}}
     \if {\= {\lsT} {_}} \else \musicLyricSyllable \fi
-    \global\set msLyrAdvNow {\nth{\msSylAdv}{\lj}}
   \fi
   \global\set msLyrJ {\calc{lj + 1}}}
 
@@ -414,6 +410,447 @@
   \set lyB {\xb}
   \set lyHw {\msHyphW}
   \at anchor:baseline {\calc{(lyA + lyB) / 2 - lyHw / 2} \msLyrY}{{\font {\musiclyricfont} {\musiclyricsize} {regular}-}}}
+
+// ---- Chord names ---------------------------------------------------------------
+// The name inside a "…" token, quotes stripped, into msChordStr: the characters after the opening quote, up to
+// the closing one.
+\def musicChordName tok {
+  \global\set msChordStr {}
+  \musicChordChars{\tail{\cat{\tok}{}}}}
+
+\def musicChordChars s {
+  \if {\size{\s}}
+    \set cc {\head{\s}}
+    \if {\= {\cc} {"}} \else
+      \global\set msChordStr {\cat{\msChordStr}{\cc}}
+      \musicChordChars{\tail{\s}}
+    \fi
+  \fi}
+
+// A chord name is set the way a lead sheet sets it: the root (a letter, any flat `b` or sharp `#`, and a minor
+// `m`) at full size, the extension that follows (7, maj7, sus4, 9, add9, …) raised as a superscript, and a slash
+// bass (/C) at full size again — so "Am7" reads A m ⁷ and "G7/B" G ⁷ /B. musicChordParts splits a name into those
+// three parts, msChRoot, msChExt and msChBass; an `m` followed by `a` begins `maj`, an extension, not a minor.
+\def musicChordParts s {
+  \global\set msChRoot {\head{\s}}
+  \global\set msChExt {}
+  \global\set msChBass {}
+  \global\set msChPart {root}
+  \musicChordPartChars{\tail{\s}}}
+
+\def musicChordPartChars s {
+  \if {\size{\s}}
+    \set pc {\head{\s}}
+    \set pn {\head{\tail{\s}}}
+    \if {\= {\pc} {/}} \global\set msChPart {bass} \global\set msChBass {/}
+    \else \if {\= {\msChPart} {bass}} \global\set msChBass {\cat{\msChBass}{\pc}}
+    \else \if {\= {\msChPart} {root}} \musicChordRootChar{\pc}{\pn}
+    \else \global\set msChExt {\cat{\msChExt}{\pc}}
+    \fi\fi\fi
+    \musicChordPartChars{\tail{\s}}
+  \fi}
+
+\def musicChordRootChar pc pn {
+  \global\set chRootKeep {0}
+  \if {\= {\pc} {b}} \global\set chRootKeep {1} \fi
+  \if {\= {\pc} {#}} \global\set chRootKeep {1} \fi
+  \if {\= {\pc} {m}} \if {\= {\pn} {a}} \else \global\set chRootKeep {1} \fi \fi
+  \if {\= {\chRootKeep} {1}} \global\set msChRoot {\cat{\msChRoot}{\pc}}
+  \else \global\set msChPart {ext} \global\set msChExt {\cat{\msChExt}{\pc}}
+  \fi}
+
+// Lay out a chord name split by musicChordParts from x, on baseline y: the root and the bass at the chord size,
+// the extension at musicchordsupscale of it, raised by musicchordsupraise of the size. A `b` or `#` anywhere in
+// the name is a flat or sharp sign (root letters are capitals and no extension word has a b), set from the music
+// font's chord-symbol accidentals — glyphs made to stand on the baseline at about the height of a capital — since
+// a text face has neither sign. With chDraw 1 every piece is drawn; with 0 nothing is, and chX still ends at the
+// name's right edge, which is how its width is measured.
+\def musicChordLay x y {
+  \global\set chX {\x}
+  \set clSz {\musicchordsize}
+  \set clY {\y}
+  \musicChordRun{\msChRoot}{\clSz}{\clY}
+  \if {\> {\size{\msChExt}} {0}}
+    \set clSup {\calc{clSz * musicchordsupscale}}
+    \set clSupY {\calc{clY + clSz * musicchordsupraise}}
+    \musicChordRun{\msChExt}{\clSup}{\clSupY}
+  \fi
+  \if {\> {\size{\msChBass}} {0}} \musicChordRun{\msChBass}{\clSz}{\clY} \fi}
+
+// One run of chord text at size sz on baseline yy: letters gather into a buffer set as one piece of text, and
+// each sign flushes the buffer and is placed after it.
+\def musicChordRun s sz yy {
+  \global\set chBuf {}
+  \global\set chSz {\sz}
+  \global\set chY {\yy}
+  \musicChordRunChars{\s}
+  \musicChordFlush}
+
+\def musicChordRunChars s {
+  \if {\size{\s}}
+    \set rc {\head{\s}}
+    \if {\= {\rc} {b}} \musicChordFlush \musicChordSign{\cpCsymFlat}
+    \else \if {\= {\rc} {#}} \musicChordFlush \musicChordSign{\cpCsymSharp}
+    \else \global\set chBuf {\cat{\chBuf}{\rc}}
+    \fi\fi
+    \musicChordRunChars{\tail{\s}}
+  \fi}
+
+// Set the buffered letters, if any, at chX and advance past them.
+\def musicChordFlush {
+  \if {\> {\size{\chBuf}} {0}}
+    \setbox msChordBox \hbox{\musicChordText}
+    \set cfW {\wd msChordBox}
+    \if {\= {\chDraw} {1}} \at anchor:baseline {\chX \chY}{\musicChordText} \fi
+    \set cfX {\chX}
+    \global\set chX {\calc{cfX + cfW}}
+    \global\set chBuf {}
+  \fi}
+
+// The buffered letters in the chord font at the run's size. One line: it is typeset inside a box.
+\def musicChordText {{\font {\musicchordfont} {\chSz} {\musicchordweight}\chBuf}}
+
+// A flat or sharp sign at chX, sized so its three-staff-space height matches the run's capitals, with a little
+// room either side. The music font has one weight, lighter than bold text, so for a bold chord name the sign is
+// stamped twice a hair apart, which thickens its upright strokes to match the letters beside it.
+\def musicChordSign cp {
+  \set csSz {\chSz}
+  \set csFs {\calc{csSz * 0.95}}
+  \set csW {\glyphwidth{\musicfont}{\csFs}{\cp}}
+  \set csX {\chX}
+  \set csPad {\calc{csSz * 0.03}}
+  \set csEm {0}
+  \if {\= {\musicchordweight} {bold}} \set csEm {\calc{csSz * 0.035}} \fi
+  \if {\= {\chDraw} {1}} \musicChordSignDraw{\cp}{\calc{csX + csPad}}{\csFs}{\csEm} \fi
+  \global\set chX {\calc{csX + csW + csEm + 2 * csPad}}}
+
+\def musicChordSignDraw cp x fs em {
+  \fontglyph anchor:baseline {\x \chY}{\musicfont}{\fs}{\cp}
+  \if {\> {\em} {0}} \fontglyph anchor:baseline {\calc{\x + \em} \chY}{\musicfont}{\fs}{\cp} \fi}
+
+// Set the chord name waiting for this note or rest, its left edge on the head's, on the lane above the staff.
+\def musicChordDraw {
+  \fill{\musiccolor} \nostroke
+  \musicChordParts{\msChordPend}
+  \global\set chDraw {1}
+  \musicChordLay{\msX}{\msChordY}
+  \global\set msChordPend {-}}
+
+// The width of a chord name as musicChordDraw sets it, into msChordWv.
+\def musicChordMeasure s {
+  \musicChordParts{\s}
+  \global\set chDraw {0}
+  \musicChordLay{0}{0}
+  \global\set msChordWv {\chX}}
+
+// ---- The spacing plan ----------------------------------------------------------
+// One pass over the score ahead of drawing, appending to msTokAdv the advance each token will take, in token
+// order, so the drawing walk can read its own by position. Only a note or rest advances by it (barlines keep
+// their own fixed advances), and it is musicnote unless something needs more:
+//   - a sung note whose syllable and the next one, each centred on its note, would come closer than
+//     musiclyricgap — with room for a hyphen and a second gap when the two are one word;
+//   - a note or rest carrying a chord name, when the next note or rest also carries one (or the score ends) and
+//     the name is wider than the advance — it gets its width plus musicchordgap.
+// Every point added past musicnote widens the score by that much (msSpaceExtra). A score with neither lyrics
+// nor chords plans musicnote for every note, the fixed spacing it has always had.
+\def musicSpacePlan {
+  \global\set msTokAdv {\seq{}}
+  \global\set msSpaceExtra {0}
+  \global\set msChordOn {0}
+  \global\set msChordN {0}
+  \global\set spJ {1}
+  \global\set spChW {0}
+  \global\set spBeam {0}
+  \global\set spSlur {0}
+  \global\set msDynOn {0}
+  \global\set msDynLane {-2.6}
+  \global\set msDynLanes {\seq{}}
+  \global\set msDynTokGrp {\seq{}}
+  \global\set spGrpN {0}
+  \global\set spGrpOpen {0}
+  \global\set spGrpLane {-2.6}
+  \global\set spHair {0}
+  \global\set spSpan {0}
+  \global\set spSince {0}
+  \global\set spItemTop {1.1}
+  // spX follows the drawing cursor, from the first note; spEnd is where the staff should stop, and spInk the
+  // right edge of the furthest syllable or chord name.
+  \global\set spX {0}
+  \global\set spEnd {0}
+  \global\set spInk {0}
+  \global\set spPrevNote {-1}
+  \global\set spPrevAdv {0}
+  \global\set spBarSince {0}
+  \musicSpaceWalk{\msList}
+  \musicDynGroupClose
+  \global\set msPlanEnd {\spEnd}
+  \global\set msPlanInk {\spInk}}
+
+\def musicSpaceWalk items {
+  \if {\size{\items}}
+    \set st {\head{\items}}
+    \global\set spAdv {0}
+    \musicTokKind{\st}
+    \if {\= {\msKind} {chord}}
+      \musicChordName{\st}
+      \musicChordMeasure{\msChordStr}
+      \global\set spChW {\msChordWv}
+      \global\set msChordOn {1}
+      \set scn {\msChordN}
+      \global\set msChordN {\calc{scn + 1}}
+    \else \if {\= {\msKind} {note}}
+      \musicSpaceNote{\st}{\tail{\items}}
+    \else
+      \musicSpaceMark{\st}
+    \fi \fi
+    \global\set msTokAdv {\append{\msTokAdv}{\spAdv}}
+    \musicSpaceWalk{\tail{\items}}
+  \fi}
+
+// The advance for one note or rest (tok), given the tokens after it (rest).
+\def musicSpaceNote tok rest {
+  \musicParse{\tok}
+  \if {\= {\msAcc} {none}} \else \musicSpaceAcc \fi
+  \global\set spLyrNeed {0}
+  \global\set spSylW {0}
+  \if {\= {\msLyr} {1}} \if {\= {\msLetter} {r}} \else \musicSpaceSyllable \fi \fi
+  \global\set spChNeed {0}
+  \global\set spChRight {0}
+  \if {\> {\spChW} {0}} \musicSpaceChord{\rest} \fi
+  \set snL {\spLyrNeed}
+  \set snC {\spChNeed}
+  \set snA {\calc{max(musicnote, snL, snC)}}
+  \global\set spAdv {\snA}
+  \set snX {\msSpaceExtra}
+  \global\set msSpaceExtra {\calc{snX + snA - musicnote}}
+  // How far this note's syllable (centred on its head) and chord name (from its head) reach, and the cursor and
+  // staff end moving on by its advance.
+  \set snP {\spX}
+  \set snSw {\spSylW}
+  \set snCr {\spChRight}
+  \set snI {\spInk}
+  \global\set spInk {\calc{max(snI, snP + msHeadW / 2 + snSw / 2, snP + snCr)}}
+  \global\set spX {\calc{snP + snA}}
+  \global\set spEnd {\calc{snP + snA}}
+  // This note is the one an accidental on the next note would have to clear.
+  \set snTi {\size{\msTokAdv}}
+  \global\set spPrevNote {\calc{snTi + 1}}
+  \global\set spPrevAdv {\snA}
+  \global\set spBarSince {0}
+  \global\set spPrevLedger {0}
+  \if {\= {\msLetter} {r}} \else \musicSpaceLedger \fi
+  // A rest's ink sits inside the staff, so it lowers nothing, but it still counts as one of a mark's notes.
+  \global\set spLow {0}
+  \if {\= {\msLetter} {r}} \else \musicSpaceLow \fi
+  \musicDynNote}
+
+// Whether this note sits on or beyond a ledger line, into spPrevLedger, for the accidental on the note after it.
+\def musicSpaceLedger {
+  \set sgI {\mapget musicLetters {\msLetter}}
+  \set sgSt {\calc{msOct * 7 + sgI - msBase}}
+  \if {\<= {\sgSt} {-2}} \global\set spPrevLedger {1} \fi
+  \if {\>= {\sgSt} {10}} \global\set spPrevLedger {1} \fi}
+
+// An accidental is drawn to the left of its head (musicAccidental), into the gap after the note before, so that
+// gap must hold it: from the previous head's right edge, half a staff space of white, then the sign. When the
+// note before came straight before this one (no barline between — a barline makes its own room), its advance is
+// widened to fit, and everything after moves right with it.
+\def musicSpaceAcc {
+  \set saI {\mapget musicLetters {\msLetter}}
+  \set saSt {\calc{msOct * 7 + saI - msBase}}
+  \musicAccLeft{\saSt}
+  \if {\= {\spBarSince} {0}} \if {\> {\spPrevNote} {0}} \musicSpaceAccWiden \fi \fi}
+
+// The note before needs its head, its ledger line's overhang if it has one, and three-fifths of a staff space of
+// white before the sign.
+\def musicSpaceAccWiden {
+  \set swOld {\spPrevAdv}
+  \set swLeft {\msAccLeftV}
+  \set swLed {\spPrevLedger}
+  \set swNeed {\calc{msHeadW + swLed * 0.4 * g + 0.6 * g + swLeft}}
+  \set swNew {\calc{max(swOld, swNeed)}}
+  \set swD {\calc{swNew - swOld}}
+  \set swI {\spPrevNote}
+  \global\set msTokAdv {\put{\msTokAdv}{\swI}{\swNew}}
+  \set swX {\spX}
+  \set swE {\spEnd}
+  \global\set spX {\calc{swX + swD}}
+  \global\set spEnd {\calc{swE + swD}}}
+
+// The marks that matter to the plan: a beam or slur opening and closing (they decide which way stems point and
+// what hangs below the notes), and a dynamic or hairpin, which means the score needs its dynamics lane.
+\def musicSpaceMark tok {
+  \if {\= {\tok} {[}} \global\set spBeam {1} \fi
+  \if {\= {\tok} {]}} \global\set spBeam {0} \fi
+  \if {\= {\tok} {(}} \global\set spSlur {1} \fi
+  \if {\= {\tok} {)}} \global\set spSlur {0} \fi
+  \if {\= {\tok} {<}} \musicDynItem \global\set spHair {1} \musicDynTopHair \fi
+  \if {\= {\tok} {>}} \musicDynItem \global\set spHair {1} \musicDynTopHair \fi
+  \if {\= {\tok} {=}} \global\set spHair {0} \global\set spSince {0} \fi
+  \if {\= {\head{\cat{\tok}{}}} {!}} \musicDynItem \global\set spSpan {2} \musicDynTopLetters{\tail{\cat{\tok}{}}} \fi
+  \if {\= {\tok} {|}} \musicSpaceBar{0.6}{0.08} \fi
+  \if {\= {\tok} {||}} \musicSpaceBar{0.7}{0.53} \fi
+  \if {\= {\tok} {|.}} \musicSpaceBar{0.8}{0.8} \fi
+  \if {\= {\tok} {|:}} \musicSpaceBar{1.0}{1.17} \fi
+  \if {\= {\tok} {:|}} \musicSpaceBar{0.9}{1.2} \fi}
+
+// A barline in the plan, as musicWalk advances past it (adv, in musicnote) and as far right as its rules and dots
+// reach from its x (reach, in staff spaces) — where the staff ends if it closes the score.
+\def musicSpaceBar adv reach {
+  \global\set spBarSince {1}
+  \set sbX {\spX}
+  \global\set spEnd {\calc{sbX + \reach * g}}
+  \global\set spX {\calc{sbX + \adv * musicnote}}}
+
+// Dynamics and hairpins are set in groups, each on one line of its own just low enough to clear the notes it sits
+// under, as an engraver places them: a dynamic, or a hairpin, that follows the last mark's notes with at most one
+// note between joins its group (so p < f > p reads as one level line), and anything further on starts a new one.
+// A dynamic's notes are its own and the next, which its letters reach over; a hairpin's are every note it spans.
+// Each dynamic and hairpin token records its group's number in msDynTokGrp, and each group's lane — in staff
+// spaces from the bottom line, never above the usual 2.6 — is appended to msDynLanes when the group closes.
+\def musicDynItem {
+  \global\set msDynOn {1}
+  \set diNew {0}
+  \if {\= {\spGrpOpen} {0}} \set diNew {1} \fi
+  \if {\> {\spSince} {1}} \if {\= {\spHair} {0}} \set diNew {1} \fi \fi
+  \if {\= {\diNew} {1}} \musicDynGroupClose \musicDynGroupOpen \fi
+  \global\set msDynTokGrp {\append{\msDynTokGrp}{\spGrpN}}
+  \global\set spSince {0}}
+
+\def musicDynGroupOpen {
+  \set dgN {\spGrpN}
+  \global\set spGrpN {\calc{dgN + 1}}
+  \global\set spGrpOpen {1}
+  \global\set spGrpLane {-2.6}}
+
+\def musicDynGroupClose {
+  \if {\= {\spGrpOpen} {1}}
+    \global\set msDynLanes {\append{\msDynLanes}{\spGrpLane}}
+    \set dcL {\spGrpLane}
+    \set dcM {\msDynLane}
+    \global\set msDynLane {\calc{min(dcM, dcL)}}
+    \global\set spGrpOpen {0}
+  \fi}
+
+// Count this note or rest against the open group: when a hairpin is open or the last dynamic still reaches over
+// it, its lowest ink (spLow, for a note) lowers the group's lane; otherwise it is one more note since the group's
+// last mark.
+\def musicDynNote {
+  \set dnOn {0}
+  \if {\= {\spGrpOpen} {1}} \if {\= {\spHair} {1}} \set dnOn {1} \fi \fi
+  \if {\= {\spGrpOpen} {1}} \if {\> {\spSpan} {0}} \set dnOn {1} \fi \fi
+  \if {\= {\dnOn} {1}} \musicDynLower \else \musicDynSince \fi}
+
+\def musicDynLower {
+  \set dlL {\spGrpLane}
+  \set dlLow {\spLow}
+  \set dlTop {\spItemTop}
+  \global\set spGrpLane {\calc{min(dlL, dlLow - dlTop - 0.6)}}
+  \set dlS {\spSpan}
+  \global\set spSpan {\calc{max(0, dlS - 1)}}
+  \if {\= {\spSpan} {0}} \global\set spItemTop {1.1} \fi
+  \global\set spSince {0}}
+
+// How far above the lane's baseline the marks over the current note reach (spItemTop, staff spaces): a hairpin's
+// upper rule 1.1; a dynamic's letters 1.1, or 1.78 if they include the tall f. A hairpin opened while a dynamic's
+// letters still reach over a note keeps the taller of the two.
+\def musicDynTopHair {
+  \if {\= {\spSpan} {0}} \global\set spItemTop {1.1} \fi}
+
+\def musicDynTopLetters s {
+  \global\set spItemTop {1.1}
+  \musicDynTopScan{\s}}
+
+\def musicDynTopScan s {
+  \if {\size{\s}}
+    \if {\= {\head{\s}} {f}} \global\set spItemTop {1.78} \fi
+    \musicDynTopScan{\tail{\s}}
+  \fi}
+
+\def musicDynSince {
+  \set dsS {\spSince}
+  \global\set spSince {\calc{dsS + 1}}}
+
+// In the drawing walk: a dynamic or hairpin token moves msUnder to its group's lane.
+\def musicDynLaneNext {
+  \set dxI {\msDynI}
+  \global\set msDynI {\calc{dxI + 1}}
+  \set dxK {\nth{\msDynTokGrp}{\msDynI}}
+  \set dxLane {\nth{\msDynLanes}{\dxK}}
+  \set msUnder {\calc{msBottom + dxLane * g}}}
+
+// The lowest ink of this note, into spLow, in staff spaces from the bottom line: the bottom of its head; the foot
+// of a down-stem (as long as musicStem draws it); the articulations stacked under an up-stemmed note; and the slur
+// that bows under it when its stem is up. The marks over the note then keep three-fifths of a staff space clear
+// of that point (musicDynLower).
+\def musicSpaceLow {
+  \set slI {\mapget musicLetters {\msLetter}}
+  \set slSt {\calc{msOct * 7 + slI - msBase}}
+  \set slDur {\msDur}
+  \set slLow {\calc{slSt / 2 - 0.5}}
+  \set slDown {0}
+  \if {\>= {\slSt} {4}} \if {\= {\spBeam} {0}} \if {\>= {\slDur} {2}} \set slDown {1} \fi\fi\fi
+  \set slLen {3.3}
+  \if {\>= {\slDur} {8}} \set slLen {4.0} \fi
+  \if {\>= {\slDur} {16}} \set slLen {4.4} \fi
+  \if {\= {\slDown} {1}} \set slLow {\calc{min(slLow, slSt / 2 - slLen)}} \fi
+  \set slA {\msArtStacc}
+  \set slB {\msArtTen}
+  \set slC {\msArtAccent}
+  \set slD {\msArtMarc}
+  \set slArt {\calc{slA + slB + slC + slD}}
+  \if {\= {\slDown} {0}} \if {\> {\slArt} {0}} \set slLow {\calc{min(slLow, slSt / 2 - 1.1 - (slArt - 1) * 0.9 - 0.45)}} \fi\fi
+  \if {\= {\slDown} {0}} \if {\= {\spSlur} {1}} \set slLow {\calc{min(slLow, slSt / 2 - 2.9)}} \fi\fi
+  \global\set spLow {\slLow}}
+
+// The room sung note spJ needs before the next: half its syllable, half the next one's, the gap, and a hyphen
+// with a second gap when the two are one word.
+\def musicSpaceSyllable {
+  \set sk {\spJ}
+  \if {\<= {\sk} {\msSylN}}
+    \set skn {\calc{sk + 1}}
+    \set swb {0}
+    \if {\< {\sk} {\msSylN}} \set swb {\nth{\msSylW}{\skn}} \fi
+    \set swa {\nth{\msSylW}{\sk}}
+    \global\set spSylW {\swa}
+    \set sha {\nth{\msSylH}{\sk}}
+    \set shw {\msHyphW}
+    \global\set spLyrNeed {\calc{swa / 2 + swb / 2 + musiclyricgap + sha * (shw + musiclyricgap)}}
+  \fi
+  \global\set spJ {\calc{sk + 1}}}
+
+// A chord name on this note or rest: when the next note or rest also names a chord, or nothing follows, the
+// name needs its own width and the gap before the next can begin.
+\def musicSpaceChord rest {
+  \global\set spChRight {\spChW}
+  \musicNextChord{\rest}
+  \if {\= {\msNextChord} {1}}
+    \set scw {\spChW}
+    \global\set spChNeed {\calc{scw + musicchordgap}}
+  \fi
+  \global\set spChW {0}}
+
+// Whether the next note or rest in `items` carries a chord name (1 when the list ends first, since a name on the
+// last note must still fit inside the score), into msNextChord.
+\def musicNextChord items {
+  \if {\size{\items}}
+    \musicTokKind{\head{\items}}
+    \if {\= {\msKind} {chord}} \global\set msNextChord {1}
+    \else \if {\= {\msKind} {note}} \global\set msNextChord {0}
+    \else \musicNextChord{\tail{\items}}
+    \fi \fi
+  \else \global\set msNextChord {1}
+  \fi}
+
+// Classify a score token into msKind: `chord` for a "…" name, `note` for a note or rest, `mark` for everything
+// else (brackets, barlines, dynamics, hairpins), which takes no room of its own.
+\set musicNoteStarts {\map{a 1 b 1 c 1 d 1 e 1 f 1 g 1 r 1 n 1 + 1 - 1}}
+\def musicTokKind tok {
+  \set tkc {\head{\cat{\tok}{}}}
+  \global\set msKind {mark}
+  \if {\= {\tkc} {"}} \global\set msKind {chord}
+  \else \if {\= {\mapget musicNoteStarts {\tkc}} {1}} \global\set msKind {note}
+  \fi \fi}
 
 // ---- Barlines ------------------------------------------------------------------
 // The pieces every barline kind is built from: a thin rule, a thick rule, and the pair of repeat dots in the
@@ -485,6 +922,9 @@
     \set msStemUp {0}
     \if {\< {\step} {4}} \set msStemUp {1} \fi
     \if {\= {\msBeam} {1}} \set msStemUp {1} \fi
+    \set msHasStem {0}
+    \if {\>= {\msDur} {2}} \set msHasStem {1} \fi
+    \if {\= {\msBeam} {1}} \set msHasStem {1} \fi
     \musicArtic
 
     // Expression marks are tracked by updating globals once per note, here at the note's own scope where msX and
@@ -528,6 +968,17 @@
     \set slStartedn {\calc{gSlurStarted + wantStart}}
     \set slXenC {\calc{gSlurXOne + gSlur * (msX + msHeadW / 2 - gSlurXOne)}}
     \set slYenC {\calc{gSlurYOne + gSlur * (ny - gSlurYOne)}}
+    // The same two ends for a slur drawn above the run — a little over the head, or over the stem tip of an
+    // up-stemmed note — and whether any note in the run stems down, which sends the slur above.
+    \set gSlurYZeroA {\msSlurYstA}
+    \set gSlurYOneA {\msSlurYenA}
+    \set gSlurDown {\msSlurDown}
+    \set slYstA {\calc{gSlurYZeroA + wantStart * (ny + 1.1 * g + msStemUp * msHasStem * 2.6 * g - gSlurYZeroA)}}
+    \set slYenA {\calc{gSlurYOneA + gSlur * (ny + 1.1 * g + msStemUp * msHasStem * 2.6 * g - gSlurYOneA)}}
+    \set slDownN {\calc{max(gSlurDown, gSlur * msHasStem * (1 - msStemUp))}}
+    \global\set msSlurYstA {\slYstA}
+    \global\set msSlurYenA {\slYenA}
+    \global\set msSlurDown {\slDownN}
     \global\set msSlurXst {\slXstC}
     \global\set msSlurYst {\slYstC}
     \global\set msSlurStarted {\slStartedn}
@@ -582,6 +1033,12 @@
       \fontglyph anchor:baseline {\calc{msStemX - msStemHalf} \msStemTop}{\musicfont}{\fs}{\cpEighthFlagUp}
     \fi \fi
   \else
+    // A down-stem sits on the head's left, and its flag curls back up on the head's side, about three and a quarter
+    // staff spaces tall. On a plain-length stem the flag's tip runs into the head, so a flagged down-stem is
+    // lengthened until the tip stops a quarter-space short of it — further for a sixteenth's taller double flag.
+    \if {\>= {\msDur} {16}} \set msStemLen {\calc{4.4 * g}}
+    \else \if {\>= {\msDur} {8}} \set msStemLen {\calc{4.0 * g}}
+    \fi\fi
     \set msStemX {\calc{msX + msStemHalf}}
     \set msStemTop {\calc{ny - msStemLen}}
     \line{\msStemX \calc{ny - msStemAttach}  \msStemX \msStemTop}
@@ -716,14 +1173,22 @@
 \def musicAccidental {
   \if {\= {\msAcc} {none}} \else
     \fill{\musiccolor} \nostroke
-    \if {\= {\msAcc} {sharp}}
-      \fontglyph anchor:baseline {\calc{msX - 1.2 * g} \ny}{\musicfont}{\fs}{\cpAccSharp}
-    \else \if {\= {\msAcc} {flat}}
-      \fontglyph anchor:baseline {\calc{msX - 1.1 * g} \ny}{\musicfont}{\fs}{\cpAccFlat}
-    \else
-      \fontglyph anchor:baseline {\calc{msX - 0.9 * g} \ny}{\musicfont}{\fs}{\cpAccNatural}
-    \fi \fi
+    \musicAccLeft{\step}
+    \fontglyph anchor:baseline {\calc{msX - msAccLeftV} \ny}{\musicfont}{\fs}{\msAccCp}
   \fi}
+
+// How far left of its head an accidental's glyph starts (msAccLeftV, points), and which glyph it is (msAccCp): its
+// own width, read from the music font, then a quarter-space of white — and, for a note on a ledger line, the
+// ledger's overhang besides, since the sign stands clear of the ledger line rather than across it.
+\def musicAccLeft st {
+  \global\set msAccCp {\cpAccNatural}
+  \if {\= {\msAcc} {sharp}} \global\set msAccCp {\cpAccSharp} \fi
+  \if {\= {\msAcc} {flat}} \global\set msAccCp {\cpAccFlat} \fi
+  \set alW {\glyphwidth{\musicfont}{\fs}{\msAccCp}}
+  \set alLed {0}
+  \if {\<= {\st} {-2}} \set alLed {1} \fi
+  \if {\>= {\st} {10}} \set alLed {1} \fi
+  \global\set msAccLeftV {\calc{alW + 0.25 * g + alLed * 0.4 * g}}}
 
 // ---- Articulations -------------------------------------------------------------
 // The articulations parsed off the note (staccato, tenuto, accent, marcato), each on the side away from the
@@ -759,12 +1224,14 @@
   \fi}
 
 // ---- Slurs and ties ------------------------------------------------------------
-// A slur ( … ) and a tie are drawn under the notes, as a cubic arc bowing downward — clear of the up-stems that
-// most notes carry. The span endpoints are gathered in globals as the notes are walked (see musicNote): the slur
-// keeps the first and last note of the run, the tie the right edge and height of the note that opened it.
+// A slur ( … ) and a tie are drawn as a cubic arc on the side away from the stems: under the notes when every
+// stem in the run points up, as most do, and over them as soon as one points down, so the arc never cuts through
+// a stem. The span endpoints are gathered in globals as the notes are walked (see musicNote): the slur keeps the
+// first and last note of the run, on both sides, the tie the right edge and height of the note that opened it.
 
 // Draw the slur for the run just closed by ), one arc from the first note (msSlurXst) to the last (msSlurXen). The
-// globals are read into locals at this scope, then the arc is laid with control points pulled below the ends.
+// globals are read into locals at this scope, then the arc is laid with control points pulled past the ends, below
+// them or above.
 \def musicSlurEnd {
   \if {\= {\msSlurStarted} {1}}
     \nofill \stroke{\musiccolor} \linewidth{\calc{0.13 * g}}
@@ -772,10 +1239,18 @@
     \set slxHi {\msSlurXen}
     \set slyZerog {\msSlurYst}
     \set slyOneg {\msSlurYen}
+    \set slOff {-1.1}
+    \set slBow {-1.4}
+    \if {\= {\msSlurDown} {1}}
+      \set slyZerog {\msSlurYstA}
+      \set slyOneg {\msSlurYenA}
+      \set slOff {0}
+      \set slBow {1.4}
+    \fi
     \set slDx {\calc{slxHi - slxLo}}
-    \set slYlo {\calc{slyZerog - 1.1 * g}}
-    \set slYhi {\calc{slyOneg - 1.1 * g}}
-    \set slPeak {\calc{(slYlo + slYhi) / 2 - 1.4 * g}}
+    \set slYlo {\calc{slyZerog + slOff * g}}
+    \set slYhi {\calc{slyOneg + slOff * g}}
+    \set slPeak {\calc{(slYlo + slYhi) / 2 + slBow * g}}
     \path{ \moveto{\slxLo \slYlo} \curveto{\calc{slxLo + slDx * 0.25} \slPeak  \calc{slxLo + slDx * 0.75} \slPeak  \slxHi \slYhi} }
   \fi}
 

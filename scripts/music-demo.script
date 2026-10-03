@@ -245,7 +245,28 @@ opening of \italic{Amazing Grace}, in three-four time and G major.
 \set musictimeden {4}
 \bigskip
 \lyrics{A -- maz -- ing _ grace, how sweet the sound}
-\centerline{\score{d4 | g2 ( b8 g8 ) | b2 a4 | g2 e4 | d2. ||}}
+\centerline{\score{d4 | g2 ( [ b8 g8 ] ) | b2 a4 | g2 e4 | d2. ||}}
+
+\section{Chord names}
+
+A chord name in double quotes, written as its own token in the score, is set
+above the staff over the note or rest that follows it — as in ABC notation and
+on a lead sheet. The name starts at the left edge of the note's head and is set
+the way a lead sheet sets it: the root at full size, with a \mono{b} or \mono{\#}
+written as a flat or sharp sign; an extension such as \mono{7}, \mono{maj7} or
+\mono{sus4} raised and smaller; and a slash bass, \mono{F/C}, back at full size.
+A name wider than the room before the next chord moves that chord along. Here the
+same phrase, with its chords.
+
+\bigskip
+\lyrics{A -- maz -- ing _ grace, how sweet the sound}
+\centerline{\score{d4 | "G" g2 ( [ b8 g8 ] ) | "G7" b2 a4 | "C" g2 e4 | "G" d2. ||}}
+\bigskip
+
+The names a lead sheet uses most, each over its own note.
+
 \set musickey {0}
 \set musictimenum {}
 \set musictimeden {}
+\bigskip
+\centerline{\score{"C" c'4 "Am7" a4 "Dm7" d'4 "G7" g4 | "Cmaj7" c'4 "F/C" f4 "Bbm7" -b4 "Eb" -e'4 | "Gsus4" g4 "G7b9" g4 "F#m" +f4 "C" c'4 |.}}
