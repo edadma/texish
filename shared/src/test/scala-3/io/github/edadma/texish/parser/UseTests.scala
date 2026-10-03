@@ -141,6 +141,40 @@ class UseTests extends AnyFreeSpec with Matchers:
     }
   }
 
+  "under \\codesyntax every space in a module body only separates" in {
+    // the spaces around an \if's branches, inside a line, set nothing; the items of a \seq stay apart
+    withModules(
+      "m.texish" -> "\\codesyntax\n\\def ab {\n  \\if {1} a \\else b \\fi c\n}\n\\def n {\\set q {\\seq{1 2}} \\size{\\q}}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\ab").result shouldBe "ac"
+      runIn(dir.toPlatformString, "\\use{m}\\n").result shouldBe "2"
+    }
+  }
+
+  "under \\codesyntax a space meant to be set is written \\space" in {
+    withModules(
+      "m.texish" -> "\\codesyntax\n\\def ab {a \\space b}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{m}\\ab").result shouldBe "a b"
+    }
+  }
+
+  "\\codesyntax lasts only for the module that declares it" in {
+    // the second module, loaded after the first, keeps its in-line spaces
+    withModules(
+      "a.texish" -> "\\codesyntax\n\\def fa {x y}\n",
+      "b.texish" -> "\\def fb {x y}\n",
+    ) { dir =>
+      runIn(dir.toPlatformString, "\\use{a}\\use{b}\\fa|\\fb").result shouldBe "xy|x y"
+    }
+  }
+
+  "\\codesyntax outside a package is an error" in {
+    withModules() { dir =>
+      a[TexishException] should be thrownBy runIn(dir.toPlatformString, "\\codesyntax")
+    }
+  }
+
   "a space typed at the end of a one-line module body is kept" in {
     // usfm's \usfmfr ends its body with a deliberate space before the closing brace; only a line break is layout
     withModules(

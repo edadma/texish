@@ -103,6 +103,23 @@ class Processor(val handler: Handler):
   registerPrimitive("seq", SeqPrimitive)
   registerPrimitive("words", WordsPrimitive)
   registerPrimitive("message", MessagePrimitive)
+
+  // \codesyntax - declare the rest of the loading module to be code (see codeSyntax). Only a module can say it.
+  registerPrimitive(
+    "codesyntax",
+    new Primitive:
+      def execute(proc: Processor, pos: CharReader): Unit =
+        if !proc.inModuleLoad then proc.handler.error("\\codesyntax can only be used in a package (a \\use'd module)", pos)
+        else proc.codeSyntax = true,
+  )
+
+  // \space - one ordinary interword space, exactly as a typed space sets. Code that sets text under \codesyntax,
+  // where typed whitespace only separates, writes the spaces it means to set this way.
+  registerPrimitive(
+    "space",
+    new Primitive:
+      def execute(proc: Processor, pos: CharReader): Unit = proc.handler.space(),
+  )
   registerPrimitive("oklch", OklchPrimitive)
   registerPrimitive("oklchof", OklchOfPrimitive)
   registerPrimitive("range", RangePrimitive)
@@ -750,16 +767,27 @@ class Processor(val handler: Handler):
   def loadModule(content: String, dir: String): Unit =
     val saved       = handler.outputSuppressed
     val savedModule = inModuleLoad
+    val savedCode   = codeSyntax
     val minDepth    = tokenSources.size
     dirStack.push(dir)
     tokenSources.push(TokenizerSource(Tokenizer(content, activeChars)))
     handler.suppressOutput(true)
     inModuleLoad = true
+    codeSyntax = false
     try processTokensUntilDepth(minDepth)
     finally
       handler.suppressOutput(saved)
       inModuleLoad = savedModule
+      codeSyntax = savedCode
       dirStack.pop()
+
+  /** True once a module has declared `\codesyntax`, for the rest of that module's load. A macro or environment body
+    * captured then is pure code: every run of whitespace in it — a space within a line as much as a line break or a
+    * blank line — becomes a layout space, which separates what is on either side but sets nothing. So an
+    * `\if {…} \x \else \y \fi` written with ordinary spacing adds no glue beside what it produces, however it is
+    * laid out, and a space that is meant to be set is written `\space`. This is the package-code counterpart of
+    * LaTeX3's code syntax; a module that sets text from literal words in its bodies leaves it off. */
+  var codeSyntax: Boolean = false
 
   /** Filter a macro/environment body captured while a module is loading, so that the layout of package code —
     * its line breaks and its indentation — never becomes text when the macro later runs inside a paragraph or a
@@ -773,6 +801,7 @@ class Processor(val handler: Handler):
     * they are the author's. Outside module loading the body is returned unchanged. */
   def moduleBody(body: Vector[Token]): Vector[Token] =
     if !inModuleLoad then body
+    else if codeSyntax then codeBody(body)
     else
       def blank(t: Token) = t.isInstanceOf[Token.Newline] || t.isInstanceOf[Token.Space]
       val out = Vector.newBuilder[Token]
@@ -793,6 +822,24 @@ class Processor(val handler: Handler):
           out += body(i)
           i += 1
       out.result()
+
+  /** A body under `\codesyntax`: every run of whitespace becomes one layout space, and whitespace at either end of
+    * the body goes altogether. */
+  private def codeBody(body: Vector[Token]): Vector[Token] =
+    def blank(t: Token) = t.isInstanceOf[Token.Newline] || t.isInstanceOf[Token.Space]
+    val out = Vector.newBuilder[Token]
+    val n   = body.length
+    var i   = 0
+    while i < n do
+      if blank(body(i)) then
+        var j = i
+        while j < n && blank(body(j)) do j += 1
+        if i > 0 && j < n then out += Token.layoutSpace(Token.pos(body(i)))
+        i = j
+      else
+        out += body(i)
+        i += 1
+    out.result()
 
   /** Process tokens until stack depth reaches minDepth */
   private def processTokensUntilDepth(minDepth: Int): Unit =
