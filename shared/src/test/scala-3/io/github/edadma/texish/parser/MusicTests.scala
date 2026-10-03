@@ -2,7 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
-import io.github.edadma.texish.{Box, GlyphBox, HeadlessTypesetter, PictureBox, PictureOp, Typesetter}
+import io.github.edadma.texish.{Box, GlyphBox, HBox, HeadlessTypesetter, PictureBox, PictureOp, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -38,21 +38,31 @@ class MusicTests extends AnyFreeSpec with Matchers:
 
   private class Capture extends HeadlessTypesetter:
     val pictures = ArrayBuffer[PictureBox]()
+    val hboxes   = ArrayBuffer[HBox]()
     override infix def add(box: Box): Typesetter =
       box match
         case pb: PictureBox => pictures += pb
+        case hb: HBox       => hboxes += hb
         case _              =>
       super.add(box)
 
-  // Process arbitrary music source (so a test can \set config before the score) and return the first picture.
-  private def opsRaw(src: String): Vector[PictureOp] =
+  private def run(src: String): Capture =
     val t       = new Capture
     val handler = new TypesetterHandler(t)
     val proc    = new Processor(handler)
     registerTypesettingPrimitives(proc, handler)
     Console.withOut(new java.io.ByteArrayOutputStream)(proc.process(s"\\use{music}$src"))
+    t
+
+  // Process arbitrary music source (so a test can \set config before the score) and return the first picture.
+  private def opsRaw(src: String): Vector[PictureOp] =
+    val t = run(src)
     t.pictures should not be empty
     t.pictures.head.displayList
+
+  // Every score's display list, in order — for a source with more than one \score.
+  private def allOps(src: String): Vector[Vector[PictureOp]] =
+    run(src).pictures.map(_.displayList).toVector
 
   private def ops(score: String): Vector[PictureOp] =
     opsRaw(s"\\score{$score}")
@@ -80,6 +90,9 @@ class MusicTests extends AnyFreeSpec with Matchers:
             case _                        =>
         case _ =>
     out.toVector
+  // lyric text: the boxes \at places (syllables and hyphens), as (left x, baseline y, width) in drawing order
+  private def texts(o: Vector[PictureOp]): Vector[(Double, Double, Double)] =
+    o.collect { case PictureOp.Place(b: HBox, _, x, y) => (x, y, b.width) }
   // note heads: placed glyphs whose codepoint is one of the three notehead shapes
   private def heads(o: Vector[PictureOp]): Vector[(Int, Double, Double)] =
     glyphs(o).filter((cp, _, _) => cp == NoteWhole || cp == NoteHalf || cp == NoteBlack)
@@ -282,4 +295,82 @@ class MusicTests extends AnyFreeSpec with Matchers:
     dm should have size 2
     dm.map(_._1._2).distinct should have size 2 // left ends spread apart
     dm.map(_._2._2).distinct should have size 1 // right ends coincide (the point)
+  }
+
+  "lyrics set one syllable centred under each note, below the staff" in {
+    val o  = opsRaw("\\lyrics{one two three}\\score{c d e}")
+    val ts = texts(o)
+    val hs = heads(o)
+    ts should have size 3
+    ts.foreach((_, y, _) => y should be < 30.0) // below the bottom staff line
+    // every syllable's centre sits the same distance from its own head's left edge: each is centred on its note
+    val offsets = ts.zip(hs).map { case ((x, _, w), (_, hx, _)) => x + w / 2 - hx }
+    offsets.foreach(_ shouldBe offsets.head +- 0.001)
+  }
+
+  "a score without lyrics keeps the fixed advance, and \\lyrics arms only the next score" in {
+    val Vector(withLyrics, plain) =
+      allOps("\\lyrics{Wonderfully marvellously}\\score{c d}\\score{c d}")
+    texts(plain) shouldBe empty
+    val xs = heads(plain).map(_._2)
+    (xs(1) - xs(0)) shouldBe 22.0 +- 0.001
+    // and the same notes with no \lyrics at all lay out identically to that plain score
+    heads(ops("c d")) shouldBe heads(plain)
+    texts(withLyrics) should have size 2
+  }
+
+  "long syllables push their notes apart so the words do not collide" in {
+    val o  = opsRaw("\\lyrics{Wonderfully marvellously}\\score{c d}")
+    val hs = heads(o).map(_._2)
+    (hs(1) - hs(0)) should be > 22.0 // wider than the fixed advance
+    val Vector((x0, _, w0), (x1, _, _)) = texts(o)
+    (x1 - (x0 + w0)) shouldBe 6.0 +- 0.001 // exactly musiclyricgap of white space between the two words
+    // short syllables need no extra room, so the advance stays the fixed one
+    val short = heads(opsRaw("\\lyrics{a b}\\score{c d}")).map(_._2)
+    (short(1) - short(0)) shouldBe 22.0 +- 0.001
+  }
+
+  "the score widens by exactly the room the lyrics added" in {
+    val plain = run("\\score{c d e}").pictures.head.width
+    val o     = run("\\lyrics{Wonderfully marvellously a}\\score{c d e}").pictures.head
+    val hs    = heads(o.displayList).map(_._2)
+    val added = (hs(1) - hs(0) - 22.0) + (hs(2) - hs(1) - 22.0)
+    o.width shouldBe (plain + added) +- 0.001
+  }
+
+  "a -- joins two syllables with a hyphen centred between them" in {
+    val ts = texts(opsRaw("\\lyrics{de -- cid}\\score{c d}"))
+    ts should have size 3 // de, the hyphen, cid
+    val Vector(de, cid, hy) = ts // the hyphen is drawn once the syllable after it is placed
+    val gapL = hy._1 - (de._1 + de._3)
+    val gapR = cid._1 - (hy._1 + hy._3)
+    gapL shouldBe gapR +- 0.001
+    gapL should be >= 6.0 - 0.001 // a hyphenated pair keeps a full gap on each side of its hyphen
+    texts(opsRaw("\\lyrics{de cid}\\score{c d}")) should have size 2 // no -- , no hyphen
+  }
+
+  "a rest takes no syllable and _ leaves a note without one" in {
+    val o  = opsRaw("\\lyrics{one _ two}\\score{c r d e}")
+    val ts = texts(o)
+    val hs = heads(o) // the rest is not a head, so these are c, d, e
+    ts should have size 2
+    // one under c; d is skipped by _; two under e
+    val centre = (t: (Double, Double, Double)) => t._1 + t._3 / 2
+    (centre(ts(1)) - hs(2)._2) shouldBe (centre(ts(0)) - hs(0)._2) +- 0.001
+  }
+
+  "more syllables than notes are dropped, and notes past the last syllable keep the fixed advance" in {
+    texts(opsRaw("\\lyrics{a b c d}\\score{c d}")) should have size 2
+    val o  = opsRaw("\\lyrics{a}\\score{c d e}")
+    texts(o) should have size 1
+    val xs = heads(o).map(_._2)
+    (xs(2) - xs(1)) shouldBe 22.0 +- 0.001
+  }
+
+  "a score inside a line adds nothing beside its picture, with or without lyrics" in {
+    // everything \score does before its picture runs in the surrounding mode, so a stray source space there would
+    // sit beside the score in a \centerline and push it off centre; the box around it must be the picture exactly
+    for src <- Seq("\\hbox{\\score{c d}}", "\\hbox{\\lyrics{Wonderfully marvellously}\\score{c d}}") do
+      val t = run(src)
+      t.hboxes.map(_.width) should contain(t.pictures.head.width)
   }

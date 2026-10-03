@@ -229,3 +229,23 @@ one phrase set in each.
 \bigskip
 \centerline{\score{[ c8 d e f ] g2 a4 | b4 c'2 r4 | g4*; }}
 \set musicfont {bravura}
+
+\section{Lyrics}
+
+A \mono{\\lyrics\{\ldots\}} line just before a score sets words under it, one
+syllable to a note. Syllables are separated by spaces and taken by the notes in
+order; rests take none. A \mono{--} between two syllables joins them into one
+word with a hyphen, and a \mono{_} leaves a note without a syllable, so one
+syllable can be held across several notes. Each syllable is centred under its
+note, and the notes spread apart wherever two syllables need the room. Here the
+opening of \italic{Amazing Grace}, in three-four time and G major.
+
+\set musickey {1}
+\set musictimenum {3}
+\set musictimeden {4}
+\bigskip
+\lyrics{A -- maz -- ing _ grace, how sweet the sound}
+\centerline{\score{d4 | g2 ( b8 g8 ) | b2 a4 | g2 e4 | d2. ||}}
+\set musickey {0}
+\set musictimenum {}
+\set musictimeden {}
