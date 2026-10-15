@@ -101,6 +101,17 @@ class CodeTests extends AnyFreeSpec with Matchers:
     }
   }
 
+  "python" - {
+    "colours a comment and a string by their own categories" in {
+      val (t, proc) = fixture()
+      proc.process("\\set codelang {python}\n\\begin{code}\n# a note\nx = \"hi\"\n\\end{code}")
+      val theme = io.github.edadma.highlighter.Theme.OneLight
+      val lines = lineBoxes(t).map(_.boxes.map(_.asInstanceOf[CharBox]))
+      lines.head.filter(_.text.trim.nonEmpty).map(_.color).distinct shouldBe Seq(Color(theme.comment))
+      lines(1).find(_.text.contains("hi")).getOrElse(fail("no 'hi' run")).color shouldBe Color(theme.string)
+    }
+  }
+
   "sysl" - {
     "is bundled" in {
       CodeHighlight.availableLanguages should contain("sysl")

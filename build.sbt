@@ -7,7 +7,7 @@ ThisBuild / scalaVersion           := "3.10.0"
 ThisBuild / organization           := "io.github.edadma"
 ThisBuild / organizationName       := "edadma"
 ThisBuild / organizationHomepage   := Some(url("https://github.com/edadma"))
-ThisBuild / version                := "0.31.2"
+ThisBuild / version                := "0.31.3"
 ThisBuild / sonatypeCredentialHost := sonatypeCentralHost
 
 ThisBuild / publishConfiguration := publishConfiguration.value.withOverwrite(true).withChecksums(Vector.empty)
@@ -63,7 +63,7 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
       "io.github.edadma" %%% "char_reader"    % "0.1.30",
       "io.github.edadma" %%% "cross_platform" % "0.1.10",
       "io.github.edadma" %%% "path"           % "0.0.9",
-      "io.github.edadma" %%% "highlighter"    % "0.0.14",
+      "io.github.edadma" %%% "highlighter"    % "0.0.15",
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "pprint" % "0.9.6" % "test",
