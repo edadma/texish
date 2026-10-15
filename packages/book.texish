@@ -81,10 +81,15 @@
 
 // ---- Title page ----------------------------------------------------------------
 // A whole page to itself: the title, author and date set large and centred over
-// vertical fill, then ejected so the next material starts fresh. (The document
-// package's \title / \author / \date and the doctitle / docauthor / docdate macros
-// they fill are reused as-is.)
-\def maketitle {
+// vertical fill, then ejected so the next material starts fresh. The title page
+// carries no running head and no folio, as in LaTeX, though it still counts as a
+// page: the head and foot are emptied inside a group that the page ships within,
+// as \cleardoublepage does for its blank leaf. (The document package's \title /
+// \author / \date and the doctitle / docauthor / docdate macros they fill are
+// reused as-is.)
+\def maketitle {{
+  \def headline {}
+  \def footline {}
   \vfil
   \centerline{\font lmroman 24 bold \doctitle}
   \vskip 36pt
@@ -93,7 +98,7 @@
   \centerline{\font lmroman 12 regular \docdate}
   \vfil
   \eject
-}
+}}
 
 // ---- Parts ---------------------------------------------------------------------
 // A part is a page of its own: "Part <roman>" over the part title, both centred and

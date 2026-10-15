@@ -67,3 +67,18 @@ class BookTests extends AnyFreeSpec with Matchers:
     drawn should contain("i") // first front-matter folio
     drawn should contain("1") // main matter restarts at arabic one
   }
+
+  "the title page carries no folio but still counts as a page" in {
+    val drawn = render(
+      "\\title{The Title}\n\\frontmatter\n\\maketitle\n\\chapter{Preface}\nbody\n\n\\vfill\\eject",
+    )
+    drawn should contain("Title") // the title page itself is set
+    drawn should not contain "i" // the title page's own folio is not set
+    drawn should contain("ii")   // the page after it is the second front-matter page
+  }
+
+  "the title page's empty foot does not outlast it" in {
+    val drawn = render("\\title{The Title}\n\\frontmatter\n\\maketitle\nbody\n\n\\vfill\\eject\nmore\n\n\\vfill\\eject")
+    drawn should contain("ii")
+    drawn should contain("iii")
+  }

@@ -106,6 +106,15 @@ class CodeTests extends AnyFreeSpec with Matchers:
       CodeHighlight.availableLanguages should contain("sysl")
     }
 
+    "colours a string literal's quotes with the string, not as punctuation" in {
+      val (t, proc) = fixture()
+      proc.process("\\code[sysl]{print(\"Hello\")}")
+      val cbs    = lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox])
+      val string = Color(io.github.edadma.highlighter.Theme.OneLight.string)
+      cbs.filter(_.text.contains("\"")).map(_.color).distinct shouldBe Seq(string)
+      cbs.find(_.text.contains("Hello")).getOrElse(fail("no 'Hello' run")).color shouldBe string
+    }
+
     "colours a declaration keyword with the theme's keyword colour" in {
       val (t, proc) = fixture()
       proc.process("\\code[sysl]{var width = 6}")
