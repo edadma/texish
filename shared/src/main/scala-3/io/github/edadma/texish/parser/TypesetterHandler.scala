@@ -41,7 +41,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
           // A single pending newline is an interword space, but only while we are still in the paragraph it
           // was seen in (see pendingNewlineMode). A vertical command or a closing group/environment that ended
           // that paragraph makes the space stale; the new paragraph is horizontal too, so identity is the test.
-          if newlineCount == 1 && (typesetter.mode eq pendingNewlineMode) then typesetter add " "
+          if newlineCount == 1 && (typesetter.mode eq pendingNewlineMode) then interwordSpace()
           typesetter.start add s
           newlineCount = 0
           pendingNewlineMode = null
@@ -53,13 +53,17 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       // not prose); otherwise add a space unless in vertical mode (halign cells are not HorizontalMode but accept
       // spaces)
       if typesetter.mode.isInstanceOf[MathMode] || typesetter.mode.isInstanceOf[PictureMode] then ()
-      else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then
-        // A space at the very start of a paragraph — nothing on the line yet but the optional indent box — is a
-        // leading space and is discarded, so a paragraph opened by a command that emits nothing (\noindent,
-        // \indent, …) and then a space starts flush rather than one interword space in.
-        typesetter.mode match
-          case pm: ParagraphMode if !pm.hasContent => ()
-          case _                                   => typesetter.start add " "
+      else if !typesetter.mode.isInstanceOf[VerticalMode] && newlineCount == 0 then interwordSpace()
+
+  /** Set one interword space into the current mode — for a Space token, and for a single line break when the
+    * space it stands for is finally set. A space at the very start of a paragraph — nothing on the line yet but
+    * the optional indent box — is a leading space and is discarded, so a paragraph opened by a command that emits
+    * nothing (\noindent, \indent, a group, a macro argument, …) and then a space or a line break starts flush
+    * rather than one interword space in. */
+  private def interwordSpace(): Unit =
+    typesetter.mode match
+      case pm: ParagraphMode if !pm.hasContent => ()
+      case _                                   => typesetter add " "
 
   def newline(): Unit =
     if capturing then captureSink.nn.append("\n")
@@ -230,7 +234,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
       typesetter.exitMath()
       newlineCount = 0
     else
-      if !display && newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
+      if !display && newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then interwordSpace()
       newlineCount = 0
       typesetter.enterMath(display)
 
@@ -262,7 +266,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
   /** Add a Box directly to the current mode */
   def addBox(box: Box): Unit =
     if !suppressed then
-      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then typesetter add " "
+      if newlineCount == 1 && typesetter.mode.isInstanceOf[HorizontalMode] then interwordSpace()
       typesetter add box
       newlineCount = 0
 
@@ -273,7 +277,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
     * flushes that space first. With no space pending it is a no-op. */
   def flushPendingSpace(): Unit =
     if !suppressed then
-      if newlineCount == 1 && (typesetter.mode eq pendingNewlineMode) then typesetter add " "
+      if newlineCount == 1 && (typesetter.mode eq pendingNewlineMode) then interwordSpace()
       newlineCount = 0
       pendingNewlineMode = null
 
