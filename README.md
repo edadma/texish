@@ -160,7 +160,7 @@ arm64) and macOS (arm64), plus a `texish-<version>-share.tar.gz` carrying the fo
 packages and the hyphenation patterns. Unpack the tarball at the same prefix as `bin/texish` — it lays down `share/texish/` — and
 the binary finds it with no wrapper script and no environment variable.
 
-Or build it: `sbt texishCli/nativeLink` produces `cli/target/scala-3.8.4/texish-cli`. To run it
+Or build it: `sbt texishCli/nativeLink` produces `cli/target/scala-3.10.0/texish-cli`. To run it
 straight from sbt during development: `sbt "texishCli/run doc.texish"`.
 
 ## In the browser
@@ -177,7 +177,7 @@ and no fonts to download separately (the Latin Modern text and math fonts and th
 are embedded in the build).
 
 Link the browser bundle with `sbt texishJS/fullLinkJS` (produced at
-`js/target/scala-3.8.4/texish-opt/main.js`), copy it to your site, and import it. The bundle exposes
+`js/target/scala-3.10.0/texish-opt/main.js`), copy it to your site, and import it. The bundle exposes
 a `texish` object as a named export. The math entry point is `renderMath(source, container)`, where the
 source is a math fragment — `$…$` for inline, `$$…$$` for a centered display — which the source itself
 distinguishes:
@@ -220,7 +220,7 @@ platform. As a library, texish is cross-published for the JVM and Scala Native �
 build with the `%%%` operator so the right platform artifact is selected:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.31.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.31.1"
 ```
 
 That is the whole setup. There is no font tree to install and no environment variable to set. Compiled

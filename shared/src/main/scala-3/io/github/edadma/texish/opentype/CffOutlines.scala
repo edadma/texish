@@ -111,7 +111,7 @@ final class CffOutlines(data: Array[Byte], cffOffset: Int):
 
   // Local subroutines depend on the glyph's font dictionary. A plain font has one set; a CID font selects per
   // glyph through FDSelect into FDArray. Each entry here is (local-subr INDEX, its bias).
-  private val (fdSelect, fdLocals): (Array[Int], Array[(Index, Int)]) =
+  private val fdTables: (Array[Int], Array[(Index, Int)]) =
     if isCID then
       val fdArray = readIndex(cffOffset + top(1236).head.toInt)._1
       val locals = Array.tabulate(fdArray.count) { i =>
@@ -121,6 +121,8 @@ final class CffOutlines(data: Array[Byte], cffOffset: Int):
       (parseFdSelect(cffOffset + top(1237).head.toInt), locals)
     else
       (Array.empty[Int], Array(privateLocalSubrs(top)))
+
+  private val (fdSelect, fdLocals) = fdTables
 
   /** Read a font/Top DICT's Private DICT and its Local Subr INDEX, returning the subrs and their bias. */
   private def privateLocalSubrs(dict: Map[Int, Vector[Double]]): (Index, Int) =

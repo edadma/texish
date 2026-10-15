@@ -6,7 +6,7 @@ Scala.js build and rendered to SVG, with glyphs filled as vector outlines from f
 ## Build and serve
 
 ```sh
-# from the repo root — produce js/target/scala-3.8.4/texish-opt/main.js
+# from the repo root — produce js/target/scala-3.10.0/texish-opt/main.js
 sbt texishJS/fullLinkJS
 
 # serve over http (ES modules do not load from file://)

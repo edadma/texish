@@ -3,11 +3,11 @@ import xerial.sbt.Sonatype.sonatypeCentralHost
 ThisBuild / licenses               := Seq("ISC" -> url("https://opensource.org/licenses/ISC"))
 ThisBuild / versionScheme          := Some("semver-spec")
 ThisBuild / evictionErrorLevel     := Level.Warn
-ThisBuild / scalaVersion           := "3.8.4"
+ThisBuild / scalaVersion           := "3.10.0"
 ThisBuild / organization           := "io.github.edadma"
 ThisBuild / organizationName       := "edadma"
 ThisBuild / organizationHomepage   := Some(url("https://github.com/edadma"))
-ThisBuild / version                := "0.31.0"
+ThisBuild / version                := "0.31.1"
 ThisBuild / sonatypeCredentialHost := sonatypeCentralHost
 
 ThisBuild / publishConfiguration := publishConfiguration.value.withOverwrite(true).withChecksums(Vector.empty)
@@ -58,15 +58,15 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
         "-language:dynamics",
       ),
     organization := "io.github.edadma",
-    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.20" % "test",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "char_reader"    % "0.1.29",
-      "io.github.edadma" %%% "cross_platform" % "0.1.7",
-      "io.github.edadma" %%% "path"           % "0.0.6",
-      "io.github.edadma" %%% "highlighter"    % "0.0.10",
+      "io.github.edadma" %%% "char_reader"    % "0.1.30",
+      "io.github.edadma" %%% "cross_platform" % "0.1.10",
+      "io.github.edadma" %%% "path"           % "0.0.9",
+      "io.github.edadma" %%% "highlighter"    % "0.0.13",
     ),
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "pprint" % "0.9.0" % "test",
+      "com.lihaoyi" %%% "pprint" % "0.9.6" % "test",
     ),
     publishMavenStyle      := true,
     Test / publishArtifact := false,
@@ -241,9 +241,9 @@ lazy val texish = crossProject(JVMPlatform, NativePlatform)
     libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0" % "test",
   )
   .nativeSettings(
-    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % "2.7.0",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "libcairo"  % "0.0.8",
+      "io.github.edadma" %%% "libcairo"  % "0.0.9",
       "io.github.edadma" %%% "freetype"  % "0.0.7",
       "io.github.edadma" %%% "turbojpeg" % "0.0.1",
     ),
@@ -268,8 +268,8 @@ lazy val texishCli = project
         "-language:existentials",
         "-language:dynamics",
       ),
-    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.19" % "test",
-    libraryDependencies += "com.github.scopt" %%% "scopt"   % "4.1.0",
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.20" % "test",
+    libraryDependencies += "com.github.scopt" %%% "scopt"   % "4.2.0",
     publish / skip      := true,
     publishLocal / skip := true,
     // The version `texish --version` prints comes from `ThisBuild / version`, not from a literal in

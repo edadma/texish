@@ -26,7 +26,7 @@ currently built or published — see [Rendering in the Browser](/guide/browser-r
 Add texish with the `%%%` operator so sbt selects the right platform artifact:
 
 ```scala
-libraryDependencies += "io.github.edadma" %%% "texish" % "0.31.0"
+libraryDependencies += "io.github.edadma" %%% "texish" % "0.31.1"
 ```
 
 Nothing else is needed: the Latin Modern core and the standard packages are compiled into the
@@ -114,7 +114,7 @@ PNG and SVG output.
 sbt texishCli/nativeLink
 ```
 
-The binary is produced at `cli/target/scala-3.8.4/texish-cli`. A checkout already has `fonts/`,
+The binary is produced at `cli/target/scala-3.10.0/texish-cli`. A checkout already has `fonts/`,
 `packages/` and `hyphenation/` in it, so a binary run from the source tree finds the whole catalogue
 with no tarball.
 

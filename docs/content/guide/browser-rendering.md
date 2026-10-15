@@ -26,7 +26,7 @@ texish repository:
 sbt texishJS/fullLinkJS
 ```
 
-This produces `js/target/scala-3.8.4/texish-opt/main.js` (use `fastLinkJS` during
+This produces `js/target/scala-3.10.0/texish-opt/main.js` (use `fastLinkJS` during
 development — it links faster but does not optimize). Copy that `main.js` to your site and
 import it; it exposes a `texish` object as a named export.
 

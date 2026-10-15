@@ -78,7 +78,7 @@ no font source has 'fonts/NotoSerifHebrew/NotoSerifHebrew-Regular.ttf'
 sbt texishCli/nativeLink
 ```
 
-The executable is produced at `cli/target/scala-3.8.4/texish-cli`.
+The executable is produced at `cli/target/scala-3.10.0/texish-cli`.
 
 ## Links and images in PDF output
 
