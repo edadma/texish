@@ -395,8 +395,8 @@ private[parser] def registerBoxPrimitives(proc: Processor, handler: TypesetterHa
             case Some((w, h)) => pw = w; ph = h
             case None =>
               handler.error(
-                s"\\geometry: unknown paper size '$name' (letter, legal, a3, a4, a5, a6, us-trade, digest, royal, " +
-                  "crown-quarto, executive, or <width>x<height> in inches or with a unit: 6x9, 148x210mm)",
+                s"\\geometry: unknown paper size '$name' (${Typesetter.paperNames.mkString(", ")}, " +
+                  "or <width>x<height> in inches or with a unit: 6x9, 148x210mm)",
                 pos,
               )
         }

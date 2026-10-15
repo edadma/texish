@@ -19,6 +19,46 @@ final case class FragmentMetrics(width: Double, height: Double, baseline: Double
 
 object Typesetter:
 
+  /** The paper sizes the engine knows, as `(width, height)` in point space (1/72 inch, on every backend).
+    * Shared by the `\geometry` primitive and the CLI's `--paper` flag so the two never drift apart, and on the
+    * companion so the CLI can validate a name before any typesetter exists. Names are matched
+    * case-insensitively. */
+  def paperSize(name: String): Option[(Double, Double)] =
+    val in = 72.0
+    val mm = in / 25.4
+    name.trim.toLowerCase match
+      case "letter"       => Some((8.5 * in, 11 * in))
+      case "legal"        => Some((8.5 * in, 14 * in))
+      case "a3"           => Some((297 * mm, 420 * mm))
+      case "a4"           => Some((210 * mm, 297 * mm))
+      case "a5"           => Some((148 * mm, 210 * mm))
+      case "a6"           => Some((105 * mm, 148 * mm))
+      case "us-trade"     => Some((6 * in, 9 * in))
+      case "digest"       => Some((5.5 * in, 8.5 * in))
+      case "royal"        => Some((6.14 * in, 9.21 * in))
+      case "crown-quarto" => Some((7.44 * in, 9.69 * in))
+      case "executive"    => Some((7 * in, 10 * in))
+      case other          => widthByHeight(other)
+
+  /** The named sizes, for a message listing what [[paperSize]] accepts. */
+  val paperNames: Seq[String] =
+    Seq("letter", "legal", "a3", "a4", "a5", "a6", "us-trade", "digest", "royal", "crown-quarto", "executive")
+
+  private val widthByHeightPattern = """(\d+(?:\.\d+)?|\.\d+)x(\d+(?:\.\d+)?|\.\d+)(in|mm|cm|pt)?""".r
+
+  /** A sheet written as `<width>x<height>`, in inches unless a unit suffix (`in`, `mm`, `cm`, `pt`) follows —
+    * `6x9`, `5.06x7.81`, `148x210mm`. This covers every print-on-demand trim size without a table. */
+  private def widthByHeight(spec: String): Option[(Double, Double)] = spec match
+    case widthByHeightPattern(w, h, unit) =>
+      val scale = unit match
+        case "mm" => 72.0 / 25.4
+        case "cm" => 72.0 / 2.54
+        case "pt" => 1.0
+        case _    => 72.0
+      val (pw, ph) = (w.toDouble * scale, h.toDouble * scale)
+      if pw > 0 && ph > 0 then Some((pw, ph)) else None
+    case _ => None
+
   /** The texish home: a directory holding the `fonts/`, `packages/` and `hyphenation/` folders that an
     * installation ships. This
     * is `$TEXISHHOME` set programmatically, and the two are searched alike — a host that can work out where its
@@ -932,36 +972,8 @@ abstract class Typesetter:
 
   def mm: Double = cm / 10
 
-  /** The named paper sizes the engine knows, as `(width, height)` in point space. Shared by the `\geometry`
-    * primitive and the CLI's `--paper` flag so the two never drift apart. Names are matched case-insensitively. */
-  def paperSize(name: String): Option[(Double, Double)] = name.trim.toLowerCase match
-    case "letter"       => Some((8.5 * in, 11 * in))
-    case "legal"        => Some((8.5 * in, 14 * in))
-    case "a3"           => Some((297 * mm, 420 * mm))
-    case "a4"           => Some((210 * mm, 297 * mm))
-    case "a5"           => Some((148 * mm, 210 * mm))
-    case "a6"           => Some((105 * mm, 148 * mm))
-    case "us-trade"     => Some((6 * in, 9 * in))
-    case "digest"       => Some((5.5 * in, 8.5 * in))
-    case "royal"        => Some((6.14 * in, 9.21 * in))
-    case "crown-quarto" => Some((7.44 * in, 9.69 * in))
-    case "executive"    => Some((7 * in, 10 * in))
-    case other          => widthByHeight(other)
-
-  private val widthByHeightPattern = """(\d+(?:\.\d+)?|\.\d+)x(\d+(?:\.\d+)?|\.\d+)(in|mm|cm|pt)?""".r
-
-  /** A sheet written as `<width>x<height>`, in inches unless a unit suffix (`in`, `mm`, `cm`, `pt`) follows —
-    * `6x9`, `5.06x7.81`, `148x210mm`. This covers every print-on-demand trim size without a table. */
-  private def widthByHeight(spec: String): Option[(Double, Double)] = spec match
-    case widthByHeightPattern(w, h, unit) =>
-      val scale = unit match
-        case "mm" => mm
-        case "cm" => cm
-        case "pt" => pt
-        case _    => in
-      val (pw, ph) = (w.toDouble * scale, h.toDouble * scale)
-      if pw > 0 && ph > 0 then Some((pw, ph)) else None
-    case _ => None
+  /** The paper sizes the engine knows, as `(width, height)` in point space: see [[Typesetter.paperSize]]. */
+  def paperSize(name: String): Option[(Double, Double)] = Typesetter.paperSize(name)
 
   infix def get(name: String): Option[Value] = scopes.top.get(name)
 
