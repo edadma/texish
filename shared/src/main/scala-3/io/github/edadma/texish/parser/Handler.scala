@@ -84,8 +84,9 @@ trait Handler:
 
   /** Typeset the raw body of a verbatim-style environment (see [[rawEnvironment]]). The text is exactly the
     * source between `\begin{name}` and `\end{name}`, with spaces and newlines preserved; the host lays it out
-    * line for line. Only called for a `name` it claims via [[rawEnvironment]]. */
-  def rawEnvironmentBody(name: String, body: String): Unit = ()
+    * line for line. Only called for a `name` it claims via [[rawEnvironment]]. `from` is the directory of the
+    * file the environment is in, where a file the body needs (a code grammar) is looked for first. */
+  def rawEnvironmentBody(name: String, body: String, from: String): Unit = ()
 
   /** Called when a command is executed that the handler should process.
     *

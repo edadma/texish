@@ -108,7 +108,7 @@ object BeginPrimitive extends Primitive:
     // A verbatim-style environment captures its body raw, straight from the input, and the matching \end is
     // consumed by that read — so it never reaches the generic env machinery below and runs no end-code.
     if proc.handler.rawEnvironment(name) then
-      proc.handler.rawEnvironmentBody(name, proc.readRawUntilEnd(name, pos))
+      proc.handler.rawEnvironmentBody(name, proc.readRawUntilEnd(name, pos), proc.currentDir)
       return
     // A math-array environment (matrix family, \cases, aligned/split) captures its body raw and builds an array
     // box directly, the same as the brace matrix primitives — it runs no begin/end code.

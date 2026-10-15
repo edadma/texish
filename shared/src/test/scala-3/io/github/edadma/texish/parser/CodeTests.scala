@@ -2,6 +2,7 @@ package io.github.edadma.texish.parser
 
 import scala.collection.mutable.ArrayBuffer
 
+import io.github.edadma.path.Path
 import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HeadlessTypesetter, TexishException, Typesetter}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -98,6 +99,77 @@ class CodeTests extends AnyFreeSpec with Matchers:
       val (_, proc) = fixture()
       a[TexishException] should be thrownBy proc.process("\\code[nope]{x}")
     }
+  }
+
+  "sysl" - {
+    "is bundled" in {
+      CodeHighlight.availableLanguages should contain("sysl")
+    }
+
+    "colours a declaration keyword with the theme's keyword colour" in {
+      val (t, proc) = fixture()
+      proc.process("\\code[sysl]{var width = 6}")
+      val cbs = lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox])
+      cbs.find(_.text == "var").getOrElse(fail("no 'var' run")).color shouldBe Color("#a626a4")
+    }
+  }
+
+  /** A grammar that colours only the word `zap`, as a keyword: enough to tell it apart from any bundled grammar. */
+  private val zapGrammar =
+    """{"scopeName": "source.zap", "patterns": [{"match": "\\bzap\\b", "name": "keyword.control.zap"}]}"""
+
+  /** A fixture whose document directory is a fresh temp directory holding the given (name -> content) files. */
+  private def withGrammars(files: (String, String)*)(body: (Capture, Processor) => Unit): Unit =
+    val dir     = Path.createTempDirectory("texish-grammar-")
+    val written = files.map((name, content) => { val p = dir / name; p.writeText(content); p })
+    try
+      val (t, proc) = fixture()
+      proc.setBaseDir(dir.toPlatformString)
+      body(t, proc)
+    finally
+      written.foreach(p => try p.delete() catch { case _: Exception => () })
+      try dir.delete() catch { case _: Exception => () }
+
+  private def colourOf(t: Capture, word: String): Color =
+    lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox]).find(_.text == word).getOrElse(fail(s"no '$word' run")).color
+
+  "a grammar file beside the document" - {
+    "highlights a language texish does not bundle" in {
+      withGrammars("zap.tmLanguage.json" -> zapGrammar) { (t, proc) =>
+        proc.process("\\code[zap]{zap here}")
+        colourOf(t, "zap") shouldBe Color("#a626a4")
+      }
+    }
+
+    "is used by the code environment too" in {
+      withGrammars("zap.tmLanguage.json" -> zapGrammar) { (t, proc) =>
+        proc.process("\\set codelang {zap}\n\\begin{code}\nzap here\n\\end{code}")
+        colourOf(t, "zap") shouldBe Color("#a626a4")
+      }
+    }
+
+    "shadows the bundled grammar of the same name" in {
+      withGrammars("scala.tmLanguage.json" -> zapGrammar) { (t, proc) =>
+        proc.process("\\code[scala]{val zap}")
+        colourOf(t, "zap") shouldBe Color("#a626a4")
+        lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox]).exists(_.text.contains("val")) shouldBe true
+        lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox]).filter(_.text.contains("val")).map(_.color) should
+          not contain Color("#a626a4") // the bundled scala grammar would have made `val` a keyword
+      }
+    }
+
+    "that cannot be compiled is an error naming the file" in {
+      withGrammars("bad.tmLanguage.json" -> "{ not json") { (_, proc) =>
+        val e = the[TexishException] thrownBy proc.process("\\code[bad]{x}")
+        e.getMessage should include("bad.tmLanguage.json")
+      }
+    }
+  }
+
+  "an unknown language's error says where a grammar file would go" in {
+    val (_, proc) = fixture()
+    val e         = the[TexishException] thrownBy proc.process("\\code[nope]{x}")
+    e.getMessage should include("nope.tmLanguage.json")
   }
 
   "the code environment" - {

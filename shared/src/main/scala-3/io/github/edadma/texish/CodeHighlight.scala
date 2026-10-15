@@ -1,11 +1,16 @@
 package io.github.edadma.texish
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+
 import scala.collection.mutable
 
 import io.github.edadma.highlighter.{Highlighter, Theme}
+import io.github.edadma.path.Path
+import io.github.edadma.texish.parser.PlatformEnv
 
 /** The bridge from the `highlighter` library to the engine's `\code` listing: resolve a language to a TextMate
-  * grammar (from the bundled set), tokenize source through it, and turn each token into a coloured run via a
+  * grammar (a file on disk, else the bundled set), tokenize source through it, and turn each token into a coloured run via a
   * theme. The layout — stacking the coloured runs into line boxes — is the typesetter's job; this object only
   * produces the `(text, colour)` runs, one list per source line.
   */
@@ -32,19 +37,59 @@ object CodeHighlight:
   /** The languages a grammar is bundled for, sorted — used in the error message for an unknown language. */
   def availableLanguages: Seq[String] = EmbeddedGrammars.sources.keys.toSeq.sorted
 
-  // Compiling a grammar is not cheap, so each language's Highlighter (or its load error) is built once and reused.
+  // Compiling a grammar is not cheap, so each grammar's Highlighter (or its load error) is built once and reused,
+  // keyed by where the grammar came from: a file on disk by its path, a bundled one by its language name.
   private val cache = mutable.Map[String, Either[String, Highlighter]]()
 
-  /** A highlighter for a bundled language, or a Left explaining why none could be built. Only the embedded
-    * grammars are consulted; loading a document-supplied grammar file from disk is a later refinement. */
-  def forLanguage(lang: String): Either[String, Highlighter] =
-    cache.getOrElseUpdate(
-      lang,
-      EmbeddedGrammars.sources.get(lang).map(_.mkString) match
-        case Some(json) => Highlighter.fromJson(json)
-        case None =>
-          Left(s"no grammar bundled for code language '$lang' (have: ${availableLanguages.mkString(", ")})")
-    )
+  /** The grammar file for a language in the folders this installation searches, if one of them has it. The
+    * search is the one `\usehyphenation` makes for a pattern file: the directory of the file asking, the current
+    * directory, then a `grammars/` folder under [[Typesetter.home]], under `$TEXISHHOME`, and under the current
+    * directory. Guarded because a host with no working filesystem reaches for platform APIs that may be absent;
+    * there nothing is found and the bundled grammars are all there is. */
+  def grammarFile(lang: String, from: String = "."): Option[Path] =
+    try
+      val fileName = s"$lang.tmLanguage.json"
+      val home     = Option(Typesetter.home).filter(_.nonEmpty)
+      val envHome  = PlatformEnv.get("TEXISHHOME").filter(_.nonEmpty)
+      val roots =
+        List(
+          Some(Path(from)),
+          Some(Path(".")),
+          home.map(h => Path(h) / "grammars"),
+          envHome.map(h => Path(h) / "grammars"),
+          Some(Path(".") / "grammars"),
+        ).flatten
+
+      roots.map(_ / fileName).find(p => p.exists && p.isFile)
+    catch case _: Throwable => None
+
+  /** A highlighter for a language, or a Left explaining why none could be built. A grammar file found on disk by
+    * [[grammarFile]] shadows the bundled grammar of the same name, so a document can carry the grammar for a
+    * language texish does not bundle — or a newer one for a language it does — beside itself. */
+  def forLanguage(lang: String, from: String = "."): Either[String, Highlighter] =
+    grammarFile(lang, from) match
+      case Some(file) =>
+        val name = file.toPlatformString
+        cache.getOrElseUpdate(
+          name,
+          try
+            Highlighter
+              .fromJson(new String(Files.readAllBytes(Paths.get(name)), StandardCharsets.UTF_8))
+              .left
+              .map(msg => s"grammar file '$name': $msg")
+          catch case e: Exception => Left(s"cannot read grammar file '$name': ${e.getMessage}"),
+        )
+      case None =>
+        cache.getOrElseUpdate(
+          lang,
+          EmbeddedGrammars.sources.get(lang).map(_.mkString) match
+            case Some(json) => Highlighter.fromJson(json)
+            case None =>
+              Left(
+                s"no grammar bundled for code language '$lang' (have: ${availableLanguages.mkString(", ")}); " +
+                  s"a grammar file '$lang.tmLanguage.json' beside the document supplies one",
+              ),
+        )
 
   /** The theme colour for one of the highlighter's nine token categories (anything else is the theme default). */
   private def categoryColor(theme: Theme, category: String): String = category match

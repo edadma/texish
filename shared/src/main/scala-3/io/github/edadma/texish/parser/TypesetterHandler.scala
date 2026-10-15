@@ -108,25 +108,26 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
 
   /** Set the body of a raw-capture environment. `verbatim` is set line for line in the typewriter face; `code`
     * is set as a highlighted listing using the language named by the `codelang` variable. */
-  override def rawEnvironmentBody(name: String, body: String): Unit =
+  override def rawEnvironmentBody(name: String, body: String, from: String): Unit =
     if !suppressed then
       name match
-        case "code" => placeCode(varString("codelang"), body, null)
+        case "code" => placeCode(varString("codelang"), body, null, from)
         case _ =>
           // verbatim: the typewriter role of the current family, one uncoloured run per source line
           placeLines(() => typesetter.mono(), verbatimLines(body).map(line => Seq((line, typesetter.currentColor))))
 
   /** Typeset a code listing: each source line on its own output line, set in the JetBrains Mono code face with
     * leading and interior spaces preserved and no line breaking. With a `lang` the body is syntax-highlighted
-    * using that language's bundled grammar and the current code theme (`codetheme`, defaulting to a light theme
-    * that reads on a white page); with an empty `lang` it is set plain. An unknown language is an error. */
-  def placeCode(lang: String, body: String, pos: CharReader): Unit =
+    * using that language's grammar — a `lang.tmLanguage.json` found from `from` (the directory of the file
+    * asking), else the bundled one — and the current code theme (`codetheme`, defaulting to a light theme that
+    * reads on a white page); with an empty `lang` it is set plain. An unknown language is an error. */
+  def placeCode(lang: String, body: String, pos: CharReader, from: String = "."): Unit =
     if !suppressed then
       val lines = verbatimLines(body)
       val styled: Seq[Seq[(String, Color)]] =
         if lang.isEmpty then lines.map(line => Seq((line, typesetter.currentColor)))
         else
-          CodeHighlight.forLanguage(lang) match
+          CodeHighlight.forLanguage(lang, from) match
             case Right(hl) =>
               val themeName = varString("codetheme")
               val theme     = CodeHighlight.themes.getOrElse(if themeName.isEmpty then "onelight" else themeName,

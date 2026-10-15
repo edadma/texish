@@ -199,7 +199,8 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
 
   // \code[language]{raw body} - typeset a code listing. The body is read raw (so backslashes, braces and // all
   // survive), set in the JetBrains Mono code face, one source line per output line. With a [language] it is
-  // syntax-highlighted using that language's bundled TextMate grammar and the current theme (\set codetheme);
+  // syntax-highlighted using that language's TextMate grammar — a `language.tmLanguage.json` beside the document
+  // or in an installation's grammars/ folder, else the bundled one — and the current theme (\set codetheme);
   // without one it is plain. The braces in the body must balance — for code that does not, use the code
   // environment (\begin{code} … \end{code}), which reads to \end{code} and takes its language from \set codelang.
   // Like \verb, the body must be written on the input directly (read raw), not produced by a macro.
@@ -209,7 +210,7 @@ private[parser] def registerFontShapePrimitives(proc: Processor, handler: Typese
       def execute(proc: Processor, pos: CharReader): Unit =
         val lang = proc.readOptionalRawBracket().getOrElse("")
         val body = proc.readRawArgument(pos)
-        handler.placeCode(lang, body, pos)
+        handler.placeCode(lang, body, pos, proc.currentDir)
     },
   )
 

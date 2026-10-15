@@ -417,6 +417,12 @@ Both read their text raw from the input, so — like LaTeX's `\verb` — they ca
 macro. `\code` colours by the theme in `codetheme`; the `code` environment takes its language from
 `codelang`.
 
+texish bundles TextMate grammars for `bash`, `json`, `python`, `scala`, `sysl` and `texish`. Any other
+language is highlighted by putting its grammar, named `<language>.tmLanguage.json`, beside the
+document — or in a `grammars/` folder under the installation or `$TEXISHHOME`. A file found there
+shadows the bundled grammar of the same name, so a document can also carry a newer grammar than texish
+was built with. The search is the one `\usehyphenation` makes for a pattern file.
+
 ## Language
 
 These set the document's language, which decides both the hyphenation patterns the line breaker uses
