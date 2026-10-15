@@ -40,6 +40,74 @@ class GeometryTests extends AnyFreeSpec with Matchers:
     g("paperheight") shouldBe (297 * mm +- 1e-6)
   }
 
+  "every print-on-demand trim size resolves to its inch dimensions" in {
+    val trims = Seq(
+      "5x8"       -> (5.0, 8.0),
+      "5.06x7.81" -> (5.06, 7.81),
+      "5.25x8"    -> (5.25, 8.0),
+      "5.5x8.5"   -> (5.5, 8.5),
+      "6x9"       -> (6.0, 9.0),
+      "6.14x9.21" -> (6.14, 9.21),
+      "6.69x9.61" -> (6.69, 9.61),
+      "7x10"      -> (7.0, 10.0),
+      "7.44x9.69" -> (7.44, 9.69),
+      "7.5x9.25"  -> (7.5, 9.25),
+      "8x10"      -> (8.0, 10.0),
+      "8.25x6"    -> (8.25, 6.0),
+      "8.25x8.25" -> (8.25, 8.25),
+      "8.5x8.5"   -> (8.5, 8.5),
+      "8.27x11.69" -> (8.27, 11.69),
+      "8.5x11"    -> (8.5, 11.0),
+    )
+    for (name, (w, h)) <- trims do
+      val g = geom(s"\\geometry paper:$name margin:0.5in")
+      withClue(name) {
+        g("paperwidth") shouldBe (w * in +- 1e-6)
+        g("paperheight") shouldBe (h * in +- 1e-6)
+      }
+  }
+
+  "the trade names are aliases for trim sizes" in {
+    val aliases = Seq(
+      "us-trade"     -> (6.0, 9.0),
+      "digest"       -> (5.5, 8.5),
+      "royal"        -> (6.14, 9.21),
+      "crown-quarto" -> (7.44, 9.69),
+      "executive"    -> (7.0, 10.0),
+    )
+    for (name, (w, h)) <- aliases do
+      val g = geom(s"\\geometry paper:$name margin:0.5in")
+      withClue(name) {
+        g("paperwidth") shouldBe (w * in +- 1e-6)
+        g("paperheight") shouldBe (h * in +- 1e-6)
+      }
+  }
+
+  "a width-by-height sheet takes an optional unit" in {
+    val g = geom("\\geometry paper:148x210mm margin:10mm")
+    g("paperwidth") shouldBe (148 * mm +- 1e-6)
+    g("paperheight") shouldBe (210 * mm +- 1e-6)
+    val c = geom("\\geometry paper:15x20cm margin:1cm")
+    c("paperwidth") shouldBe (150 * mm +- 1e-6)
+    c("paperheight") shouldBe (200 * mm +- 1e-6)
+  }
+
+  "landscape swaps a trim size" in {
+    val g = geom("\\geometry paper:6x9 landscape:on margin:0.5in")
+    g("paperwidth") shouldBe (9 * in +- 1e-6)
+    g("paperheight") shouldBe (6 * in +- 1e-6)
+  }
+
+  "an unknown or malformed paper name is an error that lists what is accepted" in {
+    for bad <- Seq("quarto", "6x", "x9", "6x9furlong", "0x9") do
+      val e = the[TexishException] thrownBy geom(s"\\geometry paper:$bad")
+      withClue(bad) {
+        e.getMessage should include("unknown paper size")
+        e.getMessage should include("us-trade")
+        e.getMessage should include("<width>x<height>")
+      }
+  }
+
   "paper and margin compose, in any unit" in {
     val g = geom("\\geometry paper:a4 margin:2cm")
     g("hoffset") shouldBe (20 * mm +- 1e-6)

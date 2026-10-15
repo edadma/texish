@@ -934,14 +934,34 @@ abstract class Typesetter:
 
   /** The named paper sizes the engine knows, as `(width, height)` in point space. Shared by the `\geometry`
     * primitive and the CLI's `--paper` flag so the two never drift apart. Names are matched case-insensitively. */
-  def paperSize(name: String): Option[(Double, Double)] = name.toLowerCase match
-    case "letter" => Some((8.5 * in, 11 * in))
-    case "legal"  => Some((8.5 * in, 14 * in))
-    case "a3"     => Some((297 * mm, 420 * mm))
-    case "a4"     => Some((210 * mm, 297 * mm))
-    case "a5"     => Some((148 * mm, 210 * mm))
-    case "a6"     => Some((105 * mm, 148 * mm))
-    case _        => None
+  def paperSize(name: String): Option[(Double, Double)] = name.trim.toLowerCase match
+    case "letter"       => Some((8.5 * in, 11 * in))
+    case "legal"        => Some((8.5 * in, 14 * in))
+    case "a3"           => Some((297 * mm, 420 * mm))
+    case "a4"           => Some((210 * mm, 297 * mm))
+    case "a5"           => Some((148 * mm, 210 * mm))
+    case "a6"           => Some((105 * mm, 148 * mm))
+    case "us-trade"     => Some((6 * in, 9 * in))
+    case "digest"       => Some((5.5 * in, 8.5 * in))
+    case "royal"        => Some((6.14 * in, 9.21 * in))
+    case "crown-quarto" => Some((7.44 * in, 9.69 * in))
+    case "executive"    => Some((7 * in, 10 * in))
+    case other          => widthByHeight(other)
+
+  private val widthByHeightPattern = """(\d+(?:\.\d+)?|\.\d+)x(\d+(?:\.\d+)?|\.\d+)(in|mm|cm|pt)?""".r
+
+  /** A sheet written as `<width>x<height>`, in inches unless a unit suffix (`in`, `mm`, `cm`, `pt`) follows —
+    * `6x9`, `5.06x7.81`, `148x210mm`. This covers every print-on-demand trim size without a table. */
+  private def widthByHeight(spec: String): Option[(Double, Double)] = spec match
+    case widthByHeightPattern(w, h, unit) =>
+      val scale = unit match
+        case "mm" => mm
+        case "cm" => cm
+        case "pt" => pt
+        case _    => in
+      val (pw, ph) = (w.toDouble * scale, h.toDouble * scale)
+      if pw > 0 && ph > 0 then Some((pw, ph)) else None
+    case _ => None
 
   infix def get(name: String): Option[Value] = scopes.top.get(name)
 

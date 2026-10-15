@@ -482,7 +482,7 @@ the remainder, so the frame closes by construction.
 
 | Option | Effect |
 |--------|--------|
-| `paper:<name>` | a named sheet: `letter`, `legal`, `a3`, `a4`, `a5`, `a6` |
+| `paper:<name>` | a named sheet: `letter`, `legal`, `a3`, `a4`, `a5`, `a6`; the trade names `us-trade` (6x9), `digest` (5.5x8.5), `royal` (6.14x9.21), `crown-quarto` (7.44x9.69), `executive` (7x10); or any `<width>x<height>` in inches, with an optional unit suffix (`in`, `mm`, `cm`, `pt`) |
 | `paperwidth:<dim>` `paperheight:<dim>` | the sheet size explicitly |
 | `landscape:on` `portrait:on` | swap the sheet to its wider / taller orientation |
 | `margin:<dim>` | one length for all four margins (`hmargin`/`vmargin` for one axis) |
@@ -492,6 +492,10 @@ the remainder, so the frame closes by construction.
 | `headsep:` `footskip:<dim>` | the running-head and running-foot gaps |
 | `twoside:on` | print both sides: the text block is mirrored on verso (even-folio) pages |
 | `inner:` `outer:<dim>` | the horizontal margins named by their relation to the binding; either one turns `twoside` on |
+
+The `<width>x<height>` form covers the print-on-demand paperback trims (Amazon KDP, IngramSpark): `paper:5x8`,
+`paper:5.5x8.5`, `paper:6x9`, `paper:6.14x9.21`, `paper:7x10`, `paper:8.5x11` and the rest, and `paper:148x210mm`
+for a metric sheet.
 
 Example: `\geometry paper:a4 margin:2cm` or `\geometry left:2in right:1in top:1.5in bottom:1in`.
 
