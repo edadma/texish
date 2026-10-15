@@ -9,16 +9,31 @@ import io.github.edadma.highlighter.{Highlighter, Theme}
 import io.github.edadma.path.Path
 import io.github.edadma.texish.parser.PlatformEnv
 
+/** How a code listing sets one token category: its ink, and whether it takes the code face's bold cut and its
+  * italic cut. A colour theme only ever sets the ink; a theme meant for a black-and-white page leans on weight and
+  * slope instead, because there every hue prints as a grey. */
+final case class CodeStyle(color: Color, bold: Boolean = false, italic: Boolean = false)
+
+/** One run of a highlighted source line: its text and the style it is set in. */
+final case class CodeRun(text: String, style: CodeStyle):
+  def color: Color = style.color
+
 /** The bridge from the `highlighter` library to the engine's `\code` listing: resolve a language to a TextMate
-  * grammar (a file on disk, else the bundled set), tokenize source through it, and turn each token into a coloured run via a
-  * theme. The layout — stacking the coloured runs into line boxes — is the typesetter's job; this object only
-  * produces the `(text, colour)` runs, one list per source line.
+  * grammar (a file on disk, else the bundled set), tokenize source through it, and turn each token into a styled run
+  * via a theme. The layout — stacking the runs into line boxes — is the typesetter's job; this object only produces
+  * the runs, one list per source line.
   */
 object CodeHighlight:
 
-  /** The named colour themes a document may select with `\set codetheme {…}`. The light themes read on a white
-    * page (their default ink is dark); the dark themes suit a dark-background preview. */
-  val themes: Map[String, Theme] = Map(
+  /** A code theme: the style for each of the highlighter's token categories (`keyword`, `string`, `comment`,
+    * `number`, `type`, `function`, `variable`, `operator`, `punctuation`; any other category, the empty one
+    * included, is plain text). */
+  type CodeTheme = String => CodeStyle
+
+  /** The highlighter's colour themes, by the name a document selects them with. The light themes read on a white
+    * page (their default ink is dark); the dark themes suit a dark-background preview. Every category is set in the
+    * regular cut; only the ink varies. */
+  val colourThemes: Map[String, Theme] = Map(
     "onedark"          -> Theme.OneDark,
     "onelight"         -> Theme.OneLight,
     "monokai"          -> Theme.Monokai,
@@ -33,6 +48,43 @@ object CodeHighlight:
     "tokyo-night"      -> Theme.TokyoNight,
     "catppuccin-mocha" -> Theme.CatppuccinMocha,
   )
+
+  /** The lightest grey (as a fraction of white) the print theme may use: anything paler breaks up in black ink. */
+  val printLightnessLimit: Double = 0.45
+
+  /** The theme for a book printed in black ink only, where a colour theme's hues all collapse into greys that a
+    * reader cannot tell apart. It leans on what black ink can still say: weight, slope, grey, and the delimiters
+    * the source already carries.
+    *
+    *   - a keyword is bold black, so a listing's structure stands out the way it does in a printed language manual;
+    *   - a comment is italic and mid-grey — two signals, so it is still unmistakable on an installation whose
+    *     JetBrains Mono italic is absent and the cut falls back to upright;
+    *   - a string is regular dark grey, set off further by its own quotes;
+    *   - everything else — identifiers, numbers, types, operators, punctuation — is regular black. More greys
+    *     would not survive the press, and black is what reads best at a listing's small size.
+    *
+    * The lighter grey is `#666666` (40% lightness, a 60% tint of black), dark enough to hold its strokes on an
+    * uncoated black-and-white page; no grey of this theme is lighter than [[printLightnessLimit]]. */
+  val printTheme: CodeTheme =
+    val black      = Color("#000000")
+    val stringGrey = Color("#4d4d4d")
+    val remarkGrey = Color("#666666")
+
+    {
+      case "keyword" => CodeStyle(black, bold = true)
+      case "comment" => CodeStyle(remarkGrey, italic = true)
+      case "string"  => CodeStyle(stringGrey)
+      case _         => CodeStyle(black)
+    }
+
+  /** The named themes a document may select with `\set codetheme {…}`: every colour theme, plus `print` for a
+    * black-and-white interior. */
+  val themes: Map[String, CodeTheme] =
+    colourThemes.map((name, theme) => name -> ((category: String) => CodeStyle(Color(categoryColor(theme, category))))) +
+      ("print" -> printTheme)
+
+  /** The theme a listing is set in when `codetheme` is unset or names no theme. */
+  val defaultTheme: String = "onelight"
 
   /** The languages a grammar is bundled for, sorted — used in the error message for an unknown language. */
   def availableLanguages: Seq[String] = EmbeddedGrammars.sources.keys.toSeq.sorted
@@ -104,7 +156,7 @@ object CodeHighlight:
     case "punctuation" => theme.punctuation
     case _             => theme.default
 
-  /** Tokenize `code` and colour it: one list of `(text, colour)` runs per source line, with each run coloured by
-    * its token's category under `theme`. Concatenating a line's run texts reproduces that source line. */
-  def styledLines(hl: Highlighter, theme: Theme, code: String): Seq[Seq[(String, Color)]] =
-    hl.tokens(code).map(line => line.map(tok => (tok.text, Color(categoryColor(theme, hl.categoryOf(tok))))))
+  /** Tokenize `code` and style it: one list of runs per source line, each run styled by its token's category under
+    * `theme`. Concatenating a line's run texts reproduces that source line. */
+  def styledLines(hl: Highlighter, theme: CodeTheme, code: String): Seq[Seq[CodeRun]] =
+    hl.tokens(code).map(line => line.map(tok => CodeRun(tok.text, theme(hl.categoryOf(tok)))))

@@ -35,11 +35,11 @@ class CodeTests extends AnyFreeSpec with Matchers:
 
     "tokenizes a known language into coloured runs, keyword distinct from default" in {
       val Right(hl) = CodeHighlight.forLanguage("scala"): @unchecked
-      val lines     = CodeHighlight.styledLines(hl, io.github.edadma.highlighter.Theme.OneLight, "val x = 42")
+      val lines     = CodeHighlight.styledLines(hl, CodeHighlight.themes("onelight"), "val x = 42")
       lines.length shouldBe 1
-      val texts = lines.head.map(_._1).mkString
+      val texts = lines.head.map(_.text).mkString
       texts shouldBe "val x = 42" // run texts reproduce the source line
-      val colours = lines.head.filter(_._1.trim.nonEmpty).map(_._2).distinct
+      val colours = lines.head.filter(_.text.trim.nonEmpty).map(_.color).distinct
       colours.length should be > 1 // not every token is the default colour
     }
 
@@ -120,6 +120,75 @@ class CodeTests extends AnyFreeSpec with Matchers:
       proc.process("\\code[sysl]{var width = 6}")
       val cbs = lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox])
       cbs.find(_.text == "var").getOrElse(fail("no 'var' run")).color shouldBe Color("#a626a4")
+    }
+  }
+
+  "the print theme" - {
+    val source = "val s = \"hi\" // note"
+
+    def runs(theme: String): Seq[CharBox] =
+      val (t, proc) = fixture()
+      proc.process(s"\\set codetheme {$theme}\\code[scala]{$source}")
+      lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox])
+
+    def run(cbs: Seq[CharBox], text: String): CharBox =
+      cbs.find(_.text.contains(text)).getOrElse(fail(s"no run containing '$text'"))
+
+    val black = Color("#000000")
+
+    "sets a keyword in the real bold cut of the code face, in black" in {
+      val kw = run(runs("print"), "val")
+      kw.color shouldBe black
+      kw.font.typeface shouldBe "jetbrains"
+      kw.font.style should contain("bold")
+      kw.font.syntheticBold shouldBe false // JetBrains Mono's own bold, not an emboldened regular
+    }
+
+    "sets a comment in italic grey and a string in regular grey, an identifier in regular black" in {
+      val cbs     = runs("print")
+      val comment = run(cbs, "note")
+      comment.font.style should contain("italic")
+      comment.font.style should not contain "bold"
+      comment.color should not be black
+      comment.color.red shouldBe comment.color.green
+      comment.color.green shouldBe comment.color.blue
+
+      val string = run(cbs, "hi")
+      string.font.style should contain noneOf ("bold", "italic")
+      string.color should not be black
+      string.color.red shouldBe string.color.blue
+
+      val ident = cbs.find(_.text.trim == "s").getOrElse(fail("no 's' run"))
+      ident.font.style should contain noneOf ("bold", "italic")
+      ident.color shouldBe black
+
+      // keyword, identifier, string and comment are pairwise distinguishable in black ink alone
+      val looks = Seq(run(cbs, "val"), ident, string, comment).map(cb => (cb.color, cb.font.style))
+      looks.distinct.length shouldBe 4
+    }
+
+    "uses only greys no lighter than the print limit" in {
+      val categories =
+        Seq("keyword", "string", "comment", "number", "type", "function", "variable", "operator", "punctuation", "")
+      for category <- categories do
+        val c = CodeHighlight.themes("print")(category).color
+        withClue(category) {
+          c.red shouldBe c.green
+          c.green shouldBe c.blue
+          c.red should be <= CodeHighlight.printLightnessLimit
+          c.alpha shouldBe 1.0
+        }
+    }
+
+    "leaves the colour themes in the regular cut" in {
+      for name <- CodeHighlight.colourThemes.keys do
+        val styles = Seq("keyword", "string", "comment", "type", "").map(CodeHighlight.themes(name))
+        withClue(name) { styles.exists(s => s.bold || s.italic) shouldBe false }
+
+      val cbs = runs("onelight")
+      cbs.map(_.font.style.intersect(Set("bold", "italic"))).distinct shouldBe Seq(Set.empty)
+      cbs.map(_.font).distinct.length shouldBe 1 // one font for the whole line, the base listing font
+      run(cbs, "val").color shouldBe Color("#a626a4")
     }
   }
 
