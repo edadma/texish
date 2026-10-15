@@ -4,7 +4,10 @@
 //     \title{...} \author{...} \date{...}
 //
 //     \frontmatter            // lowercase-roman folios, unnumbered chapters
+//     \halftitle              // optional: the title alone, on its own leaf
 //     \maketitle
+//     \copyrightpage{...}     // optional: the title page's verso
+//     \contents
 //     \chapter{Preface} ...
 //
 //     \mainmatter             // arabic folios restarting at 1, numbered chapters
@@ -16,13 +19,26 @@
 //
 // It adds a chapter level above the article sectioning, numbers sections within
 // chapters (1.1, 1.2, ...) and figures and tables within chapters (Figure 1.1),
-// starts every chapter and part on a fresh page, puts a running chapter head at the
+// starts every chapter and part on a fresh recto, puts a running chapter head at the
 // top of each page, and switches folio style and chapter numbering between the three
 // matter divisions, exactly as the LaTeX book class does. Whatever the document
 // package already provides — emphasis, lists, quotations, floats, spacing helpers —
 // is inherited unchanged.
+//
+// A book is two-sided unless it says otherwise, as LaTeX's book class is: the text
+// block mirrors on verso pages, the folio sits in the outer corner, and every part
+// and chapter opens on a recto. A book meant to be read on a screen or printed on
+// one side of the sheet says so with \geometry twoside:off.
 
 \use{document}
+
+// ---- Two-sided by default ------------------------------------------------------
+// The package turns two-sided printing on with \geometry twoside:on, which sets the
+// `twoside` register and nothing else. A \geometry that names neither `twoside` nor
+// an `inner`/`outer` margin leaves that register as it found it, so a document's own
+// \geometry paper:a5 margin:… after \use{book} changes the page and keeps the book
+// two-sided; only one that says twoside:off makes it one-sided.
+\geometry twoside:on
 
 // ---- Chapter and part counters -------------------------------------------------
 // A chapter numbers the sections, figures and tables beneath it, so stepping it
@@ -39,8 +55,9 @@
 // *recto*: the reader turns the leaf and the division begins on the right-hand page,
 // which is what \cleardoublepage gives — an extra blank leaf inserted when the page
 // would otherwise fall on a verso. One-sided there is no such thing as a wrong side,
-// so a plain \eject is right and no blank is ever wasted. The `twoside` register is
-// set by \geometry twoside:on (or by naming an inner/outer margin).
+// so a plain \eject is right and no blank is ever wasted. \cleardoublepage inserts
+// at most one blank leaf, so however divisions follow one another no two blank pages
+// ever fall in a row.
 \def openpage {\iftwoside{\cleardoublepage}{\eject}}
 
 // ---- Matter divisions ----------------------------------------------------------
@@ -58,36 +75,72 @@
 
 \def footline {\font lmroman 10 regular \iftwoside{\ifrecto{\hss\folio}{\folio\hss}}{\hss\folio\hss}}
 
-// Each division begins on a fresh page. \frontmatter restarts the folio at i and
+// Each division begins on a fresh page — a fresh recto in a two-sided book, so a
+// division that restarts the folio at 1 puts that odd folio on a right-hand page and
+// the mirrored margins stay with the sheet. \frontmatter restarts the folio at i and
 // leaves chapters unnumbered; \mainmatter restarts arabic folios at 1 and turns
 // chapter numbers on; \backmatter keeps the running folio but unnumbers chapters
 // again (appendix-style matter is set apart by its headings, not its numbers).
 \def frontmatter {
-  \eject
+  \openpage
   \set pageno {1}
   \set chapnumbered {0}
   \def foliostyle n {\roman{\n}}
 }
 \def mainmatter {
-  \eject
+  \openpage
   \set pageno {1}
   \set chapnumbered {1}
   \def foliostyle n {\arabic{\n}}
 }
 \def backmatter {
-  \eject
+  \openpage
   \set chapnumbered {0}
 }
 
-// ---- Title page ----------------------------------------------------------------
-// A whole page to itself: the title, author and date set large and centred over
-// vertical fill, then ejected so the next material starts fresh. The title page
-// carries no running head and no folio, as in LaTeX, though it still counts as a
-// page: the head and foot are emptied inside a group that the page ships within,
-// as \cleardoublepage does for its blank leaf. (The document package's \title /
-// \author / \date and the doctitle / docauthor / docdate macros they fill are
-// reused as-is.)
-\def maketitle {{
+// ---- Opening pages -------------------------------------------------------------
+// A published book opens with up to three pages before its contents, in this order:
+//
+//     \halftitle              // recto: the title alone; its verso blank
+//     \maketitle              // recto: title, author, date
+//     \copyrightpage{...}     // the title's verso: copyright, licence, ISBN, edition
+//
+// None of them carries a running head or a folio, though each counts as a page: the
+// head and foot are emptied inside a group that the page ships within, as
+// \cleardoublepage does for its blank leaf. (The document package's \title / \author /
+// \date and the doctitle / docauthor / docdate macros they fill are reused as-is.)
+//
+// The half-title is the title alone, smaller than on the title page and set a third
+// of the way down, with no author or date. Its verso is left blank, so the title page
+// after it still falls on a recto.
+\def halftitle {
+  \openpage
+  {
+    \def headline {}
+    \def footline {}
+    \vfil
+    \centerline{\font lmroman 17 regular \doctitle}
+    \vfil
+    \vfil
+    \eject
+  }
+  \openpage
+}
+
+// The title page: the title, author and date set large and centred over vertical
+// fill, on a recto of its own.
+//
+// Its verso belongs to whatever comes next. A \copyrightpage there fills it; anything
+// else — the contents, a chapter, \mainmatter — opens on a recto of its own, and the
+// single blank leaf that inserts is the title's verso. \maketitle therefore ships no
+// blank of its own, which would only have to be taken back when a copyright page
+// follows and would be a stray empty page in a one-sided book. No arrangement of these pages puts two blank pages in a
+// row, which matters to print-on-demand services that reject a run of blanks mid-book.
+\def maketitle {
+  \openpage
+  \maketitlepage
+}
+\def maketitlepage {{
   \def headline {}
   \def footline {}
   \vfil
@@ -99,6 +152,29 @@
   \vfil
   \eject
 }}
+
+// The copyright page is the verso of the title, so it is written straight after
+// \maketitle. It takes the page's text — the copyright line, the licence, the ISBN,
+// the edition and printing — as paragraphs, and sets them small, flush left and
+// ragged right, pushed down to the foot of the page, which is where a reader expects
+// the fine print and where it stays out of the way of the title facing it. The
+// paragraph shape is set inside the group and the last paragraph ended there too,
+// since a paragraph is broken with whatever settings stand when it ends.
+\def copyrightpage t {
+  \eject
+  {
+    \def headline {}
+    \def footline {}
+    \vfill
+    \font lmroman 8 regular
+    \set baselineskip {10}
+    \set parindent {0}
+    \set parskip {5}
+    \set rightskip {0 plus 1fil}
+    \noindent \t\par
+    \eject
+  }
+}
 
 // ---- Parts ---------------------------------------------------------------------
 // A part is a page of its own: "Part <roman>" over the part title, both centred and
@@ -204,12 +280,25 @@
 \the\captionkind \thechapter.\arabic{\value \captioncounter}: \text
 }}
 
-// ---- Bibliography and index headings -------------------------------------------
-// The document package opens its reference list and its index with a \section*, the
-// top level an article has. In a book both are divisions in their own right — they sit
-// beside the chapters in the table of contents and open on a fresh page like one — so
-// each is a \chapter* here instead. The list and index themselves are inherited from
-// the document package unchanged; only the heading above them differs.
+// ---- Contents, lists, bibliography and index headings --------------------------
+// The document package opens its contents, its lists of figures and tables, its
+// reference list and its index with a \section*, the top level an article has. In a
+// book each is a division in its own right — opening on a recto like a chapter, with
+// its name in the running head — so each is a \chapter* here instead. The lists
+// themselves are inherited from the document package unchanged; only the heading
+// above them differs.
+\def contents {
+  \chapter*{\tableofcontentstitle}
+  \tableofcontents
+}
+\def listoffigs {
+  \chapter*{\listoffigurestitle}
+  \listoffigures
+}
+\def listoftabs {
+  \chapter*{\listoftablestitle}
+  \listoftables
+}
 \def bibname {Bibliography}
 \def bibheading {\chapter*{\bibname}}
 \def indexheading {\chapter*{\indextitle}}

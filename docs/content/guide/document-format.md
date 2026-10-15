@@ -318,7 +318,8 @@ its second on a verso, so a head or foot can put a folio at the outer corner of 
 `\cleardoublepage` ends the page and, if the next one would be a verso, ships a blank leaf so
 what follows opens on a recto — the page a new chapter belongs on. The leaf it inserts carries
 neither head nor folio, so it comes out genuinely blank. The `book` format opens every chapter
-and part with it when the book is two-sided, and takes the next page when it is not.
+and part with it when the book is two-sided — which a book is unless it says
+`\geometry twoside:off` — and takes the next page when it is not.
 
 Both read `pageno`, the folio a page prints rather than a count of sheets, which is the parity
 the margins are mirrored on too — so a front matter renumbered to restart at 1 keeps the
@@ -329,6 +330,59 @@ second mark stream is for: `\mark` records the division and `\submark` the subdi
 back as `firstmark` and `firstsubmark`. The `book` format marks chapters with the one and
 sections with the other, so a two-sided book names the chapter on the verso and the current
 section on the recto.
+
+## Books
+
+`\use{book}` in place of `\use{document}` gives LaTeX's `book` class: chapters above the
+sections, parts above the chapters, and the three matter divisions. `\frontmatter` numbers
+pages in lowercase roman and leaves chapters unnumbered, `\mainmatter` restarts arabic folios
+at 1 and numbers chapters, and `\backmatter` unnumbers them again while the folio runs on.
+
+**A book is two-sided by default**, as LaTeX's is: every part, chapter and matter division
+opens on a recto, the folio sits in the outer corner, and the text block mirrors on versos.
+A book that will be read on a screen or printed on one side says so:
+
+```texish
+\use{book}
+\geometry twoside:off
+```
+
+The package turns two-sided printing on with `\geometry twoside:on`, and a `\geometry` that
+names neither `twoside` nor an `inner` or `outer` margin leaves the setting alone — so a
+book's own `\geometry paper:a5 margin:18mm` changes the page and keeps it two-sided.
+
+A published book opens with up to three pages before its contents, and the package has a
+command for each:
+
+```texish
+\title{The Book of Examples}
+\author{A. N. Author}
+
+\frontmatter
+\halftitle
+\maketitle
+\copyrightpage{
+Copyright © 2026 A. N. Author. All rights reserved.
+
+ISBN 978-0-00-000000-0
+
+First edition.
+}
+\contents
+```
+
+- `\halftitle` sets the title alone, smaller than on the title page, on a recto of its own;
+  its verso is left blank.
+- `\maketitle` sets title, author and date on the next recto.
+- `\copyrightpage{…}` is the title page's verso. Its paragraphs — the copyright line, the
+  licence, the ISBN, the edition — are set small, flush left, and pushed to the foot.
+
+None of the three carries a running head or a folio, though each counts as a page. Without a
+copyright page the title's verso stays blank, because whatever follows — the contents, a
+chapter, `\mainmatter` — opens on the next recto. A recto opening inserts at most one blank
+leaf, so no arrangement of these pages leaves two blank pages in a row (print-on-demand
+services reject a run of blanks mid-book). `\contents`, `\listoffigs` and `\listoftabs` open
+like an unnumbered chapter in a book, as do the bibliography and the index.
 
 See [figures and images](/guide/figures-and-images/) for `\figure`, `\caption`, and
 centering, and [text and markup](/guide/text-and-markup/) for emphasis, code, colour, and

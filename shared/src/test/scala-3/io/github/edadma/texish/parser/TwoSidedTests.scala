@@ -123,7 +123,7 @@ class TwoSidedTests extends AnyFreeSpec with Matchers:
     }
 
     "a one-sided book wastes no leaf: the next chapter takes the next page" in {
-      val t = render("book", "\\mainmatter\n\\chapter{One}\nshort\n\\chapter{Two}\nshort")
+      val t = render("book", "\\geometry twoside:off\n\\mainmatter\n\\chapter{One}\nshort\n\\chapter{Two}\nshort")
 
       t.sheets shouldBe 2
       folios(t).map(_._1) shouldBe Seq("1", "2")
@@ -143,9 +143,12 @@ class TwoSidedTests extends AnyFreeSpec with Matchers:
     }
 
     "one-sided, the head names the chapter on every page" in {
-      val t = render("book", s"\\geometry top:60 bottom:60\n\\mainmatter\n\\chapter{Alpha}\n\\section{Beta}\n$filler")
+      val t = render(
+        "book",
+        s"\\geometry twoside:off top:60 bottom:60\n\\mainmatter\n\\chapter{Alpha}\n\\section{Beta}\n$filler",
+      )
 
-      heads(t).distinct shouldBe Seq("Alpha") // unchanged from before two-sided printing existed
+      heads(t).distinct shouldBe Seq("Alpha")
     }
 
     "two-sided, the folio sits at the outer corner of each page" in {

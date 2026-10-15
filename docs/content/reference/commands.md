@@ -32,6 +32,23 @@ nested list never disturbs the one around it. `\marginparwidth`, `\marginparsep`
 `\marginparstyle` are the margin note's measure, gap and setting; a two-sided document puts its notes
 in the outer margin.
 
+## Book structure *(format: `book`)*
+
+A `book` is two-sided by default — chapters and parts open on a recto, folios sit in the outer
+corner — and `\geometry twoside:off` makes it one-sided. A `\geometry` that does not mention
+`twoside` (or `inner`/`outer`) leaves it two-sided.
+
+| Command | Effect |
+|---------|--------|
+| `\frontmatter` `\mainmatter` `\backmatter` | open a matter division on a recto: roman folios from i and unnumbered chapters; arabic from 1 and numbered; unnumbered with the folio running on |
+| `\part{…}` `\chapter{…}` `\chapter*{…}` | a part page, a chapter opening on a recto (the starred form unnumbered and out of the contents) |
+| `\halftitle` | the title alone on a recto, no head or folio; its verso left blank |
+| `\maketitle` | the title page, on a recto, no head or folio |
+| `\copyrightpage{…}` | the title page's verso: its paragraphs set small at the foot, no head or folio |
+
+Without a `\copyrightpage` the title's verso is left blank by whatever opens next; no
+arrangement of these pages leaves two blank pages in a row.
+
 ## Citations, bibliography and index *(format)*
 
 Both resolve across passes, like every other cross-reference: an index or a citation of something the

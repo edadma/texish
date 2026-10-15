@@ -3,6 +3,10 @@
 // The book package IS the document format, so we load only it (it pulls in the
 // document package itself for emphasis, lists, quotations, floats and references).
 // Loading `document` as well would double up the sectioning machinery.
+//
+// A book is two-sided unless it says otherwise: every part and chapter opens on a
+// right-hand page, behind a blank leaf when it has to, and the folio sits in the
+// outer corner. \geometry twoside:off would make this one a one-sided book.
 \use{book}
 
 // \title / \author / \date fill the doctitle / docauthor / docdate macros that the
@@ -13,11 +17,25 @@
 
 // ===== Front matter =============================================================
 // \frontmatter restarts the folio at lowercase-roman i and leaves chapters
-// unnumbered. \maketitle then gives the title block a page of its own.
+// unnumbered. The opening pages follow as in a published book: the half-title (the
+// title alone, its verso left blank), the title page, and on the title's verso the
+// copyright page, its fine print set small at the foot. None carries a head or folio.
 \frontmatter
+\halftitle
 \maketitle
+\copyrightpage{
+Copyright © 2026 A. N. Author. All rights reserved.
 
-// A table of contents. \contents prints the "Contents" heading and replays every
+This book is a demonstration of the texish \mono{book} package. It may be copied
+and changed freely.
+
+ISBN 978-0-00-000000-0 (an example, not a real number)
+
+First edition, typeset with texish.
+}
+
+// A table of contents. \contents opens on the next recto like a chapter, prints the
+// "Contents" heading and replays every
 // numbered chapter, section and subsection collected on the first pass, each with a
 // dotted leader to the page it lands on. Because texish resolves the page numbers by
 // re-running the document until they settle, the numbers below are the real ones.
