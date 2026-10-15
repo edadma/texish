@@ -290,6 +290,21 @@ different light theme:
     print(f"hello, {name}")   # an f-string
     return len(name)}
 
+A book printed in black ink only loses every hue to a grey, so the \verb|print|
+theme speaks in weight and slope instead --- bold keywords, italic grey
+comments, grey strings. The same Scala lines, first in the default colour theme
+and then under \verb|print|, as they would go to a black-and-white page:
+
+\set codetheme {onelight}
+\code[scala]{def greet(name: String) =
+  val word = "hello"   // a string, then a comment
+  if name.isEmpty then word else s"$word, $name"}
+
+\set codetheme {print}
+\code[scala]{def greet(name: String) =
+  val word = "hello"   // a string, then a comment
+  if name.isEmpty then word else s"$word, $name"}
+
 \section {Named counters}
 
 \label{sec:counters}Every numbered thing in a document — a section, a figure, a

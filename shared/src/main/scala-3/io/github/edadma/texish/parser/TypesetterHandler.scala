@@ -1,7 +1,9 @@
 package io.github.edadma.texish.parser
 
 import io.github.edadma.char_reader.CharReader
-import io.github.edadma.texish.{Box, CharBox, CodeHighlight, Color, HBox, HorizontalMode, MathMode, MathStyle, Mode, ParagraphMode, PictureMode, Typesetter, VerticalMode}
+import scala.collection.mutable
+
+import io.github.edadma.texish.{Box, CharBox, CodeHighlight, CodeRun, CodeStyle, Font, HBox, HorizontalMode, MathMode, MathStyle, Mode, ParagraphMode, PictureMode, Typesetter, VerticalMode}
 
 /** Handler that connects the parser language layer to a Typesetter.
   *
@@ -114,7 +116,7 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
         case "code" => placeCode(varString("codelang"), body, null, from)
         case _ =>
           // verbatim: the typewriter role of the current family, one uncoloured run per source line
-          placeLines(() => typesetter.mono(), verbatimLines(body).map(line => Seq((line, typesetter.currentColor))))
+          placeLines(() => typesetter.mono(), verbatimLines(body).map(line => Seq(plainRun(line))))
 
   /** Typeset a code listing: each source line on its own output line, set in the JetBrains Mono code face with
     * leading and interior spaces preserved and no line breaking. With a `lang` the body is syntax-highlighted
@@ -124,33 +126,55 @@ class TypesetterHandler(val typesetter: Typesetter) extends Handler:
   def placeCode(lang: String, body: String, pos: CharReader, from: String = "."): Unit =
     if !suppressed then
       val lines = verbatimLines(body)
-      val styled: Seq[Seq[(String, Color)]] =
-        if lang.isEmpty then lines.map(line => Seq((line, typesetter.currentColor)))
+      val styled: Seq[Seq[CodeRun]] =
+        if lang.isEmpty then lines.map(line => Seq(plainRun(line)))
         else
           CodeHighlight.forLanguage(lang, from) match
             case Right(hl) =>
               val themeName = varString("codetheme")
-              val theme     = CodeHighlight.themes.getOrElse(if themeName.isEmpty then "onelight" else themeName,
-                                CodeHighlight.themes("onelight"))
+              val theme     = CodeHighlight.themes.getOrElse(
+                if themeName.isEmpty then CodeHighlight.defaultTheme else themeName,
+                CodeHighlight.themes(CodeHighlight.defaultTheme),
+              )
               CodeHighlight.styledLines(hl, theme, lines.mkString("\n"))
             case Left(msg) => error(msg, pos)
       placeLines(() => typesetter.typeface("jetbrains"), styled)
 
+  /** A run of unhighlighted text: the running ink, the regular cut. */
+  private def plainRun(text: String): CodeRun = CodeRun(text, CodeStyle(typesetter.currentColor))
+
   /** Stack a block of pre-styled lines onto the vertical list as fixed-line boxes: close any open paragraph,
-    * select the listing font, then add one HBox per line of coloured runs (an empty line gets a single space so
-    * it still occupies a line), and restore the running font. No line breaking — one input line is one output
-    * line; leading spaces survive because each run is set as a literal fixed-width string. */
-  private def placeLines(selectFont: () => Unit, lines: Seq[Seq[(String, Color)]]): Unit =
+    * select the listing font, then add one HBox per line of runs (an empty line gets a single space so it still
+    * occupies a line), and restore the running font. A run styled bold or italic is set in that cut of the listing
+    * font's family, at its size; where the family has no such cut the font substitution falls back to the nearest
+    * one it has. No line breaking — one input line is one output line; leading spaces survive because each run is
+    * set as a literal fixed-width string. */
+  private def placeLines(selectFont: () => Unit, lines: Seq[Seq[CodeRun]]): Unit =
     val t = typesetter
     t.paragraph() // close any open paragraph: the block rides the vertical list
     resetNewlineCount()
     val saved = t.currentFont
     selectFont()
+    val base = t.currentFont
+    val cuts = mutable.Map[(Boolean, Boolean), Font]()
+
+    def fontFor(style: CodeStyle): Font =
+      if !style.bold && !style.italic then base
+      else
+        cuts.getOrElseUpdate(
+          (style.bold, style.italic),
+          t.makeFont(
+            base.typeface,
+            base.size,
+            base.style ++ Option.when(style.bold)("bold") ++ Option.when(style.italic)("italic"),
+          ),
+        )
+
     for runs <- lines do
-      val nonEmpty = runs.filter(_._1.nonEmpty)
+      val nonEmpty = runs.filter(_.text.nonEmpty)
       val boxes: Seq[Box] =
-        if nonEmpty.isEmpty then Seq(new CharBox(t, " ", t.currentFont, t.currentColor))
-        else nonEmpty.map((text, color) => new CharBox(t, text, t.currentFont, color))
+        if nonEmpty.isEmpty then Seq(new CharBox(t, " ", base, t.currentColor))
+        else nonEmpty.map(run => new CharBox(t, run.text, fontFor(run.style), run.color))
       t add new HBox(boxes)
     t.currentFont = saved
 
