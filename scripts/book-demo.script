@@ -23,8 +23,7 @@
 \frontmatter
 \halftitle
 \maketitle
-\copyrightpage{
-Copyright © 2026 A. N. Author. All rights reserved.
+\copyrightpage{Copyright © 2026 A. N. Author. All rights reserved.
 
 This book is a demonstration of the texish \mono{book} package. It may be copied
 and changed freely.

@@ -361,8 +361,7 @@ command for each:
 \frontmatter
 \halftitle
 \maketitle
-\copyrightpage{
-Copyright © 2026 A. N. Author. All rights reserved.
+\copyrightpage{Copyright © 2026 A. N. Author. All rights reserved.
 
 ISBN 978-0-00-000000-0
 

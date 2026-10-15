@@ -39,8 +39,9 @@ frame is described by its relation to the binding — inner and outer — rather
 right, which change places every time the leaf is turned.
 
 // ===== Main matter ==============================================================
-// Arabic folios restarting at 1. \mainmatter's \eject settles the folio; the chapter that follows
-// opens on a recto, inserting a blank leaf first if the next page would have been a verso.
+// Arabic folios restarting at 1. \mainmatter opens on a recto, inserting a blank leaf first if the
+// next page would have been a verso, so folio 1 falls on a right-hand page of the sheet as well as
+// by its parity; the chapter that follows opens there.
 \mainmatter
 
 \chapter{The frame}
