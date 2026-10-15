@@ -431,8 +431,21 @@ penalties, and so on).
 | `\code[language]{…}` | a code listing in the code face; `[language]` syntax-highlights it (see the code environment for unbalanced braces) |
 
 Both read their text raw from the input, so — like LaTeX's `\verb` — they cannot be produced by a
-macro. `\code` colours by the theme in `codetheme`; the `code` environment takes its language from
-`codelang`.
+macro. `\code` styles a listing by the theme named in `codetheme` (`\set codetheme {print}`); the
+`code` environment takes its language from `codelang`.
+
+| Theme | For |
+|-------|-----|
+| `onelight` (the default), `github-light`, `solarized-light`, `gruvbox-light` | colour, on a white page |
+| `onedark`, `github-dark`, `solarized-dark`, `gruvbox-dark`, `monokai`, `dracula`, `nord`, `tokyo-night`, `catppuccin-mocha` | colour, on a dark background |
+| `print` | a book printed in black ink only (Amazon KDP's standard black-and-white interior), where every colour theme's hues print as greys a reader cannot tell apart |
+
+The colour themes vary only the ink. `print` varies the cut instead: keywords are **bold** black,
+comments *italic* mid-grey (`#666666`), strings regular dark grey (`#4d4d4d`), and everything else
+regular black — so keyword, identifier, string and comment stay distinct in pure black ink, and no
+grey is light enough to break up on the press. The bold and italic are JetBrains Mono's own cuts;
+an installation without the font tree has only the regular and bold cuts compiled in, and there a
+comment falls back to upright grey.
 
 texish bundles TextMate grammars for `bash`, `json`, `python`, `scala`, `sysl` and `texish`. Any other
 language is highlighted by putting its grammar, named `<language>.tmLanguage.json`, beside the

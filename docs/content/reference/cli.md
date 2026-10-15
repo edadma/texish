@@ -12,9 +12,13 @@ texish [options] [input-file]
   input-file                    texish source to typeset; reads standard input if omitted
   -o, --output <file>           output path (default: beside the input file, or out)
   -t, --type <pdf | png>        output type (default: pdf)
-  -p, --paper <a4 | letter>     paper size (default: letter)
+  -p, --paper <name | WxH>      paper size (default: letter)
   -r, --resolution <sd|hd|fhd|dpi>  PNG device resolution (default: hd)
 ```
+
+`--paper` takes every size `\geometry paper:` does: the named sheets (`letter`, `legal`, `a3`–`a6`,
+and the book trims `us-trade`, `digest`, `royal`, `crown-quarto`, `executive`) or any
+`<width>x<height>` in inches, with an optional `mm`, `cm` or `pt` suffix (`6x9`, `148x210mm`).
 
 The resolution is either a named size — `sd` (96 dpi), `hd` (150 dpi) or `fhd` (300 dpi) —
 or a positive DPI number. Because the engine measures in points (72 per inch), **`-r 72`

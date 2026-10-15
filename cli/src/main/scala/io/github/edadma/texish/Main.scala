@@ -59,12 +59,9 @@ private def fail(msg: String): Nothing =
         }
         .text("output type (default: pdf)"),
       opt[String]('p', "paper")
-        .valueName("<letter | legal | a3 | a4 | a5>")
+        .valueName("<name | WxH>")
         .action((x, c) => c.copy(paper = x))
-        .validate {
-          case "letter" | "legal" | "a3" | "a4" | "a5" => success
-          case _ => failure("paper size must be one of: letter, legal, a3, a4, a5")
-        }
+        .validate(x => paperProblem(x).fold(success)(failure))
         .text("paper size (default: letter)"),
       opt[String]('r', "resolution")
         .valueName("<sd | hd | fhd | dpi>")
@@ -172,6 +169,16 @@ private[texish] def renderPng(source: String, base: String, paper: String, resol
   }
 
   t.destroy()
+
+/** Why `--paper` cannot take `name`, or None when it can: every size `\geometry paper:` accepts, the named sheets
+  * and any `<width>x<height>`, is accepted here too. */
+private[texish] def paperProblem(name: String): Option[String] =
+  if Typesetter.paperSize(name).isDefined then None
+  else
+    Some(
+      s"paper size must be one of ${Typesetter.paperNames.mkString(", ")}, " +
+        "or <width>x<height> in inches with an optional unit (6x9, 148x210mm)",
+    )
 
 /** Paper dimensions in the engine's point space, using the typesetter's own unit constants. */
 private def paperDimensions(paper: String, t: Typesetter): (Double, Double) =

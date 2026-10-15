@@ -69,6 +69,34 @@ class CliTests extends AnyFreeSpec with Matchers:
       dir.delete()
   }
 
+  "--paper accepts every size \\geometry does, trims included" in {
+    for name <- Seq("letter", "a6", "us-trade", "executive", "6x9", "7.5x9.25", "148x210mm") do
+      paperProblem(name) shouldBe None
+  }
+
+  "--paper rejects a size that is not one, naming what it accepts" in {
+    val Some(msg) = paperProblem("quarto"): @unchecked
+    msg should include("us-trade")
+    msg should include("<width>x<height>")
+  }
+
+  "a trim size sets the page, so at 72 DPI a 6x9 page is 432x648 pixels" in {
+    val dir  = Files.createTempDirectory("texish-cli").toFile
+    val base = new File(dir, "trim").getAbsolutePath
+
+    try
+      renderPng("hello\n\n", base, "6x9", "72")
+
+      val bytes = Files.readAllBytes(new File(dir, "trim.png").toPath)
+      def be32(off: Int) = (0 until 4).foldLeft(0)((acc, i) => (acc << 8) | (bytes(off + i) & 0xff))
+
+      be32(16) shouldBe 432
+      be32(20) shouldBe 648
+    finally
+      dir.listFiles.foreach(_.delete())
+      dir.delete()
+  }
+
   "a single-page PNG keeps the base name with a .png extension" in {
     val dir  = Files.createTempDirectory("texish-cli").toFile
     val base = new File(dir, "solo").getAbsolutePath
