@@ -631,6 +631,50 @@ class Processor(val handler: Handler):
       )
     do nextToken()
 
+  /** If the next token is a control sequence or active character bound to a macro, consume it and expand it in
+    * place — its arguments read and its body pushed as the next token source — and answer true; otherwise leave the
+    * input untouched and answer false. The test is the one dispatch applies, so a `\def` that shadows a primitive
+    * expands here too, while a primitive or a variable is left for dispatch.
+    */
+  def expandNextMacro(): Boolean =
+    if !hasMoreTokens then false
+    else
+      peekToken() match
+        case Token.ControlSeq(name, pos) =>
+          handler.get(name) match
+            case Value.Macro(params, body, _) =>
+              nextToken()
+              expandMacro(name, params, body, pos)
+              true
+            case _ => false
+        case Token.Active(c, pos) if !actives.contains(c) =>
+          handler.get(s"active:$c") match
+            case Value.Macro(params, body, _) =>
+              nextToken()
+              expandMacro(s"active:$c", params, body, pos)
+              true
+            case _ => false
+        case _ => false
+
+  /** Discard the spaces that follow, expanding macros as they are met, as TeX's `\ignorespaces` does: the run ends
+    * at the first token that is neither a space nor a macro, which is left in place. A single line break is a space
+    * and is discarded; a blank line is a paragraph break and is not, so the line break that begins it is put back.
+    */
+  def ignoreSpaces(): Unit =
+    var done = false
+    while !done && hasMoreTokens do
+      peekToken() match
+        case Token.Space(_, _) => nextToken()
+        case nl @ Token.Newline(_) =>
+          nextToken()
+          skipSpaces()
+          peekToken() match
+            case Token.Newline(_) =>
+              pushBack(Vector(nl))
+              done = true
+            case _ =>
+        case _ => done = !expandNextMacro()
+
   /** Read optional parameters in the form `name:value`.
     *
     * Reads zero or more `name:value` pairs that appear before regular arguments.

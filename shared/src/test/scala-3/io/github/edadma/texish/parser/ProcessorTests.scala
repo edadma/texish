@@ -61,6 +61,38 @@ class ProcessorTests extends AnyFreeSpec with Matchers:
       process("\\def item {*\\ignorespaces}\\item the rest") shouldBe "*the rest"
     }
 
+    "\\ignorespaces drops the line break a macro argument begins with" in {
+      // `\f{` with its text on the next line: the argument's first token is the line break, which is a space
+      process("\\def f t {[\\ignorespaces\\t]}\\f{\nwords\nmore}") shouldBe "[words\nmore]"
+    }
+
+    "\\ignorespaces drops a run of spaces and a single line break together" in {
+      process("a\\ignorespaces  \n  b") shouldBe "ab"
+    }
+
+    "\\ignorespaces leaves a blank line alone, so the paragraph break survives" in {
+      process("a\\ignorespaces\n\nb") shouldBe "a\n\nb"
+      process("a\\ignorespaces \n  \nb") shouldBe "a\n\nb"
+    }
+
+    "\\ignorespaces expands a macro that follows it and drops the spaces the expansion begins with" in {
+      process("\\def lead { x}a\\ignorespaces\\lead") shouldBe "ax"
+    }
+
+    "\\ignorespaces expands a run of macros whose expansions are only spaces" in {
+      process("\\def sp { }\\def nl {\n}a\\ignorespaces\\sp\\nl\\sp b") shouldBe "ab"
+    }
+
+    "\\ignorespaces stops at the first non-space token, leaving later spaces in place" in {
+      process("a\\ignorespaces  b  c") shouldBe "ab c" // the tokenizer reads a run of spaces as one space
+      process("\\def w {b c}a\\ignorespaces \\w") shouldBe "ab c"
+    }
+
+    "\\ignorespaces before a non-space that is not a macro changes nothing" in {
+      process("a\\ignorespaces{ b}") shouldBe "a b"         // a group: the space inside it is not skipped
+      process("\\set x {v}a\\ignorespaces\\x  b") shouldBe "av b" // a variable is output, not expanded
+    }
+
     "should handle \\set and \\get with braces" in {
       process("\\set x {hello}\\get\\x") shouldBe "hello"
     }

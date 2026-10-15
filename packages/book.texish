@@ -171,7 +171,7 @@
     \set parindent {0}
     \set parskip {5}
     \set rightskip {0 plus 1fil}
-    \noindent \t\par
+    \noindent\ignorespaces\t\par
     \eject
   }
 }

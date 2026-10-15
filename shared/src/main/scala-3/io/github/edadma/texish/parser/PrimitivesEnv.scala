@@ -70,12 +70,13 @@ private def envCode(proc: Processor, name: String): Option[(Vector[MacroParam], 
         case _ => None
     case _ => None
 
-/** `\ignorespaces` — swallow the run of `Space` tokens that immediately follows, as in LaTeX. A macro meant to
-  * be followed directly by running text ends with `\ignorespaces`, so the space the author leaves for
-  * readability (e.g. `\item the text`) does not survive as an interword space in the output. Newlines are left
-  * alone, so a blank line still ends a paragraph. */
+/** `\ignorespaces` — swallow the spaces that follow, expanding macros as it meets them, as in TeX. A macro meant
+  * to be followed directly by running text ends with `\ignorespaces`, so the space the author leaves for
+  * readability (e.g. `\item the text`) does not survive as an interword space in the output; one that sets an
+  * argument writes `\ignorespaces\t`, so an argument opened with its text on the next line (`\f{` and a line
+  * break) does not begin with one. A single line break counts as a space; a blank line still ends a paragraph. */
 object IgnoreSpacesPrimitive extends Primitive:
-  def execute(proc: Processor, pos: CharReader): Unit = proc.skipSpaces()
+  def execute(proc: Processor, pos: CharReader): Unit = proc.ignoreSpaces()
 
 /** `\newenvironment name [param…] {begin-code} {end-code}` — define an environment. Parameters are named
   * identifiers (as in `\def`) and are bound only in the begin-code, where `\begin{name}` supplies them as

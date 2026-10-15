@@ -165,6 +165,15 @@ class BookTests extends AnyFreeSpec with Matchers:
     y should be > t.getNumber("voffset") + t.getNumber("vsize") / 2
   }
 
+  "\\copyrightpage's text may start on the line after the brace and still set flush left" in {
+    val t = run(
+      "\\title{Name}\n\\maketitle\n\\copyrightpage{\nCopyright 2026 Someone.\n\nAll rights reserved.\n}\n\\chapter{One}\nbody",
+    )
+    val first  = t.drawn.find(_._1 == "Copyright").get._2
+    val second = t.drawn.find(_._1 == "All").get._2
+    first shouldBe second // the line break after `{` is not an interword space before the first word
+  }
+
   "the opening pages never put two blank pages in a row" in {
     def blankRuns(t: RecordingTypesetter) = t.sheetText.sliding(2).count(_.forall(_.isEmpty))
 

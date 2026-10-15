@@ -382,7 +382,7 @@ Arabic harakat are all applied automatically from the text in logical order — 
 | `\leavevmode` | begin a paragraph if none is open, keeping the running indent state — for inline content led by a box (e.g. a superscript) that a plain character would otherwise have started |
 | `\rtl` `\ltr` | set the paragraph base direction right-to-left / left-to-right (see [Right-to-left text](/guide/right-to-left/)) |
 | `\newpage` | end the current page and start a new one |
-| `\ignorespaces` | swallow the spaces that follow (at the end of a macro body) |
+| `\ignorespaces` | swallow the spaces that follow, expanding macros on the way and counting a single line break as a space (a blank line still ends the paragraph) — at the end of a macro body, or before an argument (`\ignorespaces\t`) so `\f{` with its text on the next line starts flush |
 | `\vfil` `\vfill` `\vss` `\hfil` `\hfill` `\hss` | stretchable fill |
 | `\lower` `\raise` | shift a box vertically |
 | `\setbox` `\box` `\copy` `\unhbox` `\unvbox` `\wd`/`\ht`/`\dp` `\isvoid` | box registers, their dimensions, splicing, and the empty test |
