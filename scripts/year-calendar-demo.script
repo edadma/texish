@@ -1,0 +1,28 @@
+// year-calendar-demo.script — the year 2026 on one letter page, three months a row.
+//
+// Built from the calendar package: twelve \calendar boxes, restyled smaller with \set and
+// laid out in four rows. A month spans four, five or six week-rows, so each one is set in
+// a box of the six-week height; without it a row would line up at its bottom edge and the
+// title bars would sit at different heights.
+
+\geometry paper:letter margin:0.5in
+\use{document}
+\use{calendar}
+
+\def headline {}
+\def footline {}
+
+\set calcw {24}\set calch {20}
+\set caltitleh {20}\set calheadh {14}
+\set caltitlesize {11}\set calheadsize {7}\set caldaysize {9}
+
+// The six-week height: title 20 + header 14 + 6 × 20.
+\def calmonth m {\vbox to:154pt{\hbox{\calendar{2026}{\m}}\vfil}}
+\def calrow a b c {\centerline{\hbox{\calmonth{\a}\hskip 18pt\calmonth{\b}\hskip 18pt\calmonth{\c}}}\vskip 10pt}
+
+\centerline{\font lmroman 36 bold 2026}
+\vskip 18pt
+\calrow{1}{2}{3}
+\calrow{4}{5}{6}
+\calrow{7}{8}{9}
+\calrow{10}{11}{12}

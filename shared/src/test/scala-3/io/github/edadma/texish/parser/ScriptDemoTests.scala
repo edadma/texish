@@ -81,3 +81,10 @@ class ScriptDemoTests extends AnyFreeSpec with Matchers:
   "the Data Matrix demo processes without error" in {
     noException should be thrownBy process("scripts/datamatrix-demo.script")
   }
+
+  // The year calendar sets all twelve months through the calendar package's date arithmetic, so a month whose
+  // first weekday or length is computed wrongly anywhere in the year is exercised here, not only the few the
+  // package's own demo draws.
+  "the year calendar demo processes without error" in {
+    noException should be thrownBy process("scripts/year-calendar-demo.script")
+  }
