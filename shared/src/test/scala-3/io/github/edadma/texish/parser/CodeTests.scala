@@ -132,6 +132,24 @@ class CodeTests extends AnyFreeSpec with Matchers:
       val cbs = lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox])
       cbs.find(_.text == "var").getOrElse(fail("no 'var' run")).color shouldBe Color("#a626a4")
     }
+
+    "keeps a nested block comment open until its outermost close" in {
+      val (t, proc) = fixture()
+      proc.process("\\code[sysl]{/* a /* b */ c */ var x}")
+      val cbs     = lineBoxes(t).head.boxes.map(_.asInstanceOf[CharBox])
+      val comment = Color(io.github.edadma.highlighter.Theme.OneLight.comment)
+      cbs.find(_.text.contains("c")).getOrElse(fail("no 'c' run")).color shouldBe comment
+      cbs.find(_.text == "var").getOrElse(fail("no 'var' run")).color shouldBe Color("#a626a4")
+    }
+
+    "colours the body of a text block as a string across lines" in {
+      val (t, proc) = fixture()
+      proc.process("\\code[sysl]{val s = \"\"\"\nhello\n\"\"\"}")
+      val lines  = lineBoxes(t)
+      val string = Color(io.github.edadma.highlighter.Theme.OneLight.string)
+      val hello  = lines(1).boxes.map(_.asInstanceOf[CharBox]).find(_.text.contains("hello"))
+      hello.getOrElse(fail("no 'hello' run")).color shouldBe string
+    }
   }
 
   "the print theme" - {
